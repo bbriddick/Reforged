@@ -1,9 +1,14 @@
+//
+//  ReforgedApp.swift
+//  Reforged
+//
+//  Created by Boaz Briddick on 1/2/26.
+//
+
 import SwiftUI
 
 @main
 struct ReforgedApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
     var body: some Scene {
         WindowGroup {
             ContentView()
