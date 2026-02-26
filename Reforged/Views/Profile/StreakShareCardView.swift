@@ -5,6 +5,7 @@ import SwiftUI
 struct StreakShareCardView: View {
     let displayName: String
     let avatar: String
+    let profileImagePath: String?
     let streak: Int
     let longestStreak: Int
     let level: Int
@@ -33,14 +34,12 @@ struct StreakShareCardView: View {
                 Spacer().frame(height: 90)
 
                 // Avatar
-                Text(avatar.isEmpty ? "🔥" : avatar)
-                    .font(.system(size: 60))
-                    .frame(width: 100, height: 100)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle().stroke(Color.reforgedGold, lineWidth: 3)
-                    )
+                StandaloneProfileAvatar(
+                    avatar: avatar,
+                    profileImagePath: profileImagePath,
+                    size: 100,
+                    borderColor: Color.reforgedGold
+                )
 
                 Spacer().frame(height: 20)
 
@@ -191,6 +190,7 @@ struct StreakShareSheet: View {
         StreakShareCardView(
             displayName: appState.user.displayName,
             avatar: appState.user.avatar,
+            profileImagePath: appState.user.profileImagePath,
             streak: streakManager.currentStreak,
             longestStreak: streakManager.longestStreak,
             level: levelInfo.level,

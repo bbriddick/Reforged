@@ -79,6 +79,7 @@ struct HomeView: View {
                         // Left column
                         VStack(spacing: ReforgedTheme.spacingL) {
                             DailyInsightCard()
+                            ContinueLearningSection()
                         }
                         .frame(maxWidth: .infinity)
 
@@ -93,8 +94,7 @@ struct HomeView: View {
                     // iPhone: Single column
                     DailyInsightCard()
 
-                    // MARK: - Continue Learning (Hidden until devotional tracks are ready)
-                    // ContinueLearningSection()
+                    ContinueLearningSection()
 
                     ReviewDueSection()
                     QuickActionsSection()
@@ -139,11 +139,7 @@ struct WelcomeHeader: View {
 
                 Spacer()
 
-                Text(appState.user.avatar)
-                    .font(.system(size: 44))
-                    .frame(width: 56, height: 56)
-                    .background(Color.white.opacity(0.2))
-                    .clipShape(Circle())
+                ProfileAvatarView(size: 56)
             }
 
             Text("Your daily journey in God's Word awaits")
@@ -177,7 +173,6 @@ struct StreakCard: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     @State private var showCalendar = false
-    @State private var showShareStreak = false
     @State private var showBuyFreezeAlert = false
 
     var streak: Int {
@@ -206,15 +201,6 @@ struct StreakCard: View {
                         .foregroundStyle(Color.reforgedCoral)
 
                     Spacer()
-
-                    Button {
-                        showShareStreak = true
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                    .padding(.trailing, 4)
 
                     Text("\(streak)")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -273,6 +259,7 @@ struct StreakCard: View {
                         }
                     }
                 }
+
             }
             .padding(ReforgedTheme.spacingM)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -281,9 +268,6 @@ struct StreakCard: View {
         .buttonStyle(.plain)
         .sheet(isPresented: $showCalendar) {
             ReadingCalendarView()
-        }
-        .sheet(isPresented: $showShareStreak) {
-            StreakShareSheet()
         }
         .alert("Buy Streak Freeze", isPresented: $showBuyFreezeAlert) {
             Button("Buy for \(appState.freezePurchaseCost) XP") {
@@ -302,9 +286,13 @@ struct StreakCard: View {
 
 struct ReadingCalendarView: View {
     @StateObject private var streakManager = ReadingStreakManager.shared
+    @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @State private var currentMonth = Date()
+    @State private var showBuyFreezeAlert = false
+    @State private var freezePurchaseSuccess = false
+    @State private var showShareStreak = false
 
     private let calendar = Calendar.current
     private let daysOfWeek = ["S", "M", "T", "W", "T", "F", "S"]
@@ -435,6 +423,150 @@ struct ReadingCalendarView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .padding(.horizontal)
                     }
+
+                    // MARK: - Streak Freezes Section
+                    VStack(spacing: 16) {
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.blue.opacity(0.12))
+                                    .frame(width: 40, height: 40)
+
+                                Image(systemName: "snowflake")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(Color.blue)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Streak Freezes")
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                                Text("Protects your streak when you miss a day")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            }
+
+                            Spacer()
+                        }
+
+                        // Freeze count indicators
+                        HStack(spacing: 6) {
+                            ForEach(0..<8, id: \.self) { index in
+                                ZStack {
+                                    Circle()
+                                        .fill(index < appState.user.streakFreezes ? Color.blue : Color.blue.opacity(0.1))
+                                        .frame(width: 30, height: 30)
+
+                                    Image(systemName: "snowflake")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(index < appState.user.streakFreezes ? .white : Color.blue.opacity(0.3))
+                                }
+                            }
+                        }
+
+                        // Status text
+                        HStack {
+                            Text("\(appState.user.streakFreezes) of 8 freezes available")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(appState.user.streakFreezes > 0 ? Color.blue : Color.reforgedCoral)
+
+                            Spacer()
+
+                            Text("4 free monthly")
+                                .font(.caption2)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+
+                        // Buy more button
+                        Button {
+                            showBuyFreezeAlert = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 16))
+
+                                Text("Buy Freeze")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+
+                                Spacer()
+
+                                HStack(spacing: 4) {
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 11))
+                                    Text("\(appState.freezePurchaseCost) XP")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color.white.opacity(0.2))
+                                .clipShape(Capsule())
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: appState.user.streakFreezes >= 8
+                                        ? [Color.gray.opacity(0.4), Color.gray.opacity(0.3)]
+                                        : [Color.blue, Color.blue.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .disabled(appState.user.streakFreezes >= 8 || appState.user.xp < appState.freezePurchaseCost)
+
+                        if appState.user.streakFreezes >= 8 {
+                            Text("Maximum freezes reached!")
+                                .font(.caption2)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        } else if appState.user.xp < appState.freezePurchaseCost {
+                            Text("You need \(appState.freezePurchaseCost - appState.user.xp) more XP to buy a freeze")
+                                .font(.caption2)
+                                .foregroundStyle(Color.reforgedCoral)
+                        }
+                    }
+                    .padding()
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+
+                    // Share Streak Button
+                    if streakManager.currentStreak >= 1 {
+                        Button {
+                            showShareStreak = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Share Your Streak")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.reforgedCoral, Color.reforgedCoral.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .padding(.horizontal)
+                    }
                 }
                 .padding(.vertical)
             }
@@ -449,6 +581,25 @@ struct ReadingCalendarView: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                 }
+            }
+            .sheet(isPresented: $showShareStreak) {
+                StreakShareSheet()
+            }
+            .alert("Buy Streak Freeze", isPresented: $showBuyFreezeAlert) {
+                Button("Buy for \(appState.freezePurchaseCost) XP") {
+                    if appState.purchaseStreakFreeze() {
+                        HapticManager.shared.lightImpact()
+                        freezePurchaseSuccess = true
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Spend \(appState.freezePurchaseCost) XP to buy a streak freeze?\n\nYou have \(appState.user.xp) XP available.")
+            }
+            .alert("Freeze Purchased!", isPresented: $freezePurchaseSuccess) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("You now have \(appState.user.streakFreezes) streak freezes. Your streak is protected!")
             }
         }
     }
@@ -673,7 +824,6 @@ struct LevelCard: View {
 
 struct DailyInsightCard: View {
     @EnvironmentObject var appState: AppState
-    @State private var isExpanded = false
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -718,7 +868,7 @@ struct DailyInsightCard: View {
                             .font(.body)
                             .italic()
                             .foregroundStyle(Color.adaptiveText(colorScheme))
-                            .lineLimit(isExpanded ? nil : 3)
+                            .lineLimit(3)
 
                         Button {
                             NotificationCenter.default.post(
@@ -742,17 +892,24 @@ struct DailyInsightCard: View {
                     .background(Color.adaptiveBackground(colorScheme))
                     .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
 
-                    // Expand button
+                    // Read more → navigate to passage
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isExpanded.toggle()
-                        }
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("NavigateToBibleVerse"),
+                            object: nil,
+                            userInfo: ["reference": insight.verse]
+                        )
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("SwitchTab"),
+                            object: nil,
+                            userInfo: ["tab": 2]
+                        )
                     } label: {
                         HStack {
-                            Text(isExpanded ? "Show less" : "Read more")
+                            Text("Read more")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            Image(systemName: "book.fill")
                                 .font(.caption)
                         }
                         .foregroundStyle(colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)

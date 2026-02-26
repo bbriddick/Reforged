@@ -1,5 +1,6 @@
 import Foundation
 import CloudKit
+import UIKit
 
 // MARK: - CloudKit Sync Service
 
@@ -87,6 +88,12 @@ class CloudKitSyncService: ObservableObject {
             record["weeklyActivity"] = activityJSON as CKRecordValue
         }
 
+        // Profile image as CKAsset
+        if let imagePath = profile.profileImagePath,
+           let imageURL = ProfileImageService.shared.imageURL(named: imagePath) {
+            record["profileImage"] = CKAsset(fileURL: imageURL)
+        }
+
         record["modifiedAt"] = Date() as CKRecordValue
 
         try await privateDatabase.save(record)
@@ -125,6 +132,15 @@ class CloudKitSyncService: ObservableObject {
             return WeeklyActivity()
         }()
 
+        // Restore profile image from CloudKit asset
+        var profileImagePath: String? = nil
+        if let asset = record["profileImage"] as? CKAsset,
+           let assetURL = asset.fileURL,
+           let imageData = try? Data(contentsOf: assetURL),
+           let image = UIImage(data: imageData) {
+            profileImagePath = ProfileImageService.shared.saveImage(image)
+        }
+
         return UserProfile(
             id: record.recordID.recordName,
             firstName: record["firstName"] as? String ?? "",
@@ -147,7 +163,8 @@ class CloudKitSyncService: ObservableObject {
             freezeUsedDates: record["freezeUsedDates"] as? [String] ?? [],
             activeDates: record["activeDates"] as? [String] ?? [],
             chaptersRead: record["chaptersRead"] as? [String] ?? [],
-            weeklyActivity: weeklyActivity
+            weeklyActivity: weeklyActivity,
+            profileImagePath: profileImagePath
         )
     }
 

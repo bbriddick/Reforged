@@ -22,14 +22,7 @@ struct AccountSettingsSection: View {
             // Account Info
             if appleSignIn.isSignedIn {
                 HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.reforgedNavy.opacity(0.15))
-                            .frame(width: 50, height: 50)
-
-                        Text(appState.user.avatar)
-                            .font(.title2)
-                    }
+                    ProfileAvatarView(size: 50)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(appState.user.displayName.isEmpty ? appState.user.firstName : appState.user.displayName)

@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
@@ -112,17 +113,9 @@ struct ProfileHeader: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text(user.avatar.isEmpty ? "🦁" : user.avatar)
-                .font(.system(size: 70))
-                .frame(width: 100, height: 100)
-                .background(Color.white)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(profileBorderColor, lineWidth: 4)
-                )
+            ProfileAvatarView(size: 100)
                 .shadow(color: profileBorderColor.opacity(0.3), radius: user.activeProfileBorder.isEmpty ? 0 : 8)
-            
+
             VStack(spacing: 4) {
                 Text(user.displayName.isEmpty ? "Friend" : user.displayName)
                     .font(.title2)
@@ -516,12 +509,22 @@ struct SettingsRow: View {
 
 struct EditProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appState: AppState
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var displayName = ""
     @State private var selectedAvatar = ""
-    
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedImage: UIImage?
+    @State private var showCamera = false
+    @State private var showPhotoPicker = false
+    @State private var showRemovePhotoAlert = false
+
+    private var hasProfileImage: Bool {
+        selectedImage != nil || (appState.user.profileImagePath != nil && !appState.user.profileImagePath!.isEmpty)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -530,8 +533,69 @@ struct EditProfileSheet: View {
                     TextField("Last Name", text: $lastName)
                     TextField("Display Name", text: $displayName)
                 }
-                
+
+                Section("Profile Photo") {
+                    VStack(spacing: 16) {
+                        // Preview
+                        if let image = selectedImage {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.reforgedGold, lineWidth: 3))
+                        } else {
+                            ProfileAvatarView(size: 100)
+                        }
+
+                        HStack(spacing: 12) {
+                            Button {
+                                showPhotoPicker = true
+                            } label: {
+                                Label("Photo Library", systemImage: "photo.on.rectangle")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                    .background(Color.reforgedNavy)
+                                    .clipShape(Capsule())
+                            }
+
+                            Button {
+                                showCamera = true
+                            } label: {
+                                Label("Camera", systemImage: "camera.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                    .background(Color.reforgedNavy)
+                                    .clipShape(Capsule())
+                            }
+                        }
+
+                        if hasProfileImage {
+                            Button(role: .destructive) {
+                                showRemovePhotoAlert = true
+                            } label: {
+                                Label("Remove Photo", systemImage: "trash")
+                                    .font(.caption)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+
                 Section("Avatar") {
+                    if hasProfileImage {
+                        Text("Avatar is hidden when a profile photo is set")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 60), spacing: 12)], spacing: 12) {
                         ForEach(avatarOptions) { avatar in
                             Text(avatar.emoji)
@@ -549,6 +613,7 @@ struct EditProfileSheet: View {
                         }
                     }
                     .padding(.vertical, 8)
+                    .opacity(hasProfileImage ? 0.5 : 1.0)
                 }
             }
             .navigationTitle("Edit Profile")
@@ -570,14 +635,46 @@ struct EditProfileSheet: View {
                 displayName = appState.user.displayName
                 selectedAvatar = appState.user.avatar
             }
+            .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
+            .onChange(of: selectedPhotoItem) { newItem in
+                Task {
+                    if let data = try? await newItem?.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        selectedImage = image
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPickerView(image: $selectedImage)
+                    .ignoresSafeArea()
+            }
+            .alert("Remove Photo?", isPresented: $showRemovePhotoAlert) {
+                Button("Remove", role: .destructive) {
+                    if let path = appState.user.profileImagePath {
+                        ProfileImageService.shared.deleteImage(named: path)
+                    }
+                    appState.user.profileImagePath = nil
+                    selectedImage = nil
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Your avatar emoji will be shown instead.")
+            }
         }
     }
-    
+
     func saveProfile() {
         appState.user.firstName = firstName
         appState.user.lastName = lastName
         appState.user.displayName = displayName
         appState.user.avatar = selectedAvatar
+
+        // Save profile image if a new one was selected
+        if let image = selectedImage {
+            if let filename = ProfileImageService.shared.saveImage(image) {
+                appState.user.profileImagePath = filename
+            }
+        }
     }
 }
 

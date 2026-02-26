@@ -1021,6 +1021,7 @@ struct StreakMilestoneView: View {
     let streakCount: Int
     @Binding var isPresented: Bool
     @State private var showConfetti = false
+    @State private var showShareStreak = false
     @Environment(\.colorScheme) var colorScheme
 
     var milestoneMessage: String {
@@ -1097,17 +1098,43 @@ struct StreakMilestoneView: View {
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
 
-                    // Continue button
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Keep Going!")
-                            .font(.headline)
+                    // Buttons
+                    VStack(spacing: 10) {
+                        // Share Your Streak button (primary)
+                        Button {
+                            showShareStreak = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Share Your Streak!")
+                                    .font(.headline)
+                            }
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.reforgedNavy)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.reforgedCoral, Color.reforgedCoral.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
                             .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+
+                        // Continue button (secondary)
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Keep Going!")
+                                .font(.headline)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.adaptiveText(colorScheme).opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
                     }
                 }
                 .padding(32)
@@ -1123,6 +1150,9 @@ struct StreakMilestoneView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     showConfetti = true
                 }
+            }
+            .sheet(isPresented: $showShareStreak) {
+                StreakShareSheet()
             }
         }
     }

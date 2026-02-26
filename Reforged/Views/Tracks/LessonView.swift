@@ -101,6 +101,7 @@ struct LessonView: View {
                 selectedAnswer: $selectedAnswer,
                 showExplanation: $showExplanation
             )
+            .id(content.id)
         case .reflection(let data):
             ReflectionContentView(content: data, text: $reflectionText)
         }

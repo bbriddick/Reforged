@@ -17,5 +17,7 @@
 	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Reforged needs access to save your streak card to your photo library.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Reforged uses your camera to take a profile photo.</string>
 </dict>
 </plist>

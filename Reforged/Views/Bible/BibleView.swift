@@ -55,6 +55,7 @@ struct BibleView: View {
     // Verse interaction state
     @State private var selectedVerseForAction: ParsedVerse?
     @State private var memoryVersesSelection: MemoryVersesSelection?
+    @State private var verseShareSelection: VerseShareSelection?
 
     // Strong's word study state
     @State private var wordLookupResult: WordLookupResult?
@@ -433,6 +434,9 @@ struct BibleView: View {
                 }
             )
             .environmentObject(appState)
+        }
+        .sheet(item: $verseShareSelection) { selection in
+            VerseShareSheet(selection: selection)
         }
         .sheet(item: $wordLookupResult, onDismiss: {
             withAnimation(.easeInOut(duration: 0.15)) {
@@ -832,6 +836,15 @@ struct BibleView: View {
             withAnimation { readingState.clearSelection() }
 
         case .share:
+            let selected = verses.filter { readingState.selectedVerses.contains($0.reference) }
+            if !selected.isEmpty {
+                verseShareSelection = VerseShareSelection(
+                    verses: selected,
+                    book: selectedBook.name,
+                    chapter: selectedChapter,
+                    translation: currentTranslation.rawValue
+                )
+            }
             withAnimation { readingState.clearSelection() }
 
         }
@@ -3203,6 +3216,10 @@ struct SelectionActionBar: View {
 
                 ActionBarButton(icon: "doc.on.doc", label: "Copy") {
                     onAction(.copy)
+                }
+
+                ActionBarButton(icon: "square.and.arrow.up", label: "Share") {
+                    onAction(.share)
                 }
             }
             .padding(.vertical, 16)

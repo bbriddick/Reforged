@@ -29,8 +29,9 @@ struct UserProfile: Codable {
     var perks: [Perk]
     var activeProfileBorder: String
     var activeTheme: String
+    var profileImagePath: String?
 
-    init(id: String, firstName: String, lastName: String, displayName: String, email: String?, avatar: String, goals: [String], xp: Int, level: Int, streak: Int, longestStreak: Int, lastActiveDate: String, badges: [Badge], completedLessons: [String], memoryVerses: [String], onboardingCompleted: Bool, loggedIn: Bool, streakFreezes: Int, freezeUsedDates: [String], lastFreezeReplenishMonth: String = "", activeDates: [String], chaptersRead: [String], weeklyActivity: WeeklyActivity, perks: [Perk] = [], activeProfileBorder: String = "", activeTheme: String = "") {
+    init(id: String, firstName: String, lastName: String, displayName: String, email: String?, avatar: String, goals: [String], xp: Int, level: Int, streak: Int, longestStreak: Int, lastActiveDate: String, badges: [Badge], completedLessons: [String], memoryVerses: [String], onboardingCompleted: Bool, loggedIn: Bool, streakFreezes: Int, freezeUsedDates: [String], lastFreezeReplenishMonth: String = "", activeDates: [String], chaptersRead: [String], weeklyActivity: WeeklyActivity, perks: [Perk] = [], activeProfileBorder: String = "", activeTheme: String = "", profileImagePath: String? = nil) {
         self.id = id
         self.firstName = firstName
         self.lastName = lastName
@@ -57,6 +58,7 @@ struct UserProfile: Codable {
         self.perks = perks
         self.activeProfileBorder = activeProfileBorder
         self.activeTheme = activeTheme
+        self.profileImagePath = profileImagePath
     }
 
     init(from decoder: Decoder) throws {
@@ -88,6 +90,7 @@ struct UserProfile: Codable {
         perks = (try? container.decode([Perk].self, forKey: .perks)) ?? []
         activeProfileBorder = (try? container.decode(String.self, forKey: .activeProfileBorder)) ?? ""
         activeTheme = (try? container.decode(String.self, forKey: .activeTheme)) ?? ""
+        profileImagePath = try? container.decode(String.self, forKey: .profileImagePath)
     }
 
     /// Computed level based on XP thresholds

@@ -150,6 +150,39 @@ struct AboutSection: View {
 
             SettingsDivider()
 
+            // Image Assets
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "photo.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+
+                    Text("Image Assets")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Unsplash")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    Text("Background images for verse sharing are provided by Unsplash (unsplash.com). Photos are used under the Unsplash License. Individual photographer credits are displayed on each shared image.")
+                        .font(.caption2)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineSpacing(3)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.reforgedNavy.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.vertical, 10)
+
+            SettingsDivider()
+
             // Links Section
             SettingsNavigationRow(
                 title: "What's New",

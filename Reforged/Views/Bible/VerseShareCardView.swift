@@ -15,12 +15,10 @@ struct VerseShareSelection: Identifiable {
         if numbers.count == 1 {
             return "\(book) \(chapter):\(numbers[0])"
         }
-        // Check if consecutive range
         let isConsecutive = numbers.count == (numbers.last! - numbers.first! + 1)
         if isConsecutive {
             return "\(book) \(chapter):\(numbers.first!)-\(numbers.last!)"
         }
-        // Non-consecutive: list them
         let refs = numbers.map { String($0) }.joined(separator: ", ")
         return "\(book) \(chapter):\(refs)"
     }
@@ -28,6 +26,16 @@ struct VerseShareSelection: Identifiable {
     var fullText: String {
         verses.sorted(by: { $0.number < $1.number }).map { $0.text }.joined(separator: " ")
     }
+}
+
+// MARK: - Unsplash Thumbnail Model
+
+struct UnsplashThumbnail: Identifiable {
+    let id: String
+    let photo: UnsplashService.UnsplashPhoto
+    var thumbnail: UIImage?
+    var fullImage: UIImage?
+    var attribution: UnsplashService.PhotographerAttribution
 }
 
 // MARK: - Shareable Verse Card (1080x1080)
@@ -41,7 +49,7 @@ struct VerseShareCard: View {
 
     var body: some View {
         ZStack {
-            // Background image
+            // Background image (hotlinked from Unsplash CDN)
             Image(uiImage: backgroundImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
@@ -94,7 +102,6 @@ struct VerseShareCard: View {
 
                 // Bottom section: branding + photographer credit
                 VStack(spacing: 8) {
-                    // Branding
                     Text("REFORGED")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white.opacity(0.5))
@@ -114,7 +121,6 @@ struct VerseShareCard: View {
         .environment(\.colorScheme, .dark)
     }
 
-    /// Dynamically size font based on text length
     private var verseFontSize: CGFloat {
         let length = verseText.count
         if length < 80 { return 42 }
@@ -133,12 +139,19 @@ struct VerseShareSheet: View {
     @Environment(\.colorScheme) var colorScheme
 
     @State private var selectedImage: UIImage?
-    @State private var photographerName: String?
+    @State private var currentAttribution: UnsplashService.PhotographerAttribution?
     @State private var renderedImage: UIImage?
     @State private var showShareSheet = false
     @State private var showSaveConfirmation = false
-    @State private var isLoadingUnsplash = false
+
+    // Bundled images
     @State private var bundledImages: [(name: String, image: UIImage)] = []
+
+    // Unsplash images
+    @State private var unsplashThumbnails: [UnsplashThumbnail] = []
+    @State private var isLoadingInitial = false
+    @State private var isLoadingMore = false
+    @State private var selectedUnsplashId: String?
 
     private var currentBackground: UIImage {
         selectedImage ?? UnsplashService.fallbackGradientImage()
@@ -150,82 +163,146 @@ struct VerseShareSheet: View {
             reference: selection.referenceText,
             translation: selection.translation,
             backgroundImage: currentBackground,
-            photographerName: photographerName
+            photographerName: currentAttribution?.name
         )
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Preview
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 16) {
                         Spacer().frame(height: 8)
 
+                        // Preview card
                         shareCard
                             .scaleEffect(0.3)
                             .frame(width: 324, height: 324)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
 
-                        // Background image picker
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Text("Background")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                        // Unsplash attribution link
+                        if let attribution = currentAttribution {
+                            HStack(spacing: 4) {
+                                Text("Photo by")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                                Spacer()
+                                Link(attribution.name, destination: URL(string: attribution.profileURL)!)
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
 
-                                // Shuffle from Unsplash
-                                Button {
-                                    fetchUnsplashImage()
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        if isLoadingUnsplash {
-                                            ProgressView()
-                                                .scaleEffect(0.7)
-                                        } else {
-                                            Image(systemName: "arrow.triangle.2.circlepath")
-                                                .font(.caption)
-                                        }
-                                        Text("Shuffle")
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                    }
-                                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                                }
-                                .disabled(isLoadingUnsplash)
+                                Text("on")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+                                Link("Unsplash", destination: URL(string: "https://unsplash.com/?utm_source=reforged&utm_medium=referral")!)
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
                             }
-                            .padding(.horizontal, 24)
+                        }
+
+                        // MARK: - Bundled Backgrounds
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Backgrounds")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                                .padding(.horizontal, 24)
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 10) {
                                     ForEach(bundledImages, id: \.name) { item in
                                         Button {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                selectedImage = item.image
-                                                photographerName = nil
-                                                renderedImage = nil
-                                            }
+                                            selectBundledImage(item.image)
                                         } label: {
-                                            Image(uiImage: item.image)
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 64, height: 64)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 10)
-                                                        .stroke(
-                                                            selectedImage === item.image ? Color.reforgedGold : Color.clear,
-                                                            lineWidth: 2
-                                                        )
-                                                )
+                                            thumbnailView(image: item.image, isSelected: selectedUnsplashId == nil && selectedImage === item.image)
                                         }
                                     }
                                 }
                                 .padding(.horizontal, 24)
+                            }
+                        }
+
+                        // MARK: - Unsplash Images
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "photo.on.rectangle.angled")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                                    Text("Unsplash")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                                }
+
+                                Spacer()
+
+                                // Load More button
+                                Button {
+                                    loadMoreUnsplashImages()
+                                } label: {
+                                    HStack(spacing: 5) {
+                                        if isLoadingMore {
+                                            ProgressView()
+                                                .scaleEffect(0.7)
+                                        } else {
+                                            Image(systemName: "arrow.clockwise")
+                                                .font(.system(size: 12, weight: .semibold))
+                                        }
+                                        Text("Load More")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                    }
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 7)
+                                    .background(Color.adaptiveNavyText(colorScheme))
+                                    .clipShape(Capsule())
+                                }
+                                .disabled(isLoadingMore || isLoadingInitial)
+                            }
+                            .padding(.horizontal, 24)
+
+                            if isLoadingInitial && unsplashThumbnails.isEmpty {
+                                // Initial loading state
+                                HStack {
+                                    Spacer()
+                                    VStack(spacing: 8) {
+                                        ProgressView()
+                                        Text("Loading images...")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                    }
+                                    .padding(.vertical, 20)
+                                    Spacer()
+                                }
+                            } else {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        ForEach(unsplashThumbnails) { item in
+                                            Button {
+                                                selectUnsplashImage(item)
+                                            } label: {
+                                                if let thumb = item.thumbnail {
+                                                    thumbnailView(image: thumb, isSelected: selectedUnsplashId == item.id)
+                                                } else {
+                                                    // Placeholder while loading thumbnail
+                                                    RoundedRectangle(cornerRadius: 10)
+                                                        .fill(Color.gray.opacity(0.2))
+                                                        .frame(width: 64, height: 64)
+                                                        .overlay(
+                                                            ProgressView()
+                                                                .scaleEffect(0.6)
+                                                        )
+                                                }
+                                            }
+                                            .disabled(item.thumbnail == nil)
+                                        }
+                                    }
+                                    .padding(.horizontal, 24)
+                                }
                             }
                         }
 
@@ -237,6 +314,7 @@ struct VerseShareSheet: View {
                 VStack(spacing: 12) {
                     Button {
                         HapticManager.shared.mediumImpact()
+                        trackUnsplashDownload()
                         renderImage()
                         showShareSheet = true
                     } label: {
@@ -246,6 +324,7 @@ struct VerseShareSheet: View {
 
                     Button {
                         HapticManager.shared.lightImpact()
+                        trackUnsplashDownload()
                         saveToPhotos()
                     } label: {
                         Label("Save to Photos", systemImage: "photo.on.rectangle")
@@ -277,11 +356,67 @@ struct VerseShareSheet: View {
             }
             .onAppear {
                 loadBundledImages()
+                loadInitialUnsplashImages()
             }
         }
     }
 
-    // MARK: - Image Helpers
+    // MARK: - Thumbnail View
+
+    private func thumbnailView(image: UIImage, isSelected: Bool) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.reforgedGold : Color.clear, lineWidth: 2.5)
+            )
+            .shadow(color: isSelected ? Color.reforgedGold.opacity(0.3) : .clear, radius: 4)
+    }
+
+    // MARK: - Selection
+
+    private func selectBundledImage(_ image: UIImage) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            selectedImage = image
+            currentAttribution = nil
+            selectedUnsplashId = nil
+            renderedImage = nil
+        }
+    }
+
+    private func selectUnsplashImage(_ item: UnsplashThumbnail) {
+        selectedUnsplashId = item.id
+        currentAttribution = item.attribution
+        renderedImage = nil
+
+        // Use full image if already loaded, otherwise use thumbnail then upgrade
+        if let full = item.fullImage {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedImage = full
+            }
+        } else if let thumb = item.thumbnail {
+            selectedImage = thumb
+            // Load full-res in background
+            Task {
+                if let fullImage = await UnsplashService.shared.loadFullImage(for: item.photo) {
+                    await MainActor.run {
+                        if let idx = unsplashThumbnails.firstIndex(where: { $0.id == item.id }) {
+                            unsplashThumbnails[idx].fullImage = fullImage
+                        }
+                        if selectedUnsplashId == item.id {
+                            selectedImage = fullImage
+                            renderedImage = nil
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Image Loading
 
     private func loadBundledImages() {
         bundledImages = UnsplashService.shared.allBundledImages()
@@ -290,18 +425,86 @@ struct VerseShareSheet: View {
         }
     }
 
-    private func fetchUnsplashImage() {
-        isLoadingUnsplash = true
-        renderedImage = nil
+    private func loadInitialUnsplashImages() {
+        isLoadingInitial = true
         Task {
-            let result = await UnsplashService.shared.getImage()
+            await fetchAndAppendUnsplashImages(count: 10)
             await MainActor.run {
-                selectedImage = result.image
-                photographerName = result.photographer?.name
-                renderedImage = nil
-                isLoadingUnsplash = false
+                isLoadingInitial = false
             }
         }
+    }
+
+    private func loadMoreUnsplashImages() {
+        isLoadingMore = true
+        Task {
+            await fetchAndAppendUnsplashImages(count: 10)
+            await MainActor.run {
+                isLoadingMore = false
+            }
+        }
+    }
+
+    private func fetchAndAppendUnsplashImages(count: Int) async {
+        do {
+            let photos = try await UnsplashService.shared.fetchRandomPhotos(count: count)
+            let utmParams = "?utm_source=reforged&utm_medium=referral"
+
+            // Create placeholder thumbnails immediately
+            let newThumbnails = photos.map { photo in
+                UnsplashThumbnail(
+                    id: photo.id,
+                    photo: photo,
+                    thumbnail: nil,
+                    fullImage: nil,
+                    attribution: UnsplashService.PhotographerAttribution(
+                        name: photo.user.name,
+                        profileURL: photo.user.links.html + utmParams,
+                        photoURL: photo.links.html + utmParams,
+                        downloadLocation: photo.links.download_location
+                    )
+                )
+            }
+
+            await MainActor.run {
+                unsplashThumbnails.append(contentsOf: newThumbnails)
+            }
+
+            // Load thumbnails concurrently
+            await withTaskGroup(of: (String, UIImage?).self) { group in
+                for photo in photos {
+                    group.addTask {
+                        guard let url = URL(string: photo.urls.small) else { return (photo.id, nil) }
+                        do {
+                            let (data, _) = try await URLSession.shared.data(from: url)
+                            let image = UIImage(data: data)
+                            return (photo.id, image)
+                        } catch {
+                            return (photo.id, nil)
+                        }
+                    }
+                }
+
+                for await (photoId, image) in group {
+                    if let image = image {
+                        await MainActor.run {
+                            if let idx = unsplashThumbnails.firstIndex(where: { $0.id == photoId }) {
+                                unsplashThumbnails[idx].thumbnail = image
+                            }
+                        }
+                    }
+                }
+            }
+        } catch {
+            // Silently fail — bundled images still available
+        }
+    }
+
+    // MARK: - Actions
+
+    private func trackUnsplashDownload() {
+        guard let attribution = currentAttribution else { return }
+        UnsplashService.shared.trackDownload(attribution: attribution)
     }
 
     private func renderImage() {

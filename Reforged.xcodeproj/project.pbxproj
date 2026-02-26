@@ -39,6 +39,8 @@
 		A1000040279B9E0000000001 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000041279B9E0000000001 /* ProfileView.swift */; };
 		A1000042279B9E0000000001 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000043279B9E0000000001 /* JournalView.swift */; };
 		A10000B0279B9E0000000001 /* StreakShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000B1279B9E0000000001 /* StreakShareCardView.swift */; };
+		A10000C0279B9E0000000001 /* VerseShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000C1279B9E0000000001 /* VerseShareCardView.swift */; };
+		A10000D0279B9E0000000001 /* UnsplashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000D1279B9E0000000001 /* UnsplashService.swift */; };
 		A1000044279B9E0000000001 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000045279B9E0000000001 /* OnboardingFlowView.swift */; };
 		A1000046279B9E0000000001 /* ESVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000047279B9E0000000001 /* ESVService.swift */; };
 		A1000048279B9E0000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000049279B9E0000000001 /* Theme.swift */; };
@@ -75,6 +77,8 @@
 		D1A00007279B9E0000000001 /* DoctrineTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00003279B9E0000000001 /* DoctrineTracks.swift */; };
 		D1A00008279B9E0000000001 /* DoctrineTracksExtended.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */; };
 		D1B00002279B9E0000000001 /* LearningPathView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B00001279B9E0000000001 /* LearningPathView.swift */; };
+		E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00001279B9E0000000001 /* ProfileImageService.swift */; };
+		E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00003279B9E0000000001 /* ProfileAvatarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -141,6 +145,8 @@
 		A1000041279B9E0000000001 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		A1000043279B9E0000000001 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		A10000B1279B9E0000000001 /* StreakShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakShareCardView.swift; sourceTree = "<group>"; };
+		A10000C1279B9E0000000001 /* VerseShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseShareCardView.swift; sourceTree = "<group>"; };
+		A10000D1279B9E0000000001 /* UnsplashService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnsplashService.swift; sourceTree = "<group>"; };
 		A1000045279B9E0000000001 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		A1000047279B9E0000000001 /* ESVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESVService.swift; sourceTree = "<group>"; };
 		A1000049279B9E0000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -177,6 +183,8 @@
 		D1A00003279B9E0000000001 /* DoctrineTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracks.swift; sourceTree = "<group>"; };
 		D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracksExtended.swift; sourceTree = "<group>"; };
 		D1B00001279B9E0000000001 /* LearningPathView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningPathView.swift; sourceTree = "<group>"; };
+		E1A00001279B9E0000000001 /* ProfileImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageService.swift; sourceTree = "<group>"; };
+		E1A00003279B9E0000000001 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -315,6 +323,8 @@
 				A1000093279B9E0000000001 /* AppleSignInService.swift */,
 				A1000095279B9E0000000001 /* CloudKitSyncService.swift */,
 				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
+				A10000D1279B9E0000000001 /* UnsplashService.swift */,
+				E1A00001279B9E0000000001 /* ProfileImageService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -369,6 +379,7 @@
 				B1A00005279B9E0000000001 /* WordTappableVerseText.swift */,
 				B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */,
 				B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */,
+				A10000C1279B9E0000000001 /* VerseShareCardView.swift */,
 			);
 			path = Bible;
 			sourceTree = "<group>";
@@ -404,6 +415,7 @@
 			isa = PBXGroup;
 			children = (
 				B1A00009279B9E0000000001 /* FlowLayout.swift */,
+				E1A00003279B9E0000000001 /* ProfileAvatarView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -544,8 +556,10 @@
 				A1000040279B9E0000000001 /* ProfileView.swift in Sources */,
 				A1000042279B9E0000000001 /* JournalView.swift in Sources */,
 				A10000B0279B9E0000000001 /* StreakShareCardView.swift in Sources */,
+				A10000C0279B9E0000000001 /* VerseShareCardView.swift in Sources */,
 				A1000044279B9E0000000001 /* OnboardingFlowView.swift in Sources */,
 				A1000046279B9E0000000001 /* ESVService.swift in Sources */,
+				A10000D0279B9E0000000001 /* UnsplashService.swift in Sources */,
 				A1000080279B9E0000000001 /* KJVService.swift in Sources */,
 				A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */,
 				A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */,
@@ -580,6 +594,8 @@
 				D1A00007279B9E0000000001 /* DoctrineTracks.swift in Sources */,
 				D1A00008279B9E0000000001 /* DoctrineTracksExtended.swift in Sources */,
 				D1B00002279B9E0000000001 /* LearningPathView.swift in Sources */,
+				E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */,
+				E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
