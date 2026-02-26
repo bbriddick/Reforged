@@ -400,67 +400,87 @@ struct DragAndDropView: View {
     @State private var displayWords: [String] = []
     @State private var showResult = false
     @State private var score = 0
-    @State private var draggedWord: DraggableWord?
     @State private var selectedWordForTap: DraggableWord? = nil
+    @State private var draggingWord: DraggableWord? = nil
+    @State private var dragOffset: CGSize = .zero
+    @State private var dragOrigin: CGPoint = .zero
+    @State private var dropZoneFrames: [Int: CGRect] = [:]
+    @State private var hoveredBlankIndex: Int? = nil
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Text(verse.reference)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                    .padding(.top)
+        ZStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    Text(verse.reference)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .padding(.top)
 
-                Text("Tap a word, then tap a blank to place it")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    Text("Drag a word to a blank, or tap word then tap blank")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                // Verse with blanks
-                FlowLayout(spacing: 6) {
-                    ForEach(displayWords.indices, id: \.self) { index in
-                        if let blankIdx = blanks.firstIndex(where: { $0.index == index }) {
-                            DropZone(
-                                correctWord: blanks[blankIdx].word,
-                                filledWord: blanks[blankIdx].filled,
-                                showResult: showResult,
-                                isHighlighted: selectedWordForTap != nil && blanks[blankIdx].filled == nil,
-                                onDrop: { word in
-                                    fillBlank(at: blankIdx, with: word)
-                                    selectedWordForTap = nil
-                                },
-                                onTap: {
-                                    if let selected = selectedWordForTap {
-                                        fillBlank(at: blankIdx, with: selected.word)
-                                        selectedWordForTap = nil
+                    // Verse with blanks
+                    FlowLayout(spacing: 6) {
+                        ForEach(displayWords.indices, id: \.self) { index in
+                            if let blankIdx = blanks.firstIndex(where: { $0.index == index }) {
+                                DropZone(
+                                    correctWord: blanks[blankIdx].word,
+                                    filledWord: blanks[blankIdx].filled,
+                                    showResult: showResult,
+                                    isHighlighted: (selectedWordForTap != nil && blanks[blankIdx].filled == nil) || hoveredBlankIndex == blankIdx,
+                                    onTap: {
+                                        if let selected = selectedWordForTap {
+                                            fillBlank(at: blankIdx, with: selected.word)
+                                            selectedWordForTap = nil
+                                        } else if blanks[blankIdx].filled != nil {
+                                            // Tap filled blank to remove word
+                                            unfillBlank(at: blankIdx)
+                                        }
                                     }
-                                }
-                            )
-                        } else {
-                            Text(displayWords[index])
-                                .font(.body)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                                )
+                                .background(
+                                    GeometryReader { geo in
+                                        Color.clear
+                                            .onAppear {
+                                                dropZoneFrames[blankIdx] = geo.frame(in: .global)
+                                            }
+                                            .onChange(of: geo.frame(in: .global)) { newFrame in
+                                                dropZoneFrames[blankIdx] = newFrame
+                                            }
+                                    }
+                                )
+                            } else {
+                                Text(displayWords[index])
+                                    .font(.body)
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                            }
                         }
                     }
-                }
-                .padding()
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal)
+                    .padding()
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal)
 
-                // Tappable word bank
-                if !showResult {
-                    VStack(spacing: 12) {
-                        Text("Word Bank")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    // Word bank
+                    if !showResult {
+                        VStack(spacing: 12) {
+                            Text("Word Bank")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                        FlowLayout(spacing: 10) {
-                            ForEach(availableWords) { word in
-                                if !word.isUsed {
-                                    DraggableWordTile(word: word, isSelected: selectedWordForTap?.id == word.id)
+                            FlowLayout(spacing: 10) {
+                                ForEach(availableWords) { word in
+                                    if !word.isUsed {
+                                        DraggableWordTile(
+                                            word: word,
+                                            isSelected: selectedWordForTap?.id == word.id,
+                                            isDragging: draggingWord?.id == word.id
+                                        )
+                                        .opacity(draggingWord?.id == word.id ? 0.3 : 1.0)
                                         .onTapGesture {
                                             HapticManager.shared.lightImpact()
                                             if selectedWordForTap?.id == word.id {
@@ -469,56 +489,119 @@ struct DragAndDropView: View {
                                                 selectedWordForTap = word
                                             }
                                         }
-                                        .onDrag {
-                                            draggedWord = word
-                                            return NSItemProvider(object: word.word as NSString)
-                                        }
+                                        .simultaneousGesture(
+                                            DragGesture(minimumDistance: 10, coordinateSpace: .global)
+                                                .onChanged { value in
+                                                    if draggingWord == nil {
+                                                        draggingWord = word
+                                                        dragOrigin = value.startLocation
+                                                        selectedWordForTap = nil
+                                                        HapticManager.shared.lightImpact()
+                                                    }
+                                                    dragOffset = value.translation
+
+                                                    // Check if hovering over a drop zone
+                                                    let currentPos = CGPoint(
+                                                        x: value.startLocation.x + value.translation.width,
+                                                        y: value.startLocation.y + value.translation.height
+                                                    )
+                                                    hoveredBlankIndex = blankIndexAt(point: currentPos)
+                                                }
+                                                .onEnded { value in
+                                                    let dropPoint = CGPoint(
+                                                        x: value.startLocation.x + value.translation.width,
+                                                        y: value.startLocation.y + value.translation.height
+                                                    )
+
+                                                    if let blankIdx = blankIndexAt(point: dropPoint) {
+                                                        fillBlank(at: blankIdx, with: word.word)
+                                                    }
+
+                                                    withAnimation(.spring(response: 0.3)) {
+                                                        draggingWord = nil
+                                                        dragOffset = .zero
+                                                        hoveredBlankIndex = nil
+                                                    }
+                                                }
+                                        )
+                                    }
                                 }
                             }
                         }
+                        .padding()
+                        .background(Color.adaptiveBorder(colorScheme).opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(.horizontal)
                     }
-                    .padding()
-                    .background(Color.adaptiveBorder(colorScheme).opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .padding(.horizontal)
-                }
 
-                if showResult {
-                    VStack(spacing: 16) {
-                        HStack(spacing: 8) {
-                            Image(systemName: score == blanks.count ? "star.fill" : "checkmark.circle")
-                                .foregroundStyle(score == blanks.count ? Color.reforgedGold : Color.green)
-                            Text("Score: \(score)/\(blanks.count)")
-                                .font(.headline)
-                        }
+                    if showResult {
+                        VStack(spacing: 16) {
+                            HStack(spacing: 8) {
+                                Image(systemName: score == blanks.count ? "star.fill" : "checkmark.circle")
+                                    .foregroundStyle(score == blanks.count ? Color.reforgedGold : Color.green)
+                                Text("Score: \(score)/\(blanks.count)")
+                                    .font(.headline)
+                            }
 
-                        HStack(spacing: 10) {
-                            RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
-                            RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
-                            RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
-                            RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
+                            HStack(spacing: 10) {
+                                RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
+                                RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
+                                RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
+                                RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
+                            }
                         }
+                        .padding()
+                    } else {
+                        Button("Check Answers") {
+                            checkAnswers()
+                        }
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(allBlanksFilled ? Color.reforgedNavy : Color.gray)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal)
+                        .disabled(!allBlanksFilled)
                     }
-                    .padding()
-                } else {
-                    Button("Check Answers") {
-                        checkAnswers()
-                    }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(allBlanksFilled ? Color.reforgedNavy : Color.gray)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding(.horizontal)
-                    .disabled(!allBlanksFilled)
                 }
+                .padding(.bottom)
             }
-            .padding(.bottom)
+            .scrollDisabled(draggingWord != nil)
+
+            // Floating drag preview
+            if let word = draggingWord {
+                Text(word.word)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.reforgedNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .shadow(color: Color.black.opacity(0.3), radius: 8, y: 4)
+                    .position(
+                        x: dragOrigin.x + dragOffset.width,
+                        y: dragOrigin.y + dragOffset.height
+                    )
+                    .allowsHitTesting(false)
+            }
         }
         .onAppear {
             setupBlanks()
         }
+    }
+
+    // Find which blank zone the drag is hovering over
+    func blankIndexAt(point: CGPoint) -> Int? {
+        for (idx, frame) in dropZoneFrames {
+            // Expand hit area slightly for easier dropping
+            let expanded = frame.insetBy(dx: -10, dy: -10)
+            if expanded.contains(point) && blanks[idx].filled == nil {
+                return idx
+            }
+        }
+        return nil
     }
 
     var allBlanksFilled: Bool {
@@ -547,7 +630,6 @@ struct DragAndDropView: View {
     }
 
     func fillBlank(at index: Int, with word: String) {
-        // Haptic feedback for drop
         HapticManager.shared.lightImpact()
 
         // Remove word from previous blank if it was used
@@ -565,10 +647,21 @@ struct DragAndDropView: View {
         }
     }
 
+    func unfillBlank(at index: Int) {
+        guard let filledWord = blanks[index].filled else { return }
+        HapticManager.shared.lightImpact()
+
+        blanks[index].filled = nil
+
+        // Mark word as available again
+        if let wordIndex = availableWords.firstIndex(where: { $0.word == filledWord && $0.isUsed }) {
+            availableWords[wordIndex].isUsed = false
+        }
+    }
+
     func checkAnswers() {
         score = blanks.filter { $0.filled?.lowercased() == $0.word.lowercased() }.count
 
-        // Haptic feedback based on score
         if score == blanks.count {
             HapticManager.shared.correctAnswer()
         } else if score > 0 {
@@ -586,6 +679,7 @@ struct DragAndDropView: View {
 struct DraggableWordTile: View {
     let word: DraggableWord
     var isSelected: Bool = false
+    var isDragging: Bool = false
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -611,9 +705,7 @@ struct DropZone: View {
     let filledWord: String?
     let showResult: Bool
     var isHighlighted: Bool = false
-    let onDrop: (String) -> Void
     var onTap: (() -> Void)? = nil
-    @State private var isTargeted = false
     @Environment(\.colorScheme) var colorScheme
 
     var isCorrect: Bool {
@@ -638,7 +730,7 @@ struct DropZone: View {
         .background(
             showResult
                 ? (isCorrect ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
-                : (isTargeted || isHighlighted ? Color.reforgedGold.opacity(0.3) : Color.reforgedNavy.opacity(0.1))
+                : (isHighlighted ? Color.reforgedGold.opacity(0.3) : Color.reforgedNavy.opacity(0.1))
         )
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
@@ -646,23 +738,13 @@ struct DropZone: View {
                 .stroke(
                     showResult
                         ? (isCorrect ? Color.green : Color.red)
-                        : (isTargeted || isHighlighted ? Color.reforgedGold : Color.reforgedNavy.opacity(0.3)),
-                    lineWidth: (isTargeted || isHighlighted) ? 2 : 1
+                        : (isHighlighted ? Color.reforgedGold : Color.reforgedNavy.opacity(0.3)),
+                    lineWidth: isHighlighted ? 2 : 1
                 )
         )
+        .contentShape(Rectangle())
         .onTapGesture {
             onTap?()
-        }
-        .onDrop(of: [.text], isTargeted: $isTargeted) { providers in
-            guard let provider = providers.first else { return false }
-            provider.loadObject(ofClass: NSString.self) { object, _ in
-                if let word = object as? String {
-                    DispatchQueue.main.async {
-                        onDrop(word)
-                    }
-                }
-            }
-            return true
         }
     }
 }
