@@ -17,6 +17,7 @@ struct MemoryVerse: Codable, Identifiable {
     var isLearning: Bool
     var accuracy: Double?
     var modeStats: MemoryVerseModeStats?
+    var reflectionNote: String?
 
     var level: Int {
         if interval >= 365 {
@@ -32,8 +33,25 @@ struct MemoryVerse: Codable, Identifiable {
         }
     }
 
+    var levelName: String {
+        switch level {
+        case 5: return "Mastered"
+        case 4: return "Well-Known"
+        case 3: return "Known"
+        case 2: return "Familiar"
+        default: return "Learning"
+        }
+    }
+
     var isDueForReview: Bool {
         return nextReviewDate <= Date()
+    }
+
+    /// Force-marks the verse as mastered (level 5). Sets interval to 365+ days.
+    mutating func markAsMastered() {
+        interval = 365
+        isLearning = false
+        nextReviewDate = Calendar.current.date(byAdding: .day, value: 365, to: Date()) ?? Date()
     }
 
     // SM-2 Algorithm for spaced repetition

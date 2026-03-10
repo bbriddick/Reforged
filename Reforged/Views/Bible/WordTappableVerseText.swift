@@ -20,7 +20,7 @@ struct WordLongPressVerseText: View {
                     && highlightedWord?.word == token.cleanWord.lowercased()
 
                 Text(token.displayText)
-                    .font(.system(size: settings.fontSize.size, weight: .regular, design: settings.fontType.design))
+                    .font(.system(size: settings.effectiveFontSize, weight: .regular, design: settings.fontType.design))
                     .foregroundStyle(textColor)
                     .background(
                         Group {
@@ -52,8 +52,6 @@ struct WordLongPressVerseText: View {
     private var textColor: Color {
         if isSelected {
             return colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy
-        } else if let hl = highlight {
-            return hl.highlightColor.opacity(1.0)
         }
         return Color.adaptiveText(colorScheme)
     }
@@ -82,7 +80,7 @@ struct WordLongPressParagraphText: View {
 
                 // Superscript verse number — tap to select verse
                 Text("\(verse.number) ")
-                    .font(.system(size: settings.fontSize.verseNumberSize, weight: .bold, design: .rounded))
+                    .font(.system(size: settings.effectiveVerseNumberSize, weight: .bold, design: .rounded))
                     .foregroundColor(Color.reforgedGold)
                     .baselineOffset(6)
                     .background(
@@ -102,7 +100,7 @@ struct WordLongPressParagraphText: View {
                         && highlightedWord?.word == token.cleanWord.lowercased()
 
                     Text(token.displayText)
-                        .font(.system(size: settings.fontSize.size, weight: .regular, design: settings.fontType.design))
+                        .font(.system(size: settings.effectiveFontSize, weight: .regular, design: settings.fontType.design))
                         .foregroundStyle(wordColor(isSelected: isSelected, highlight: highlight))
                         .background(
                             Group {
@@ -116,6 +114,8 @@ struct WordLongPressParagraphText: View {
                                     // Seamless flat fill — tiles perfectly with neighboring words
                                     Color.reforgedGold.opacity(0.15)
                                         .padding(.vertical, -2)
+                                } else if let hl = highlight {
+                                    HighlighterBackground(color: hl.baseColor)
                                 }
                             }
                         )
@@ -134,8 +134,6 @@ struct WordLongPressParagraphText: View {
     private func wordColor(isSelected: Bool, highlight: VerseHighlight?) -> Color {
         if isSelected {
             return colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy
-        } else if let hl = highlight {
-            return hl.highlightColor.opacity(1.0)
         }
         return Color.adaptiveText(colorScheme)
     }

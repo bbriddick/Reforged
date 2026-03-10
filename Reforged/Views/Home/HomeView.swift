@@ -87,6 +87,7 @@ struct HomeView: View {
                         VStack(spacing: ReforgedTheme.spacingL) {
                             ReviewDueSection()
                             QuickActionsSection()
+                            BibleProgressCard()
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -98,7 +99,10 @@ struct HomeView: View {
 
                     ReviewDueSection()
                     QuickActionsSection()
+                    BibleProgressCard()
                 }
+
+                BuyMeACoffeeButton()
             }
             .responsivePadding(.horizontal)
             .padding(.vertical)
@@ -106,6 +110,79 @@ struct HomeView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+    }
+}
+
+// MARK: - Bible Progress Card
+
+struct BibleProgressCard: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.colorScheme) var colorScheme
+
+    private var chaptersReadCount: Int { appState.user.chaptersRead.count }
+    private let totalChapters = 1189
+
+    var body: some View {
+        NavigationLink {
+            BibleProgressView()
+                .environmentObject(appState)
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.reforgedNavy.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.reforgedNavy)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Reading Progress")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("\(chaptersReadCount) of \(totalChapters) chapters read")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(14)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Buy Me a Coffee Button
+
+struct BuyMeACoffeeButton: View {
+    private let coffeeYellow = Color(red: 1.0, green: 0.867, blue: 0.0)
+
+    var body: some View {
+        Link(destination: URL(string: "https://www.buymeacoffee.com/reforgedapp")!) {
+            HStack(spacing: 10) {
+                Text("☕")
+                    .font(.title3)
+                Text("Buy Me a Coffee")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            .foregroundStyle(Color(red: 0.1, green: 0.06, blue: 0))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(coffeeYellow)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .padding(.top, 4)
+        .padding(.bottom, 8)
     }
 }
 
@@ -429,7 +506,7 @@ struct ReadingCalendarView: View {
                         HStack(spacing: 10) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.blue.opacity(0.12))
+                                    .fill(Color.blue.opacity(colorScheme == .dark ? 0.28 : 0.12))
                                     .frame(width: 40, height: 40)
 
                                 Image(systemName: "snowflake")
@@ -456,12 +533,12 @@ struct ReadingCalendarView: View {
                             ForEach(0..<8, id: \.self) { index in
                                 ZStack {
                                     Circle()
-                                        .fill(index < appState.user.streakFreezes ? Color.blue : Color.blue.opacity(0.1))
+                                        .fill(index < appState.user.streakFreezes ? Color.blue : Color.adaptiveBorder(colorScheme))
                                         .frame(width: 30, height: 30)
 
                                     Image(systemName: "snowflake")
                                         .font(.system(size: 12))
-                                        .foregroundStyle(index < appState.user.streakFreezes ? .white : Color.blue.opacity(0.3))
+                                        .foregroundStyle(index < appState.user.streakFreezes ? .white : Color.adaptiveTextSecondary(colorScheme))
                                 }
                             }
                         }
@@ -506,13 +583,13 @@ struct ReadingCalendarView: View {
                                 .background(Color.white.opacity(0.2))
                                 .clipShape(Capsule())
                             }
-                            .foregroundStyle(.white)
+                            .foregroundStyle(appState.user.streakFreezes >= 8 ? Color.adaptiveTextSecondary(colorScheme) : .white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
                             .background(
                                 LinearGradient(
                                     colors: appState.user.streakFreezes >= 8
-                                        ? [Color.gray.opacity(0.4), Color.gray.opacity(0.3)]
+                                        ? [Color.adaptiveBorder(colorScheme), Color.adaptiveBorder(colorScheme)]
                                         : [Color.blue, Color.blue.opacity(0.8)],
                                     startPoint: .leading,
                                     endPoint: .trailing
@@ -1130,16 +1207,6 @@ struct ReviewDueSection: View {
 
 struct QuickActionsSection: View {
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
-
-    var columns: [GridItem] {
-        if horizontalSizeClass == .regular {
-            // iPad/Mac: Can show more items or larger buttons
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        } else {
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1148,64 +1215,39 @@ struct QuickActionsSection: View {
                 .fontWeight(.bold)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
 
-            LazyVGrid(columns: columns, spacing: 12) {
-                QuickActionButton(
-                    icon: "book.fill",
-                    label: "Read Bible",
-                    color: .reforgedNavy,
-                    destination: AnyView(BibleView())
-                )
-
-                QuickActionButton(
-                    icon: "brain.head.profile",
-                    label: "Practice",
-                    color: .reforgedCoral,
-                    destination: AnyView(MemoryView())
-                )
-
-                QuickActionButton(
-                    icon: "pencil.line",
-                    label: "Journal",
-                    color: .reforgedGold,
-                    destination: AnyView(JournalView())
-                )
-            }
-        }
-    }
-}
-
-struct QuickActionButton<Destination: View>: View {
-    let icon: String
-    let label: String
-    let color: Color
-    let destination: Destination
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        NavigationLink(destination: destination) {
-            VStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.12))
-                        .frame(width: 48, height: 48)
-
-                    Image(systemName: icon)
-                        .font(.title3)
-                        .foregroundStyle(color)
+            NavigationLink(destination: JournalView()) {
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.reforgedGold.opacity(0.15))
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "pencil.line")
+                            .font(.title2)
+                            .foregroundStyle(Color.reforgedGold)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Journal")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("Write and reflect on God's Word")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
-
-                Text(label)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .reforgedCard()
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .reforgedCard()
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 }
+
 
 #Preview {
     HomeView()

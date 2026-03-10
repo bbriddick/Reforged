@@ -233,18 +233,46 @@ class ApiBibleService {
         print("API.Bible chapter cache cleared.")
     }
 
+    func cachedChapterCount(for translation: BibleTranslation) -> Int {
+        guard let bibleId = ApiBibleConfig.bibleIds[translation] else { return 0 }
+        let prefix = "\(bibleId)_"
+        return chapterCache.keys.filter { $0.hasPrefix(prefix) }.count
+    }
+
+    func clearCache(for translation: BibleTranslation) {
+        guard let bibleId = ApiBibleConfig.bibleIds[translation] else { return }
+        let prefix = "\(bibleId)_"
+        chapterCache = chapterCache.filter { !$0.key.hasPrefix(prefix) }
+        saveCacheToDisk()
+        print("\(translation.rawValue) chapter cache cleared.")
+    }
+
+    /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
+    func injectBundle(_ bundle: [String: ApiBibleCachedChapter]) {
+        let now = Date()
+        for (key, chapter) in bundle where chapterCache[key] == nil {
+            chapterCache[key] = ApiBibleCachedChapter(
+                book: chapter.book,
+                chapter: chapter.chapter,
+                translationId: chapter.translationId,
+                canonical: chapter.canonical,
+                cachedAt: now,
+                verses: chapter.verses
+            )
+        }
+        saveCacheToDisk()
+        print("API.Bible bundle injected: \(bundle.count) chapters.")
+    }
+
     // MARK: - API Request Helper
 
     private func makeRequest(url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         request.setValue(apiKey, forHTTPHeaderField: "api-key")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw ApiBibleError.invalidResponse
-        }
+        let (data, httpResponse) = try await performWithRetry(request)
 
         guard httpResponse.statusCode == 200 else {
             throw ApiBibleError.httpError(httpResponse.statusCode)

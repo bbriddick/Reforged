@@ -221,6 +221,43 @@ struct AboutSection: View {
 
             SettingsDivider()
 
+            // Buy Me a Coffee
+            Button {
+                if let url = URL(string: "https://buymeacoffee.com/reforgedapp") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.reforgedGold.opacity(0.15))
+                            .frame(width: 36, height: 36)
+                        Text("☕")
+                            .font(.system(size: 18))
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Buy Me a Coffee")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("Support the developer")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+
+            SettingsDivider()
+
             // Made with love
             VStack(spacing: 8) {
                 Text("Made with ❤️ for the glory of God")

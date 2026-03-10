@@ -129,19 +129,19 @@ struct FlashcardPracticeView: View {
                         RatingButton(label: "Again", color: .red, quality: 1, onRate: { quality in
                             HapticManager.shared.incorrectAnswer()
                             onComplete(quality)
-                        })
+                        }, subtitle: "I didn't know it")
                         RatingButton(label: "Hard", color: .orange, quality: 2, onRate: { quality in
                             HapticManager.shared.lightImpact()
                             onComplete(quality)
-                        })
+                        }, subtitle: "I struggled")
                         RatingButton(label: "Good", color: .green, quality: 4, onRate: { quality in
                             HapticManager.shared.correctAnswer()
                             onComplete(quality)
-                        })
+                        }, subtitle: "I knew it")
                         RatingButton(label: "Easy", color: .blue, quality: 5, onRate: { quality in
                             HapticManager.shared.correctAnswer()
                             onComplete(quality)
-                        })
+                        }, subtitle: "I knew it cold")
                     }
                 }
                 .padding()
@@ -226,6 +226,29 @@ struct FlashcardBack: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
                 .lineSpacing(6)
+
+            if let note = verse.reflectionNote, !note.isEmpty {
+                Divider()
+                    .background(Color.white.opacity(0.2))
+
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "heart.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.reforgedGold.opacity(0.8))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Your reflection")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.reforgedGold.opacity(0.7))
+                        Text(note)
+                            .font(.caption)
+                            .italic()
+                            .foregroundStyle(Color.white.opacity(0.75))
+                            .multilineTextAlignment(.leading)
+                    }
+                    Spacer()
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: 280)
@@ -284,58 +307,66 @@ struct TapToRevealView: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Progress indicator
-            HStack(spacing: 4) {
-                ForEach(0..<phrases.count, id: \.self) { index in
-                    Circle()
-                        .fill(index < revealedPhrases ? Color.reforgedGold : Color.adaptiveBorder(colorScheme))
-                        .frame(width: 8, height: 8)
-                }
-            }
-            .padding(.top)
-
-            Text(verse.reference)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-
-            Spacer()
-
-            // Phrase container
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(0..<phrases.count, id: \.self) { index in
-                    if index < revealedPhrases {
-                        Text(phrases[index])
-                            .font(.title3)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                            .transition(.asymmetric(
-                                insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                                removal: .opacity
-                            ))
-                    } else if index == revealedPhrases {
-                        // Next phrase to reveal (hidden)
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Progress indicator
                         HStack(spacing: 4) {
-                            ForEach(0..<phrases[index].components(separatedBy: " ").count, id: \.self) { _ in
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.reforgedNavy.opacity(0.2))
-                                    .frame(width: 40, height: 24)
+                            ForEach(0..<phrases.count, id: \.self) { index in
+                                Circle()
+                                    .fill(index < revealedPhrases ? Color.reforgedGold : Color.adaptiveBorder(colorScheme))
+                                    .frame(width: 8, height: 8)
                             }
                         }
+                        .padding(.top)
+
+                        Text(verse.reference)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+
+                        // Phrase container
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(0..<phrases.count, id: \.self) { index in
+                                if index < revealedPhrases {
+                                    Text(phrases[index])
+                                        .font(.title3)
+                                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                                        .transition(.asymmetric(
+                                            insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                                            removal: .opacity
+                                        ))
+                                } else if index == revealedPhrases {
+                                    HStack(spacing: 4) {
+                                        ForEach(0..<phrases[index].components(separatedBy: " ").count, id: \.self) { _ in
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .fill(Color.reforgedNavy.opacity(0.2))
+                                                .frame(width: 40, height: 24)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(24)
+                        .background(Color.adaptiveCardBackground(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .shadow(color: Color.black.opacity(0.08), radius: 12, y: 6)
+                        .padding(.horizontal)
+                        .id("phraseContainer")
                     }
+                    .padding(.bottom, 12)
+                }
+                .onChange(of: revealedPhrases) { _ in
+                    withAnimation { proxy.scrollTo("phraseContainer", anchor: .bottom) }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(24)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: Color.black.opacity(0.08), radius: 12, y: 6)
-            .padding(.horizontal)
 
-            Spacer()
+            Divider()
 
+            // Sticky bottom action area
             if showRating {
-                // Rating buttons
                 VStack(spacing: 12) {
                     Text("How well did you recall?")
                         .font(.subheadline)
@@ -351,7 +382,6 @@ struct TapToRevealView: View {
                 .padding()
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
-                // Tap to reveal button
                 Button(action: revealNextPhrase) {
                     HStack(spacing: 8) {
                         Image(systemName: "hand.tap.fill")
@@ -365,9 +395,9 @@ struct TapToRevealView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.horizontal)
+                .padding(.vertical, 12)
             }
         }
-        .padding(.bottom)
     }
 
     func revealNextPhrase() {
@@ -473,58 +503,55 @@ struct DragAndDropView: View {
                                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
                             FlowLayout(spacing: 10) {
-                                ForEach(availableWords) { word in
-                                    if !word.isUsed {
-                                        DraggableWordTile(
-                                            word: word,
-                                            isSelected: selectedWordForTap?.id == word.id,
-                                            isDragging: draggingWord?.id == word.id
-                                        )
-                                        .opacity(draggingWord?.id == word.id ? 0.3 : 1.0)
-                                        .onTapGesture {
-                                            HapticManager.shared.lightImpact()
-                                            if selectedWordForTap?.id == word.id {
-                                                selectedWordForTap = nil
-                                            } else {
-                                                selectedWordForTap = word
-                                            }
+                                ForEach(availableWords.filter { !$0.isUsed }) { word in
+                                    DraggableWordTile(
+                                        word: word,
+                                        isSelected: selectedWordForTap?.id == word.id,
+                                        isDragging: draggingWord?.id == word.id
+                                    )
+                                    .opacity(draggingWord?.id == word.id ? 0.3 : 1.0)
+                                    .onTapGesture {
+                                        HapticManager.shared.lightImpact()
+                                        if selectedWordForTap?.id == word.id {
+                                            selectedWordForTap = nil
+                                        } else {
+                                            selectedWordForTap = word
                                         }
-                                        .simultaneousGesture(
-                                            DragGesture(minimumDistance: 10, coordinateSpace: .global)
-                                                .onChanged { value in
-                                                    if draggingWord == nil {
-                                                        draggingWord = word
-                                                        dragOrigin = value.startLocation
-                                                        selectedWordForTap = nil
-                                                        HapticManager.shared.lightImpact()
-                                                    }
-                                                    dragOffset = value.translation
-
-                                                    // Check if hovering over a drop zone
-                                                    let currentPos = CGPoint(
-                                                        x: value.startLocation.x + value.translation.width,
-                                                        y: value.startLocation.y + value.translation.height
-                                                    )
-                                                    hoveredBlankIndex = blankIndexAt(point: currentPos)
-                                                }
-                                                .onEnded { value in
-                                                    let dropPoint = CGPoint(
-                                                        x: value.startLocation.x + value.translation.width,
-                                                        y: value.startLocation.y + value.translation.height
-                                                    )
-
-                                                    if let blankIdx = blankIndexAt(point: dropPoint) {
-                                                        fillBlank(at: blankIdx, with: word.word)
-                                                    }
-
-                                                    withAnimation(.spring(response: 0.3)) {
-                                                        draggingWord = nil
-                                                        dragOffset = .zero
-                                                        hoveredBlankIndex = nil
-                                                    }
-                                                }
-                                        )
                                     }
+                                    .simultaneousGesture(
+                                        DragGesture(minimumDistance: 10, coordinateSpace: .global)
+                                            .onChanged { value in
+                                                if draggingWord == nil {
+                                                    draggingWord = word
+                                                    dragOrigin = value.startLocation
+                                                    selectedWordForTap = nil
+                                                    HapticManager.shared.lightImpact()
+                                                }
+                                                dragOffset = value.translation
+
+                                                let currentPos = CGPoint(
+                                                    x: value.startLocation.x + value.translation.width,
+                                                    y: value.startLocation.y + value.translation.height
+                                                )
+                                                hoveredBlankIndex = blankIndexAt(point: currentPos)
+                                            }
+                                            .onEnded { value in
+                                                let dropPoint = CGPoint(
+                                                    x: value.startLocation.x + value.translation.width,
+                                                    y: value.startLocation.y + value.translation.height
+                                                )
+
+                                                if let blankIdx = blankIndexAt(point: dropPoint) {
+                                                    fillBlank(at: blankIdx, with: word.word)
+                                                }
+
+                                                withAnimation(.spring(response: 0.3)) {
+                                                    draggingWord = nil
+                                                    dragOffset = .zero
+                                                    hoveredBlankIndex = nil
+                                                }
+                                            }
+                                    )
                                 }
                             }
                         }
@@ -631,6 +658,13 @@ struct DragAndDropView: View {
 
     func fillBlank(at index: Int, with word: String) {
         HapticManager.shared.lightImpact()
+
+        // Return previously-placed word to bank if replacing an existing fill
+        if let oldWord = blanks[index].filled, oldWord != word {
+            if let oldIdx = availableWords.firstIndex(where: { $0.word == oldWord && $0.isUsed }) {
+                availableWords[oldIdx].isUsed = false
+            }
+        }
 
         // Remove word from previous blank if it was used
         for i in blanks.indices {
@@ -759,7 +793,30 @@ struct FillInBlankView: View {
     @State private var displayWords: [String] = []
     @State private var showResult = false
     @State private var score = 0
+    @State private var hintUsed = false
+    @State private var currentSegment: Int = 0
     @Environment(\.colorScheme) var colorScheme
+
+    // Split long verses into sentence-sized chunks (~20 words each, breaking at punctuation)
+    var segments: [[String]] {
+        let words = verse.text.components(separatedBy: " ")
+        guard words.count > 25 else { return [words] }
+        var result: [[String]] = []
+        var current: [String] = []
+        for word in words {
+            current.append(word)
+            let endsClause = word.last == "." || word.last == ";" || word.last == "!" || word.last == "?"
+            if current.count >= 18 && endsClause {
+                result.append(current)
+                current = []
+            }
+        }
+        if !current.isEmpty { result.append(current) }
+        return result
+    }
+
+    var isLastSegment: Bool { currentSegment >= segments.count - 1 }
+    var hasMultipleSegments: Bool { segments.count > 1 }
 
     var body: some View {
         ScrollView {
@@ -770,9 +827,23 @@ struct FillInBlankView: View {
                     .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                     .padding(.top)
 
-                Text("Type the missing words")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                if hasMultipleSegments {
+                    HStack(spacing: 4) {
+                        ForEach(0..<segments.count, id: \.self) { i in
+                            Capsule()
+                                .fill(i < currentSegment ? Color.reforgedGold : (i == currentSegment ? Color.reforgedNavy : Color.adaptiveBorder(colorScheme)))
+                                .frame(width: i == currentSegment ? 20 : 8, height: 8)
+                                .animation(.spring(response: 0.3), value: currentSegment)
+                        }
+                        Text("Part \(currentSegment + 1) of \(segments.count)")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                } else {
+                    Text("Type the missing words")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
 
                 // Verse with blanks
                 FlowLayout(spacing: 6) {
@@ -809,15 +880,41 @@ struct FillInBlankView: View {
                                 .foregroundStyle(Color.adaptiveText(colorScheme))
                         }
 
-                        HStack(spacing: 10) {
-                            RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
-                            RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
-                            RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
-                            RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
+                        if !isLastSegment {
+                            Button("Continue to Part \(currentSegment + 2)") {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                    currentSegment += 1
+                                    hintUsed = false
+                                    setupBlanks()
+                                }
+                            }
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.reforgedNavy)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal)
+                        } else {
+                            HStack(spacing: 10) {
+                                RatingButton(label: "Again", color: .red, quality: 1, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                                RatingButton(label: "Hard", color: .orange, quality: 2, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                                RatingButton(label: "Good", color: .green, quality: 4, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                                RatingButton(label: "Easy", color: .blue, quality: 5, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                            }
                         }
                     }
                     .padding()
                 } else {
+                    HintButton(hintUsed: hintUsed) {
+                        if let i = userInputs.indices.first(where: { userInputs[$0].isEmpty }),
+                           i < blanks.count {
+                            userInputs[i] = String(blanks[i].word.prefix(1))
+                        }
+                        hintUsed = true
+                    }
+                    .padding(.horizontal)
+
                     Button("Check Answers") {
                         checkAnswers()
                     }
@@ -838,7 +935,7 @@ struct FillInBlankView: View {
     }
 
     func setupBlanks() {
-        let words = verse.text.components(separatedBy: " ")
+        let words = segments[currentSegment]
         displayWords = words
 
         let blankCount = max(2, words.count / 4)
@@ -849,6 +946,8 @@ struct FillInBlankView: View {
         }
 
         userInputs = Array(repeating: "", count: blanks.count)
+        showResult = false
+        score = 0
     }
 
     func checkAnswers() {
@@ -905,12 +1004,18 @@ struct FirstLetterView: View {
     let onComplete: (Int) -> Void
     @State private var userText = ""
     @State private var showResult = false
+    @State private var hintUsed = false
     @Environment(\.colorScheme) var colorScheme
 
     var firstLetters: String {
         verse.text.components(separatedBy: " ")
             .compactMap { $0.first.map { String($0).uppercased() } }
             .joined(separator: " ")
+    }
+
+    var hintWords: String {
+        let words = verse.text.components(separatedBy: " ")
+        return words.prefix(3).joined(separator: " ") + "..."
     }
 
     var body: some View {
@@ -968,13 +1073,25 @@ struct FirstLetterView: View {
                     .padding(.horizontal)
 
                     HStack(spacing: 10) {
-                        RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
-                        RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
-                        RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
-                        RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
+                        RatingButton(label: "Again", color: .red, quality: 1, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                        RatingButton(label: "Hard", color: .orange, quality: 2, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                        RatingButton(label: "Good", color: .green, quality: 4, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                        RatingButton(label: "Easy", color: .blue, quality: 5, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
                     }
                     .padding()
                 } else {
+                    if hintUsed {
+                        Text("Starts with: \"\(hintWords)\"")
+                            .font(.caption)
+                            .italic()
+                            .foregroundStyle(Color.reforgedGold)
+                            .padding(.horizontal)
+                            .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                    }
+
+                    HintButton(hintUsed: hintUsed) { hintUsed = true }
+                        .padding(.horizontal)
+
                     Button("Check Answer") {
                         withAnimation {
                             showResult = true
@@ -1003,7 +1120,13 @@ struct TypingPracticeView: View {
     @State private var userText = ""
     @State private var showResult = false
     @State private var accuracy: Double = 0
+    @State private var hintUsed = false
     @Environment(\.colorScheme) var colorScheme
+
+    var hintWords: String {
+        let words = verse.text.components(separatedBy: " ")
+        return words.prefix(3).joined(separator: " ") + "..."
+    }
 
     var body: some View {
         ScrollView {
@@ -1017,6 +1140,15 @@ struct TypingPracticeView: View {
                 Text("Type the verse from memory")
                     .font(.subheadline)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+                if hintUsed {
+                    Text("Starts with: \"\(hintWords)\"")
+                        .font(.caption)
+                        .italic()
+                        .foregroundStyle(Color.reforgedGold)
+                        .padding(.horizontal)
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                }
 
                 TextEditor(text: $userText)
                     .frame(minHeight: 180)
@@ -1058,13 +1190,18 @@ struct TypingPracticeView: View {
                     .padding(.horizontal)
 
                     HStack(spacing: 10) {
-                        RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
-                        RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
-                        RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
-                        RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
+                        RatingButton(label: "Again", color: .red, quality: 1, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                        RatingButton(label: "Hard", color: .orange, quality: 2, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                        RatingButton(label: "Good", color: .green, quality: 4, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                        RatingButton(label: "Easy", color: .blue, quality: 5, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
                     }
                     .padding()
                 } else {
+                    HintButton(hintUsed: hintUsed) {
+                        withAnimation(.easeIn(duration: 0.2)) { hintUsed = true }
+                    }
+                    .padding(.horizontal)
+
                     Button("Check Answer") {
                         calculateAccuracy()
                         withAnimation {
@@ -1105,6 +1242,34 @@ struct TypingPracticeView: View {
     }
 }
 
+// MARK: - Hint Button
+
+struct HintButton: View {
+    let hintUsed: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: hintUsed ? {} : action) {
+            HStack(spacing: 6) {
+                Image(systemName: hintUsed ? "lightbulb.fill" : "lightbulb")
+                    .font(.subheadline)
+                    .foregroundStyle(hintUsed ? Color.reforgedGold : Color.secondary)
+                Text(hintUsed ? "Hint used — max rating: Hard" : "Get a Hint")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(hintUsed ? Color.reforgedGold : Color.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(hintUsed ? Color.reforgedGold.opacity(0.1) : Color.secondary.opacity(0.08))
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(hintUsed ? Color.reforgedGold.opacity(0.4) : Color.secondary.opacity(0.25), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(hintUsed)
+    }
+}
+
 // MARK: - Rating Button
 
 struct RatingButton: View {
@@ -1112,17 +1277,28 @@ struct RatingButton: View {
     let color: Color
     let quality: Int
     let onRate: (Int) -> Void
+    var subtitle: String? = nil
 
     var body: some View {
         Button(action: { onRate(quality) }) {
-            Text(label)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(color)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+            VStack(spacing: 2) {
+                Text(label)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, subtitle != nil ? 10 : 14)
+            .background(color)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 }

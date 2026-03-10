@@ -3,18 +3,35 @@ import SwiftUI
 struct BibleReadingSettingsSection: View {
     @StateObject private var settings = SettingsManager.shared
     @Environment(\.colorScheme) var colorScheme
+    @State private var showReorder = false
 
     var body: some View {
         VStack(spacing: 0) {
             // Default Translation
             VStack(alignment: .leading, spacing: 10) {
-                Text("Default Translation")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                HStack {
+                    Text("Default Translation")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                    Button {
+                        showReorder = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.caption)
+                            Text("Reorder")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundStyle(Color.reforgedNavy)
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 HStack {
-                    ForEach(BibleTranslation.allCases) { translation in
+                    ForEach(settings.translationOrder) { translation in
                         TranslationButton(
                             translation: translation,
                             isSelected: settings.defaultTranslation == translation
@@ -27,6 +44,9 @@ struct BibleReadingSettingsSection: View {
                 }
             }
             .padding(.vertical, 10)
+            .sheet(isPresented: $showReorder) {
+                TranslationReorderSheet(translationOrder: $settings.translationOrder)
+            }
 
             SettingsDivider()
 
@@ -63,6 +83,32 @@ struct BibleReadingSettingsSection: View {
                 subtitle: "Show navigation arrows to quickly move between chapters",
                 isOn: $settings.persistentChapterNavigation
             )
+
+            SettingsDivider()
+
+            // Day Boundary
+            VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Day Ends At")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("Activities before this time count toward the previous day's streak. Useful if your devotional time is late at night.")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Picker("Day ends at", selection: $settings.dayStartHour) {
+                    Text("Midnight (default)").tag(0)
+                    ForEach([20, 21, 22, 23], id: \.self) { hour in
+                        let displayHour = hour > 12 ? hour - 12 : hour
+                        Text("\(displayHour):00 PM").tag(hour)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.vertical, 10)
 
             SettingsDivider()
 
@@ -110,6 +156,63 @@ struct TranslationButton: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Translation Reorder Sheet
+
+struct TranslationReorderSheet: View {
+    @Binding var translationOrder: [BibleTranslation]
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(translationOrder) { translation in
+                        HStack(spacing: 12) {
+                            Text(translation.rawValue)
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                                .frame(width: 52, height: 36)
+                                .background(Color.reforgedNavy)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(translation.fullName)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Text(translation.copyright)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondary)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .onMove { from, to in
+                        translationOrder.move(fromOffsets: from, toOffset: to)
+                    }
+                } header: {
+                    Text("Drag to set the order they appear in the switcher")
+                        .textCase(nil)
+                        .font(.footnote)
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+            .navigationTitle("Reorder Translations")
+            .navigationBarTitleDisplayMode(.inline)
+            .environment(\.editMode, .constant(.active))
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
     }
 }
 

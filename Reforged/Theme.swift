@@ -192,6 +192,27 @@ class BibleReadingSettings: ObservableObject {
         didSet { save() }
     }
 
+    @Published var lastVerse: Int {
+        didSet { save() }
+    }
+
+    /// Live pinch-to-resize scale multiplier. Not persisted — resets to 1.0 after gesture ends.
+    @Published var temporaryScale: CGFloat = 1.0
+
+    // MARK: - Effective font size (base × live pinch scale, clamped)
+
+    /// Font size used for verse text, accounting for any live pinch gesture.
+    var effectiveFontSize: CGFloat {
+        let raw = fontSize.size * temporaryScale
+        return min(max(raw, 11), 32)
+    }
+
+    /// Font size used for superscript verse numbers, accounting for any live pinch gesture.
+    var effectiveVerseNumberSize: CGFloat {
+        let raw = fontSize.verseNumberSize * temporaryScale
+        return min(max(raw, 8), 22)
+    }
+
     enum FontSize: String, CaseIterable {
         case small, medium, large, extraLarge
 
@@ -220,6 +241,11 @@ class BibleReadingSettings: ObservableObject {
             case .large: return 14
             case .extraLarge: return 16
             }
+        }
+
+        /// Returns the FontSize case whose point size is closest to `target`.
+        static func nearest(to target: CGFloat) -> FontSize {
+            allCases.min(by: { abs($0.size - target) < abs($1.size - target) }) ?? .medium
         }
     }
 
@@ -265,14 +291,33 @@ class BibleReadingSettings: ObservableObject {
 
     private init() {
         let defaults = UserDefaults.standard
-        fontSize = FontSize(rawValue: defaults.string(forKey: "bible_font_size") ?? "medium") ?? .medium
-        fontType = FontType(rawValue: defaults.string(forKey: "bible_font_type") ?? "serif") ?? .serif
-        lineSpacing = LineSpacingOption(rawValue: defaults.string(forKey: "bible_line_spacing") ?? "normal") ?? .normal
-        verseByVerse = defaults.bool(forKey: "bible_verse_by_verse")
+
+        // Prefer SettingsManager's authoritative keys ("settings.*"), fall back to legacy "bible_*" keys.
+        // This ensures BibleReadingSettings always starts from the same source of truth as SettingsManager.
+
+        let fontSizeStr = defaults.string(forKey: "settings.fontSize") ?? defaults.string(forKey: "bible_font_size") ?? "medium"
+        fontSize = FontSize(rawValue: fontSizeStr) ?? .medium
+
+        // "dyslexiaFriendly" is a SettingsManager-only value; map it to sansSerif here
+        let fontTypeStr = defaults.string(forKey: "settings.fontType") ?? defaults.string(forKey: "bible_font_type") ?? "serif"
+        fontType = fontTypeStr == "dyslexiaFriendly" ? .sansSerif : (FontType(rawValue: fontTypeStr) ?? .serif)
+
+        let lineSpacingStr = defaults.string(forKey: "settings.lineSpacing") ?? defaults.string(forKey: "bible_line_spacing") ?? "normal"
+        lineSpacing = LineSpacingOption(rawValue: lineSpacingStr) ?? .normal
+
+        // SettingsManager stores verse format as "paragraph" / "verseByVerse"; map to Bool
+        if let vfStr = defaults.string(forKey: "settings.verseFormatting") {
+            verseByVerse = (vfStr == "verseByVerse")
+        } else {
+            verseByVerse = defaults.bool(forKey: "bible_verse_by_verse")
+        }
+
         lastBook = defaults.string(forKey: "bible_last_book") ?? "John"
         let savedChapter = defaults.integer(forKey: "bible_last_chapter")
         lastChapter = savedChapter == 0 ? 3 : savedChapter
         lastScrollPosition = CGFloat(defaults.float(forKey: "bible_scroll_position"))
+        let savedVerse = defaults.integer(forKey: "bible_last_verse")
+        lastVerse = savedVerse == 0 ? 1 : savedVerse
     }
 
     private func save() {
@@ -284,6 +329,7 @@ class BibleReadingSettings: ObservableObject {
         defaults.set(lastBook, forKey: "bible_last_book")
         defaults.set(lastChapter, forKey: "bible_last_chapter")
         defaults.set(Float(lastScrollPosition), forKey: "bible_scroll_position")
+        defaults.set(lastVerse, forKey: "bible_last_verse")
         // Notify iCloud sync of reading position changes
         NotificationCenter.default.post(name: .bibleDataDidChange, object: nil)
     }

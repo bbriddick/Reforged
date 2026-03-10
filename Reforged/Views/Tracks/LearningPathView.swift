@@ -34,6 +34,7 @@ enum PathItem: Identifiable {
 struct LearningPathView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @State private var selectedLesson: Lesson?
     @State private var navigateToLesson = false
     @State private var hasScrolledToCurrentOnAppear = false
@@ -132,10 +133,10 @@ struct LearningPathView: View {
 
                                 case .lessonNode(let lesson, let globalIdx, let track):
                                     let state = nodeState(for: lesson, globalIndex: globalIdx)
-                                    let offset = xOffset(for: globalIdx, containerWidth: outerGeo.size.width)
+                                    let offset = xOffset(for: globalIdx, containerWidth: effectiveWidth(from: outerGeo.size.width))
 
                                     // Connector line to previous lesson node
-                                    if let prevOffset = previousLessonOffset(before: index, in: items, containerWidth: outerGeo.size.width) {
+                                    if let prevOffset = previousLessonOffset(before: index, in: items, containerWidth: effectiveWidth(from: outerGeo.size.width)) {
                                         let prevCompleted = isPreviousLessonCompleted(before: index, in: items)
                                         PathSegmentLine(
                                             fromXOffset: prevOffset,
@@ -163,6 +164,8 @@ struct LearningPathView: View {
 
                             Spacer().frame(height: 120)
                         }
+                        .frame(width: effectiveWidth(from: outerGeo.size.width))
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .onAppear {
                         guard !hasScrolledToCurrentOnAppear else { return }
@@ -189,6 +192,11 @@ struct LearningPathView: View {
     }
 
     // MARK: - Connector Helpers
+
+    /// Effective container width: full screen on iPhone, middle third on iPad
+    func effectiveWidth(from totalWidth: CGFloat) -> CGFloat {
+        horizontalSizeClass == .regular ? totalWidth / 3 : totalWidth
+    }
 
     /// Find the x-offset of the previous lesson node (skipping section headers)
     func previousLessonOffset(before index: Int, in items: [PathItem], containerWidth: CGFloat) -> CGFloat? {

@@ -19,6 +19,7 @@ struct BibleView: View {
     @StateObject private var readingSettings = BibleReadingSettings.shared
     @StateObject private var settingsManager = SettingsManager.shared
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.isSidebarNavigation) var isSidebarNavigation
@@ -30,7 +31,16 @@ struct BibleView: View {
     @State private var showSearchPanel = false
     @State private var showFormattingPanel = false
     @State private var showAudioPlayer = false
+    @State private var showNowPlaying = false
     @State private var currentTranslation: BibleTranslation = .esv
+
+    // Reading mode
+    @State private var readingModeOverride = false          // temporarily shows bars when reading mode is on
+    @State private var readingModeHideTask: Task<Void, Never>? = nil
+
+    // Pinch-to-resize
+    @State private var fontSizeIndicator: String? = nil     // brief HUD label shown after snap
+    @State private var fontSizeIndicatorTask: Task<Void, Never>? = nil
 
     // Content state
     @State private var verses: [ParsedVerse] = []
@@ -38,6 +48,7 @@ struct BibleView: View {
     @State private var canonicalReference = ""
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var loadTask: Task<Void, Never>? = nil   // tracks in-flight chapter fetch
     @State private var scrollPosition: CGFloat = 0
 
     // Chapter transition animation state
@@ -51,6 +62,10 @@ struct BibleView: View {
     @State private var recentPassages: [(book: String, chapter: Int)] = []
     @State private var isSearching = false
     @State private var scrollToVerseID: String? = nil
+    @State private var immediateScrollToVerseID: String? = nil  // no-animation restore scroll
+    @State private var firstVisibleVerseNumber: Int = 1
+    @State private var hasAppeared = false
+    @State private var isRestoringPosition = false
 
     // Verse interaction state
     @State private var selectedVerseForAction: ParsedVerse?
@@ -81,6 +96,28 @@ struct BibleView: View {
     // Maximum content width for readability on large screens
     var maxContentWidth: CGFloat {
         horizontalSizeClass == .regular ? 800 : .infinity
+    }
+
+    // Reading mode: bars are visible when reading mode is off, OR when temporarily overridden by a tap
+    private var barsVisible: Bool {
+        !settingsManager.readingMode || readingModeOverride
+    }
+
+    private func revealBarsTemporarily() {
+        readingModeHideTask?.cancel()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            readingModeOverride = true
+        }
+        readingModeHideTask = Task {
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                    readingModeOverride = false
+                }
+                readingModeHideTask = nil
+            }
+        }
     }
 
     // Abbreviated book name for toolbar display
@@ -121,13 +158,13 @@ struct BibleView: View {
     }
 
     private func onAudioTap() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-            showAudioPlayer.toggle()
-            if showAudioPlayer && !audioPlayer.isPlaying && audioPlayer.currentTime == 0 {
-                audioPlayer.updateFromSettings()
-                audioPlayer.play(book: selectedBook.name, chapter: selectedChapter)
-            }
+        // Start audio if not already loaded
+        if !audioPlayer.isPlaying && audioPlayer.currentTime == 0 && audioPlayer.currentBook.isEmpty {
+            audioPlayer.updateFromSettings()
+            audioPlayer.play(book: selectedBook.name, chapter: selectedChapter)
+            showAudioPlayer = true
         }
+        showNowPlaying = true
     }
 
     private func onFormatTap() {
@@ -149,11 +186,12 @@ struct BibleView: View {
             // Main content
             VStack(spacing: 0) {
                 // Top Navigation Bar (iPhone only — iPad uses .toolbar)
-                if !isSidebarNavigation {
+                if barsVisible && !isSidebarNavigation {
                     BibleTopBar(
                         book: selectedBook,
                         chapter: selectedChapter,
                         translation: currentTranslation,
+                        translationOrder: settingsManager.translationOrder,
                         showAudioPlayer: showAudioPlayer,
                         audioPlayer: audioPlayer,
                         onNavigationTap: onNavigationTap,
@@ -165,21 +203,6 @@ struct BibleView: View {
                                 settingsManager.defaultTranslation = newTranslation
                                 currentTranslation = newTranslation
                                 loadChapter()
-                            }
-                        }
-                    )
-                }
-
-                // Collapsible Audio player bar
-                if showAudioPlayer {
-                    BibleAudioBar(
-                        audioPlayer: audioPlayer,
-                        book: selectedBook.name,
-                        chapter: selectedChapter,
-                        onClose: {
-                            withAnimation(.spring(response: 0.3)) {
-                                audioPlayer.stop()
-                                showAudioPlayer = false
                             }
                         }
                     )
@@ -228,6 +251,14 @@ struct BibleView: View {
                                                 readingState: readingState
                                             )
                                             .id(verse.id)
+                                            .background(
+                                                GeometryReader { geo in
+                                                    Color.clear.preference(
+                                                        key: VerseMinYKey.self,
+                                                        value: [verse.id: geo.frame(in: .named("bibleScroll")).minY]
+                                                    )
+                                                }
+                                            )
                                         }
                                     }
                                     .padding(.horizontal, horizontalSizeClass == .regular ? 24 : 16)
@@ -275,9 +306,11 @@ struct BibleView: View {
                             GeometryReader { geo in
                                 Color.clear
                                     .preference(key: ScrollOffsetPreferenceKey.self, value: geo.frame(in: .global).maxY)
+                                    .preference(key: ScrollTopPreferenceKey.self, value: geo.frame(in: .named("bibleScroll")).minY)
                             }
                         )
                     }
+                    .coordinateSpace(name: "bibleScroll")
                     .onPreferenceChange(ScrollOffsetPreferenceKey.self) { maxY in
                         // Check if user has scrolled near the bottom
                         let screenHeight = UIScreen.main.bounds.height
@@ -289,6 +322,33 @@ struct BibleView: View {
                                     showMarkAsReadPrompt = true
                                 }
                             }
+                        }
+                    }
+                    .onPreferenceChange(ScrollTopPreferenceKey.self) { minY in
+                        // Show bars immediately when at top; hide when scrolled away
+                        guard settingsManager.readingMode && !isLoading else { return }
+                        let atTop = minY > -60
+                        if atTop {
+                            // Cancel any pending tap-timer and show bars immediately (no delay)
+                            readingModeHideTask?.cancel()
+                            readingModeHideTask = nil
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                                readingModeOverride = true
+                            }
+                        } else if readingModeHideTask == nil {
+                            // No tap-timer running — bars were shown by scroll-to-top, so hide them now
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                                readingModeOverride = false
+                            }
+                        }
+                        // If readingModeHideTask != nil, a tap-triggered timer is running — leave it alone
+                    }
+                    .onPreferenceChange(VerseMinYKey.self) { positions in
+                        // Find the topmost visible verse (smallest minY >= -20 in scroll space)
+                        if let top = positions.filter({ $0.value >= -20 }).min(by: { $0.value < $1.value }),
+                           let colonIdx = top.key.lastIndex(of: ":"),
+                           let verseNum = Int(String(top.key[top.key.index(after: colonIdx)...])) {
+                            firstVisibleVerseNumber = verseNum
                         }
                     }
                     .simultaneousGesture(
@@ -323,6 +383,39 @@ struct BibleView: View {
                                 }
                             }
                     )
+                    .simultaneousGesture(TapGesture().onEnded {
+                        guard settingsManager.readingMode else { return }
+                        revealBarsTemporarily()
+                    })
+                    .simultaneousGesture(
+                        MagnificationGesture()
+                            .onChanged { value in
+                                // Clamp scale so effective size stays in a reasonable range
+                                let clamped = min(max(value, 0.7), 1.65)
+                                readingSettings.temporaryScale = clamped
+                            }
+                            .onEnded { value in
+                                // Snap to the nearest preset FontSize and persist
+                                let finalSize = readingSettings.fontSize.size * min(max(value, 0.7), 1.65)
+                                let nearest = BibleReadingSettings.FontSize.nearest(to: finalSize)
+                                withAnimation(.spring(response: 0.2, dampingFraction: 0.9)) {
+                                    readingSettings.fontSize = nearest
+                                    readingSettings.temporaryScale = 1.0
+                                }
+                                // Show a brief font size indicator
+                                fontSizeIndicatorTask?.cancel()
+                                fontSizeIndicator = nearest.displayName
+                                HapticManager.shared.lightImpact()
+                                fontSizeIndicatorTask = Task {
+                                    try? await Task.sleep(for: .seconds(1.5))
+                                    guard !Task.isCancelled else { return }
+                                    await MainActor.run {
+                                        withAnimation(.easeOut(duration: 0.3)) { fontSizeIndicator = nil }
+                                        fontSizeIndicatorTask = nil
+                                    }
+                                }
+                            }
+                    )
                     .onChange(of: scrollToVerseID) { targetID in
                         if let targetID = targetID {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -333,6 +426,16 @@ struct BibleView: View {
                             }
                         }
                     }
+                    .onChange(of: immediateScrollToVerseID) { targetID in
+                        if let targetID = targetID {
+                            // Jump directly with no animation (used for position restore on open)
+                            proxy.scrollTo(targetID, anchor: .top)
+                            self.immediateScrollToVerseID = nil
+                            withAnimation(.easeIn(duration: 0.15)) {
+                                chapterTransitionOpacity = 1.0
+                            }
+                        }
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -340,29 +443,33 @@ struct BibleView: View {
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
 
             // Floating chapter navigation buttons
-            VStack {
-                Spacer()
-                FloatingChapterNav(
-                    currentChapter: selectedChapter,
-                    totalChapters: selectedBook.chapters,
-                    onPrevious: {
-                        if selectedChapter > 1 {
-                            animateChapterChange(direction: .backward) {
-                                selectedChapter -= 1
-                                loadChapter()
+            let miniPlayerVisible = !audioPlayer.currentBook.isEmpty
+            if barsVisible {
+                VStack {
+                    Spacer()
+                    FloatingChapterNav(
+                        currentChapter: selectedChapter,
+                        totalChapters: selectedBook.chapters,
+                        onPrevious: {
+                            if selectedChapter > 1 {
+                                animateChapterChange(direction: .backward) {
+                                    selectedChapter -= 1
+                                    loadChapter()
+                                }
+                            }
+                        },
+                        onNext: {
+                            if selectedChapter < selectedBook.chapters {
+                                animateChapterChange(direction: .forward) {
+                                    selectedChapter += 1
+                                    loadChapter()
+                                }
                             }
                         }
-                    },
-                    onNext: {
-                        if selectedChapter < selectedBook.chapters {
-                            animateChapterChange(direction: .forward) {
-                                selectedChapter += 1
-                                loadChapter()
-                            }
-                        }
-                    }
-                )
-                .padding(.bottom, 16)
+                    )
+                    .padding(.bottom, miniPlayerVisible ? 80 : 16)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
             // Selection action bar
@@ -372,9 +479,48 @@ struct BibleView: View {
                     SelectionActionBar(readingState: readingState) { action in
                         handleSelectionAction(action)
                     }
-                    .padding(.bottom, 70) // Above nav buttons
+                    .padding(.bottom, miniPlayerVisible ? 144 : 70) // Above nav buttons + mini player
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            // Mini audio player (shown when audio is loaded)
+            if miniPlayerVisible {
+                VStack {
+                    Spacer()
+                    AudioMiniPlayerBar(
+                        audioPlayer: audioPlayer,
+                        onTap: { showNowPlaying = true },
+                        onClose: {
+                            audioPlayer.stop()
+                            showAudioPlayer = false
+                        }
+                    )
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            // Pinch font-size indicator HUD
+            if let label = fontSizeIndicator {
+                VStack {
+                    HStack(spacing: 6) {
+                        Image(systemName: "textformat.size")
+                            .font(.caption.weight(.semibold))
+                        Text(label)
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.reforgedNavy.opacity(0.88), in: Capsule())
+                    .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                    Spacer()
+                }
+                .padding(.top, 12)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                .allowsHitTesting(false)
             }
 
             // Search Panel Overlay
@@ -462,10 +608,16 @@ struct BibleView: View {
                         scrollToVerseID = targetVerseID
                     }
                 },
-                translation: currentTranslation
+                translation: currentTranslation,
+                translationOrder: settingsManager.translationOrder
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showNowPlaying) {
+            NowPlayingView(audioPlayer: audioPlayer)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
         }
         .toolbar {
             if isSidebarNavigation {
@@ -493,7 +645,7 @@ struct BibleView: View {
 
                         // Translation dropdown menu
                         Menu {
-                            ForEach(BibleTranslation.allCases) { t in
+                            ForEach(settingsManager.translationOrder) { t in
                                 Button {
                                     withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
                                         settingsManager.defaultTranslation = t
@@ -537,7 +689,7 @@ struct BibleView: View {
                     Button(action: onAudioTap) {
                         Label("Audio", systemImage: audioPlayer.isPlaying ? "speaker.wave.2.fill" : "headphones")
                     }
-                    .tint(showAudioPlayer || audioPlayer.isPlaying ? Color.reforgedGold : nil)
+                    .tint(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? Color.reforgedGold : nil)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -549,25 +701,38 @@ struct BibleView: View {
         }
         .toolbarBackground(Color.adaptiveBackground(colorScheme), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(barsVisible ? .visible : .hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: settingsManager.readingMode) { isOn in
+            if !isOn {
+                readingModeHideTask?.cancel()
+                readingModeOverride = false
+            }
+        }
         .onAppear {
-            // Restore last reading position
+            guard !hasAppeared else {
+                // Tab switch back — do NOT reload; scroll position is already preserved
+                audioPlayer.updateFromSettings()
+                return
+            }
+            hasAppeared = true
+
+            // First appearance: restore last reading position
             selectedBook = BibleData.books.first(where: { $0.name == readingSettings.lastBook }) ?? selectedBook
             selectedChapter = readingSettings.lastChapter
             currentTranslation = settingsManager.defaultTranslation
+            isRestoringPosition = readingSettings.lastVerse > 1
+
             loadSearchHistory()
             loadRecentPassages()
             loadChapter()
-            // Update audio player settings
             audioPlayer.updateFromSettings()
 
-            // Wire up audio chapter completion callback
+            // Wire up audio chapter completion callback (once)
             audioPlayer.onChapterCompleted = { [self] book, chapter in
-                // Mark the completed chapter as read
                 streakManager.recordChapterRead(book: book, chapter: chapter)
                 _ = appState.markChapterRead(book: book, chapter: chapter)
 
-                // If the audio player auto-advances, update the Bible view to follow
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     if !audioPlayer.currentBook.isEmpty && audioPlayer.currentChapter > 0 {
                         if let newBook = BibleData.books.first(where: { $0.name == audioPlayer.currentBook }) {
@@ -583,7 +748,6 @@ struct BibleView: View {
             // Resume audio if it was playing when the app was backgrounded
             if audioPlayer.savedAudioState() != nil {
                 audioPlayer.resumeFromSavedState()
-                showAudioPlayer = true
             }
         }
         .onChange(of: settingsManager.defaultTranslation) { newTranslation in
@@ -591,6 +755,35 @@ struct BibleView: View {
             if currentTranslation != newTranslation {
                 loadChapter()
             }
+        }
+        // Sync FormattingPanel changes back to SettingsManager so they persist across restarts
+        .onChange(of: readingSettings.fontSize) { newValue in
+            switch newValue {
+            case .small: settingsManager.fontSize = .small
+            case .medium: settingsManager.fontSize = .medium
+            case .large: settingsManager.fontSize = .large
+            case .extraLarge: settingsManager.fontSize = .extraLarge
+            }
+        }
+        .onChange(of: readingSettings.fontType) { newValue in
+            switch newValue {
+            case .serif: settingsManager.fontType = .serif
+            case .sansSerif: settingsManager.fontType = .sansSerif
+            }
+        }
+        .onChange(of: readingSettings.lineSpacing) { newValue in
+            switch newValue {
+            case .tight: settingsManager.lineSpacing = .tight
+            case .normal: settingsManager.lineSpacing = .normal
+            case .relaxed: settingsManager.lineSpacing = .relaxed
+            case .wide: settingsManager.lineSpacing = .wide
+            }
+        }
+        .onChange(of: readingSettings.verseByVerse) { newValue in
+            settingsManager.verseFormatting = newValue ? .verseByVerse : .paragraph
+        }
+        .onChange(of: themeManager.currentMode) { newMode in
+            settingsManager.themeMode = newMode
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToBibleVerse"))) { notification in
             if let reference = notification.userInfo?["reference"] as? String {
@@ -602,6 +795,8 @@ struct BibleView: View {
             if audioPlayer.isPlaying {
                 audioPlayer.saveAudioStatePublic()
             }
+            // Save current verse position
+            readingSettings.lastVerse = firstVisibleVerseNumber
         }
     }
 
@@ -661,6 +856,9 @@ struct BibleView: View {
     }
 
     func loadChapter() {
+        // Cancel any in-flight fetch so stale results never overwrite fresh ones
+        loadTask?.cancel()
+
         isLoading = true
         errorMessage = nil
         readingState.clearSelection()
@@ -675,43 +873,67 @@ struct BibleView: View {
         readingSettings.lastBook = selectedBook.name
         readingSettings.lastChapter = selectedChapter
 
-        // Get the current translation from settings
-        let translation = settingsManager.defaultTranslation
+        // Capture intent at call-site so checks inside the Task are reliable
+        let translation  = settingsManager.defaultTranslation
+        let book         = selectedBook.name
+        let chapter      = selectedChapter
         currentTranslation = translation
 
-        Task {
+        // Capture restore intent: only restore on first load after cold start
+        let restoreVerse = isRestoringPosition && readingSettings.lastVerse > 1
+        let savedVerse   = readingSettings.lastVerse
+        if restoreVerse { isRestoringPosition = false }
+        // On manual chapter navigation, reset tracked verse to 1
+        if !restoreVerse { firstVisibleVerseNumber = 1 }
+
+        loadTask = Task {
             do {
                 var fetchedVerses: [ParsedVerse] = []
                 var fetchedCanonical: String = ""
 
                 switch translation {
                 case .esv:
-                    let result = try await ESVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
+                    let result = try await ESVService.shared.fetchChapterParsed(book: book, chapter: chapter)
                     fetchedVerses = result.verses
                     fetchedCanonical = result.canonical
                 case .kjv:
-                    let result = try await KJVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
+                    let result = try await KJVService.shared.fetchChapterParsed(book: book, chapter: chapter)
                     fetchedVerses = result.verses
                     fetchedCanonical = result.canonical
                 case .csb, .nkjv, .nasb:
-                    let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)
+                    let result = try await ApiBibleService.shared.fetchChapterParsed(book: book, chapter: chapter, translation: translation)
                     fetchedVerses = result.verses
                     fetchedCanonical = result.canonical
                 }
 
+                // Discard results if this task was cancelled while the fetch was in flight
+                guard !Task.isCancelled else { return }
+
                 await MainActor.run {
+                    if restoreVerse {
+                        // Hide content so user never sees a flash at verse 1
+                        chapterTransitionOpacity = 0
+                    }
                     verses = fetchedVerses
                     canonicalReference = fetchedCanonical
                     isLoading = false
+                    if restoreVerse {
+                        // Trigger instant (no-animation) scroll on next run loop after layout
+                        let verseID = "\(book) \(chapter):\(savedVerse)"
+                        DispatchQueue.main.async {
+                            immediateScrollToVerseID = verseID
+                        }
+                    }
                 }
 
                 // Pre-fetch interlinear data for word lookup
                 await StrongsLexiconService.shared.prefetchChapter(
-                    bookName: selectedBook.name,
-                    chapter: selectedChapter,
+                    bookName: book,
+                    chapter: chapter,
                     totalVerses: fetchedVerses.count
                 )
             } catch {
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     isLoading = false
@@ -826,12 +1048,24 @@ struct BibleView: View {
             }
 
         case .copy:
-            let selectedTexts = verses
+            let selected = verses
                 .filter { readingState.selectedVerses.contains($0.reference) }
-                .map { "[\($0.number)] \($0.text)" }
-                .joined(separator: "\n")
+                .sorted { $0.number < $1.number }
 
-            let fullText = "\(selectedBook.name) \(selectedChapter)\n\n\(selectedTexts)\n\n(ESV)"
+            let verseText = selected.map { $0.text }.joined(separator: " ")
+
+            let reference: String
+            if let first = selected.first, let last = selected.last {
+                if first.number == last.number {
+                    reference = first.reference
+                } else {
+                    reference = "\(selectedBook.name) \(selectedChapter):\(first.number)-\(last.number)"
+                }
+            } else {
+                reference = "\(selectedBook.name) \(selectedChapter)"
+            }
+
+            let fullText = "\(reference)\n\(verseText)\n(\(currentTranslation.rawValue))"
             UIPasteboard.general.string = fullText
             withAnimation { readingState.clearSelection() }
 
@@ -881,7 +1115,14 @@ struct BibleView: View {
     func loadRecentPassages() {
         let books = UserDefaults.standard.stringArray(forKey: "bible_recent_books") ?? []
         let chapters = UserDefaults.standard.array(forKey: "bible_recent_chapters") as? [Int] ?? []
-        recentPassages = zip(books, chapters).map { (book: $0, chapter: $1) }
+        // Deduplicate on load in case stored data has duplicates
+        var seen = Set<String>()
+        recentPassages = zip(books, chapters).compactMap { book, chapter in
+            let key = "\(book):\(chapter)"
+            guard !seen.contains(key) else { return nil }
+            seen.insert(key)
+            return (book: book, chapter: chapter)
+        }
     }
 
     func saveRecentPassages() {
@@ -897,6 +1138,20 @@ struct ScrollOffsetPreferenceKey: PreferenceKey {
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
+    }
+}
+
+private struct ScrollTopPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+// MARK: - Verse Visibility Preference Key
+
+private struct VerseMinYKey: PreferenceKey {
+    static var defaultValue: [String: CGFloat] = [:]
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue()) { $1 }
     }
 }
 
@@ -1057,7 +1312,7 @@ struct TappableParagraphText: View {
     var body: some View {
         // Build the paragraph as a single Text view for natural text flow
         buildParagraphText()
-            .font(.system(size: settings.fontSize.size, weight: .regular, design: settings.fontType.design))
+            .font(.system(size: settings.effectiveFontSize, weight: .regular, design: settings.fontType.design))
             .lineSpacing(settings.lineSpacing.spacing)
             .overlay(
                 // Overlay invisible tap targets for each verse
@@ -1084,7 +1339,7 @@ struct TappableParagraphText: View {
 
             // Superscript verse number
             let verseNumber = Text("\(verse.number)")
-                .font(.system(size: settings.fontSize.verseNumberSize, weight: .bold, design: .rounded))
+                .font(.system(size: settings.effectiveVerseNumberSize, weight: .bold, design: .rounded))
                 .foregroundColor(Color.reforgedGold)
                 .baselineOffset(6)
 
@@ -1169,6 +1424,7 @@ struct BibleTopBar: View {
     let book: BibleBook
     let chapter: Int
     let translation: BibleTranslation
+    var translationOrder: [BibleTranslation] = BibleTranslation.allCases
     let showAudioPlayer: Bool
     @ObservedObject var audioPlayer: BibleAudioPlayer
     let onNavigationTap: () -> Void
@@ -1232,7 +1488,7 @@ struct BibleTopBar: View {
 
             // Translation dropdown menu
             Menu {
-                ForEach(BibleTranslation.allCases) { t in
+                ForEach(translationOrder) { t in
                     Button {
                         onTranslationSelect(t)
                     } label: {
@@ -1281,14 +1537,14 @@ struct BibleTopBar: View {
             Button(action: onAudioTap) {
                 ZStack {
                     Circle()
-                        .fill(showAudioPlayer || audioPlayer.isPlaying ? Color.reforgedNavy : Color.adaptiveCardBackground(colorScheme))
+                        .fill(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? Color.reforgedNavy : Color.adaptiveCardBackground(colorScheme))
                         .frame(width: 40, height: 40)
                         .shadow(color: Color.black.opacity(0.06), radius: 4, y: 2)
 
                     Image(systemName: audioPlayer.isPlaying ? "speaker.wave.2.fill" : "headphones")
                         .font(.body)
                         .fontWeight(.semibold)
-                        .foregroundStyle(showAudioPlayer || audioPlayer.isPlaying ? .white : iconColor)
+                        .foregroundStyle(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? .white : iconColor)
                 }
             }
 
@@ -1372,6 +1628,11 @@ class BibleAudioPlayer: ObservableObject {
     @Published var skipInterval: TimeInterval = 10.0
     @Published var currentBook: String = ""
     @Published var currentChapter: Int = 0
+
+    // Sleep timer
+    @Published var sleepTimerRemaining: TimeInterval = 0   // 0 = off
+    @Published var sleepTimerEndOfChapter: Bool = false
+    private var sleepTimer: Timer?
 
     private var player: AVPlayer?
     private var timeObserver: Any?
@@ -1485,6 +1746,8 @@ class BibleAudioPlayer: ObservableObject {
         isLoading = false
         currentTime = 0
         duration = 0
+        currentBook = ""
+        currentChapter = 0
         clearAudioState()
         clearNowPlayingInfo()
     }
@@ -1498,6 +1761,15 @@ class BibleAudioPlayer: ObservableObject {
 
         // Notify BibleView to mark chapter as read
         onChapterCompleted?(finishedBook, finishedChapter)
+
+        // Sleep timer: end of chapter mode stops here
+        if sleepTimerEndOfChapter {
+            cancelSleepTimer()
+            isPlaying = false
+            currentTime = 0
+            updateNowPlayingInfo()
+            return
+        }
 
         // Auto-advance to next chapter
         if let nextChapter = nextChapterInfo(book: finishedBook, chapter: finishedChapter) {
@@ -1600,6 +1872,34 @@ class BibleAudioPlayer: ObservableObject {
         updateNowPlayingInfo()
     }
 
+    // MARK: - Chapter Navigation
+
+    func playNextChapter() {
+        guard let next = nextChapterInfo(book: currentBook, chapter: currentChapter) else { return }
+        play(book: next.book, chapter: next.chapter)
+    }
+
+    func playPreviousChapter() {
+        // If more than 3 seconds in, restart current chapter
+        if currentTime > 3 {
+            seek(to: 0)
+            return
+        }
+        guard let bookData = BibleData.books.first(where: { $0.name == currentBook }) else { return }
+        let prevChapter: (book: String, chapter: Int)
+        if currentChapter > 1 {
+            prevChapter = (book: currentBook, chapter: currentChapter - 1)
+        } else if let bookIndex = BibleData.books.firstIndex(where: { $0.name == currentBook }), bookIndex > 0 {
+            let prevBook = BibleData.books[bookIndex - 1]
+            prevChapter = (book: prevBook.name, chapter: prevBook.chapters)
+        } else {
+            seek(to: 0)
+            return
+        }
+        _ = bookData // suppress warning
+        play(book: prevChapter.book, chapter: prevChapter.chapter)
+    }
+
     // MARK: - Now Playing Info (Lock Screen & Control Center)
 
     private func updateNowPlayingInfo() {
@@ -1664,6 +1964,17 @@ class BibleAudioPlayer: ObservableObject {
             return .success
         }
 
+        // Previous / Next chapter
+        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
+            self?.playPreviousChapter()
+            return .success
+        }
+
+        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
+            self?.playNextChapter()
+            return .success
+        }
+
         // Seek
         commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
             guard let self = self,
@@ -1675,7 +1986,42 @@ class BibleAudioPlayer: ObservableObject {
         }
     }
 
+    // MARK: - Sleep Timer
+
+    func setSleepTimer(minutes: Int) {
+        sleepTimerEndOfChapter = false
+        sleepTimerRemaining = TimeInterval(minutes * 60)
+        sleepTimer?.invalidate()
+        sleepTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            if self.isPlaying { self.sleepTimerRemaining -= 1 }
+            if self.sleepTimerRemaining <= 0 {
+                DispatchQueue.main.async {
+                    self.cancelSleepTimer()
+                    self.player?.pause()
+                    self.isPlaying = false
+                    self.updateNowPlayingInfo()
+                }
+            }
+        }
+    }
+
+    func setSleepTimerEndOfChapter() {
+        sleepTimer?.invalidate()
+        sleepTimer = nil
+        sleepTimerRemaining = 0
+        sleepTimerEndOfChapter = true
+    }
+
+    func cancelSleepTimer() {
+        sleepTimer?.invalidate()
+        sleepTimer = nil
+        sleepTimerRemaining = 0
+        sleepTimerEndOfChapter = false
+    }
+
     deinit {
+        sleepTimer?.invalidate()
         stop()
     }
 }
@@ -1846,6 +2192,7 @@ struct UnifiedNavigationView: View {
     let onSelect: () -> Void
     var onSelectVerse: ((Int) -> Void)? = nil
     var translation: BibleTranslation = .esv
+    var translationOrder: [BibleTranslation] = BibleTranslation.allCases
     @Environment(\.colorScheme) var colorScheme
 
     enum ActiveTab { case books, history }
@@ -1860,6 +2207,54 @@ struct UnifiedNavigationView: View {
     @State private var chapterVerses: [ParsedVerse] = []
     @State private var isLoadingVerses = false
 
+    struct ParsedBibleRef {
+        let book: BibleBook
+        let chapter: Int
+        let verse: Int?
+
+        var displayString: String {
+            if let verse { return "\(book.name) \(chapter):\(verse)" }
+            return "\(book.name) \(chapter)"
+        }
+    }
+
+    var parsedReference: ParsedBibleRef? {
+        let trimmed = searchText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        let lower = trimmed.lowercased()
+
+        // Try longer names first so "1 John" beats "John" for "1 john 3"
+        let sorted = BibleData.books.sorted { $0.name.count > $1.name.count }
+
+        for book in sorted {
+            for candidate in [book.name.lowercased(), book.abbreviation.lowercased()] {
+                guard lower.hasPrefix(candidate) else { continue }
+                let afterBook = lower.dropFirst(candidate.count)
+                // Candidate must be followed by whitespace (or end — but end means no chapter)
+                guard let first = afterBook.first, first.isWhitespace else { continue }
+                let rest = afterBook.trimmingCharacters(in: .whitespaces)
+                guard !rest.isEmpty else { break }
+
+                // Parse chapter[:verse]
+                let colonIdx = rest.firstIndex(of: ":")
+                let chapterPart: String
+                let versePart: String?
+                if let colon = colonIdx {
+                    chapterPart = String(rest[rest.startIndex..<colon]).trimmingCharacters(in: .whitespaces)
+                    versePart = String(rest[rest.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+                } else {
+                    chapterPart = rest
+                    versePart = nil
+                }
+
+                guard let chapter = Int(chapterPart), chapter >= 1, chapter <= book.chapters else { break }
+                let verse = versePart.flatMap { Int($0) }
+                return ParsedBibleRef(book: book, chapter: chapter, verse: verse)
+            }
+        }
+        return nil
+    }
+
     var filteredBooks: [BibleBook] {
         var books = BibleData.books
 
@@ -1868,7 +2263,12 @@ struct UnifiedNavigationView: View {
         }
 
         if !searchText.isEmpty {
-            books = books.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+            if let ref = parsedReference {
+                // Show only the matched book when a reference is detected
+                books = books.filter { $0.id == ref.book.id }
+            } else {
+                books = books.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+            }
         }
 
         if sortOrder == .alphabetical {
@@ -1944,7 +2344,7 @@ struct UnifiedNavigationView: View {
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            ForEach(recentPassages.prefix(5), id: \.book) { passage in
+                            ForEach(Array(recentPassages.prefix(5).enumerated()), id: \.offset) { _, passage in
                                 Button {
                                     if let book = BibleData.books.first(where: { $0.name == passage.book }) {
                                         selectedBook = book
@@ -1976,7 +2376,7 @@ struct UnifiedNavigationView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                TextField("Search books...", text: $searchText)
+                TextField("Search or go to reference...", text: $searchText)
                     .font(.subheadline)
 
                 if !searchText.isEmpty {
@@ -1993,6 +2393,47 @@ struct UnifiedNavigationView: View {
             .background(colorScheme == .dark ? Color(white: 0.15) : Color(.systemGray6))
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .padding(.horizontal)
+
+            // Reference jump row
+            if let ref = parsedReference {
+                Button {
+                    selectedBook = ref.book
+                    selectedChapter = ref.chapter
+                    if let verse = ref.verse, let selectVerse = onSelectVerse {
+                        isPresented = false
+                        onSelect()
+                        selectVerse(verse)
+                    } else {
+                        isPresented = false
+                        onSelect()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.reforgedGold)
+                        Text("Go to \(ref.displayString)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(colorScheme == .dark ? Color(white: 0.18) : Color.reforgedGold.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.reforgedGold.opacity(0.3), lineWidth: 1)
+                    )
+                }
+                .padding(.horizontal)
+                .padding(.top, 6)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
 
             // Testament filter
             HStack(spacing: 10) {
@@ -2096,6 +2537,16 @@ struct UnifiedNavigationView: View {
                                         .padding(.leading, 16)
                                 }
                             }
+                        }
+                    }
+                }
+                .onAppear {
+                    // Auto-expand and scroll to the currently active book
+                    let bookID = selectedBook.id
+                    expandedBookID = bookID
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation {
+                            proxy.scrollTo(bookID, anchor: .center)
                         }
                     }
                 }
@@ -2788,6 +3239,7 @@ private struct FormattingPanelHeader: View {
 private struct FormattingPanelScrollContent: View {
     @ObservedObject var settings: BibleReadingSettings
     @ObservedObject var themeManager: ThemeManager
+    @StateObject private var settingsManager = SettingsManager.shared
 
     var body: some View {
         ScrollView {
@@ -2797,6 +3249,7 @@ private struct FormattingPanelScrollContent: View {
                 FormattingFontTypeSection(settings: settings)
                 FormattingLineSpacingSection(settings: settings)
                 FormattingVerseLayoutSection(settings: settings)
+                FormattingReadingModeSection(isOn: $settingsManager.readingMode)
             }
             .padding()
         }
@@ -3020,6 +3473,34 @@ private struct FormattingVerseLayoutSection: View {
     }
 }
 
+// MARK: - Reading Mode Section
+
+private struct FormattingReadingModeSection: View {
+    @Binding var isOn: Bool
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Reading Mode")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            Toggle(isOn: $isOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Full Screen")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("Hide navigation bars. Tap or scroll to top to reveal.")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+            .tint(Color.reforgedNavy)
+        }
+    }
+}
+
 // MARK: - Chapter Header
 
 struct ChapterHeader: View {
@@ -3067,7 +3548,7 @@ struct VerseRow: View {
         HStack(alignment: .top, spacing: 4) {
             // Superscript verse number
             Text("\(verse.number)")
-                .font(.system(size: settings.fontSize.verseNumberSize, weight: .bold, design: .rounded))
+                .font(.system(size: settings.effectiveVerseNumberSize, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.reforgedGold)
                 .baselineOffset(6)
                 .padding(.leading, 2)
@@ -3089,7 +3570,7 @@ struct VerseRow: View {
                 } else {
                     // Plain text (fallback)
                     Text(verse.text)
-                        .font(.system(size: settings.fontSize.size, weight: .regular, design: settings.fontType.design))
+                        .font(.system(size: settings.effectiveFontSize, weight: .regular, design: settings.fontType.design))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                         .lineSpacing(settings.lineSpacing.spacing)
                         .fixedSize(horizontal: false, vertical: true)
@@ -3275,6 +3756,12 @@ struct TakeNoteView: View {
     let onDismiss: () -> Void
 
     @State private var noteText: String = ""
+    @State private var crossReferences: [String] = []
+    @State private var showCrossRefPicker = false
+    @State private var crossRefBook = BibleData.books[0]
+    @State private var crossRefChapter: Int = 1
+    @State private var crossRefVerseStart: Int = 0
+    @State private var crossRefVerseEnd: Int = 0
     @FocusState private var isNoteFocused: Bool
     @Environment(\.colorScheme) var colorScheme
 
@@ -3379,6 +3866,7 @@ struct TakeNoteView: View {
                             Button {
                                 readingState.removeNote(reference: verse.reference)
                                 noteText = ""
+                                crossReferences = []
                             } label: {
                                 Text("Delete")
                                     .font(.caption)
@@ -3399,19 +3887,82 @@ struct TakeNoteView: View {
                         )
                         .focused($isNoteFocused)
 
+                    // Cross-references section
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label("Cross-References", systemImage: "arrow.triangle.branch")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            Spacer()
+                            Button {
+                                showCrossRefPicker = true
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "plus")
+                                    Text("Add")
+                                }
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(Color.reforgedNavy)
+                            }
+                        }
+
+                        if crossReferences.isEmpty {
+                            Text("Link related verses to this note")
+                                .font(.caption)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
+                                .padding(.vertical, 2)
+                        } else {
+                            ForEach(crossReferences, id: \.self) { ref in
+                                HStack(spacing: 8) {
+                                    Image(systemName: "book.closed")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.reforgedNavy)
+                                    Text(ref)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                                    Spacer()
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            crossReferences.removeAll { $0 == ref }
+                                        }
+                                    } label: {
+                                        Image(systemName: "xmark")
+                                            .font(.caption2)
+                                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                    }
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.adaptiveCardBackground(colorScheme))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+
                     Button {
                         // Haptic feedback for saving note
                         HapticManager.shared.noteSaved()
 
                         if existingNote != nil {
-                            readingState.updateNote(reference: verse.reference, content: noteText)
+                            readingState.updateNote(
+                                reference: verse.reference,
+                                content: noteText,
+                                crossReferences: crossReferences
+                            )
                         } else {
                             readingState.addNote(
                                 reference: verse.reference,
                                 book: readingState.currentBook,
                                 chapter: readingState.currentChapter,
                                 verse: verse.number,
-                                content: noteText
+                                content: noteText,
+                                crossReferences: crossReferences
                             )
                         }
                         onDismiss()
@@ -3432,6 +3983,7 @@ struct TakeNoteView: View {
             }
             .navigationTitle("Take Note")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") {
@@ -3441,6 +3993,22 @@ struct TakeNoteView: View {
             }
             .onAppear {
                 noteText = existingNote?.content ?? ""
+                crossReferences = existingNote?.crossReferences ?? []
+            }
+            .sheet(isPresented: $showCrossRefPicker) {
+                VersePickerSheet(
+                    selectedBook: $crossRefBook,
+                    selectedChapter: $crossRefChapter,
+                    selectedVerseStart: $crossRefVerseStart,
+                    selectedVerseEnd: $crossRefVerseEnd,
+                    translation: SettingsManager.shared.defaultTranslation
+                ) { _, reference in
+                    if !crossReferences.contains(reference) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            crossReferences.append(reference)
+                        }
+                    }
+                }
             }
         }
     }

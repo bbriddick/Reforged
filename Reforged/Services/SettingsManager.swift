@@ -50,6 +50,14 @@ class SettingsManager: ObservableObject {
         didSet { save(defaultTranslation.rawValue, forKey: Keys.defaultTranslation) }
     }
 
+    @Published var translationOrder: [BibleTranslation] {
+        didSet { UserDefaults.standard.set(translationOrder.map(\.rawValue), forKey: Keys.translationOrder) }
+    }
+
+    @Published var readingMode: Bool {
+        didSet { save(readingMode, forKey: Keys.readingMode) }
+    }
+
     @Published var showSuperscriptVerseNumbers: Bool {
         didSet { save(showSuperscriptVerseNumbers, forKey: Keys.showSuperscriptVerseNumbers) }
     }
@@ -135,6 +143,14 @@ class SettingsManager: ObservableObject {
         didSet { save(syncEnabled, forKey: Keys.syncEnabled) }
     }
 
+    // MARK: - Day Boundary Setting
+
+    /// The hour at which a new "logical day" begins (0 = midnight, 22 = 10 PM, etc.).
+    /// When set to a non-zero value, activity before that hour counts toward the previous day.
+    @Published var dayStartHour: Int {
+        didSet { save(dayStartHour, forKey: Keys.dayStartHour) }
+    }
+
     // MARK: - Keys
 
     private enum Keys {
@@ -144,6 +160,8 @@ class SettingsManager: ObservableObject {
         static let verseFormatting = "settings.verseFormatting"
         static let themeMode = "settings.themeMode"
         static let defaultTranslation = "settings.defaultTranslation"
+        static let translationOrder = "settings.translationOrder"
+        static let readingMode = "settings.readingMode"
         static let showSuperscriptVerseNumbers = "settings.showSuperscriptVerseNumbers"
         static let showParagraphHeadings = "settings.showParagraphHeadings"
         static let autoRestoreReadingLocation = "settings.autoRestoreReadingLocation"
@@ -161,6 +179,7 @@ class SettingsManager: ObservableObject {
         static let lessonReminders = "settings.lessonReminders"
         static let notificationsEnabled = "settings.notificationsEnabled"
         static let syncEnabled = "settings.syncEnabled"
+        static let dayStartHour = "settings.dayStartHour"
     }
 
     // MARK: - Initialization
@@ -173,8 +192,18 @@ class SettingsManager: ObservableObject {
         self.verseFormatting = VerseFormattingMode(rawValue: UserDefaults.standard.string(forKey: Keys.verseFormatting) ?? "") ?? .paragraph
         self.themeMode = ThemeMode(rawValue: UserDefaults.standard.string(forKey: Keys.themeMode) ?? "") ?? .system
 
+        // Load Display Settings (continued)
+        self.readingMode = UserDefaults.standard.object(forKey: Keys.readingMode) as? Bool ?? false
+
         // Load Bible Reading Settings
         self.defaultTranslation = BibleTranslation(rawValue: UserDefaults.standard.string(forKey: Keys.defaultTranslation) ?? "") ?? .esv
+        if let raw = UserDefaults.standard.array(forKey: Keys.translationOrder) as? [String] {
+            let ordered = raw.compactMap { BibleTranslation(rawValue: $0) }
+            let missing = BibleTranslation.allCases.filter { !ordered.contains($0) }
+            self.translationOrder = ordered + missing
+        } else {
+            self.translationOrder = BibleTranslation.allCases
+        }
         self.showSuperscriptVerseNumbers = UserDefaults.standard.object(forKey: Keys.showSuperscriptVerseNumbers) as? Bool ?? true
         self.showParagraphHeadings = UserDefaults.standard.object(forKey: Keys.showParagraphHeadings) as? Bool ?? true
         self.autoRestoreReadingLocation = UserDefaults.standard.object(forKey: Keys.autoRestoreReadingLocation) as? Bool ?? true
@@ -209,8 +238,13 @@ class SettingsManager: ObservableObject {
         // Load Sync Settings
         self.syncEnabled = UserDefaults.standard.object(forKey: Keys.syncEnabled) as? Bool ?? true
 
+        // Load Day Boundary Setting (default 0 = midnight)
+        self.dayStartHour = UserDefaults.standard.object(forKey: Keys.dayStartHour) as? Int ?? 0
+
         // Sync to BibleReadingSettings on initialization
         syncToBibleReadingSettings()
+        // Apply the loaded theme so ThemeManager reflects persisted value on startup
+        updateTheme()
     }
 
     // MARK: - Helper Methods
@@ -228,6 +262,25 @@ class SettingsManager: ObservableObject {
 
     private func updateTheme() {
         ThemeManager.shared.setTheme(themeMode)
+    }
+
+    // MARK: - Day Boundary Utility
+
+    /// Returns the current "logical date" as a YYYY-MM-DD string, accounting for a custom day start hour.
+    /// If `dayStartHour` is non-zero and the current hour is before that threshold,
+    /// we are still in yesterday's logical day.
+    func currentLogicalDateString() -> String {
+        let now = Date()
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: now)
+        let logicalDate: Date
+        if dayStartHour > 0 && currentHour < dayStartHour {
+            // Before the day-start threshold — still "yesterday" logically
+            logicalDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
+        } else {
+            logicalDate = now
+        }
+        return String(ISO8601DateFormatter().string(from: logicalDate).prefix(10))
     }
 
     // MARK: - Computed Properties
@@ -261,14 +314,17 @@ class SettingsManager: ObservableObject {
         lineSpacing = .normal
         verseFormatting = .paragraph
         themeMode = .system
+        readingMode = false
     }
 
     func resetBibleSettings() {
         defaultTranslation = .esv
+        translationOrder = BibleTranslation.allCases
         showSuperscriptVerseNumbers = true
         showParagraphHeadings = true
         autoRestoreReadingLocation = true
         persistentChapterNavigation = true
+        dayStartHour = 0
     }
 
     func resetAudioSettings() {
@@ -324,14 +380,7 @@ class SettingsManager: ObservableObject {
 
 extension ThemeManager {
     func setTheme(_ mode: ThemeMode) {
-        switch mode {
-        case .light:
-            colorScheme = .light
-        case .dark:
-            colorScheme = .dark
-        case .system:
-            colorScheme = nil
-        }
+        currentMode = mode
     }
 }
 

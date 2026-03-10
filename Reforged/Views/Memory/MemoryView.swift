@@ -8,6 +8,7 @@ struct MemoryView: View {
     @State private var showAddVerse = false
     @State private var verseToDelete: MemoryVerse?
     @State private var showDeleteConfirmation = false
+    @State private var showHowItWorks = false
 
     var versesForReview: [MemoryVerse] {
         appState.getVersesForReview()
@@ -55,6 +56,9 @@ struct MemoryView: View {
         .sheet(isPresented: $showAddVerse) {
             AddVerseSheet()
         }
+        .sheet(isPresented: $showHowItWorks) {
+            SpacedRepetitionInfoSheet()
+        }
         .alert("Delete Verse", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {
                 verseToDelete = nil
@@ -78,15 +82,24 @@ struct MemoryView: View {
         ScrollView {
             VStack(spacing: ReforgedTheme.spacingL) {
                 // Header section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Scripture Memory")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Scripture Memory")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
 
-                    Text("Memorize God's Word through spaced repetition")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        Text("Memorize God's Word through spaced repetition")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    Spacer()
+                    Button(action: { showHowItWorks = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .font(.title3)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    .accessibilityLabel("How it works")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -275,13 +288,19 @@ struct ReviewCard: View {
 
 // MARK: - Verse Card
 
+enum VerseCardSheet: Identifiable {
+    case practiceOptions
+    case reflectionEditor
+    var id: Int { hashValue }
+}
+
 struct VerseCard: View {
     let verse: MemoryVerse
     let onDelete: () -> Void
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
-    @State private var showPracticeOptions = false
     @State private var showActions = false
+    @State private var activeSheet: VerseCardSheet? = nil
 
     var daysUntilReview: Int {
         let days = Calendar.current.dateComponents([.day], from: Date(), to: verse.nextReviewDate).day ?? 0
@@ -341,7 +360,7 @@ struct VerseCard: View {
                         .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.reforgedNavy.opacity(0.1))
+                        .background(colorScheme == .dark ? Color(white: 0.26) : Color.reforgedNavy.opacity(0.1))
                         .clipShape(Capsule())
                 }
 
@@ -349,11 +368,22 @@ struct VerseCard: View {
 
                 // Actions menu
                 Menu {
-                    Button(action: { showPracticeOptions = true }) {
+                    Button(action: { activeSheet = .practiceOptions }) {
                         Label("Practice", systemImage: "brain.head.profile")
                     }
 
+                    Button(action: { activeSheet = .reflectionEditor }) {
+                        Label(verse.reflectionNote == nil ? "Add Reflection" : "Edit Reflection",
+                              systemImage: "heart.text.square")
+                    }
+
                     Divider()
+
+                    if verse.level < 5 {
+                        Button(action: { appState.markVerseAsMastered(verse.id) }) {
+                            Label("Mark as Mastered", systemImage: "checkmark.seal.fill")
+                        }
+                    }
 
                     Button(role: .destructive, action: onDelete) {
                         Label("Delete Verse", systemImage: "trash")
@@ -389,25 +419,33 @@ struct VerseCard: View {
                             .frame(width: CGFloat(masteryPercent) * 0.4, height: 6)
                     }
 
-                    Text("\(masteryPercent)%")
+                    // Level name instead of raw percentage
+                    Text(verse.levelName)
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .foregroundStyle(verse.level == 5 ? Color.green : Color.adaptiveTextSecondary(colorScheme))
+
+                    // Mastered star badge
+                    if verse.level == 5 {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.green)
+                    }
                 }
 
                 // Status badge
-                Text(statusText)
+                Text(verse.level == 5 ? "Mastered" : statusText)
                     .font(.caption2)
                     .fontWeight(.semibold)
-                    .foregroundStyle(statusColor)
+                    .foregroundStyle(verse.level == 5 ? Color.green : statusColor)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(statusColor.opacity(0.12))
+                    .background((verse.level == 5 ? Color.green : statusColor).opacity(0.12))
                     .clipShape(Capsule())
 
                 Spacer()
 
-                Button(action: { showPracticeOptions = true }) {
+                Button(action: { activeSheet = .practiceOptions }) {
                     HStack(spacing: 4) {
                         Image(systemName: "brain.head.profile")
                             .font(.caption)
@@ -425,8 +463,13 @@ struct VerseCard: View {
         }
         .padding(ReforgedTheme.spacingM)
         .reforgedCard()
-        .sheet(isPresented: $showPracticeOptions) {
-            PracticeOptionsSheet(verse: verse)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .practiceOptions:
+                PracticeOptionsSheet(verse: verse)
+            case .reflectionEditor:
+                ReflectionNoteSheet(verse: verse)
+            }
         }
     }
 }
@@ -436,6 +479,7 @@ struct VerseCard: View {
 struct SuggestedVersesSection: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var settingsManager = SettingsManager.shared
     @State private var selectedCategory: String = SuggestedVersesData.categories[0]
 
     private var existingReferences: Set<String> {
@@ -506,7 +550,7 @@ struct SuggestedVersesSection: View {
             } else {
                 VStack(spacing: 10) {
                     ForEach(filteredVerses) { verse in
-                        SuggestedVerseCard(verse: verse)
+                        SuggestedVerseCard(verse: verse, translation: settingsManager.defaultTranslation)
                     }
                 }
             }
@@ -516,17 +560,29 @@ struct SuggestedVersesSection: View {
 
 struct SuggestedVerseCard: View {
     let verse: SuggestedVerse
+    let translation: BibleTranslation
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     @State private var isAdded = false
+    @State private var isFetching = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(verse.reference)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.reforgedGold)
+                HStack(spacing: 6) {
+                    Text(verse.reference)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.reforgedGold)
+                    Text(translation.rawValue)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.reforgedNavy.opacity(0.7))
+                        .clipShape(Capsule())
+                }
 
                 Text(verse.text)
                     .font(.caption)
@@ -537,33 +593,18 @@ struct SuggestedVerseCard: View {
             Spacer()
 
             Button {
-                let memoryVerse = MemoryVerse(
-                    id: UUID().uuidString,
-                    reference: verse.reference,
-                    text: verse.text,
-                    esvText: verse.text,
-                    category: verse.category,
-                    translation: "ESV",
-                    lastFetched: ISO8601DateFormatter().string(from: Date()),
-                    nextReviewDate: Date(),
-                    reviewCount: 0,
-                    easeFactor: 2.5,
-                    interval: 1,
-                    isLearning: true,
-                    accuracy: nil,
-                    modeStats: nil
-                )
-                withAnimation {
-                    appState.addMemoryVerse(memoryVerse)
-                    isAdded = true
-                }
-                HapticManager.shared.lightImpact()
+                addVerse()
             } label: {
-                Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(isAdded ? Color.green : Color.reforgedNavy)
+                if isFetching {
+                    ProgressView()
+                        .frame(width: 28, height: 28)
+                } else {
+                    Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(isAdded ? Color.green : Color.reforgedNavy)
+                }
             }
-            .disabled(isAdded)
+            .disabled(isAdded || isFetching)
         }
         .padding(12)
         .background(Color.adaptiveCardBackground(colorScheme))
@@ -572,6 +613,74 @@ struct SuggestedVerseCard: View {
             RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
                 .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
         )
+    }
+
+    func addVerse() {
+        if translation == .esv {
+            // ESV text is already stored in suggested verse data
+            let memoryVerse = MemoryVerse(
+                id: UUID().uuidString,
+                reference: verse.reference,
+                text: verse.text,
+                esvText: verse.text,
+                category: verse.category,
+                translation: translation.rawValue,
+                lastFetched: ISO8601DateFormatter().string(from: Date()),
+                nextReviewDate: Date(),
+                reviewCount: 0,
+                easeFactor: 2.5,
+                interval: 1,
+                isLearning: true,
+                accuracy: nil,
+                modeStats: nil
+            )
+            withAnimation { appState.addMemoryVerse(memoryVerse); isAdded = true }
+            HapticManager.shared.lightImpact()
+        } else {
+            // Fetch verse text in the user's preferred translation
+            isFetching = true
+            Task {
+                do {
+                    var fetchedText = ""
+                    var fetchedRef = verse.reference
+                    switch translation {
+                    case .esv:
+                        break // handled above
+                    case .kjv:
+                        let result = try await KJVService.shared.fetchVerseForMemory(reference: verse.reference)
+                        fetchedText = result.text
+                        fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
+                    case .csb, .nkjv, .nasb:
+                        let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
+                        fetchedText = result.text
+                        fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
+                    }
+                    let memoryVerse = MemoryVerse(
+                        id: UUID().uuidString,
+                        reference: fetchedRef,
+                        text: fetchedText,
+                        esvText: nil,
+                        category: verse.category,
+                        translation: translation.rawValue,
+                        lastFetched: ISO8601DateFormatter().string(from: Date()),
+                        nextReviewDate: Date(),
+                        reviewCount: 0,
+                        easeFactor: 2.5,
+                        interval: 1,
+                        isLearning: true,
+                        accuracy: nil,
+                        modeStats: nil
+                    )
+                    await MainActor.run {
+                        withAnimation { appState.addMemoryVerse(memoryVerse); isAdded = true }
+                        isFetching = false
+                        HapticManager.shared.lightImpact()
+                    }
+                } catch {
+                    await MainActor.run { isFetching = false }
+                }
+            }
+        }
     }
 }
 
@@ -645,8 +754,8 @@ struct AddVerseSheet: View {
     // Verse picker state
     @State private var selectedBook: BibleBook = BibleData.books.first { $0.name == "John" } ?? BibleData.books[0]
     @State private var selectedChapter: Int = 3
-    @State private var selectedVerseStart: Int = 16
-    @State private var selectedVerseEnd: Int = 16
+    @State private var selectedVerseStart: Int = 0
+    @State private var selectedVerseEnd: Int = 0
 
     let categories = ["Salvation", "Trust", "Strength", "Hope", "Guidance", "Love", "Faith", "Peace", "General"]
 
@@ -892,6 +1001,7 @@ struct PracticeOptionsSheet: View {
     let verse: MemoryVerse
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
+    @State private var showReflectionEditor = false
 
     var body: some View {
         NavigationStack {
@@ -909,6 +1019,32 @@ struct PracticeOptionsSheet: View {
                     }
                     .padding(.top)
 
+                    // Reflection note prompt
+                    if verse.reflectionNote == nil {
+                        Button {
+                            showReflectionEditor = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "heart.fill")
+                                    .foregroundStyle(Color.reforgedGold)
+                                    .font(.subheadline)
+                                Text("Add a personal note to deepen your memory")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.reforgedGold)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(Color.reforgedGold.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.reforgedGold.opacity(0.25), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     // Practice mode cards
                     ForEach(MemoryMode.allCases, id: \.self) { mode in
                         NavigationLink(destination: MemoryPracticeView(verse: verse, mode: mode)) {
@@ -916,6 +1052,12 @@ struct PracticeOptionsSheet: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    // Deep Drill card
+                    NavigationLink(destination: DeepDrillView(verse: verse)) {
+                        DeepDrillCard()
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding()
             }
@@ -926,6 +1068,9 @@ struct PracticeOptionsSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $showReflectionEditor) {
+                ReflectionNoteSheet(verse: verse)
             }
         }
     }
@@ -975,6 +1120,79 @@ struct PracticeModeCard: View {
     }
 }
 
+// MARK: - Deep Drill Card
+
+struct DeepDrillCard: View {
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.reforgedCoral, Color.reforgedGold],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 50, height: 50)
+
+                Image(systemName: "flame.fill")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text("Deep Drill")
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    Text("+30 XP")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.reforgedGold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.reforgedGold.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+
+                Text("Flashcard · Fill Blank · Typing")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        }
+        .padding()
+        .background(
+            LinearGradient(
+                colors: [Color.reforgedCoral.opacity(0.06), Color.reforgedGold.opacity(0.06)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.reforgedCoral.opacity(0.35), Color.reforgedGold.opacity(0.35)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+    }
+}
+
 // MARK: - Verse Picker Sheet
 
 struct VersePickerSheet: View {
@@ -990,6 +1208,7 @@ struct VersePickerSheet: View {
     @State private var step: PickerStep = .book
     @State private var verses: [ParsedVerse] = []
     @State private var isLoading = false
+    @State private var referenceSearch = ""
 
     enum PickerStep {
         case book, chapter, verse
@@ -998,13 +1217,43 @@ struct VersePickerSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // Reference search bar (always visible)
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    TextField("Go to reference (e.g. John 3:16)", text: $referenceSearch)
+                        .font(.subheadline)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.go)
+                        .onSubmit { parseAndNavigateToReference() }
+                    if !referenceSearch.isEmpty {
+                        Button { referenceSearch = "" } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color.adaptiveBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                )
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
                 // Progress indicator
                 HStack(spacing: 8) {
                     StepIndicator(step: 1, current: step, label: "Book")
                     StepIndicator(step: 2, current: step, label: "Chapter")
                     StepIndicator(step: 3, current: step, label: "Verse")
                 }
-                .padding()
+                .padding(.horizontal)
+                .padding(.bottom, 8)
 
                 Divider()
 
@@ -1051,6 +1300,42 @@ struct VersePickerSheet: View {
         }
     }
 
+    func parseAndNavigateToReference() {
+        let input = referenceSearch.trimmingCharacters(in: .whitespaces)
+        guard !input.isEmpty else { return }
+
+        // Find last colon separating chapter:verse
+        guard let colonIdx = input.lastIndex(of: ":") else { return }
+        let verseStr = String(input[input.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
+        let bookChapterStr = String(input[..<colonIdx]).trimmingCharacters(in: .whitespaces)
+
+        // Parse verse range (e.g., "16" or "16-20")
+        let verseParts = verseStr.components(separatedBy: "-")
+        guard let startVerse = Int(verseParts[0].trimmingCharacters(in: .whitespaces)) else { return }
+        let endVerse = verseParts.count > 1 ? (Int(verseParts[1].trimmingCharacters(in: .whitespaces)) ?? startVerse) : startVerse
+
+        // Parse book name and chapter (last word = chapter number)
+        let parts = bookChapterStr.components(separatedBy: " ")
+        guard parts.count >= 2, let chapter = Int(parts.last!) else { return }
+        let bookName = parts.dropLast().joined(separator: " ")
+
+        // Find matching book (partial match)
+        guard let book = BibleData.books.first(where: {
+            $0.name.localizedCaseInsensitiveContains(bookName) ||
+            bookName.localizedCaseInsensitiveContains($0.name)
+        }) else { return }
+
+        guard chapter >= 1 && chapter <= book.chapters else { return }
+
+        selectedBook = book
+        selectedChapter = chapter
+        selectedVerseStart = max(1, startVerse)
+        selectedVerseEnd = max(startVerse, endVerse)
+        referenceSearch = ""
+        loadVerses()
+        withAnimation { step = .verse }
+    }
+
     func loadVerses() {
         isLoading = true
         Task {
@@ -1071,8 +1356,8 @@ struct VersePickerSheet: View {
 
                 await MainActor.run {
                     verses = fetchedVerses
-                    selectedVerseStart = 1
-                    selectedVerseEnd = 1
+                    selectedVerseStart = 0
+                    selectedVerseEnd = 0
                     isLoading = false
                 }
             } catch {
@@ -1084,6 +1369,7 @@ struct VersePickerSheet: View {
     }
 
     func confirmSelection() {
+        guard selectedVerseStart > 0 else { return }
         let selectedVerses = verses.filter { $0.number >= selectedVerseStart && $0.number <= selectedVerseEnd }
         let text = selectedVerses.map { $0.text }.joined(separator: " ")
         let reference: String
@@ -1297,6 +1583,53 @@ struct VerseSelectView: View {
     let onBack: () -> Void
     @Environment(\.colorScheme) var colorScheme
 
+    var nothingSelected: Bool { selectedStart == 0 }
+
+    var selectionLabel: String {
+        guard !verses.isEmpty else { return "" }
+        if nothingSelected { return "Tap a verse to select it" }
+        if selectedStart == selectedEnd { return "Verse \(selectedStart) selected · tap another to extend" }
+        let count = selectedEnd - selectedStart + 1
+        return "Verses \(selectedStart)–\(selectedEnd) selected (\(count) verses)"
+    }
+
+    var confirmTitle: String {
+        if selectedStart == selectedEnd {
+            return "Use Verse \(selectedStart)"
+        } else {
+            return "Use Verses \(selectedStart)–\(selectedEnd)"
+        }
+    }
+
+    func handleTap(_ verse: ParsedVerse) {
+        let n = verse.number
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+            if nothingSelected {
+                // First tap — select single verse
+                selectedStart = n
+                selectedEnd = n
+            } else if selectedStart == selectedEnd {
+                if n == selectedStart {
+                    // Tap same verse → deselect
+                    selectedStart = 0
+                    selectedEnd = 0
+                } else if n > selectedStart {
+                    // Tap later verse → extend range
+                    selectedEnd = n
+                } else {
+                    // Tap earlier verse → new single selection
+                    selectedStart = n
+                    selectedEnd = n
+                }
+            } else {
+                // Range active — reset to new single verse
+                selectedStart = n
+                selectedEnd = n
+            }
+        }
+        HapticManager.shared.lightImpact()
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header with back button
@@ -1312,97 +1645,290 @@ struct VerseSelectView: View {
 
                 Spacer()
 
-                Text("Select Verse(s)")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                VStack(spacing: 2) {
+                    Text("Select Verse(s)")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    if !verses.isEmpty && !isLoading {
+                        Text(nothingSelected ? "Tap a verse to begin" : "Tap another verse to extend the range")
+                            .font(.caption2)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                }
 
                 Spacer()
-                Spacer().frame(width: 60)
+                Spacer().frame(width: 70)
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.vertical, 12)
 
             if isLoading {
                 Spacer()
                 ProgressView("Loading verses...")
                 Spacer()
+            } else if verses.isEmpty {
+                Spacer()
+                Text("No verses found")
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Spacer()
             } else {
-                // Verse range selector
-                VStack(spacing: 8) {
-                    HStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Start")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            Picker("Start", selection: $selectedStart) {
-                                ForEach(verses, id: \.number) { verse in
-                                    Text("\(verse.number)").tag(verse.number)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .tint(Color.reforgedGold)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("End")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            Picker("End", selection: $selectedEnd) {
-                                ForEach(verses.filter { $0.number >= selectedStart }, id: \.number) { verse in
-                                    Text("\(verse.number)").tag(verse.number)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .tint(Color.reforgedGold)
-                        }
-                    }
-
-                    Text("Select a single verse or a range of verses to memorize")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-
-                // Preview
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(verses.filter { $0.number >= selectedStart && $0.number <= selectedEnd }) { verse in
-                            HStack(alignment: .top, spacing: 6) {
-                                Text("\(verse.number)")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(Color.reforgedGold)
-
-                                Text(verse.text)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                            }
+                    LazyVStack(spacing: 6) {
+                        ForEach(verses) { verse in
+                            PickerVerseCard(
+                                verse: verse,
+                                isInRange: verse.number >= selectedStart && verse.number <= selectedEnd,
+                                isStart: verse.number == selectedStart,
+                                isEnd: verse.number == selectedEnd,
+                                isSingleSelection: selectedStart == selectedEnd,
+                                onTap: { handleTap(verse) }
+                            )
                         }
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.adaptiveBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 100)
                 }
 
-                // Confirm button
-                Button(action: onConfirm) {
-                    Text(selectedStart == selectedEnd ? "Use Verse \(selectedStart)" : "Use Verses \(selectedStart)–\(selectedEnd)")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.reforgedNavy)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                // Bottom confirm area
+                VStack(spacing: 8) {
+                    Divider()
+                    VStack(spacing: 6) {
+                        Text(selectionLabel)
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        Button(action: onConfirm) {
+                            Text(nothingSelected ? "Select a verse above" : confirmTitle)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(nothingSelected ? Color.gray : Color.reforgedNavy)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .disabled(nothingSelected)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
+                }
+                .background(Color.adaptiveCardBackground(colorScheme))
+            }
+        }
+    }
+}
+
+struct PickerVerseCard: View {
+    let verse: ParsedVerse
+    let isInRange: Bool
+    let isStart: Bool
+    let isEnd: Bool
+    let isSingleSelection: Bool
+    let onTap: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+
+    var cardBackground: Color {
+        if isStart && isSingleSelection {
+            return Color.reforgedNavy
+        } else if isInRange {
+            return Color.reforgedNavy.opacity(colorScheme == .dark ? 0.18 : 0.06)
+        } else {
+            return Color.adaptiveCardBackground(colorScheme)
+        }
+    }
+
+    var numberBackground: Color {
+        if isStart && isSingleSelection { return Color.white.opacity(0.2) }
+        if isStart { return Color.reforgedNavy }
+        if isEnd { return Color.reforgedGold }
+        return Color.adaptiveBackground(colorScheme)
+    }
+
+    var numberForeground: Color {
+        if isStart || isEnd { return .white }
+        if isInRange && isSingleSelection { return .white }
+        return Color.adaptiveTextSecondary(colorScheme)
+    }
+
+    var textColor: Color {
+        isStart && isSingleSelection ? .white : Color.adaptiveText(colorScheme)
+    }
+
+    var borderColor: Color {
+        if isStart { return Color.reforgedNavy }
+        if isEnd { return Color.reforgedGold }
+        if isInRange { return Color.reforgedNavy.opacity(0.25) }
+        return Color.adaptiveBorder(colorScheme)
+    }
+
+    var borderWidth: CGFloat {
+        (isStart || isEnd) ? 1.5 : 0.5
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(alignment: .top, spacing: 12) {
+                // Verse number badge
+                ZStack {
+                    Circle()
+                        .fill(numberBackground)
+                        .frame(width: 30, height: 30)
+                    Text("\(verse.number)")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(numberForeground)
+                }
+
+                // Verse text
+                Text(verse.text)
+                    .font(.subheadline)
+                    .foregroundStyle(textColor)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Start / End badge
+                if isStart && !isSingleSelection {
+                    Text("START")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.reforgedNavy)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.reforgedNavy.opacity(0.1))
+                        .clipShape(Capsule())
+                } else if isEnd && !isSingleSelection {
+                    Text("END")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.reforgedGold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.reforgedGold.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background(cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(borderColor, lineWidth: borderWidth)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Spaced Repetition Info Sheet
+
+struct SpacedRepetitionInfoSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
+
+    private struct InfoRow: View {
+        let icon: String
+        let iconColor: Color
+        let title: String
+        let description: String
+        @Environment(\.colorScheme) var colorScheme
+
+        var body: some View {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(iconColor)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+
+                    Text("The more you know a verse, the less often you'll be asked to review it. When a year passes without needing a reminder, that verse is Mastered.")
+                        .font(.body)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    // Progress levels
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Progress Levels")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            InfoRow(icon: "1.circle.fill", iconColor: .reforgedCoral,
+                                    title: "Learning",
+                                    description: "Reviewed less than a week ago — you're just getting started.")
+                            InfoRow(icon: "2.circle.fill", iconColor: .orange,
+                                    title: "Familiar",
+                                    description: "Due every week or so — building a habit with this verse.")
+                            InfoRow(icon: "3.circle.fill", iconColor: Color(red: 0.2, green: 0.7, blue: 0.4),
+                                    title: "Known",
+                                    description: "Due every month — you know it well but still need reinforcement.")
+                            InfoRow(icon: "4.circle.fill", iconColor: Color.blue,
+                                    title: "Well-Known",
+                                    description: "Due every 90+ days — nearly committed to long-term memory.")
+                            InfoRow(icon: "checkmark.seal.fill", iconColor: Color.green,
+                                    title: "Mastered",
+                                    description: "Due once a year or less — it's yours for life.")
+                        }
+                    }
+
+                    // Rating guide
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("After Each Practice")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            InfoRow(icon: "arrow.counterclockwise.circle.fill", iconColor: .reforgedCoral,
+                                    title: "Again — I didn't know it",
+                                    description: "Resets the verse back to day 1. You'll see it again tomorrow.")
+                            InfoRow(icon: "minus.circle.fill", iconColor: .orange,
+                                    title: "Hard — I struggled",
+                                    description: "Keeps the review interval short so you practice again soon.")
+                            InfoRow(icon: "checkmark.circle.fill", iconColor: Color(red: 0.2, green: 0.7, blue: 0.4),
+                                    title: "Good — I knew it",
+                                    description: "Extends the interval — you'll see it less frequently.")
+                            InfoRow(icon: "star.circle.fill", iconColor: Color.blue,
+                                    title: "Easy — I knew it cold",
+                                    description: "Extends the interval even further. You're mastering this verse.")
+                        }
+                    }
+
+                    Text("You can also manually mark any verse as Mastered using the ··· menu on its card.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .padding(.top, 4)
                 }
                 .padding()
             }
-        }
-        .onChange(of: selectedStart) { newValue in
-            if selectedEnd < newValue {
-                selectedEnd = newValue
+            .background(Color.adaptiveCardBackground(colorScheme).ignoresSafeArea())
+            .navigationTitle("How It Works")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(Color.reforgedGold)
+                }
             }
         }
     }

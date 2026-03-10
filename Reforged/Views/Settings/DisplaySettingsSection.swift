@@ -137,6 +137,15 @@ struct DisplaySettingsSection: View {
 
             SettingsDivider()
 
+            // Reading Mode
+            SettingsToggleRow(
+                title: "Reading Mode",
+                subtitle: "Hide navigation bars for a distraction-free experience. Tap the text to reveal them.",
+                isOn: $settings.readingMode
+            )
+
+            SettingsDivider()
+
             // Preview
             VStack(alignment: .leading, spacing: 10) {
                 Text("Preview")

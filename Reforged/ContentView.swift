@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 struct ContentView: View {
     @StateObject private var appState = AppState.shared
@@ -6,7 +7,9 @@ struct ContentView: View {
     @StateObject private var settingsManager = SettingsManager.shared
     @State private var selectedTab = 2 // Default to Bible
     @State private var showFreezeEncouragement = false
+    @State private var showDonationPrompt = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         ZStack {
@@ -29,6 +32,14 @@ struct ContentView: View {
                     NotificationManager.shared.rescheduleWithSmartContent()
                     // Check if freeze encouragement should show
                     checkFreezeEncouragement()
+                    // Track app opens and show donation prompt at milestone
+                    checkDonationPrompt()
+                    // Pull latest data from CloudKit every time the app foregrounds,
+                    // throttled to at most once every 2 minutes to avoid excessive API calls.
+                    let twoMinutesAgo = Date().addingTimeInterval(-120)
+                    if appState.lastSyncDate == nil || appState.lastSyncDate! < twoMinutesAgo {
+                        Task { await appState.performFullSync() }
+                    }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchTab"))) { notification in
@@ -46,8 +57,15 @@ struct ContentView: View {
                     .environmentObject(appState)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
+
+            // Donation prompt overlay
+            if showDonationPrompt {
+                DonationPromptView(isPresented: $showDonationPrompt)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showFreezeEncouragement)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showDonationPrompt)
     }
 
     private func checkFreezeEncouragement() {
@@ -63,6 +81,27 @@ struct ContentView: View {
         UserDefaults.standard.set(today, forKey: "lastFreezeEncouragementDate")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             showFreezeEncouragement = true
+        }
+    }
+
+    private func checkDonationPrompt() {
+        guard appState.user.onboardingCompleted else { return }
+        let key = "appOpenCount"
+        let count = UserDefaults.standard.integer(forKey: key) + 1
+        UserDefaults.standard.set(count, forKey: key)
+
+        // App Store review request at 15 opens (one-time)
+        if count == 15 && !UserDefaults.standard.bool(forKey: "hasRequestedAppStoreReview") {
+            UserDefaults.standard.set(true, forKey: "hasRequestedAppStoreReview")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                requestReview()
+            }
+        }
+
+        // Donation prompt at 20 opens
+        guard count == 20 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            showDonationPrompt = true
         }
     }
 }
@@ -221,6 +260,103 @@ struct FreezeEncouragementView: View {
             }
         } message: {
             Text("Your streak is now protected! You have \(appState.user.streakFreezes) streak freeze\(appState.user.streakFreezes == 1 ? "" : "s").")
+        }
+    }
+
+    private func dismissView() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            isPresented = false
+        }
+    }
+}
+
+// MARK: - Donation Prompt View
+
+struct DonationPromptView: View {
+    @Binding var isPresented: Bool
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+                .onTapGesture { dismissView() }
+
+            VStack(spacing: 24) {
+                // Coffee icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.reforgedGold, Color.orange.opacity(0.8)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 90, height: 90)
+                        .shadow(color: Color.reforgedGold.opacity(0.5), radius: 20)
+
+                    Text("☕")
+                        .font(.system(size: 44))
+                }
+
+                VStack(spacing: 10) {
+                    Text("Enjoying Reforged?")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .multilineTextAlignment(.center)
+
+                    Text("Reforged is free and built to help you grow in God's Word. If it's been a blessing, consider buying me a coffee — it goes a long way in keeping the app going!")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                }
+
+                VStack(spacing: 10) {
+                    Button {
+                        if let url = URL(string: "https://buymeacoffee.com/reforgedapp") {
+                            UIApplication.shared.open(url)
+                        }
+                        dismissView()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text("☕")
+                                .font(.system(size: 18))
+                            Text("Buy Me a Coffee")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.reforgedGold, Color.orange.opacity(0.9)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    Button {
+                        dismissView()
+                    } label: {
+                        Text("Maybe Later")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .padding(.vertical, 12)
+                    }
+                }
+            }
+            .padding(28)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color.black.opacity(0.2), radius: 30)
+            .padding(32)
         }
     }
 

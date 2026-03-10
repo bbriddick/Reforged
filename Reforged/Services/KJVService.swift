@@ -143,6 +143,25 @@ class KJVService {
         print("KJV chapter cache cleared.")
     }
 
+    /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
+    func injectBundle(_ bundle: [String: KJVCachedChapter]) {
+        let now = Date()
+        for (key, chapter) in bundle where chapterCache[key] == nil {
+            chapterCache[key] = KJVCachedChapter(
+                book: chapter.book,
+                chapter: chapter.chapter,
+                passages: chapter.passages,
+                canonical: chapter.canonical,
+                cachedAt: now,
+                verses: chapter.verses
+            )
+        }
+        saveCacheToDisk()
+        print("KJV bundle injected: \(bundle.count) chapters.")
+    }
+
+    var cachedChapterCount: Int { chapterCache.count }
+
     // MARK: - Book Name Conversion
 
     /// Convert our book names to bible-api.com format
@@ -199,11 +218,7 @@ class KJVService {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw KJVError.invalidResponse
-        }
+        let (data, httpResponse) = try await performWithRetry(request)
 
         guard httpResponse.statusCode == 200 else {
             throw KJVError.httpError(httpResponse.statusCode)
@@ -259,7 +274,6 @@ class KJVService {
         // Parse the reference (e.g., "John 3:16" or "Genesis 1:1-3")
         let apiReference = reference
             .replacingOccurrences(of: " ", with: "+")
-            .replacingOccurrences(of: ":", with: ".")
 
         guard let url = URL(string: baseURL + apiReference + "?translation=kjv") else {
             throw KJVError.invalidURL
@@ -268,11 +282,7 @@ class KJVService {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw KJVError.invalidResponse
-        }
+        let (data, httpResponse) = try await performWithRetry(request)
 
         guard httpResponse.statusCode == 200 else {
             throw KJVError.httpError(httpResponse.statusCode)

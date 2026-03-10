@@ -14,14 +14,21 @@ struct FlowLayout: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = arrange(proposal: proposal, subviews: subviews)
+        // Always use the actual bounds width for placement so words wrap
+        // correctly even if sizeThatFits was called with an unconstrained proposal.
+        let constrainedProposal = ProposedViewSize(width: bounds.width, height: proposal.height)
+        let result = arrange(proposal: constrainedProposal, subviews: subviews)
         for (index, position) in result.positions.enumerated() {
             subviews[index].place(at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y), proposal: .unspecified)
         }
     }
 
     private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
-        let maxWidth = proposal.width ?? .infinity
+        // Guard against nil or infinite width (can occur during SwiftUI's measurement
+        // pass inside a ScrollView). Fall back to the device screen width so words
+        // always wrap rather than running off-screen.
+        let rawWidth = proposal.width ?? UIScreen.main.bounds.width
+        let maxWidth = rawWidth.isFinite ? rawWidth : UIScreen.main.bounds.width
         let verticalGap = lineSpacing ?? spacing
         var positions: [CGPoint] = []
         var currentX: CGFloat = 0

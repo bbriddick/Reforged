@@ -119,7 +119,17 @@ class ReadingStreakManager: ObservableObject {
     // MARK: - Private Helpers
 
     private var todayString: String {
-        dateToString(Date())
+        let dayStartHour = UserDefaults.standard.object(forKey: "settings.dayStartHour") as? Int ?? 0
+        let now = Date()
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: now)
+        let logicalDate: Date
+        if dayStartHour > 0 && currentHour < dayStartHour {
+            logicalDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
+        } else {
+            logicalDate = now
+        }
+        return String(ISO8601DateFormatter().string(from: logicalDate).prefix(10))
     }
 
     private func dateToString(_ date: Date) -> String {

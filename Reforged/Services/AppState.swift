@@ -152,11 +152,20 @@ class AppState: ObservableObject {
         }
 
         do {
-            // Check if CloudKit has any data (first sync detection)
-            let cloudProfile = try? await cloudKit.fetchProfile()
+            // Check if CloudKit has any data (first sync detection).
+            // Use explicit do/catch so a transient network error doesn't look like
+            // "no cloud data" and incorrectly trigger a migration push.
+            let cloudProfile: UserProfile?
+            do {
+                cloudProfile = try await cloudKit.fetchProfile()
+            } catch {
+                print("☁️ Could not fetch cloud profile (\(error)) — skipping sync to avoid overwriting data")
+                hasSyncedFromCloud = true
+                return
+            }
 
             if cloudProfile == nil && user.onboardingCompleted {
-                // No cloud data but we have local data — push everything up (migration)
+                // No cloud data but we have local data — push everything up (first-time migration)
                 print("☁️ First CloudKit sync: pushing local data to cloud")
                 let highlights = Array(BibleReadingState.shared.highlights.values)
                 let notes = Array(BibleReadingState.shared.notes.values)
@@ -294,6 +303,9 @@ class AppState: ObservableObject {
             readingState.isSyncingFromCloud = true
             readingState.highlights = merged
             readingState.isSyncingFromCloud = false
+            // Persist merged highlights to UserDefaults so they survive a cold restart
+            // before the next sync cycle (avoids losing cloud data between launches).
+            readingState.persistToStorage()
         } catch {
             print("Error loading highlights from cloud: \(error)")
         }
@@ -321,6 +333,9 @@ class AppState: ObservableObject {
             readingState.isSyncingFromCloud = true
             readingState.notes = merged
             readingState.isSyncingFromCloud = false
+            // Persist merged notes to UserDefaults so they survive a cold restart
+            // before the next sync cycle.
+            readingState.persistToStorage()
         } catch {
             print("Error loading notes from cloud: \(error)")
         }
@@ -470,7 +485,7 @@ class AppState: ObservableObject {
     }
 
     func recordActivity() {
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        let today = SettingsManager.shared.currentLogicalDateString()
         let lastActive = user.lastActiveDate.prefix(10)
 
         guard lastActive != today else {
@@ -576,13 +591,18 @@ class AppState: ObservableObject {
         memoryVerses.removeAll { $0.id == verseId }
     }
 
+    func markVerseAsMastered(_ verseId: String) {
+        guard let index = memoryVerses.firstIndex(where: { $0.id == verseId }) else { return }
+        memoryVerses[index].markAsMastered()
+    }
+
     // MARK: - Bible Reading
 
     func markChapterRead(book: String, chapter: Int) -> Bool {
         let chapterKey = "\(book) \(chapter)"
         guard !user.chaptersRead.contains(chapterKey) else { return false }
 
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        let today = SettingsManager.shared.currentLogicalDateString()
         user.chaptersRead.append(chapterKey)
         user.weeklyActivity.chaptersRead.append(ChapterActivity(chapter: chapterKey, date: today))
         addXP(15, source: "chapter")

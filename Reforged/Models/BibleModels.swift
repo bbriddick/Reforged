@@ -66,6 +66,38 @@ struct VerseNote: Codable, Identifiable {
     let content: String
     let createdAt: String
     var updatedAt: String
+    var crossReferences: [String]   // e.g., ["Romans 8:28", "Genesis 1:1"]
+
+    enum CodingKeys: String, CodingKey {
+        case id, reference, book, chapter, verse, content, createdAt, updatedAt, crossReferences
+    }
+
+    init(id: String, reference: String, book: String, chapter: Int, verse: Int,
+         content: String, createdAt: String, updatedAt: String, crossReferences: [String] = []) {
+        self.id = id
+        self.reference = reference
+        self.book = book
+        self.chapter = chapter
+        self.verse = verse
+        self.content = content
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.crossReferences = crossReferences
+    }
+
+    // Custom decoder for backward-compatibility with notes saved before this field existed
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id             = try c.decode(String.self, forKey: .id)
+        reference      = try c.decode(String.self, forKey: .reference)
+        book           = try c.decode(String.self, forKey: .book)
+        chapter        = try c.decode(Int.self,    forKey: .chapter)
+        verse          = try c.decode(Int.self,    forKey: .verse)
+        content        = try c.decode(String.self, forKey: .content)
+        createdAt      = try c.decode(String.self, forKey: .createdAt)
+        updatedAt      = try c.decode(String.self, forKey: .updatedAt)
+        crossReferences = (try? c.decode([String].self, forKey: .crossReferences)) ?? []
+    }
 }
 
 // MARK: - Highlight Colors
@@ -100,39 +132,29 @@ enum HighlightColor: String, CaseIterable, Identifiable {
 
 // MARK: - Highlighter Background Shape
 
-/// Creates a realistic highlighter effect that looks hand-drawn
+/// Creates a natural highlighter stroke effect — one smooth swoop per edge
 struct HighlighterShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
 
-        // Create a slightly uneven rectangle to mimic highlighter strokes
-        // with slight waviness on top and bottom edges
-        let topVariance: CGFloat = 1.5
-        let bottomVariance: CGFloat = 2.0
-
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY + topVariance))
-
-        // Top edge with slight waviness
-        path.addQuadCurve(
-            to: CGPoint(x: rect.midX, y: rect.minY),
-            control: CGPoint(x: rect.width * 0.25, y: rect.minY - topVariance)
-        )
-        path.addQuadCurve(
-            to: CGPoint(x: rect.maxX, y: rect.minY + topVariance * 0.5),
-            control: CGPoint(x: rect.width * 0.75, y: rect.minY + topVariance)
+        // Top edge: single gentle arc, lifts slightly in the first third
+        // then eases back down — like a marker drawn left-to-right in one stroke
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + 1.0))
+        path.addCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY + 0.5),
+            control1: CGPoint(x: rect.width * 0.28, y: rect.minY - 1.2),
+            control2: CGPoint(x: rect.width * 0.72, y: rect.minY + 0.8)
         )
 
-        // Right edge
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - bottomVariance))
+        // Right edge: straight drop
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - 0.5))
 
-        // Bottom edge with slight waviness
-        path.addQuadCurve(
-            to: CGPoint(x: rect.midX, y: rect.maxY),
-            control: CGPoint(x: rect.width * 0.75, y: rect.maxY + bottomVariance)
-        )
-        path.addQuadCurve(
-            to: CGPoint(x: rect.minX, y: rect.maxY - bottomVariance * 0.5),
-            control: CGPoint(x: rect.width * 0.25, y: rect.maxY - bottomVariance)
+        // Bottom edge: single gentle swoop going right-to-left,
+        // bowing slightly outward in the latter half
+        path.addCurve(
+            to: CGPoint(x: rect.minX, y: rect.maxY - 1.0),
+            control1: CGPoint(x: rect.width * 0.72, y: rect.maxY + 1.5),
+            control2: CGPoint(x: rect.width * 0.28, y: rect.maxY + 0.5)
         )
 
         path.closeSubpath()
@@ -384,7 +406,8 @@ class BibleReadingState: ObservableObject {
 
     // MARK: - Notes
 
-    func addNote(reference: String, book: String, chapter: Int, verse: Int, content: String) {
+    func addNote(reference: String, book: String, chapter: Int, verse: Int,
+                 content: String, crossReferences: [String] = []) {
         let now = ISO8601DateFormatter().string(from: Date())
         let note = VerseNote(
             id: UUID().uuidString,
@@ -394,13 +417,14 @@ class BibleReadingState: ObservableObject {
             verse: verse,
             content: content,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
+            crossReferences: crossReferences
         )
         notes[reference] = note
         saveToStorage()
     }
 
-    func updateNote(reference: String, content: String) {
+    func updateNote(reference: String, content: String, crossReferences: [String] = []) {
         guard var note = notes[reference] else { return }
         note.updatedAt = ISO8601DateFormatter().string(from: Date())
         notes[reference] = VerseNote(
@@ -411,7 +435,8 @@ class BibleReadingState: ObservableObject {
             verse: note.verse,
             content: content,
             createdAt: note.createdAt,
-            updatedAt: note.updatedAt
+            updatedAt: note.updatedAt,
+            crossReferences: crossReferences
         )
         saveToStorage()
     }
@@ -474,6 +499,18 @@ class BibleReadingState: ObservableObject {
         if let notesData = UserDefaults.standard.data(forKey: notesKey),
            let notesArray = try? JSONDecoder().decode([VerseNote].self, from: notesData) {
             notes = Dictionary(uniqueKeysWithValues: notesArray.map { ($0.reference, $0) })
+        }
+    }
+
+    /// Writes the current in-memory highlights and notes to UserDefaults without posting
+    /// the `.bibleDataDidChange` notification. Called after loading data from CloudKit so
+    /// the merged state survives a cold restart before the next sync.
+    func persistToStorage() {
+        if let data = try? JSONEncoder().encode(Array(highlights.values)) {
+            UserDefaults.standard.set(data, forKey: highlightsKey)
+        }
+        if let data = try? JSONEncoder().encode(Array(notes.values)) {
+            UserDefaults.standard.set(data, forKey: notesKey)
         }
     }
 }

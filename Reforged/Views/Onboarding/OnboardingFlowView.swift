@@ -1,5 +1,6 @@
 import SwiftUI
 import AuthenticationServices
+import PhotosUI
 
 enum OnboardingStep: Int, CaseIterable {
     case welcome
@@ -585,61 +586,180 @@ struct AvatarStepView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     @State private var selectedAvatar = "🦁"
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedImage: UIImage?
+    @State private var showPhotoPicker = false
+    @State private var showCamera = false
+
+    private var hasPhoto: Bool { selectedImage != nil }
 
     var body: some View {
-        VStack(spacing: 40) {
-            Spacer()
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 24) {
+                    Spacer().frame(height: 8)
 
-            VStack(spacing: 16) {
-                Text("Choose an Avatar")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    // Header
+                    VStack(spacing: 8) {
+                        Text("Choose Your Picture")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
 
-                Text(selectedAvatar)
-                    .font(.system(size: 80))
-                    .frame(width: 120, height: 120)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.reforgedGold, lineWidth: 4)
-                    )
-                    .shadow(color: ReforgedTheme.cardShadow, radius: 8, y: 4)
-            }
+                        Text("Add a photo or pick an emoji")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-                ForEach(avatarOptions) { avatar in
-                    Text(avatar.emoji)
-                        .font(.largeTitle)
-                        .frame(width: 60, height: 60)
-                        .background(selectedAvatar == avatar.emoji ? Color.reforgedNavy.opacity(0.1) : Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(selectedAvatar == avatar.emoji ? Color.reforgedNavy : Color.adaptiveBorder(colorScheme), lineWidth: selectedAvatar == avatar.emoji ? 3 : 1.5)
-                        )
-                        .onTapGesture {
-                            selectedAvatar = avatar.emoji
+                    // Preview circle with camera badge
+                    ZStack(alignment: .bottomTrailing) {
+                        Group {
+                            if let image = selectedImage {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                Text(selectedAvatar)
+                                    .font(.system(size: 64))
+                            }
                         }
+                        .frame(width: 120, height: 120)
+                        .background(Color.adaptiveCardBackground(colorScheme))
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.reforgedGold, lineWidth: 4))
+                        .shadow(color: ReforgedTheme.cardShadow, radius: 8, y: 4)
+
+                        // Camera badge
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 28, height: 28)
+                            Image(systemName: "camera.circle.fill")
+                                .font(.system(size: 30))
+                                .foregroundStyle(Color.reforgedNavy)
+                        }
+                        .offset(x: 4, y: 4)
+                    }
+                    .onTapGesture { showPhotoPicker = true }
+
+                    // Photo upload buttons
+                    HStack(spacing: 12) {
+                        Button { showPhotoPicker = true } label: {
+                            Label("Photo Library", systemImage: "photo.on.rectangle")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.reforgedNavy)
+                                .clipShape(Capsule())
+                        }
+
+                        Button { showCamera = true } label: {
+                            Label("Camera", systemImage: "camera.fill")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.reforgedNavy)
+                                .clipShape(Capsule())
+                        }
+                    }
+
+                    // Remove photo button (only when photo selected)
+                    if hasPhoto {
+                        Button {
+                            selectedImage = nil
+                            selectedPhotoItem = nil
+                        } label: {
+                            Label("Remove Photo", systemImage: "xmark.circle")
+                                .font(.caption)
+                                .foregroundStyle(Color.reforgedCoral)
+                        }
+                    }
+
+                    // "or choose an emoji" divider
+                    HStack(spacing: 8) {
+                        Rectangle()
+                            .fill(Color.adaptiveBorder(colorScheme))
+                            .frame(height: 1)
+                        Text("or choose an emoji")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .fixedSize()
+                        Rectangle()
+                            .fill(Color.adaptiveBorder(colorScheme))
+                            .frame(height: 1)
+                    }
+                    .padding(.horizontal)
+                    .opacity(hasPhoto ? 0.4 : 1.0)
+
+                    // Emoji grid (dimmed when photo selected; tap clears photo)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
+                        ForEach(avatarOptions) { avatar in
+                            Text(avatar.emoji)
+                                .font(.largeTitle)
+                                .frame(width: 60, height: 60)
+                                .background(selectedAvatar == avatar.emoji && !hasPhoto
+                                    ? Color.reforgedNavy.opacity(0.1)
+                                    : Color.adaptiveCardBackground(colorScheme))
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(
+                                            selectedAvatar == avatar.emoji && !hasPhoto
+                                                ? Color.reforgedNavy
+                                                : Color.adaptiveBorder(colorScheme),
+                                            lineWidth: selectedAvatar == avatar.emoji && !hasPhoto ? 3 : 1.5
+                                        )
+                                )
+                                .onTapGesture {
+                                    selectedAvatar = avatar.emoji
+                                    // Tapping an emoji clears any selected photo
+                                    selectedImage = nil
+                                    selectedPhotoItem = nil
+                                }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .opacity(hasPhoto ? 0.4 : 1.0)
+
+                    Spacer().frame(height: 8)
                 }
+                .frame(maxWidth: 500)
+                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal)
 
-            Spacer()
-
+            // Continue button pinned at bottom
             Button(action: {
                 appState.user.avatar = selectedAvatar
+                if let image = selectedImage,
+                   let filename = ProfileImageService.shared.saveImage(image) {
+                    appState.user.profileImagePath = filename
+                }
                 onNext()
             }) {
                 Text("Continue")
                     .reforgedPrimaryButton()
             }
             .padding(.horizontal, 24)
+            .padding(.vertical, 16)
         }
-        .padding()
-        .frame(maxWidth: 500)
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal)
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
+        .onChange(of: selectedPhotoItem) { newItem in
+            Task {
+                if let data = try? await newItem?.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    await MainActor.run { selectedImage = image }
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPickerView(image: $selectedImage)
+                .ignoresSafeArea()
+        }
     }
 }
 

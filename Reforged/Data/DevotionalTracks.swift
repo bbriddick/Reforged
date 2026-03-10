@@ -262,7 +262,7 @@ extension LearningTracks {
         id: "devotional-foundations",
         name: "Foundations of Faith",
         description: "Explore core truths about God\'s nature and our hope in Him",
-        icon: "anchor.fill",
+        icon: "anchor",
         color: "blue",
         totalLessons: 3,
         completedLessons: 0,

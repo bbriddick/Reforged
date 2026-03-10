@@ -195,6 +195,7 @@ class CloudKitSyncService: ObservableObject {
                 record["interval"] = verse.interval as CKRecordValue
                 record["isLearning"] = (verse.isLearning ? 1 : 0) as CKRecordValue
                 record["accuracy"] = (verse.accuracy ?? 0.0) as CKRecordValue
+                record["reflectionNote"] = (verse.reflectionNote ?? "") as CKRecordValue
 
                 if let modeStats = verse.modeStats,
                    let data = try? JSONEncoder().encode(modeStats),
@@ -267,7 +268,11 @@ class CloudKitSyncService: ObservableObject {
             interval: record["interval"] as? Int ?? 1,
             isLearning: (record["isLearning"] as? Int ?? 1) == 1,
             accuracy: record["accuracy"] as? Double,
-            modeStats: modeStats
+            modeStats: modeStats,
+            reflectionNote: {
+                let s = record["reflectionNote"] as? String
+                return (s?.isEmpty == false) ? s : nil
+            }()
         )
     }
 
@@ -373,6 +378,7 @@ class CloudKitSyncService: ObservableObject {
                 record["createdAt"] = note.createdAt as CKRecordValue
                 record["updatedAt"] = note.updatedAt as CKRecordValue
                 record["modifiedAt"] = Date() as CKRecordValue
+                record["crossReferences"] = note.crossReferences.joined(separator: ",") as CKRecordValue
 
                 records.append(record)
             }
@@ -416,6 +422,9 @@ class CloudKitSyncService: ObservableObject {
             return nil
         }
 
+        let crossRefString = record["crossReferences"] as? String ?? ""
+        let crossRefs = crossRefString.isEmpty ? [] : crossRefString.components(separatedBy: ",")
+
         return VerseNote(
             id: record["noteID"] as? String ?? UUID().uuidString,
             reference: reference,
@@ -424,7 +433,8 @@ class CloudKitSyncService: ObservableObject {
             verse: record["verse"] as? Int ?? 0,
             content: content,
             createdAt: record["createdAt"] as? String ?? ISO8601DateFormatter().string(from: Date()),
-            updatedAt: record["updatedAt"] as? String ?? ISO8601DateFormatter().string(from: Date())
+            updatedAt: record["updatedAt"] as? String ?? ISO8601DateFormatter().string(from: Date()),
+            crossReferences: crossRefs
         )
     }
 

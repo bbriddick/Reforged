@@ -162,6 +162,25 @@ class ESVService {
         print("ESV chapter cache cleared.")
     }
 
+    /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
+    func injectBundle(_ bundle: [String: ESVCachedChapter]) {
+        let now = Date()
+        for (key, chapter) in bundle where chapterCache[key] == nil {
+            chapterCache[key] = ESVCachedChapter(
+                book: chapter.book,
+                chapter: chapter.chapter,
+                passages: chapter.passages,
+                canonical: chapter.canonical,
+                cachedAt: now,
+                verses: chapter.verses
+            )
+        }
+        saveCacheToDisk()
+        print("ESV bundle injected: \(bundle.count) chapters.")
+    }
+
+    var cachedChapterCount: Int { chapterCache.count }
+
     // MARK: - Fetch Passage with Caching
 
     func fetchPassage(
@@ -228,11 +247,7 @@ class ESVService {
         request.setValue("Token \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw ESVError.invalidResponse
-        }
+        let (data, httpResponse) = try await performWithRetry(request)
 
         guard httpResponse.statusCode == 200 else {
             throw ESVError.httpError(httpResponse.statusCode)
@@ -357,11 +372,7 @@ class ESVService {
         request.setValue("Token \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw ESVError.invalidResponse
-        }
+        let (data, httpResponse) = try await performWithRetry(request)
 
         guard httpResponse.statusCode == 200 else {
             throw ESVError.httpError(httpResponse.statusCode)
@@ -565,11 +576,7 @@ class ESVService {
         request.setValue("Token \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw ESVError.invalidResponse
-        }
+        let (data, httpResponse) = try await performWithRetry(request)
 
         guard httpResponse.statusCode == 200 else {
             throw ESVError.httpError(httpResponse.statusCode)

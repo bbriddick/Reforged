@@ -170,7 +170,12 @@ struct LessonView: View {
 
 struct ScriptureContentView: View {
     let content: ScriptureContent
+    @EnvironmentObject var settings: SettingsManager
     @Environment(\.colorScheme) var colorScheme
+    @State private var fetchedText: String? = nil
+    @State private var isFetching = false
+
+    private var displayText: String { fetchedText ?? content.text }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -182,22 +187,53 @@ struct ScriptureContentView: View {
                 .font(.headline)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-            Text("\"\(content.text)\"")
-                .font(.title3)
-                .italic()
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
-                .padding()
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+            ZStack {
+                Text("\"\(displayText)\"")
+                    .font(.title3)
+                    .italic()
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Color.adaptiveText(colorScheme).opacity(isFetching ? 0.4 : 1))
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
 
-            if let version = content.version {
-                Text(version)
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                if isFetching {
+                    ProgressView()
+                        .tint(Color.reforgedGold)
+                }
             }
+
+            Text(settings.defaultTranslation.rawValue)
+                .font(.caption)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
         }
         .padding()
+        .task(id: settings.defaultTranslation) {
+            await fetchVerse(translation: settings.defaultTranslation)
+        }
+    }
+
+    private func fetchVerse(translation: BibleTranslation) async {
+        isFetching = true
+        defer { isFetching = false }
+        do {
+            let result: (text: String, canonical: String)
+            switch translation {
+            case .esv:
+                result = try await ESVService.shared.fetchVerseForMemory(reference: content.reference)
+            case .kjv:
+                result = try await KJVService.shared.fetchVerseForMemory(reference: content.reference)
+            case .csb, .nkjv, .nasb:
+                result = try await ApiBibleService.shared.fetchVerseForMemory(
+                    reference: content.reference,
+                    translation: translation
+                )
+            }
+            fetchedText = result.text
+        } catch {
+            fetchedText = nil // fall back to static text
+        }
     }
 }
 
@@ -479,5 +515,6 @@ struct LessonCompleteView: View {
     NavigationStack {
         LessonView(lesson: LearningTracks.allTracks[0].lessons[0])
             .environmentObject(AppState.shared)
+            .environmentObject(SettingsManager.shared)
     }
 }
