@@ -58,6 +58,10 @@ class SettingsManager: ObservableObject {
         didSet { save(readingMode, forKey: Keys.readingMode) }
     }
 
+    @Published var keepScreenOn: Bool {
+        didSet { save(keepScreenOn, forKey: Keys.keepScreenOn) }
+    }
+
     @Published var showSuperscriptVerseNumbers: Bool {
         didSet { save(showSuperscriptVerseNumbers, forKey: Keys.showSuperscriptVerseNumbers) }
     }
@@ -162,6 +166,7 @@ class SettingsManager: ObservableObject {
         static let defaultTranslation = "settings.defaultTranslation"
         static let translationOrder = "settings.translationOrder"
         static let readingMode = "settings.readingMode"
+        static let keepScreenOn = "settings.keepScreenOn"
         static let showSuperscriptVerseNumbers = "settings.showSuperscriptVerseNumbers"
         static let showParagraphHeadings = "settings.showParagraphHeadings"
         static let autoRestoreReadingLocation = "settings.autoRestoreReadingLocation"
@@ -194,6 +199,7 @@ class SettingsManager: ObservableObject {
 
         // Load Display Settings (continued)
         self.readingMode = UserDefaults.standard.object(forKey: Keys.readingMode) as? Bool ?? false
+        self.keepScreenOn = UserDefaults.standard.object(forKey: Keys.keepScreenOn) as? Bool ?? false
 
         // Load Bible Reading Settings
         self.defaultTranslation = BibleTranslation(rawValue: UserDefaults.standard.string(forKey: Keys.defaultTranslation) ?? "") ?? .esv
@@ -315,6 +321,7 @@ class SettingsManager: ObservableObject {
         verseFormatting = .paragraph
         themeMode = .system
         readingMode = false
+        keepScreenOn = false
     }
 
     func resetBibleSettings() {

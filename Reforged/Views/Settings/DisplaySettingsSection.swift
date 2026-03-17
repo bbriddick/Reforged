@@ -146,6 +146,15 @@ struct DisplaySettingsSection: View {
 
             SettingsDivider()
 
+            // Keep Screen On
+            SettingsToggleRow(
+                title: "Keep Screen On",
+                subtitle: "Prevent the screen from dimming or locking while reading the Bible.",
+                isOn: $settings.keepScreenOn
+            )
+
+            SettingsDivider()
+
             // Preview
             VStack(alignment: .leading, spacing: 10) {
                 Text("Preview")

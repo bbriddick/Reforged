@@ -710,6 +710,7 @@ struct BibleView: View {
             }
         }
         .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = settingsManager.keepScreenOn
             guard !hasAppeared else {
                 // Tab switch back — do NOT reload; scroll position is already preserved
                 audioPlayer.updateFromSettings()
@@ -749,6 +750,12 @@ struct BibleView: View {
             if audioPlayer.savedAudioState() != nil {
                 audioPlayer.resumeFromSavedState()
             }
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+        .onChange(of: settingsManager.keepScreenOn) { enabled in
+            UIApplication.shared.isIdleTimerDisabled = enabled
         }
         .onChange(of: settingsManager.defaultTranslation) { newTranslation in
             // Reload chapter when translation changes
