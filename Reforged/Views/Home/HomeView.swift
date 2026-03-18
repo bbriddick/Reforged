@@ -88,6 +88,7 @@ struct HomeView: View {
                             ReviewDueSection()
                             QuickActionsSection()
                             BibleProgressCard()
+                            ShareGospelCard()
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -100,6 +101,7 @@ struct HomeView: View {
                     ReviewDueSection()
                     QuickActionsSection()
                     BibleProgressCard()
+                    ShareGospelCard()
                 }
 
                 BuyMeACoffeeButton()
@@ -156,6 +158,7 @@ struct BibleProgressCard: View {
             .padding(14)
             .background(Color.adaptiveCardBackground(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: ReforgedTheme.cardShadow, radius: ReforgedTheme.cardShadowRadius, y: ReforgedTheme.cardShadowY)
         }
         .buttonStyle(.plain)
     }
@@ -901,7 +904,9 @@ struct LevelCard: View {
 
 struct DailyInsightCard: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var settingsManager: SettingsManager
     @Environment(\.colorScheme) var colorScheme
+    @State private var liveVerseText: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -941,7 +946,7 @@ struct DailyInsightCard: View {
 
                     // Verse quote with decorative styling
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("\"\(insight.verseText)\"")
+                        Text("\"\(liveVerseText ?? insight.verseText)\"")
                             .font(.body)
                             .italic()
                             .foregroundStyle(Color.adaptiveText(colorScheme))
@@ -1005,12 +1010,35 @@ struct DailyInsightCard: View {
         .padding(ReforgedTheme.spacingL)
         .frame(maxWidth: .infinity, alignment: .leading)
         .reforgedCard(elevated: true)
+        .task(id: appState.dailyInsight?.verse) {
+            guard let reference = appState.dailyInsight?.verse else { return }
+            liveVerseText = await fetchVerseText(reference: reference)
+        }
+        .onChange(of: settingsManager.defaultTranslation) { _ in
+            guard let reference = appState.dailyInsight?.verse else { return }
+            Task { liveVerseText = await fetchVerseText(reference: reference) }
+        }
     }
 
     var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMMM d"
         return formatter.string(from: Date())
+    }
+
+    private func fetchVerseText(reference: String) async -> String? {
+        do {
+            switch settingsManager.defaultTranslation {
+            case .esv:
+                return try await ESVService.shared.fetchVerseForMemory(reference: reference).text
+            case .kjv:
+                return try await KJVService.shared.fetchVerseForMemory(reference: reference).text
+            case .csb, .nkjv, .nasb:
+                return try await ApiBibleService.shared.fetchVerseForMemory(reference: reference, translation: settingsManager.defaultTranslation).text
+            }
+        } catch {
+            return nil
+        }
     }
 }
 
@@ -1248,6 +1276,291 @@ struct QuickActionsSection: View {
     }
 }
 
+
+// MARK: - Share Gospel Card
+
+struct ShareGospelCard: View {
+    @Environment(\.colorScheme) var colorScheme
+    @State private var showDetail = false
+
+    var body: some View {
+        Button {
+            showDetail = true
+        } label: {
+            VStack(alignment: .leading, spacing: 14) {
+                // Header
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.reforgedGold.opacity(0.15))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Color.reforgedGold)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Share the Gospel")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("The Four P's")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+
+                // Four P's preview pills
+                HStack(spacing: 8) {
+                    ForEach(["Problem", "Penalty", "Payment", "Promise"], id: \.self) { label in
+                        Text(label)
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.reforgedGold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.reforgedGold.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                Text("Romans 3:23 · 6:23 · 5:8 · 10:9")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(ReforgedTheme.spacingM)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .gamifiedStatCard(accent: .reforgedGold)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showDetail) {
+            ShareGospelDetailView()
+        }
+    }
+}
+
+// MARK: - Share Gospel Detail View
+
+struct GospelSection {
+    let title: String
+    let subtitle: String
+    let verseRefs: [String]
+    let body: String
+}
+
+struct ShareGospelDetailView: View {
+    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dismiss) var dismiss
+
+    private let sections: [GospelSection] = [
+        GospelSection(
+            title: "Problem",
+            subtitle: "We All Fall Short",
+            verseRefs: ["Romans 3:23"],
+            body: "Every person who has ever lived, no matter how good they seem, has sinned. Sin is anything that goes against God's perfect standard — a lie, a selfish thought, a harsh word, a wrong action. Romans 3:23 tells us that all have sinned. Not most. Not the worst people. All of us. That includes me, and it includes you. God is perfectly holy, and our sin creates a real gap between us and Him. We cannot close that gap on our own, no matter how hard we try."
+        ),
+        GospelSection(
+            title: "Penalty",
+            subtitle: "Sin Has a Cost",
+            verseRefs: ["Romans 6:23"],
+            body: "Sin is not something God simply overlooks. Romans 6:23 says the wages of sin is death. A wage is something you earn. Because of our sin, what we have earned is death — not just physical death, but spiritual separation from God forever. That is a sobering reality. But notice that the same verse pivots: \"but the gift of God is eternal life.\" A gift is not earned. It is given. That contrast is everything."
+        ),
+        GospelSection(
+            title: "Payment",
+            subtitle: "God Made a Way",
+            verseRefs: ["Romans 5:8"],
+            body: "Here is where the good news really begins. God did not leave us without hope. Romans 5:8 says that while we were still sinners — not after we cleaned ourselves up, not once we became worthy — Christ died for us. Jesus, God's own Son, took the penalty that we deserved. He died in our place, was buried, and rose again three days later, defeating death. The debt was real, and it was paid in full. Not by us — by Him."
+        ),
+        GospelSection(
+            title: "Promise",
+            subtitle: "Salvation Is Available to You",
+            verseRefs: ["Romans 10:9", "Romans 10:13"],
+            body: "This is the personal invitation. Romans 10:9 says that if you confess with your mouth that Jesus is Lord and believe in your heart that God raised Him from the dead, you will be saved. And Romans 10:13 makes it as wide open as possible: whosoever calls on the name of the Lord will be saved. That word whosoever leaves no one out. It means you, right now, wherever you are and whatever you have done."
+        )
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: ReforgedTheme.spacingL) {
+
+                    // Intro banner
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Salvation is not about being good enough. It is about trusting what Jesus already did.")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .italic()
+                    }
+                    .padding(ReforgedTheme.spacingM)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .heroCard()
+
+                    // Four P sections
+                    ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
+                        GospelSectionCard(index: index + 1, section: section, onNavigate: navigateToVerse)
+                    }
+
+                    // Closing prompt
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "message.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color.reforgedGold)
+                            Text("How to Close the Conversation")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                        }
+
+                        Text("\"Would you like to call on the Lord right now? I can walk you through a prayer, but what matters is not the words — it's the genuine belief in your heart.\"")
+                            .font(.body)
+                            .italic()
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                            .padding(12)
+                            .background(Color.reforgedGold.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .padding(ReforgedTheme.spacingM)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusLarge))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusLarge)
+                            .stroke(Color.reforgedGold.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                .padding()
+            }
+            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            .navigationTitle("Share the Gospel")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                }
+            }
+        }
+    }
+
+    private func navigateToVerse(_ reference: String) {
+        dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("NavigateToBibleVerse"),
+                object: nil,
+                userInfo: ["reference": reference]
+            )
+        }
+    }
+}
+
+struct GospelSectionCard: View {
+    let index: Int
+    let section: GospelSection
+    let onNavigate: (String) -> Void
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section header
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.reforgedNavy.opacity(colorScheme == .dark ? 0.6 : 1.0))
+                        .frame(width: 40, height: 40)
+                    Text("\(index)")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(section.title)
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("—")
+                            .font(.headline)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        Text(section.subtitle)
+                            .font(.headline)
+                            .foregroundStyle(colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+                    }
+
+                    // Tappable verse reference pills
+                    HStack(spacing: 6) {
+                        ForEach(section.verseRefs, id: \.self) { ref in
+                            Button {
+                                onNavigate(ref)
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "book.fill")
+                                        .font(.system(size: 9))
+                                    Text(ref)
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                }
+                                .foregroundStyle(Color.reforgedGold)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.reforgedGold.opacity(0.12))
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.reforgedGold.opacity(0.3), lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+
+            // Body text with inline tappable verse references
+            Text(attributedBody(section.body, refs: section.verseRefs))
+                .font(.body)
+                .lineSpacing(4)
+                .accentColor(Color.reforgedGold)
+                .environment(\.openURL, OpenURLAction { url in
+                    guard url.scheme == "bibleverse",
+                          let encoded = url.host,
+                          let ref = encoded.removingPercentEncoding else { return .systemAction }
+                    onNavigate(ref)
+                    return .handled
+                })
+        }
+        .padding(ReforgedTheme.spacingM)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusLarge))
+        .overlay(
+            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusLarge)
+                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
+        .shadow(color: ReforgedTheme.cardShadow, radius: ReforgedTheme.cardShadowRadius, y: ReforgedTheme.cardShadowY)
+    }
+
+    private func attributedBody(_ text: String, refs: [String]) -> AttributedString {
+        var result = AttributedString(text)
+        for ref in refs {
+            var searchStart = result.startIndex
+            while let range = result[searchStart...].range(of: ref) {
+                let encoded = ref.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) ?? ref
+                result[range].link = URL(string: "bibleverse://\(encoded)")
+                searchStart = range.upperBound
+            }
+        }
+        return result
+    }
+}
 
 #Preview {
     HomeView()

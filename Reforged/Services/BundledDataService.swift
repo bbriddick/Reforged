@@ -113,7 +113,10 @@ class BundledDataService {
 
     func getDailyInsight(forDayOfYear day: Int) -> BundledDailyInsight? {
         loadDailyInsights()
-        return dailyInsights[day]
+        guard !dailyInsights.isEmpty else { return nil }
+        let sortedKeys = dailyInsights.keys.sorted()
+        let index = (day - 1) % sortedKeys.count
+        return dailyInsights[sortedKeys[index]]
     }
 
     func getTodaysInsight() -> BundledDailyInsight? {
