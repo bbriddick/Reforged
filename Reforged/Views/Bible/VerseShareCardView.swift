@@ -46,6 +46,7 @@ struct VerseShareCard: View {
     let translation: String
     let backgroundImage: UIImage
     let photographerName: String?
+    var noteText: String? = nil
 
     var body: some View {
         ZStack {
@@ -98,6 +99,30 @@ struct VerseShareCard: View {
                     .foregroundStyle(Color.reforgedGold)
                     .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
 
+                // Note section — shown when a note is attached
+                if let note = noteText, !note.isEmpty {
+                    Spacer().frame(height: 40)
+
+                    // Thin divider
+                    HStack {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.25))
+                            .frame(height: 1)
+                    }
+                    .padding(.horizontal, 100)
+
+                    Spacer().frame(height: 28)
+
+                    Text("\u{201C}\(note)\u{201D}")
+                        .font(.system(size: noteFontSize, weight: .light, design: .serif))
+                        .italic()
+                        .foregroundStyle(.white.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(8)
+                        .padding(.horizontal, 100)
+                        .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
+                }
+
                 Spacer()
 
                 // Bottom section: branding + photographer credit
@@ -122,12 +147,23 @@ struct VerseShareCard: View {
     }
 
     private var verseFontSize: CGFloat {
+        let hasNote = !(noteText?.isEmpty ?? true)
         let length = verseText.count
-        if length < 80 { return 42 }
-        if length < 150 { return 36 }
-        if length < 250 { return 30 }
-        if length < 400 { return 26 }
-        return 22
+        // Slightly smaller when a note is also shown
+        let bump: CGFloat = hasNote ? 4 : 0
+        if length < 80 { return 42 - bump }
+        if length < 150 { return 36 - bump }
+        if length < 250 { return 30 - bump }
+        if length < 400 { return 26 - bump }
+        return 22 - bump
+    }
+
+    private var noteFontSize: CGFloat {
+        let length = noteText?.count ?? 0
+        if length < 80 { return 28 }
+        if length < 180 { return 24 }
+        if length < 300 { return 20 }
+        return 18
     }
 }
 
@@ -135,6 +171,7 @@ struct VerseShareCard: View {
 
 struct VerseShareSheet: View {
     let selection: VerseShareSelection
+    var noteText: String? = nil
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
 
@@ -163,7 +200,8 @@ struct VerseShareSheet: View {
             reference: selection.referenceText,
             translation: selection.translation,
             backgroundImage: currentBackground,
-            photographerName: currentAttribution?.name
+            photographerName: currentAttribution?.name,
+            noteText: noteText
         )
     }
 

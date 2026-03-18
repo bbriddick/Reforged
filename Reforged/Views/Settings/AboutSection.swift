@@ -174,6 +174,20 @@ struct AboutSection: View {
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .lineSpacing(3)
                 }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Flaticon")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    Text("Sticky-note icon designed by laterunlabs from Flaticon (flaticon.com). Used under the Flaticon Free License.")
+                        .font(.caption2)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineSpacing(3)
+                }
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)

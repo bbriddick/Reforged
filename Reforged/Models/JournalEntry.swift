@@ -7,10 +7,48 @@ struct JournalEntry: Codable, Identifiable {
     let date: String
     var content: String
     var tags: [String]
-    var linkedVerse: String?
+    var linkedVerse: String?       // legacy single-verse field (kept for backward compat)
+    var linkedVerses: [String]     // multi-verse support
     var linkedLesson: String?
     var linkedInsight: String?
     var prompt: String?
+
+    /// All linked verses, merging legacy `linkedVerse` with `linkedVerses`.
+    var allLinkedVerses: [String] {
+        var result = linkedVerses
+        if let legacy = linkedVerse, !legacy.isEmpty, !result.contains(legacy) {
+            result.insert(legacy, at: 0)
+        }
+        return result
+    }
+
+    init(id: String, date: String, content: String, tags: [String],
+         linkedVerse: String? = nil, linkedVerses: [String] = [],
+         linkedLesson: String? = nil, linkedInsight: String? = nil,
+         prompt: String? = nil) {
+        self.id = id
+        self.date = date
+        self.content = content
+        self.tags = tags
+        self.linkedVerse = linkedVerse
+        self.linkedVerses = linkedVerses
+        self.linkedLesson = linkedLesson
+        self.linkedInsight = linkedInsight
+        self.prompt = prompt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id            = try c.decode(String.self,   forKey: .id)
+        date          = try c.decode(String.self,   forKey: .date)
+        content       = try c.decode(String.self,   forKey: .content)
+        tags          = try c.decode([String].self, forKey: .tags)
+        linkedVerse   = try c.decodeIfPresent(String.self,   forKey: .linkedVerse)
+        linkedVerses  = (try c.decodeIfPresent([String].self, forKey: .linkedVerses)) ?? []
+        linkedLesson  = try c.decodeIfPresent(String.self,   forKey: .linkedLesson)
+        linkedInsight = try c.decodeIfPresent(String.self,   forKey: .linkedInsight)
+        prompt        = try c.decodeIfPresent(String.self,   forKey: .prompt)
+    }
 }
 
 struct DailyInsight: Codable, Identifiable {

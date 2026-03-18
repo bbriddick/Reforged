@@ -245,6 +245,10 @@ struct BibleView: View {
                                                         readingState.toggleSelection(verse.reference)
                                                     }
                                                 },
+                                                onNoteTap: {
+                                                    readingState.selectedVerses = [verse.reference]
+                                                    selectedVerseForAction = verse
+                                                },
                                                 onWordLongPress: { word, tappedVerse in
                                                     performWordLookup(word: word, verse: tappedVerse)
                                                 },
@@ -559,11 +563,14 @@ struct BibleView: View {
             }
         }
         .sheet(item: $selectedVerseForAction) { verse in
+            let allSelected = verses.filter { readingState.selectedVerses.contains($0.reference) }
+            let sheetVerses = allSelected.isEmpty ? [verse] : allSelected
             TakeNoteView(
-                verse: verse,
+                verses: sheetVerses,
                 readingState: readingState,
                 onDismiss: {
                     selectedVerseForAction = nil
+                    withAnimation { readingState.clearSelection() }
                 }
             )
             .presentationDetents([.medium, .large])
@@ -1039,6 +1046,8 @@ struct BibleView: View {
             withAnimation { readingState.clearSelection() }
 
         case .addNote:
+            // Use the first selected verse as the sheet trigger; the sheet reads
+            // all selectedVerses from readingState to build the range.
             if let firstRef = readingState.selectedVerses.first,
                let verse = verses.first(where: { $0.reference == firstRef }) {
                 selectedVerseForAction = verse
@@ -1343,12 +1352,21 @@ struct TappableParagraphText: View {
         for verse in verses {
             let isSelected = readingState.isSelected(verse.reference)
             let highlight = readingState.getHighlight(for: verse.reference)
+            let hasNote = readingState.getNote(for: verse.reference) != nil
 
             // Superscript verse number
             let verseNumber = Text("\(verse.number)")
                 .font(.system(size: settings.effectiveVerseNumberSize, weight: .bold, design: .rounded))
                 .foregroundColor(Color.reforgedGold)
                 .baselineOffset(6)
+
+            // Note indicator icon (inline, gold, template-rendered)
+            let noteIcon = hasNote
+                ? Text(Image("sticky-note"))
+                    .foregroundColor(Color.reforgedGold)
+                    .baselineOffset(4)
+                + Text(" ").font(.system(size: settings.effectiveVerseNumberSize))
+                : Text("")
 
             // Verse text - use color tinting for selection/highlight since Text can't have backgrounds in concatenation
             let verseText: Text
@@ -1368,7 +1386,7 @@ struct TappableParagraphText: View {
                     .foregroundColor(Color.adaptiveText(colorScheme))
             }
 
-            result = result + verseNumber + verseText
+            result = result + verseNumber + noteIcon + verseText
         }
 
         return result
@@ -3547,6 +3565,7 @@ struct VerseRow: View {
     let verseByVerse: Bool
     var highlightedWord: (verseID: String, word: String)? = nil
     let onTap: () -> Void
+    var onNoteTap: (() -> Void)? = nil
     var onWordLongPress: ((String, ParsedVerse) -> Void)? = nil
     @ObservedObject var readingState: BibleReadingState
     @Environment(\.colorScheme) var colorScheme
@@ -3592,15 +3611,22 @@ struct VerseRow: View {
                         )
                 }
 
-                // Note indicator - small icon next to the verse
+                // Note indicator — tappable icon to open the saved note
                 if hasNote {
-                    Image(systemName: "note.text")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.reforgedGold)
-                        .padding(4)
-                        .background(Color.reforgedGold.opacity(0.15))
-                        .clipShape(Circle())
-                        .padding(.leading, 6)
+                    Button {
+                        onNoteTap?()
+                    } label: {
+                        Image("sticky-note")
+                            .resizable()
+                            .renderingMode(.template)
+                            .scaledToFit()
+                            .frame(width: 12, height: 12)
+                            .foregroundStyle(Color.reforgedGold)
+                            .padding(4)
+                            .background(Color.reforgedGold.opacity(0.15))
+                            .clipShape(Circle())
+                    }
+                    .padding(.leading, 6)
                 }
             }
             .padding(.vertical, verseByVerse ? 6 : 2)
@@ -3758,7 +3784,7 @@ struct ActionBarButton: View {
 // MARK: - Take Note View (Improved Verse Action Sheet)
 
 struct TakeNoteView: View {
-    let verse: ParsedVerse
+    let verses: [ParsedVerse]
     @ObservedObject var readingState: BibleReadingState
     let onDismiss: () -> Void
 
@@ -3769,233 +3795,253 @@ struct TakeNoteView: View {
     @State private var crossRefChapter: Int = 1
     @State private var crossRefVerseStart: Int = 0
     @State private var crossRefVerseEnd: Int = 0
+    @State private var showNoteShareSheet = false
     @FocusState private var isNoteFocused: Bool
     @Environment(\.colorScheme) var colorScheme
 
+    // Convenience: first verse for single-verse operations
+    private var primaryVerse: ParsedVerse { verses[0] }
+
+    // Reference covering the full range: "John 3:16" or "John 3:16-18"
+    private var noteReference: String {
+        guard verses.count > 1 else { return primaryVerse.reference }
+        let first = verses.first!
+        let last = verses.last!
+        // Build "Book Chapter:start-end"
+        return "\(readingState.currentBook) \(readingState.currentChapter):\(first.number)-\(last.number)"
+    }
+
     var existingNote: VerseNote? {
-        readingState.getNote(for: verse.reference)
+        readingState.getNote(for: noteReference)
     }
 
     var existingHighlight: VerseHighlight? {
-        readingState.getHighlight(for: verse.reference)
+        readingState.getHighlight(for: primaryVerse.reference)
     }
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 0) {
-                // Header spacing
-                Spacer().frame(height: 16)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
 
-                // Verse preview
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(verse.reference)
-                        .font(.headline)
-                        .foregroundStyle(Color.reforgedGold)
+                    // Verse preview
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(noteReference)
+                            .font(.headline)
+                            .foregroundStyle(Color.reforgedGold)
 
-                    Text(verse.text)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                        .lineLimit(3)
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.adaptiveBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                .padding(.horizontal)
-
-                // Spacer between verse and highlight
-                Spacer().frame(height: 24)
-
-                // Highlight section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Highlight")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                    HStack(spacing: 12) {
-                        ForEach(HighlightColor.allCases) { color in
-                            Button {
-                                // Haptic feedback for highlighting
-                                HapticManager.shared.verseHighlighted()
-
-                                readingState.highlight(
-                                    reference: verse.reference,
-                                    book: readingState.currentBook,
-                                    chapter: readingState.currentChapter,
-                                    verse: verse.number,
-                                    color: color
-                                )
-                            } label: {
-                                Circle()
-                                    .fill(color.color)
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(
-                                                existingHighlight?.color == color.rawValue ? Color.reforgedNavy : Color.clear,
-                                                lineWidth: 3
-                                            )
-                                    )
-                            }
+                        ForEach(verses) { v in
+                            Text(v.text)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
                         }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.adaptiveBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
 
-                        Spacer()
+                    // Highlight section (applies to primary verse)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Highlight")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                        if existingHighlight != nil {
-                            Button {
-                                HapticManager.shared.lightImpact()
-                                readingState.removeHighlight(reference: verse.reference)
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.title2)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        HStack(spacing: 12) {
+                            ForEach(HighlightColor.allCases) { color in
+                                Button {
+                                    HapticManager.shared.verseHighlighted()
+                                    for v in verses {
+                                        readingState.highlight(
+                                            reference: v.reference,
+                                            book: readingState.currentBook,
+                                            chapter: readingState.currentChapter,
+                                            verse: v.number,
+                                            color: color
+                                        )
+                                    }
+                                } label: {
+                                    Circle()
+                                        .fill(color.color)
+                                        .frame(width: 40, height: 40)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(
+                                                    existingHighlight?.color == color.rawValue ? Color.reforgedNavy : Color.clear,
+                                                    lineWidth: 3
+                                                )
+                                        )
+                                }
+                            }
+
+                            Spacer()
+
+                            if existingHighlight != nil {
+                                Button {
+                                    HapticManager.shared.lightImpact()
+                                    for v in verses {
+                                        readingState.removeHighlight(reference: v.reference)
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                }
                             }
                         }
                     }
-                }
-                .padding(.horizontal)
 
-                // Spacer
-                Spacer().frame(height: 24)
-
-                // Note section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
+                    // Note section
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("Note")
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                        Spacer()
+                        TextEditor(text: $noteText)
+                            .frame(minHeight: 120)
+                            .padding(12)
+                            .scrollContentBackground(.hidden)
+                            .background(Color.adaptiveCardBackground(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                            )
+                            .focused($isNoteFocused)
 
-                        if existingNote != nil {
-                            Button {
-                                readingState.removeNote(reference: verse.reference)
-                                noteText = ""
-                                crossReferences = []
-                            } label: {
-                                Text("Delete")
+                        // Cross-references section
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Label("Cross-References", systemImage: "arrow.triangle.branch")
                                     .font(.caption)
-                                    .foregroundStyle(Color.reforgedCoral)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                Spacer()
+                                Button {
+                                    showCrossRefPicker = true
+                                } label: {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "plus")
+                                        Text("Add")
+                                    }
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(Color.reforgedNavy)
+                                }
+                            }
+
+                            if crossReferences.isEmpty {
+                                Text("Link related verses to this note")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
+                                    .padding(.vertical, 2)
+                            } else {
+                                ForEach(crossReferences, id: \.self) { ref in
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "book.closed")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.reforgedNavy)
+                                        Text(ref)
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                                        Spacer()
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                crossReferences.removeAll { $0 == ref }
+                                            }
+                                        } label: {
+                                            Image(systemName: "xmark")
+                                                .font(.caption2)
+                                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                        }
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.adaptiveCardBackground(colorScheme))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Delete + Share action row
+                        HStack(spacing: 12) {
+                            // Delete — only visible when a saved note exists
+                            if existingNote != nil {
+                                Button {
+                                    HapticManager.shared.lightImpact()
+                                    readingState.removeNote(reference: noteReference)
+                                    noteText = ""
+                                    crossReferences = []
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(Color.reforgedCoral)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 13)
+                                        .background(Color.reforgedCoral.opacity(0.12))
+                                        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                                .stroke(Color.reforgedCoral.opacity(0.3), lineWidth: 1)
+                                        )
+                                }
+                            }
+
+                            // Share — always visible; shares verse + current note text
+                            Button {
+                                HapticManager.shared.lightImpact()
+                                showNoteShareSheet = true
+                            } label: {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 13)
+                                    .background(Color.reforgedNavy)
+                                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
                             }
                         }
                     }
-
-                    TextEditor(text: $noteText)
-                        .frame(minHeight: 100)
-                        .padding(12)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                        )
-                        .focused($isNoteFocused)
-
-                    // Cross-references section
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Label("Cross-References", systemImage: "arrow.triangle.branch")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            Spacer()
-                            Button {
-                                showCrossRefPicker = true
-                            } label: {
-                                HStack(spacing: 3) {
-                                    Image(systemName: "plus")
-                                    Text("Add")
-                                }
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(Color.reforgedNavy)
-                            }
-                        }
-
-                        if crossReferences.isEmpty {
-                            Text("Link related verses to this note")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
-                                .padding(.vertical, 2)
-                        } else {
-                            ForEach(crossReferences, id: \.self) { ref in
-                                HStack(spacing: 8) {
-                                    Image(systemName: "book.closed")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.reforgedNavy)
-                                    Text(ref)
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                                    Spacer()
-                                    Button {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            crossReferences.removeAll { $0 == ref }
-                                        }
-                                    } label: {
-                                        Image(systemName: "xmark")
-                                            .font(.caption2)
-                                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                    }
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.adaptiveCardBackground(colorScheme))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                }
+                .padding()
+            }
+            .background(Color.adaptiveCardBackground(colorScheme).ignoresSafeArea())
+            .navigationTitle("Take Note")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        // Auto-save on dismiss if there's content
+                        if !noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            HapticManager.shared.noteSaved()
+                            if existingNote != nil {
+                                readingState.updateNote(
+                                    reference: noteReference,
+                                    content: noteText,
+                                    crossReferences: crossReferences
+                                )
+                            } else {
+                                readingState.addNote(
+                                    reference: noteReference,
+                                    book: readingState.currentBook,
+                                    chapter: readingState.currentChapter,
+                                    verse: primaryVerse.number,
+                                    content: noteText,
+                                    crossReferences: crossReferences
                                 )
                             }
                         }
-                    }
-
-                    Button {
-                        // Haptic feedback for saving note
-                        HapticManager.shared.noteSaved()
-
-                        if existingNote != nil {
-                            readingState.updateNote(
-                                reference: verse.reference,
-                                content: noteText,
-                                crossReferences: crossReferences
-                            )
-                        } else {
-                            readingState.addNote(
-                                reference: verse.reference,
-                                book: readingState.currentBook,
-                                chapter: readingState.currentChapter,
-                                verse: verse.number,
-                                content: noteText,
-                                crossReferences: crossReferences
-                            )
-                        }
-                        onDismiss()
-                    } label: {
-                        Text(existingNote != nil ? "Update Note" : "Save Note")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(noteText.isEmpty ? Color.gray : Color.reforgedNavy)
-                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                    }
-                    .disabled(noteText.isEmpty)
-                }
-                .padding(.horizontal)
-
-                Spacer()
-            }
-            .navigationTitle("Take Note")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
                         onDismiss()
                     }
+                    .fontWeight(.semibold)
                 }
             }
             .onAppear {
@@ -4016,6 +4062,18 @@ struct TakeNoteView: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showNoteShareSheet) {
+                let shareSelection = VerseShareSelection(
+                    verses: verses,
+                    book: readingState.currentBook,
+                    chapter: readingState.currentChapter,
+                    translation: SettingsManager.shared.defaultTranslation.rawValue
+                )
+                VerseShareSheet(
+                    selection: shareSelection,
+                    noteText: noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : noteText
+                )
             }
         }
     }

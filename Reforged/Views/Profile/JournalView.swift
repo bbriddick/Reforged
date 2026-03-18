@@ -650,16 +650,23 @@ struct JournalEntryRow: View {
                         .foregroundStyle(iconColor)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(formattedDate)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
 
-                    if let verse = entry.linkedVerse {
-                        Text(verse)
-                            .font(.caption)
-                            .foregroundStyle(Color.reforgedGold)
+                    let verses = entry.allLinkedVerses
+                    if !verses.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "book.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.reforgedGold)
+                            Text(verses.joined(separator: " · "))
+                                .font(.caption)
+                                .foregroundStyle(Color.reforgedGold)
+                                .lineLimit(1)
+                        }
                     }
                 }
 
@@ -720,9 +727,14 @@ struct NewJournalEntrySheet: View {
     var usePrompt: Bool = false
     var onSave: (() -> Void)?
     @State private var content = ""
-    @State private var linkedVerse = ""
+    @State private var linkedVerses: [String] = []
     @State private var selectedPrompt: String?
     @State private var displayedPrompts: [String] = randomJournalPrompts()
+    @State private var showVersePicker = false
+    @State private var pickerBook = BibleData.books[0]
+    @State private var pickerChapter: Int = 1
+    @State private var pickerVerseStart: Int = 0
+    @State private var pickerVerseEnd: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -741,7 +753,7 @@ struct NewJournalEntrySheet: View {
                     .background(Color.green.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
 
-                    // Prompt Suggestions (show if usePrompt or always show)
+                    // Prompt Suggestions
                     if usePrompt {
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Choose a Prompt")
@@ -786,28 +798,88 @@ struct NewJournalEntrySheet: View {
                             )
                     }
 
-                    // Linked Verse
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Link a Verse (optional)")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                    // Linked Verses
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Linked Verses")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
 
-                        HStack(spacing: 10) {
-                            Image(systemName: "book.fill")
+                            Text("(optional)")
+                                .font(.subheadline)
                                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                            TextField("e.g., John 3:16", text: $linkedVerse)
-                                .font(.subheadline)
+                            Spacer()
+
+                            Button {
+                                showVersePicker = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "plus")
+                                        .font(.caption.bold())
+                                    Text("Add Verse")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                }
+                                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.reforgedNavy.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                        )
+
+                        if linkedVerses.isEmpty {
+                            HStack(spacing: 8) {
+                                Image(systemName: "book.closed")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                Text("No verses linked yet")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.adaptiveCardBackground(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                            )
+                        } else {
+                            VStack(spacing: 8) {
+                                ForEach(linkedVerses, id: \.self) { ref in
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "book.fill")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.reforgedGold)
+                                        Text(ref)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                                        Spacer()
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                linkedVerses.removeAll { $0 == ref }
+                                            }
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.body)
+                                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                        }
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 10)
+                                    .background(Color.adaptiveCardBackground(colorScheme))
+                                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                            .stroke(Color.reforgedGold.opacity(0.3), lineWidth: 1)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     // XP reward info
@@ -843,11 +915,25 @@ struct NewJournalEntrySheet: View {
                     .disabled(content.isEmpty)
                 }
             }
+            .sheet(isPresented: $showVersePicker) {
+                VersePickerSheet(
+                    selectedBook: $pickerBook,
+                    selectedChapter: $pickerChapter,
+                    selectedVerseStart: $pickerVerseStart,
+                    selectedVerseEnd: $pickerVerseEnd,
+                    translation: SettingsManager.shared.defaultTranslation
+                ) { _, reference in
+                    if !linkedVerses.contains(reference) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            linkedVerses.append(reference)
+                        }
+                    }
+                }
+            }
         }
     }
 
     func saveEntry() {
-        // Haptic feedback for saving
         HapticManager.shared.journalSaved()
 
         let entry = JournalEntry(
@@ -855,9 +941,7 @@ struct NewJournalEntrySheet: View {
             date: ISO8601DateFormatter().string(from: Date()),
             content: content,
             tags: [],
-            linkedVerse: linkedVerse.isEmpty ? nil : linkedVerse,
-            linkedLesson: nil,
-            linkedInsight: nil,
+            linkedVerses: linkedVerses,
             prompt: selectedPrompt
         )
         entries.insert(entry, at: 0)
