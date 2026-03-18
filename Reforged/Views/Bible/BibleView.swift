@@ -2833,28 +2833,41 @@ struct SearchPanelView: View {
     @FocusState private var isSearchFocused: Bool
     @State private var selectedCategory: BookCategory? = nil
 
+    /// Determine which BookCategory a verse reference belongs to.
+    ///
+    /// Books are checked longest-name-first so that e.g. "1 John" matches before
+    /// the plain "John" entry.  A space is appended to every prefix to guarantee
+    /// a word-boundary match ("John " won't accidentally absorb "Johnny…").
+    /// Known API spelling variants (e.g. ESV returns "Psalm" not "Psalms",
+    /// "Song of Songs" vs "Song of Solomon") are handled explicitly.
+    private func bookCategory(for reference: String) -> BookCategory? {
+        // Sort longest name first to prevent short names swallowing longer ones
+        let sortedBooks = BibleData.books.sorted { $0.name.count > $1.name.count }
+        for book in sortedBooks {
+            // Match on full name or abbreviation, both with a trailing space guard
+            if reference.hasPrefix(book.name + " ") ||
+               reference.hasPrefix(book.abbreviation + " ") {
+                return book.category
+            }
+        }
+        // ESV (and most APIs) use "Psalm" (singular); our data has "Psalms"
+        if reference.hasPrefix("Psalm ") { return .poetryWisdom }
+        // Some translations use "Song of Songs" instead of "Song of Solomon"
+        if reference.hasPrefix("Song of Songs ") { return .poetryWisdom }
+        return nil
+    }
+
     /// Filter search results by book category
     var filteredResults: [BibleSearchResult] {
         guard let category = selectedCategory else { return searchResults }
-        let booksInCategory = BibleData.books.filter { $0.category == category }.map { $0.name }
-        return searchResults.filter { result in
-            booksInCategory.contains { bookName in
-                result.reference.hasPrefix(bookName)
-            }
-        }
+        return searchResults.filter { bookCategory(for: $0.reference) == category }
     }
 
     /// Count results per book category for the chart
     var categoryCounts: [BookCategory: Int] {
         var counts: [BookCategory: Int] = [:]
-        for category in BookCategory.allCases {
-            let booksInCategory = BibleData.books.filter { $0.category == category }.map { $0.name }
-            let count = searchResults.filter { result in
-                booksInCategory.contains { bookName in
-                    result.reference.hasPrefix(bookName)
-                }
-            }.count
-            counts[category] = count
+        for cat in BookCategory.allCases {
+            counts[cat] = searchResults.filter { bookCategory(for: $0.reference) == cat }.count
         }
         return counts
     }
