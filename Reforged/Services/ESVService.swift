@@ -584,8 +584,16 @@ class ESVService {
         let lines = text.components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
 
-        // Characters that end a sentence/clause but never a section heading
-        let sentenceEnders: Set<Character> = [".", ",", ";", ":"]
+        // Characters that end a sentence/clause — section headings never end with these.
+        // Includes both straight and curly quote variants so block-quote lines (e.g.
+        // `"They shall not enter my rest."`) are correctly rejected.
+        let sentenceEnders: Set<Character> = [".", ",", ";", ":",
+                                              "\"", "\u{201C}", "\u{201D}",  // straight + curly double quotes
+                                              "'",  "\u{2018}", "\u{2019}"]  // straight + curly single quotes
+
+        // Opening quote characters — a line that STARTS with one of these is a block
+        // quote, not a section heading.
+        let openingQuotes: Set<Character> = ["\"", "\u{201C}", "'", "\u{2018}"]
 
         if isFirstVerse {
             // Before the first verse, the heading appears at the top (e.g. "Greeting").
@@ -596,6 +604,7 @@ class ESVService {
                 if prevWasEmpty,
                    line.count >= 3, line.count <= 80,
                    !(sentenceEnders.contains(line.last ?? " ")),
+                   !(openingQuotes.contains(line.first ?? " ")),
                    line.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil {
                     let nextIndex = i + 1
                     let followedByBlankOrEnd = nextIndex >= lines.count
@@ -618,6 +627,7 @@ class ESVService {
                 if nextWasEmpty,
                    line.count >= 3, line.count <= 80,
                    !(sentenceEnders.contains(line.last ?? " ")),
+                   !(openingQuotes.contains(line.first ?? " ")),
                    line.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil {
                     let prevIndex = i - 1
                     let precededByBlankOrStart = prevIndex < 0 || lines[prevIndex].isEmpty

@@ -598,7 +598,17 @@ class ApiBibleService {
 
         let lines = text.components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
-        let sentenceEnders: Set<Character> = [".", ",", ";", ":"]
+
+        // Characters that end a sentence/clause — section headings never end with these.
+        // Includes both straight and curly quote variants so block-quote lines (e.g.
+        // `"They shall not enter my rest."`) are correctly rejected.
+        let sentenceEnders: Set<Character> = [".", ",", ";", ":",
+                                              "\"", "\u{201C}", "\u{201D}",
+                                              "'",  "\u{2018}", "\u{2019}"]
+
+        // Opening quote characters — a line that STARTS with one of these is a block
+        // quote, not a section heading.
+        let openingQuotes: Set<Character> = ["\"", "\u{201C}", "'", "\u{2018}"]
 
         if isFirstVerse {
             var prevWasEmpty = true
@@ -607,6 +617,7 @@ class ApiBibleService {
                 if prevWasEmpty,
                    line.count >= 3, line.count <= 80,
                    !sentenceEnders.contains(line.last ?? " "),
+                   !openingQuotes.contains(line.first ?? " "),
                    line.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil {
                     let next = i + 1
                     let followedByBlankOrEnd = next >= lines.count || lines[next].isEmpty
@@ -623,6 +634,7 @@ class ApiBibleService {
                 if nextWasEmpty,
                    line.count >= 3, line.count <= 80,
                    !sentenceEnders.contains(line.last ?? " "),
+                   !openingQuotes.contains(line.first ?? " "),
                    line.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil {
                     let prev = i - 1
                     let precededByBlankOrStart = prev < 0 || lines[prev].isEmpty

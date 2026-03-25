@@ -62,20 +62,32 @@ class NotificationManager: NSObject, ObservableObject {
     
     // MARK: - Daily Smart Reminders
 
-    /// Schedule daily reading & review reminders at the user's chosen time
+    /// All notification identifiers managed by this manager.
+    /// Must be kept in sync with the identifiers used in scheduleDailyReminder().
+    private var allManagedIdentifiers: [String] {
+        var ids: [String] = ["daily-reading-reminder", "daily-review-reminder"]
+        for weekday in 1...7 {
+            ids.append("reading-reminder-\(weekday)")
+            ids.append("review-reminder-\(weekday)")
+        }
+        return ids
+    }
+
+    /// Schedule reading & memory-review reminders on the days the user has selected.
+    /// Each enabled weekday gets its own weekly-repeating UNCalendarNotificationTrigger.
     @MainActor func scheduleDailyReminder() {
         let center = UNUserNotificationCenter.current()
-        // Remove old reminders
-        center.removePendingNotificationRequests(withIdentifiers: [
-            "daily-reading-reminder",
-            "daily-review-reminder"
-        ])
+        // Remove all previously scheduled reminders (both legacy daily and weekday-specific).
+        center.removePendingNotificationRequests(withIdentifiers: allManagedIdentifiers)
 
         let settings = SettingsManager.shared
         guard settings.notificationsEnabled else { return }
 
-        let reminderDate = settings.dailyReminderTime
-        let components = Calendar.current.dateComponents([.hour, .minute], from: reminderDate)
+        let baseComponents = Calendar.current.dateComponents([.hour, .minute], from: settings.dailyReminderTime)
+
+        // Resolve enabled days — empty set means every day.
+        let readingDays = settings.readingReminderDays.isEmpty ? Set(1...7) : settings.readingReminderDays
+        let memoryDays  = settings.memoryReminderDays.isEmpty  ? Set(1...7) : settings.memoryReminderDays
 
         if settings.readingPlanReminders {
             let content = UNMutableNotificationContent()
@@ -84,18 +96,26 @@ class NotificationManager: NSObject, ObservableObject {
             content.sound = .default
             content.userInfo = ["action": "open-bible"]
 
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-            let request = UNNotificationRequest(identifier: "daily-reading-reminder", content: content, trigger: trigger)
-            center.add(request)
+            for weekday in readingDays.sorted() {
+                var components = baseComponents
+                components.weekday = weekday
+                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                let request = UNNotificationRequest(
+                    identifier: "reading-reminder-\(weekday)",
+                    content: content,
+                    trigger: trigger
+                )
+                center.add(request)
+            }
         }
 
         if settings.memoryReviewReminders {
-            // Schedule review reminder 5 minutes after reading
-            var reviewComponents = components
-            reviewComponents.minute = (components.minute ?? 0) + 5
-            if let min = reviewComponents.minute, min >= 60 {
-                reviewComponents.minute = min - 60
-                reviewComponents.hour = (reviewComponents.hour ?? 0) + 1
+            // Schedule memory reminders 5 minutes after the reading time.
+            var reviewBase = baseComponents
+            reviewBase.minute = (baseComponents.minute ?? 0) + 5
+            if let min = reviewBase.minute, min >= 60 {
+                reviewBase.minute = min - 60
+                reviewBase.hour = (reviewBase.hour ?? 0) + 1
             }
 
             let content = UNMutableNotificationContent()
@@ -104,9 +124,17 @@ class NotificationManager: NSObject, ObservableObject {
             content.sound = .default
             content.userInfo = ["action": "open-memory"]
 
-            let trigger = UNCalendarNotificationTrigger(dateMatching: reviewComponents, repeats: true)
-            let request = UNNotificationRequest(identifier: "daily-review-reminder", content: content, trigger: trigger)
-            center.add(request)
+            for weekday in memoryDays.sorted() {
+                var components = reviewBase
+                components.weekday = weekday
+                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                let request = UNNotificationRequest(
+                    identifier: "review-reminder-\(weekday)",
+                    content: content,
+                    trigger: trigger
+                )
+                center.add(request)
+            }
         }
     }
 
@@ -121,10 +149,7 @@ class NotificationManager: NSObject, ObservableObject {
         let center = UNUserNotificationCenter.current()
 
         // Remove existing to reschedule with updated content
-        center.removePendingNotificationRequests(withIdentifiers: [
-            "daily-reading-reminder",
-            "daily-review-reminder"
-        ])
+        center.removePendingNotificationRequests(withIdentifiers: allManagedIdentifiers)
 
         let reminderDate = settings.dailyReminderTime
         let components = Calendar.current.dateComponents([.hour, .minute], from: reminderDate)

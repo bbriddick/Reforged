@@ -131,9 +131,27 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    /// Days of the week on which reading reminders fire (1 = Sunday … 7 = Saturday).
+    /// An empty set is treated as every day.
+    @Published var readingReminderDays: Set<Int> {
+        didSet {
+            save(Array(readingReminderDays), forKey: Keys.readingReminderDays)
+            NotificationManager.shared.scheduleDailyReminder()
+        }
+    }
+
     @Published var memoryReviewReminders: Bool {
         didSet {
             save(memoryReviewReminders, forKey: Keys.memoryReviewReminders)
+            NotificationManager.shared.scheduleDailyReminder()
+        }
+    }
+
+    /// Days of the week on which memory-review reminders fire (1 = Sunday … 7 = Saturday).
+    /// An empty set is treated as every day.
+    @Published var memoryReminderDays: Set<Int> {
+        didSet {
+            save(Array(memoryReminderDays), forKey: Keys.memoryReminderDays)
             NotificationManager.shared.scheduleDailyReminder()
         }
     }
@@ -195,7 +213,9 @@ class SettingsManager: ObservableObject {
         static let dailyReminderHour = "settings.dailyReminderHour"
         static let dailyReminderMinute = "settings.dailyReminderMinute"
         static let readingPlanReminders = "settings.readingPlanReminders"
+        static let readingReminderDays = "settings.readingReminderDays"
         static let memoryReviewReminders = "settings.memoryReviewReminders"
+        static let memoryReminderDays = "settings.memoryReminderDays"
         static let lessonReminders = "settings.lessonReminders"
         static let notificationsEnabled = "settings.notificationsEnabled"
         static let syncEnabled = "settings.syncEnabled"
@@ -254,7 +274,11 @@ class SettingsManager: ObservableObject {
             self.dailyReminderTime = savedTime > 0 ? Date(timeIntervalSince1970: savedTime) : Self.defaultReminderTime()
         }
         self.readingPlanReminders = UserDefaults.standard.object(forKey: Keys.readingPlanReminders) as? Bool ?? true
+        let savedReadingDays = UserDefaults.standard.array(forKey: Keys.readingReminderDays) as? [Int]
+        self.readingReminderDays = savedReadingDays.map { Set($0) } ?? Set(1...7)
         self.memoryReviewReminders = UserDefaults.standard.object(forKey: Keys.memoryReviewReminders) as? Bool ?? true
+        let savedMemoryDays = UserDefaults.standard.array(forKey: Keys.memoryReminderDays) as? [Int]
+        self.memoryReminderDays = savedMemoryDays.map { Set($0) } ?? Set(1...7)
         self.lessonReminders = UserDefaults.standard.object(forKey: Keys.lessonReminders) as? Bool ?? true
         self.notificationsEnabled = UserDefaults.standard.object(forKey: Keys.notificationsEnabled) as? Bool ?? true
 
@@ -371,7 +395,9 @@ class SettingsManager: ObservableObject {
     func resetNotificationSettings() {
         dailyReminderTime = Self.defaultReminderTime()
         readingPlanReminders = true
+        readingReminderDays = Set(1...7)
         memoryReviewReminders = true
+        memoryReminderDays = Set(1...7)
         lessonReminders = true
         notificationsEnabled = true
     }

@@ -78,6 +78,14 @@ struct NotificationSettingsSection: View {
                     isOn: $settings.readingPlanReminders
                 )
 
+                if settings.readingPlanReminders {
+                    DaySchedulePicker(
+                        label: "Reading Days",
+                        selectedDays: $settings.readingReminderDays
+                    )
+                    .padding(.bottom, 10)
+                }
+
                 SettingsDivider()
 
                 // Memory Review Reminders
@@ -86,6 +94,14 @@ struct NotificationSettingsSection: View {
                     subtitle: "Notifications when verses are due for review",
                     isOn: $settings.memoryReviewReminders
                 )
+
+                if settings.memoryReviewReminders {
+                    DaySchedulePicker(
+                        label: "Review Days",
+                        selectedDays: $settings.memoryReminderDays
+                    )
+                    .padding(.bottom, 10)
+                }
 
                 SettingsDivider()
 
@@ -116,6 +132,73 @@ struct NotificationSettingsSection: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Day Schedule Picker
+
+/// A row of S M T W T F S toggle buttons that lets the user pick which
+/// days of the week a notification should fire.
+struct DaySchedulePicker: View {
+    let label: String
+    @Binding var selectedDays: Set<Int>
+    @Environment(\.colorScheme) var colorScheme
+
+    private let dayLetters = ["S", "M", "T", "W", "T", "F", "S"]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            HStack(spacing: 6) {
+                ForEach(1...7, id: \.self) { weekday in
+                    let isSelected = selectedDays.contains(weekday)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            if isSelected {
+                                // Always keep at least one day selected.
+                                if selectedDays.count > 1 {
+                                    selectedDays.remove(weekday)
+                                }
+                            } else {
+                                selectedDays.insert(weekday)
+                            }
+                        }
+                    } label: {
+                        Text(dayLetters[weekday - 1])
+                            .font(.system(size: 13, weight: .semibold))
+                            .frame(width: 36, height: 36)
+                            .foregroundStyle(isSelected ? .white : Color.adaptiveTextSecondary(colorScheme))
+                            .background(
+                                Circle()
+                                    .fill(isSelected ? Color.reforgedNavy : Color.adaptiveTextSecondary(colorScheme).opacity(0.12))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Spacer()
+
+                // "Every day" shortcut
+                if selectedDays.count < 7 {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            selectedDays = Set(1...7)
+                        }
+                    } label: {
+                        Text("Every day")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.reforgedNavy)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.horizontal, 2)
     }
 }
 
