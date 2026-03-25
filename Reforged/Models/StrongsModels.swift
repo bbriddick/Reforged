@@ -101,6 +101,9 @@ struct WordLookupResult: Identifiable {
     let id = UUID()
     let tappedWord: String
     let verseReference: String
+    let bookName: String             // e.g. "Genesis" or "John" — used for TR/WLC lookup
+    let chapterNumber: Int
+    let verseNumber: Int
     let isHebrew: Bool
     let isFromAPI: Bool              // true = exact interlinear match; false = dictionary search fallback
 
@@ -150,6 +153,7 @@ struct WordToken: Identifiable {
     let id: String           // unique identifier (e.g., "v3_2" for verse 3, word index 2)
     let displayText: String  // "loved " (with trailing space/punctuation)
     let cleanWord: String    // "loved" (normalized for lookup)
+    var isItalic: Bool = false  // true for KJV supplied words wrapped in [brackets]
 }
 
 // MARK: - Tokenizer
@@ -159,23 +163,44 @@ func tokenizeVerseText(_ text: String, verseId: String = "v") -> [WordToken] {
     let rawWords = text.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
     var tokens: [WordToken] = []
 
+    // State machine: tracks whether we are inside a multi-word bracket span [like this].
+    // Single-word brackets [word] and multi-word spans [word word] are both handled correctly.
+    var insideBrackets = false
+
     for (index, raw) in rawWords.enumerated() {
         let isLast = index == rawWords.count - 1
-        let display = isLast ? raw : raw + " "
+        var strippedRaw = raw
+        var isItalic = insideBrackets   // inherit state from previous word
+
+        // Opening bracket: word begins with [
+        if strippedRaw.hasPrefix("[") {
+            strippedRaw = String(strippedRaw.dropFirst())
+            isItalic = true
+            insideBrackets = true
+        }
+
+        // Closing bracket: word contains ] anywhere (may have trailing punctuation, e.g. "word],")
+        if let closeIdx = strippedRaw.firstIndex(of: "]") {
+            strippedRaw.remove(at: closeIdx)
+            isItalic = true
+            insideBrackets = false
+        }
+
+        let display = isLast ? strippedRaw : strippedRaw + " "
 
         // Strip punctuation for clean lookup word
-        let clean = raw
+        let clean = strippedRaw
             .trimmingCharacters(in: .punctuationCharacters)
             .lowercased()
 
         let tokenId = "\(verseId)_\(index)"
 
-        if !clean.isEmpty {
-            tokens.append(WordToken(id: tokenId, displayText: display, cleanWord: clean))
-        } else {
-            // Pure punctuation token - still display it
-            tokens.append(WordToken(id: tokenId, displayText: display, cleanWord: raw))
-        }
+        tokens.append(WordToken(
+            id: tokenId,
+            displayText: display,
+            cleanWord: clean.isEmpty ? strippedRaw : clean,
+            isItalic: isItalic
+        ))
     }
 
     return tokens

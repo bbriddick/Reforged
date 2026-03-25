@@ -20,7 +20,7 @@ struct WordLongPressVerseText: View {
                     && highlightedWord?.word == token.cleanWord.lowercased()
 
                 Text(token.displayText)
-                    .font(.system(size: settings.effectiveFontSize, weight: .regular, design: settings.fontType.design))
+                    .font(settings.fontType.font(size: settings.effectiveFontSize, italic: token.isItalic))
                     .foregroundStyle(textColor)
                     .background(
                         Group {
@@ -100,7 +100,9 @@ struct WordLongPressParagraphText: View {
                         && highlightedWord?.word == token.cleanWord.lowercased()
 
                     Text(token.displayText)
-                        .font(.system(size: settings.effectiveFontSize, weight: .regular, design: settings.fontType.design))
+                        .font(token.isItalic
+                            ? settings.fontType.font(size: settings.effectiveFontSize).italic()
+                            : settings.fontType.font(size: settings.effectiveFontSize))
                         .foregroundStyle(wordColor(isSelected: isSelected, highlight: highlight))
                         .background(
                             Group {
@@ -132,6 +134,84 @@ struct WordLongPressParagraphText: View {
     }
 
     private func wordColor(isSelected: Bool, highlight: VerseHighlight?) -> Color {
+        if isSelected {
+            return colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy
+        }
+        return Color.adaptiveText(colorScheme)
+    }
+}
+
+// MARK: - Original Language Tappable Verse Text (TR Greek / WLC Hebrew)
+
+/// Per-word long-press for Textus Receptus (Greek) and Westminster Leningrad Codex (Hebrew).
+///
+/// Uses `FlowLayout(isRTL: isWLC)` so Hebrew words wrap right-to-left while Greek wraps LTR.
+/// Unlike `WordLongPressVerseText`, words are split directly from `verse.text` (already Greek/Hebrew)
+/// rather than tokenised via the English KJV tokeniser.
+struct OriginalLanguageTappableVerseText: View {
+    let verse: ParsedVerse
+    let isWLC: Bool                  // false = TR Greek, true = WLC Hebrew
+    let font: Font
+    let lineSpacing: CGFloat
+    let isSelected: Bool
+    var highlightedWord: (verseID: String, word: String)? = nil
+    let colorScheme: ColorScheme
+    var highlight: VerseHighlight? = nil
+    let onWordLongPress: (String, ParsedVerse) -> Void
+    var onTap: (() -> Void)? = nil
+
+    /// Split the verse text into individual displayable words.
+    private var words: [String] {
+        verse.text.components(separatedBy: " ").filter { !$0.isEmpty }
+    }
+
+    var body: some View {
+        FlowLayout(spacing: 0, lineSpacing: lineSpacing, isRTL: isWLC) {
+            ForEach(Array(words.enumerated()), id: \.offset) { index, word in
+                let isHighlighted = highlightedWord?.verseID == verse.id
+                    && highlightedWord?.word == word
+
+                // Append a space so words don't run together inside FlowLayout.
+                let displayWord = index < words.count - 1 ? word + " " : word
+
+                Text(displayWord)
+                    .font(font)
+                    .foregroundStyle(wordColor)
+                    .background(
+                        Group {
+                            if isHighlighted {
+                                // Rounded gold highlight for the word being looked up
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(Color.reforgedGold.opacity(0.3))
+                                    .padding(.horizontal, -2)
+                                    .padding(.vertical, -1)
+                            } else if isSelected {
+                                Color.reforgedGold.opacity(0.15)
+                                    .padding(.vertical, -2)
+                            } else if let hl = highlight {
+                                HighlighterBackground(color: hl.baseColor)
+                            }
+                        }
+                    )
+                    .onTapGesture { onTap?() }
+                    .onLongPressGesture(minimumDuration: 0.3) {
+                        HapticManager.shared.mediumImpact()
+                        onWordLongPress(word, verse)
+                    }
+            }
+        }
+        .padding(.vertical, 2)
+        .padding(.horizontal, highlight != nil ? 4 : 0)
+        .background(
+            Group {
+                if let hl = highlight {
+                    HighlighterBackground(color: hl.baseColor)
+                }
+            }
+        )
+    }
+
+    private var wordColor: Color {
         if isSelected {
             return colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy
         }

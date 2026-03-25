@@ -907,6 +907,7 @@ struct DailyInsightCard: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @Environment(\.colorScheme) var colorScheme
     @State private var liveVerseText: String? = nil
+    @State private var showShareSheet = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -952,50 +953,77 @@ struct DailyInsightCard: View {
                             .foregroundStyle(Color.adaptiveText(colorScheme))
                             .lineLimit(3)
 
-                        Button {
-                            NotificationCenter.default.post(
-                                name: NSNotification.Name("NavigateToBibleVerse"),
-                                object: nil,
-                                userInfo: ["reference": insight.verse]
-                            )
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text("— \(insight.verse)")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                Image(systemName: "arrow.right.circle.fill")
-                                    .font(.caption)
-                            }
+                        // Plain reference — no arrow or hyperlink
+                        Text("— \(insight.verse)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                             .foregroundStyle(Color.reforgedGold)
-                        }
                     }
                     .padding(ReforgedTheme.spacingM)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.adaptiveBackground(colorScheme))
                     .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
 
-                    // Read more → navigate to passage
-                    Button {
-                        NotificationCenter.default.post(
-                            name: NSNotification.Name("NavigateToBibleVerse"),
-                            object: nil,
-                            userInfo: ["reference": insight.verse]
-                        )
-                        NotificationCenter.default.post(
-                            name: NSNotification.Name("SwitchTab"),
-                            object: nil,
-                            userInfo: ["tab": 2]
-                        )
-                    } label: {
-                        HStack {
-                            Text("Read more")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Image(systemName: "book.fill")
-                                .font(.caption)
+                    // Action buttons row
+                    HStack(spacing: 10) {
+                        // Read more — primary capsule button
+                        Button {
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("NavigateToBibleVerse"),
+                                object: nil,
+                                userInfo: ["reference": insight.verse]
+                            )
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("SwitchTab"),
+                                object: nil,
+                                userInfo: ["tab": 2]
+                            )
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "book.fill")
+                                    .font(.caption)
+                                Text("Read More")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 9)
+                            .background(Color.reforgedGold)
+                            .clipShape(Capsule())
                         }
-                        .foregroundStyle(colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+
+                        // Share — secondary capsule button
+                        Button {
+                            let verseText = liveVerseText ?? insight.verseText
+                            UIPasteboard.general.string = "\"\(verseText)\" — \(insight.verse)"
+                            showShareSheet = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.caption)
+                                Text("Share")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundStyle(colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 9)
+                            .background(
+                                Capsule()
+                                    .strokeBorder(
+                                        colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy,
+                                        lineWidth: 1.5
+                                    )
+                            )
+                        }
+
+                        Spacer()
                     }
+                }
+                .sheet(isPresented: $showShareSheet) {
+                    let verseText = liveVerseText ?? insight.verseText
+                    ShareSheet(activityItems: ["\"\(verseText)\" — \(insight.verse)"])
                 }
             } else {
                 HStack {
@@ -1033,8 +1061,10 @@ struct DailyInsightCard: View {
                 return try await ESVService.shared.fetchVerseForMemory(reference: reference).text
             case .kjv:
                 return try await KJVService.shared.fetchVerseForMemory(reference: reference).text
-            case .csb, .nkjv, .nasb:
+            case .csb, .nkjv, .nasb, .rvr1960:
                 return try await ApiBibleService.shared.fetchVerseForMemory(reference: reference, translation: settingsManager.defaultTranslation).text
+            case .tr, .wlc:
+                return nil
             }
         } catch {
             return nil

@@ -3,26 +3,38 @@ import SwiftUI
 // MARK: - Font Size Settings
 
 enum FontSizeSetting: String, CaseIterable, Codable {
+    case tiny = "Tiny"
+    case extraSmall = "Extra Small"
     case small = "Small"
     case medium = "Medium"
     case large = "Large"
     case extraLarge = "Extra Large"
+    case huge = "Huge"
+    case massive = "Massive"
 
     var scaleFactor: CGFloat {
         switch self {
-        case .small: return 0.85
-        case .medium: return 1.0
-        case .large: return 1.15
+        case .tiny:       return 0.60
+        case .extraSmall: return 0.72
+        case .small:      return 0.85
+        case .medium:     return 1.0
+        case .large:      return 1.15
         case .extraLarge: return 1.3
+        case .huge:       return 1.5
+        case .massive:    return 1.75
         }
     }
 
     var bodyFont: Font {
         switch self {
-        case .small: return .subheadline
-        case .medium: return .body
-        case .large: return .title3
+        case .tiny:       return .caption2
+        case .extraSmall: return .caption
+        case .small:      return .subheadline
+        case .medium:     return .body
+        case .large:      return .title3
         case .extraLarge: return .title2
+        case .huge:       return .title
+        case .massive:    return .largeTitle
         }
     }
 }
@@ -44,9 +56,25 @@ enum FontTypeSetting: String, CaseIterable, Codable {
 
     var fontName: String? {
         switch self {
-        case .serif: return "Georgia"
-        case .sansSerif: return nil // System default
-        case .dyslexiaFriendly: return "OpenDyslexic" // Fallback to system rounded
+        case .serif: return "LibreBaskerville"
+        case .sansSerif: return "Roboto"
+        case .dyslexiaFriendly: return nil // system rounded
+        }
+    }
+
+    func makeFont(size: CGFloat, weight: Font.Weight = .regular, italic: Bool = false) -> Font {
+        switch self {
+        case .serif:
+            return italic
+                ? Font.custom("LibreBaskerville-Italic", size: size)
+                : Font.custom("LibreBaskerville-Regular", size: size)
+        case .sansSerif:
+            return italic
+                ? Font.custom("Roboto-Italic", size: size)
+                : Font.custom("Roboto", size: size)
+        case .dyslexiaFriendly:
+            let base = Font.system(size: size, weight: weight, design: .rounded)
+            return italic ? base.italic() : base
         }
     }
 }
@@ -141,13 +169,21 @@ enum SkipInterval: String, CaseIterable, Codable {
 // MARK: - Bible Translation
 
 enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
-    case esv = "ESV"
     case kjv = "KJV"
-    case csb = "CSB"
+    case esv = "ESV"
     case nkjv = "NKJV"
+    case csb = "CSB"
     case nasb = "NASB"
+    case rvr1960 = "RVR1960"
+    case tr = "TR"
+    case wlc = "WLC"
 
     var id: String { rawValue }
+
+    /// True for Textus Receptus and Westminster Leningrad Codex — hidden unless the setting is enabled.
+    var isOriginalLanguage: Bool {
+        self == .tr || self == .wlc
+    }
 
     var fullName: String {
         switch self {
@@ -156,6 +192,19 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .csb: return "Christian Standard Bible"
         case .nkjv: return "New King James Version"
         case .nasb: return "New American Standard Bible"
+        case .rvr1960: return "Reina-Valera 1960"
+        case .tr: return "Textus Receptus (Greek NT)"
+        case .wlc: return "Westminster Leningrad Codex (Hebrew OT)"
+        }
+    }
+
+    /// BCP 47 language tag — used for accessibility and UI hints
+    var languageCode: String {
+        switch self {
+        case .rvr1960: return "es"
+        case .tr: return "grc"
+        case .wlc: return "he"
+        default: return "en"
         }
     }
 
@@ -166,6 +215,9 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .csb: return "© 2017 Holman Bible Publishers"
         case .nkjv: return "© 1982 Thomas Nelson"
         case .nasb: return "© 1995 The Lockman Foundation"
+        case .rvr1960: return "© 1960 Sociedades Bíblicas en América Latina; © Renovado 1988 Sociedades Bíblicas Unidas"
+        case .tr: return "Public Domain"
+        case .wlc: return "Public Domain"
         }
     }
 
@@ -181,14 +233,34 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
             return "Scripture quotations marked NKJV are taken from the New King James Version®, Copyright © 1982 Thomas Nelson. Used by permission. All rights reserved. The NKJV text may not be quoted in any publication made available to the public by a Creative Commons license. The NKJV may not be translated into any other language. Website: www.thomasnelson.com"
         case .nasb:
             return "Scripture quotations marked NASB are taken from the (NASB®) New American Standard Bible®, Copyright © 1960, 1971, 1977, 1995 by The Lockman Foundation. Used by permission. All rights reserved. The NASB text may not be quoted in any publication made available to the public by a Creative Commons license. The NASB may not be translated into any other language. Website: www.lockman.org"
+        case .rvr1960:
+            return "Las citas bíblicas marcadas RVR1960 son tomadas de la Reina-Valera 1960®, © Sociedades Bíblicas en América Latina, 1960; © Renovado, Sociedades Bíblicas Unidas, 1988. Utilizado con permiso. Reina-Valera 1960® es una marca registrada de las Sociedades Bíblicas Unidas y puede ser usada solamente bajo licencia. Website: www.sociedades-biblicas.net"
+        case .tr:
+            return "The Textus Receptus (1550 Stephanus edition) is in the public domain."
+        case .wlc:
+            return "The Westminster Leningrad Codex is provided by the J. Alan Groves Center for Advanced Biblical Research."
         }
     }
 
-    /// Whether this translation uses the API.Bible service
+    /// Shortest displayable code — used when toolbar space is tight (3 chars max)
+    var compactCode: String {
+        switch self {
+        case .esv:    return "ESV"
+        case .kjv:    return "KJV"
+        case .csb:    return "CSB"
+        case .nkjv:   return "NKJ"
+        case .nasb:   return "NAS"
+        case .rvr1960: return "RVR"
+        case .tr:     return "TR"
+        case .wlc:    return "WLC"
+        }
+    }
+
+    /// Whether this translation is fetched via the API.Bible service
     var usesApiBible: Bool {
         switch self {
-        case .csb, .nkjv, .nasb: return true
-        case .esv, .kjv: return false
+        case .csb, .nkjv, .nasb, .rvr1960: return true
+        case .esv, .kjv, .tr, .wlc: return false
         }
     }
 }

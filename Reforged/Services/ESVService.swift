@@ -114,6 +114,11 @@ class ESVService {
     private let verseCacheKey = "esv_verse_cache"
     private let cacheRefreshDays = 30
 
+    // Increment when the query format for any book group changes so stale
+    // entries are automatically evicted and re-fetched on next launch.
+    private static let cacheFormatVersion = 2
+    private static let cacheFormatVersionKey = "esv_cache_format_version"
+
     private init() {
         loadCacheFromDisk()
     }
@@ -126,9 +131,33 @@ class ESVService {
 
     private func loadCacheFromDisk() {
         if let data = UserDefaults.standard.data(forKey: cacheKey),
-           let cache = try? JSONDecoder().decode([String: ESVCachedChapter].self, from: data) {
-            chapterCache = cache
-            print("Loaded \(cache.count) chapters from cache")
+           var cache = try? JSONDecoder().decode([String: ESVCachedChapter].self, from: data) {
+
+            // Version migration: single-chapter books (Obadiah, Philemon, 2 John, 3 John,
+            // Jude) were previously fetched with just the book name, which made the ESV API
+            // return paragraph-flow text. That caused verse content to be misread as section
+            // headings. Evict those entries once so they are re-fetched with the correct
+            // "Book 1:1-99" query that returns properly delimited chapter text.
+            let storedVersion = UserDefaults.standard.integer(forKey: Self.cacheFormatVersionKey)
+            if storedVersion < Self.cacheFormatVersion {
+                let singleChapterBooks: Set<String> = ["Obadiah", "Philemon", "2 John", "3 John", "Jude"]
+                let before = cache.count
+                cache = cache.filter { !singleChapterBooks.contains($0.value.book) }
+                UserDefaults.standard.set(Self.cacheFormatVersion, forKey: Self.cacheFormatVersionKey)
+                if cache.count < before {
+                    print("ESV cache: migrated to v\(Self.cacheFormatVersion), evicted \(before - cache.count) single-chapter book entries")
+                }
+            }
+
+            // Evict any previously-poisoned entries that contain fewer than 2 verses.
+            let cleaned = cache.filter { $0.value.verses.count >= 2 }
+            chapterCache = cleaned
+            let evicted = cache.count - cleaned.count
+            if evicted > 0 {
+                saveCacheToDisk()
+                print("ESV cache: evicted \(evicted) under-populated entries on load")
+            }
+            print("Loaded \(cleaned.count) chapters from cache")
         }
     }
 
@@ -142,12 +171,12 @@ class ESVService {
         let key = cacheKeyFor(book: book, chapter: chapter)
         guard let cached = chapterCache[key] else { return nil }
 
-        // Return cached if not stale
-        if !cached.isStale {
+        // Reject stale entries and entries with suspiciously few verses (cache poisoning guard)
+        if !cached.isStale && cached.verses.count >= 2 {
             return cached
         }
 
-        return nil // Stale cache, need to refresh
+        return nil
     }
 
     private func cacheChapter(_ chapter: ESVCachedChapter) {
@@ -165,7 +194,7 @@ class ESVService {
     /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
     func injectBundle(_ bundle: [String: ESVCachedChapter]) {
         let now = Date()
-        for (key, chapter) in bundle where chapterCache[key] == nil {
+        for (key, chapter) in bundle where chapterCache[key] == nil || (chapterCache[key]?.verses.count ?? 0) < 2 {
             chapterCache[key] = ESVCachedChapter(
                 book: chapter.book,
                 chapter: chapter.chapter,
@@ -278,8 +307,24 @@ class ESVService {
         )
     }
 
+    /// Returns the ESV API query string for a chapter.
+    /// Single-chapter books (Obadiah, Philemon, 2 John, 3 John, Jude) need special
+    /// handling:
+    ///   - Requesting just "Philemon" returns paragraph-flow text where verse content
+    ///     bleeds between [N] markers, causing the heading extractor to misread verse
+    ///     text as section headings.
+    ///   - Requesting "Philemon 1" makes the API treat "1" as verse 1, returning only
+    ///     the first verse.
+    ///   - Requesting "Philemon 1:1-99" is unambiguous: chapter 1, all verses up to 99.
+    ///     The API caps the range at the last verse, returning the full chapter in
+    ///     proper verse-numbered format (same structure as any other chapter request).
+    private func esvReference(book: String, chapter: Int) -> String {
+        let singleChapterBooks: Set<String> = ["Obadiah", "Philemon", "2 John", "3 John", "Jude"]
+        return singleChapterBooks.contains(book) ? "\(book) 1:1-99" : "\(book) \(chapter)"
+    }
+
     func fetchChapter(book: String, chapter: Int) async throws -> (text: String, canonical: String) {
-        let reference = "\(book) \(chapter)"
+        let reference = esvReference(book: book, chapter: chapter)
         return try await fetchPassage(
             reference: reference,
             includeVerseNumbers: true,
@@ -345,14 +390,16 @@ class ESVService {
         }
 
         // Fetch from API
-        let reference = "\(book) \(chapter)"
+        // Single-chapter books must be requested by book name only — appending " 1"
+        // causes the ESV API to treat "1" as a verse index, returning only verse 1.
+        let reference = esvReference(book: book, chapter: chapter)
 
         var components = URLComponents(string: baseURL)
         components?.queryItems = [
             URLQueryItem(name: "q", value: reference),
             URLQueryItem(name: "include-verse-numbers", value: "true"),
             URLQueryItem(name: "include-footnotes", value: "false"),
-            URLQueryItem(name: "include-headings", value: "false"),
+            URLQueryItem(name: "include-headings", value: "true"),
             URLQueryItem(name: "include-short-copyright", value: "false"),
             URLQueryItem(name: "include-passage-references", value: "false"),
             URLQueryItem(name: "include-first-verse-numbers", value: "true"),
@@ -406,13 +453,9 @@ class ESVService {
 
     private func parsePassageIntoVerses(_ text: String, book: String, chapter: Int) -> ([ParsedVerse], [Int: String]) {
         var verses: [ParsedVerse] = []
-        let headings: [Int: String] = [:]
+        var headings: [Int: String] = [:]
 
-        // Keep original text to detect paragraph breaks (double newlines)
         let originalText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Primary parsing method: Use regex to find all [number] patterns
-        // Pattern matches [1], [2], [13], etc.
         let pattern = #"\[(\d+)\]"#
 
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
@@ -423,35 +466,65 @@ class ESVService {
         let matches = regex.matches(in: originalText, options: [], range: nsRange)
 
         if matches.isEmpty {
-            // No verse numbers found, try fallback
             return (parseVersesFallback(text, book: book, chapter: chapter), headings)
         }
 
-        // Extract verses based on positions
         for (index, match) in matches.enumerated() {
-            guard let verseNumRange = Range(match.range(at: 1), in: originalText) else { continue }
-            guard let verseNum = Int(originalText[verseNumRange]) else { continue }
+            guard let verseNumRange = Range(match.range(at: 1), in: originalText),
+                  let verseNum = Int(originalText[verseNumRange]),
+                  let matchRange = Range(match.range, in: originalText) else { continue }
 
-            // Find the start of verse text (after the [number])
-            guard let matchRange = Range(match.range, in: originalText) else { continue }
             let textStart = matchRange.upperBound
 
-            // Check if this verse starts a new paragraph by looking for double newline before the verse number
-            var startsNewParagraph = false
-            if index == 0 {
-                // First verse always starts a paragraph
-                startsNewParagraph = true
-            } else {
-                // Look at text between previous verse end and this verse number
-                let previousEnd = matches[index - 1].range.upperBound
-                if let prevEndIndex = Range(NSRange(location: previousEnd, length: match.range.location - previousEnd), in: originalText) {
-                    let textBetween = String(originalText[prevEndIndex])
-                    // Check for paragraph break: double newline or newline followed by whitespace and newline
-                    startsNewParagraph = textBetween.contains("\n\n") || textBetween.contains("\n    ") || textBetween.contains("\n\t")
+            // --- Paragraph break detection ---
+            var startsNewParagraph = index == 0
+            if index > 0 {
+                let prevEnd = matches[index - 1].range.upperBound
+                if let betweenRange = Range(NSRange(location: prevEnd, length: match.range.location - prevEnd), in: originalText) {
+                    let between = String(originalText[betweenRange])
+                    startsNewParagraph = between.contains("\n\n") || between.contains("\n    ") || between.contains("\n\t")
                 }
             }
 
-            // Find the end of verse text (start of next verse number or end of string)
+            // --- Heading extraction: text between previous verse end and this verse marker ---
+            if index > 0 {
+                let prevEnd = matches[index - 1].range.upperBound
+                if let betweenRange = Range(NSRange(location: prevEnd, length: match.range.location - prevEnd), in: originalText) {
+                    let between = String(originalText[betweenRange])
+                    if let h = extractHeadingFromBetweenText(between, isFirstVerse: false) {
+                        headings[verseNum] = h
+
+                        // The raw verse text for the previous verse runs from after its
+                        // [N] marker all the way to the start of this [M] marker — the
+                        // same span as `between`. That means the heading text was included
+                        // in the previous verse's processed string. Strip it now.
+                        if !verses.isEmpty {
+                            let last = verses[verses.count - 1]
+                            if let headingRange = last.text.range(of: h, options: [.caseInsensitive]) {
+                                let patched = String(last.text[..<headingRange.lowerBound])
+                                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                                verses[verses.count - 1] = ParsedVerse(
+                                    id: last.id,
+                                    number: last.number,
+                                    text: patched.isEmpty ? last.text : patched,
+                                    reference: last.reference,
+                                    startsNewParagraph: last.startsNewParagraph,
+                                    sectionHeading: last.sectionHeading
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Text before the first verse marker may contain a chapter heading
+                // (e.g. "Greeting" in Philemon or "Salutation" in 2 John).
+                let before = String(originalText[originalText.startIndex..<matchRange.lowerBound])
+                if let h = extractHeadingFromBetweenText(before, isFirstVerse: true) {
+                    headings[verseNum] = h
+                }
+            }
+
+            // --- Verse text end ---
             let textEnd: String.Index
             if index + 1 < matches.count,
                let nextMatchRange = Range(matches[index + 1].range, in: originalText) {
@@ -460,21 +533,15 @@ class ESVService {
                 textEnd = originalText.endIndex
             }
 
-            // Extract the raw verse text preserving some structure
             let rawVerseText = String(originalText[textStart..<textEnd])
-
-            // Clean up the verse text while preserving essential content
             var verseText = rawVerseText
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "\n", with: " ")
-
-            // Collapse multiple spaces into single space
             while verseText.contains("  ") {
                 verseText = verseText.replacingOccurrences(of: "  ", with: " ")
             }
-
-            // Remove any trailing section headers (all caps lines)
-            verseText = removeTrailingSectionHeaders(from: verseText)
+            // Remove trailing heading text that leaked into the verse body
+            verseText = stripTrailingHeading(from: verseText)
 
             if !verseText.isEmpty {
                 let reference = "\(book) \(chapter):\(verseNum)"
@@ -483,33 +550,94 @@ class ESVService {
                     number: verseNum,
                     text: verseText,
                     reference: reference,
-                    startsNewParagraph: startsNewParagraph
+                    startsNewParagraph: startsNewParagraph,
+                    sectionHeading: headings[verseNum]
                 ))
             }
         }
 
-        // If we still didn't get verses, try fallback
         if verses.isEmpty {
             return (parseVersesFallback(text, book: book, chapter: chapter), headings)
         }
 
-        // Sort by verse number to ensure correct order
         verses.sort { $0.number < $1.number }
-
         return (verses, headings)
     }
 
-    private func removeTrailingSectionHeaders(from text: String) -> String {
-        // Remove trailing text that looks like a section header (all caps with only letters and spaces)
-        var result = text
+    /// Extracts a section heading from the gap text around a verse marker.
+    ///
+    /// - Parameter text: The raw text segment to inspect.
+    /// - Parameter isFirstVerse: Pass `true` when `text` is the content *before*
+    ///   the very first verse marker (e.g. "Greeting\n\n"). In that position the
+    ///   first non-empty line is always a heading candidate.
+    ///   Pass `false` for the gap *between* two consecutive verse markers. In that
+    ///   position the heading always appears at the **end** of the gap (immediately
+    ///   before the next verse marker). Some books (e.g. Titus 1:4) split a single
+    ///   verse across multiple paragraph blocks separated by `\n\n`, so a forward
+    ///   scan would incorrectly promote the continuation text to a heading. Scanning
+    ///   backward from the end avoids this. An additional sentence-terminator guard
+    ///   (`.`, `,`, `;`, `:`) rejects verse content that ends mid-sentence, since
+    ///   genuine ESV section headings are short, un-punctuated noun phrases.
+    private func extractHeadingFromBetweenText(_ text: String, isFirstVerse: Bool = false) -> String? {
+        guard text.contains("\n") else { return nil }
 
-        // Pattern for section headers at the end: multiple capital letters/spaces
-        let headerPattern = #"\s+[A-Z][A-Z\s]+$"#
+        let lines = text.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+
+        // Characters that end a sentence/clause but never a section heading
+        let sentenceEnders: Set<Character> = [".", ",", ";", ":"]
+
+        if isFirstVerse {
+            // Before the first verse, the heading appears at the top (e.g. "Greeting").
+            // Scan forward; treat the very start as if preceded by a blank line.
+            var prevWasEmpty = true
+            for (i, line) in lines.enumerated() {
+                if line.isEmpty { prevWasEmpty = true; continue }
+                if prevWasEmpty,
+                   line.count >= 3, line.count <= 80,
+                   !(sentenceEnders.contains(line.last ?? " ")),
+                   line.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil {
+                    let nextIndex = i + 1
+                    let followedByBlankOrEnd = nextIndex >= lines.count
+                        || lines[nextIndex].isEmpty
+                    if followedByBlankOrEnd { return line }
+                }
+                prevWasEmpty = false
+            }
+        } else {
+            // Between verses the heading appears at the END of the gap — just before
+            // the opening `[N]` of the next verse. Only proceed if there is at least
+            // one paragraph break; plain verse continuation never needs this path.
+            guard text.contains("\n\n") else { return nil }
+
+            // Scan backward: treat the text end as if followed by a blank line.
+            var nextWasEmpty = true
+            for i in stride(from: lines.count - 1, through: 0, by: -1) {
+                let line = lines[i]
+                if line.isEmpty { nextWasEmpty = true; continue }
+                if nextWasEmpty,
+                   line.count >= 3, line.count <= 80,
+                   !(sentenceEnders.contains(line.last ?? " ")),
+                   line.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil {
+                    let prevIndex = i - 1
+                    let precededByBlankOrStart = prevIndex < 0 || lines[prevIndex].isEmpty
+                    if precededByBlankOrStart { return line }
+                }
+                nextWasEmpty = false
+            }
+        }
+        return nil
+    }
+
+    /// Strips any trailing heading-like text from a verse body string.
+    private func stripTrailingHeading(from text: String) -> String {
+        var result = text
+        // Trailing ALL-CAPS header: one or more words all uppercase separated by spaces
+        let headerPattern = #"\s+[A-Z][A-Z\s']+$"#
         if let regex = try? NSRegularExpression(pattern: headerPattern, options: []) {
             let range = NSRange(result.startIndex..., in: result)
             result = regex.stringByReplacingMatches(in: result, options: [], range: range, withTemplate: "")
         }
-
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

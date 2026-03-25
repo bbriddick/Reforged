@@ -32,6 +32,189 @@ class StrongsLexiconService {
         loadCachesFromDisk()
     }
 
+    // MARK: - Original Language Direct Lookups
+
+    /// Looks up a Greek word from the Textus Receptus by its Strong's number.
+    /// Used when the user long-presses a TR word — the TRToken already has the Strong's number,
+    /// so we skip KJV English interlinear matching and go straight to the detail endpoint.
+    func lookupByStrongsNumber(
+        _ strongsNumber: String,
+        tappedWord: String,
+        originalForm: String,
+        morphDescription: String,
+        verseReference: String,
+        bookName: String,
+        chapter: Int,
+        verseNumber: Int,
+        isHebrew: Bool
+    ) async -> WordLookupResult {
+        // Try API detail first (most complete: Thayer's/BDB, Mounce, usage counts)
+        if let detail = await getStrongsDetail(number: strongsNumber) {
+            let translationCounts = (detail.translation_counts ?? []).compactMap { tc -> (word: String, count: Int)? in
+                guard let word = tc.trans_link ?? tc.trans,
+                      let count = Int(tc.count) else { return nil }
+                return (word: word, count: count)
+            }
+            return WordLookupResult(
+                tappedWord: tappedWord,
+                verseReference: verseReference,
+                bookName: bookName,
+                chapterNumber: chapter,
+                verseNumber: verseNumber,
+                isHebrew: isHebrew,
+                isFromAPI: true,
+                originalWord: originalForm.isEmpty ? detail.original_word : originalForm,
+                lexicalForm: detail.original_word,
+                strongsNumber: detail.number,
+                transliteration: detail.transliteration,
+                pronunciation: detail.phonetics,
+                strongsDefinition: detail.strong_definition.trimmingCharacters(in: .whitespacesAndNewlines),
+                detailedDefinition: isHebrew
+                    ? stripHTML(detail.bdb_definition)
+                    : stripHTML(detail.thayers_definition),
+                mounceDefinition: detail.mounce_definition.trimmingCharacters(in: .whitespacesAndNewlines),
+                kjvUsage: detail.kjv_usage,
+                derivation: stripHTML(detail.linked_derivation),
+                occurrenceCount: detail.count,
+                translationCounts: translationCounts,
+                strongsEntries: []
+            )
+        }
+
+        // Fall back to bundled dictionary (offline)
+        if let bundled = lookupBundledEntry(strongsNumber) {
+            return WordLookupResult(
+                tappedWord: tappedWord,
+                verseReference: verseReference,
+                bookName: bookName,
+                chapterNumber: chapter,
+                verseNumber: verseNumber,
+                isHebrew: isHebrew,
+                isFromAPI: true,   // Strong's number is a definitive match
+                originalWord: originalForm.isEmpty ? bundled.lemma : originalForm,
+                lexicalForm: bundled.lemma,
+                strongsNumber: strongsNumber,
+                transliteration: bundled.transliteration,
+                pronunciation: bundled.pronunciation,
+                strongsDefinition: bundled.shortDefinition,
+                detailedDefinition: bundled.definition,
+                mounceDefinition: "",
+                kjvUsage: bundled.usage,
+                derivation: bundled.source,
+                occurrenceCount: 0,
+                translationCounts: [],
+                strongsEntries: []
+            )
+        }
+
+        // Bare minimum result when no data available
+        return WordLookupResult(
+            tappedWord: tappedWord,
+            verseReference: verseReference,
+            bookName: bookName,
+            chapterNumber: chapter,
+            verseNumber: verseNumber,
+            isHebrew: isHebrew,
+            isFromAPI: false,
+            originalWord: originalForm,
+            lexicalForm: "",
+            strongsNumber: strongsNumber,
+            transliteration: "",
+            pronunciation: "",
+            strongsDefinition: "",
+            detailedDefinition: "",
+            mounceDefinition: "",
+            kjvUsage: "",
+            derivation: "",
+            occurrenceCount: 0,
+            translationCounts: [],
+            strongsEntries: []
+        )
+    }
+
+    /// Looks up a Hebrew word from the Westminster Leningrad Codex.
+    ///
+    /// Strategy:
+    ///   1. Fetch the verse ORIG data from the API — Hebrew words + Strong's numbers for that verse.
+    ///   2. Strip cantillation marks from both the tapped word and each ORIG word, then match.
+    ///   3. If a match is found, call `lookupByStrongsNumber` for the full Thayer's/BDB entry.
+    ///   4. If not, fall back to a consonant search of the bundled Hebrew dictionary.
+    func lookupWLCWord(
+        _ hebrewWord: String,
+        verseReference: String,
+        bookName: String,
+        chapter: Int,
+        verseNumber: Int
+    ) async -> WordLookupResult {
+        // Step 1: Use cached verse interlinear (ORIG endpoint has Hebrew words + Strong's numbers)
+        if let verseData = await getVerseInterlinear(bookName: bookName, chapter: chapter, verse: verseNumber) {
+            let strippedTapped = OriginalLanguageService.stripCantillation(hebrewWord)
+
+            // Match by stripping cantillation from each ORIG Hebrew word
+            let matched = verseData.words.first { entry in
+                let strippedOrig = OriginalLanguageService.stripCantillation(entry.originalWord)
+                return strippedOrig == strippedTapped
+                    || strippedOrig.contains(strippedTapped)
+                    || strippedTapped.contains(strippedOrig)
+            }
+
+            if let matched, let strongsNum = matched.primaryStrongsNumber {
+                return await lookupByStrongsNumber(
+                    strongsNum,
+                    tappedWord: hebrewWord,
+                    originalForm: matched.originalWord,
+                    morphDescription: "",
+                    verseReference: verseReference,
+                    bookName: bookName,
+                    chapter: chapter,
+                    verseNumber: verseNumber,
+                    isHebrew: true
+                )
+            }
+        }
+
+        // Step 2: Fallback — search bundled Hebrew dictionary by consonantal form
+        let stripped = OriginalLanguageService.stripCantillation(hebrewWord)
+        let hebrewMatches = searchByHebrewConsonants(stripped)
+
+        return WordLookupResult(
+            tappedWord: hebrewWord,
+            verseReference: verseReference,
+            bookName: bookName,
+            chapterNumber: chapter,
+            verseNumber: verseNumber,
+            isHebrew: true,
+            isFromAPI: false,
+            originalWord: "",
+            lexicalForm: "",
+            strongsNumber: "",
+            transliteration: "",
+            pronunciation: "",
+            strongsDefinition: "",
+            detailedDefinition: "",
+            mounceDefinition: "",
+            kjvUsage: "",
+            derivation: "",
+            occurrenceCount: 0,
+            translationCounts: [],
+            strongsEntries: Array(hebrewMatches.prefix(5))
+        )
+    }
+
+    /// Searches the bundled Hebrew dictionary for entries whose lemma consonants match.
+    private func searchByHebrewConsonants(_ consonants: String) -> [StrongsEntry] {
+        ensureHebrewLoaded()
+        guard let entries = hebrewDict, !consonants.isEmpty else { return [] }
+        return entries.values
+            .filter { entry in
+                let lemmaConsonants = OriginalLanguageService.stripCantillation(entry.lemma)
+                return lemmaConsonants == consonants
+                    || lemmaConsonants.contains(consonants)
+                    || consonants.contains(lemmaConsonants)
+            }
+            .sorted { $0.number < $1.number }
+    }
+
     // MARK: - Main Lookup (API-first, fallback to bundled)
 
     /// Main entry point: looks up a tapped word with full interlinear data.
@@ -59,6 +242,9 @@ class StrongsLexiconService {
         return await lookupViaOfflineDictionary(
             word: word,
             verseReference: verseReference,
+            bookName: bookName,
+            chapter: chapter,
+            verseNumber: verseNumber,
             isHebrew: isHebrew
         )
     }
@@ -73,6 +259,9 @@ class StrongsLexiconService {
         verseNumber: Int,
         isHebrew: Bool
     ) async -> WordLookupResult? {
+        let _bookName = bookName
+        let _chapter = chapter
+        let _verseNumber = verseNumber
         // Get or fetch verse interlinear data
         guard let verseData = await getVerseInterlinear(
             bookName: bookName,
@@ -103,6 +292,9 @@ class StrongsLexiconService {
             return WordLookupResult(
                 tappedWord: word,
                 verseReference: verseReference,
+                bookName: _bookName,
+                chapterNumber: _chapter,
+                verseNumber: _verseNumber,
                 isHebrew: isHebrew,
                 isFromAPI: true,
                 originalWord: matched.originalWord,
@@ -128,6 +320,9 @@ class StrongsLexiconService {
             return WordLookupResult(
                 tappedWord: word,
                 verseReference: verseReference,
+                bookName: _bookName,
+                chapterNumber: _chapter,
+                verseNumber: _verseNumber,
                 isHebrew: isHebrew,
                 isFromAPI: true,
                 originalWord: matched.originalWord,
@@ -193,6 +388,8 @@ class StrongsLexiconService {
 
     /// Pre-fetches interlinear data for an entire chapter (2 API calls instead of 2 per verse).
     func prefetchChapter(bookName: String, chapter: Int, totalVerses: Int) async {
+        // Guard against empty chapters (e.g. WLC/TR not yet loaded) — 1...0 is a fatal crash
+        guard totalVerses > 0 else { return }
         guard let apiBookName = BibleData.books.first(where: { $0.name == bookName })?.studyBibleAPIName else {
             return
         }
@@ -379,6 +576,9 @@ class StrongsLexiconService {
     private func lookupViaOfflineDictionary(
         word: String,
         verseReference: String,
+        bookName: String,
+        chapter: Int,
+        verseNumber: Int,
         isHebrew: Bool
     ) async -> WordLookupResult {
         let offlineResults = searchByEnglishWord(word, isHebrew: isHebrew)
@@ -386,6 +586,9 @@ class StrongsLexiconService {
         return WordLookupResult(
             tappedWord: word,
             verseReference: verseReference,
+            bookName: bookName,
+            chapterNumber: chapter,
+            verseNumber: verseNumber,
             isHebrew: isHebrew,
             isFromAPI: false,
             originalWord: "",

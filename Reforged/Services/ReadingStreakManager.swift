@@ -123,13 +123,13 @@ class ReadingStreakManager: ObservableObject {
         let now = Date()
         let calendar = Calendar.current
         let currentHour = calendar.component(.hour, from: now)
-        let logicalDate: Date
-        if dayStartHour > 0 && currentHour < dayStartHour {
-            logicalDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
-        } else {
-            logicalDate = now
-        }
-        return String(ISO8601DateFormatter().string(from: logicalDate).prefix(10))
+        let logicalDate = (dayStartHour > 0 && currentHour < dayStartHour)
+            ? (calendar.date(byAdding: .day, value: -1, to: now) ?? now)
+            : now
+        // Use local-timezone DateFormatter so stored keys match calculateCurrentStreak's lookups.
+        // ISO8601DateFormatter was previously used here but formats in UTC, causing mismatches
+        // for users in UTC-negative timezones who read in the evening.
+        return dateToString(logicalDate)
     }
 
     private func dateToString(_ date: Date) -> String {
@@ -148,37 +148,49 @@ class ReadingStreakManager: ObservableObject {
         guard !readingDates.isEmpty else { return 0 }
 
         let calendar = Calendar.current
+        // Use todayString so the anchor respects both the local timezone and the
+        // user's custom dayStartHour — the same date key that recordChapterRead stores.
+        let todayStr = todayString
+        guard let todayDate = stringToDate(todayStr) else { return 0 }
         var streak = 0
-        var currentDate = calendar.startOfDay(for: Date())
 
-        // Check if today counts
-        if readingDates.contains(dateToString(currentDate)) {
+        if readingDates.contains(todayStr) {
+            // Today has been read — count today then walk backwards.
             streak = 1
-            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
-        }
-
-        // Count consecutive days backwards
-        while readingDates.contains(dateToString(currentDate)) {
-            streak += 1
-            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
-        }
-
-        // If user hasn't read today, check if yesterday was the last day
-        // (streak is still valid until end of today)
-        if streak == 0 {
-            let yesterday = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: Date()))!
+            var cur = calendar.date(byAdding: .day, value: -1, to: todayDate)!
+            while readingDates.contains(dateToString(cur)) {
+                streak += 1
+                cur = calendar.date(byAdding: .day, value: -1, to: cur)!
+            }
+        } else {
+            // Grace period: streak is still live until end of today if yesterday was read.
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: todayDate)!
             if readingDates.contains(dateToString(yesterday)) {
-                // Yesterday was a reading day, but today isn't yet
-                // The streak is still active
-                currentDate = yesterday
-                while readingDates.contains(dateToString(currentDate)) {
+                var cur = yesterday
+                while readingDates.contains(dateToString(cur)) {
                     streak += 1
-                    currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
+                    cur = calendar.date(byAdding: .day, value: -1, to: cur)!
                 }
             }
         }
 
         return streak
+    }
+
+    /// Seeds the last `count` consecutive days into `readingDates` when the set is empty.
+    /// Called after CloudKit restores a streak on a fresh install so the local computed
+    /// streak matches the synced value immediately, rather than showing 0.
+    func seedStreak(count: Int) {
+        guard count > 0, readingDates.isEmpty else { return }
+        let calendar = Calendar.current
+        guard let today = stringToDate(todayString) else { return }
+        for i in 0..<count {
+            if let date = calendar.date(byAdding: .day, value: -i, to: today) {
+                readingDates.insert(dateToString(date))
+            }
+        }
+        saveToStorage()
+        objectWillChange.send()
     }
 
     // MARK: - Persistence

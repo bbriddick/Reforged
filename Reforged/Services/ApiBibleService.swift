@@ -10,7 +10,8 @@ struct ApiBibleConfig {
     static let bibleIds: [BibleTranslation: String] = [
         .csb: "a556c5305ee15c3f-01",
         .nkjv: "63097d2a0a2f7db3-01",
-        .nasb: "b8ee27bcd1cae43a-01"
+        .nasb: "b8ee27bcd1cae43a-01",
+        .rvr1960: "592420522e16049f-01"
     ]
 }
 
@@ -132,10 +133,34 @@ struct ApiBibleCachedChapter: Codable {
     let canonical: String
     let cachedAt: Date
     let verses: [ApiBibleCachedVerse]
+    /// Raw API text stored so that headings and paragraph breaks can be
+    /// re-derived on cache hits without a network round-trip.
+    /// Empty string for entries cached before heading support was added.
+    let content: String
 
     var isStale: Bool {
         let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
         return cachedAt < thirtyDaysAgo
+    }
+
+    // Explicit memberwise init (Codable synthesised init is overridden below)
+    init(book: String, chapter: Int, translationId: String, canonical: String,
+         cachedAt: Date, verses: [ApiBibleCachedVerse], content: String) {
+        self.book = book; self.chapter = chapter; self.translationId = translationId
+        self.canonical = canonical; self.cachedAt = cachedAt
+        self.verses = verses; self.content = content
+    }
+
+    // Backward-compatible decoding: `content` did not exist in earlier cache entries.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        book         = try c.decode(String.self,                  forKey: .book)
+        chapter      = try c.decode(Int.self,                     forKey: .chapter)
+        translationId = try c.decode(String.self,                 forKey: .translationId)
+        canonical    = try c.decode(String.self,                  forKey: .canonical)
+        cachedAt     = try c.decode(Date.self,                    forKey: .cachedAt)
+        verses       = try c.decode([ApiBibleCachedVerse].self,   forKey: .verses)
+        content      = (try? c.decode(String.self,                forKey: .content)) ?? ""
     }
 }
 
@@ -203,8 +228,15 @@ class ApiBibleService {
     private func loadCacheFromDisk() {
         if let data = UserDefaults.standard.data(forKey: cacheKey),
            let cache = try? JSONDecoder().decode([String: ApiBibleCachedChapter].self, from: data) {
-            chapterCache = cache
-            print("Loaded \(cache.count) API.Bible chapters from cache")
+            // Evict any previously-poisoned entries that contain fewer than 2 verses.
+            let cleaned = cache.filter { $0.value.verses.count >= 2 }
+            chapterCache = cleaned
+            let evicted = cache.count - cleaned.count
+            if evicted > 0 {
+                saveCacheToDisk()
+                print("API.Bible cache: evicted \(evicted) under-populated entries on load")
+            }
+            print("Loaded \(cleaned.count) API.Bible chapters from cache")
         }
     }
 
@@ -217,7 +249,8 @@ class ApiBibleService {
     private func getCachedChapter(translation: String, book: String, chapter: Int) -> ApiBibleCachedChapter? {
         let key = cacheKeyFor(translation: translation, book: book, chapter: chapter)
         guard let cached = chapterCache[key] else { return nil }
-        if !cached.isStale { return cached }
+        // Reject stale entries and entries with suspiciously few verses (cache poisoning guard)
+        if !cached.isStale && cached.verses.count >= 2 { return cached }
         return nil
     }
 
@@ -250,14 +283,15 @@ class ApiBibleService {
     /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
     func injectBundle(_ bundle: [String: ApiBibleCachedChapter]) {
         let now = Date()
-        for (key, chapter) in bundle where chapterCache[key] == nil {
+        for (key, chapter) in bundle where chapterCache[key] == nil || (chapterCache[key]?.verses.count ?? 0) < 2 {
             chapterCache[key] = ApiBibleCachedChapter(
                 book: chapter.book,
                 chapter: chapter.chapter,
                 translationId: chapter.translationId,
                 canonical: chapter.canonical,
                 cachedAt: now,
-                verses: chapter.verses
+                verses: chapter.verses,
+                content: chapter.content
             )
         }
         saveCacheToDisk()
@@ -290,31 +324,27 @@ class ApiBibleService {
 
         // Check local cache first
         if let cached = getCachedChapter(translation: bibleId, book: book, chapter: chapter) {
-            let verses = cached.verses.map { cachedVerse in
-                ParsedVerse(
-                    id: cachedVerse.reference,
-                    number: cachedVerse.number,
-                    text: cachedVerse.text,
-                    reference: cachedVerse.reference,
-                    startsNewParagraph: cachedVerse.number == 1
-                )
+            // Re-parse from raw content when available so that paragraph breaks
+            // and section headings are fully restored without a network request.
+            if !cached.content.isEmpty {
+                let verses = parseChapterContent(cached.content, book: book, chapter: chapter)
+                return (verses: verses, canonical: cached.canonical)
+            }
+            // Fallback for pre-heading cache entries (content field is empty)
+            let verses = cached.verses.map { cv in
+                ParsedVerse(id: cv.reference, number: cv.number, text: cv.text,
+                            reference: cv.reference, startsNewParagraph: cv.number == 1)
             }
             return (verses: verses, canonical: cached.canonical)
         }
 
-        guard let bookCode = bookId(for: book) else {
-            throw ApiBibleError.invalidURL
-        }
-
-        // First, get list of verses in this chapter to know IDs
+        guard let bookCode = bookId(for: book) else { throw ApiBibleError.invalidURL }
         let chapterId = "\(bookCode).\(chapter)"
 
-        // Fetch chapter content as text
-        let urlString = "\(ApiBibleConfig.baseURL)/bibles/\(bibleId)/chapters/\(chapterId)?content-type=text&include-verse-numbers=true&include-titles=false&include-chapter-numbers=false&include-verse-spans=false"
+        // include-titles=true so section headings appear in the text for extraction
+        let urlString = "\(ApiBibleConfig.baseURL)/bibles/\(bibleId)/chapters/\(chapterId)?content-type=text&include-verse-numbers=true&include-titles=true&include-chapter-numbers=false&include-verse-spans=false"
 
-        guard let url = URL(string: urlString) else {
-            throw ApiBibleError.invalidURL
-        }
+        guard let url = URL(string: urlString) else { throw ApiBibleError.invalidURL }
 
         let data = try await makeRequest(url: url)
 
@@ -322,20 +352,16 @@ class ApiBibleService {
             let decoded = try JSONDecoder().decode(ApiBibleChapterResponse.self, from: data)
             let content = decoded.data.content
 
-            // Parse the text content into individual verses
             let verses = parseChapterContent(content, book: book, chapter: chapter)
-
             let canonical = "\(book) \(chapter)"
 
-            // Cache the result
+            // Store raw content alongside the parsed verse list so future cache
+            // hits can re-derive headings and paragraph breaks without a network call.
             let cachedVerses = verses.map { ApiBibleCachedVerse(number: $0.number, text: $0.text, reference: $0.reference) }
             let cachedChapter = ApiBibleCachedChapter(
-                book: book,
-                chapter: chapter,
-                translationId: bibleId,
-                canonical: canonical,
-                cachedAt: Date(),
-                verses: cachedVerses
+                book: book, chapter: chapter, translationId: bibleId,
+                canonical: canonical, cachedAt: Date(),
+                verses: cachedVerses, content: content
             )
             cacheChapter(cachedChapter, translation: bibleId)
 
@@ -451,70 +477,88 @@ class ApiBibleService {
 
     // MARK: - Content Parsing
 
-    /// Parse text content from API.Bible chapter response into individual verses
+    /// Parses the raw API.Bible chapter text into individual verses, extracting
+    /// section headings and paragraph-break flags along the way.
     private func parseChapterContent(_ content: String, book: String, chapter: Int) -> [ParsedVerse] {
         var verses: [ParsedVerse] = []
+        var headings: [Int: String] = [:]
 
         let text = content.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // API.Bible text format with include-verse-numbers=true includes [1], [2], etc.
         let pattern = #"\[(\d+)\]"#
 
+        func fallbackVerse() -> [ParsedVerse] {
+            guard !text.isEmpty else { return [] }
+            let ref = "\(book) \(chapter):1"
+            return [ParsedVerse(id: ref, number: 1, text: text.cleanApiBibleContent(),
+                                reference: ref, startsNewParagraph: true)]
+        }
+
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
-            // Fallback: return the whole content as a single verse
-            if !text.isEmpty {
-                let reference = "\(book) \(chapter):1"
-                verses.append(ParsedVerse(
-                    id: reference,
-                    number: 1,
-                    text: text,
-                    reference: reference,
-                    startsNewParagraph: true
-                ))
-            }
-            return verses
+            return fallbackVerse()
         }
 
         let nsRange = NSRange(text.startIndex..., in: text)
         let matches = regex.matches(in: text, options: [], range: nsRange)
-
-        if matches.isEmpty {
-            // No verse numbers found - return whole content as verse 1
-            if !text.isEmpty {
-                let reference = "\(book) \(chapter):1"
-                verses.append(ParsedVerse(
-                    id: reference,
-                    number: 1,
-                    text: text,
-                    reference: reference,
-                    startsNewParagraph: true
-                ))
-            }
-            return verses
-        }
+        guard !matches.isEmpty else { return fallbackVerse() }
 
         for (index, match) in matches.enumerated() {
-            guard let verseNumRange = Range(match.range(at: 1), in: text) else { continue }
-            guard let verseNum = Int(text[verseNumRange]) else { continue }
-            guard let matchRange = Range(match.range, in: text) else { continue }
+            guard let verseNumRange = Range(match.range(at: 1), in: text),
+                  let verseNum = Int(text[verseNumRange]),
+                  let matchRange = Range(match.range, in: text) else { continue }
 
             let textStart = matchRange.upperBound
 
-            // Detect paragraph breaks
+            // ── Paragraph break detection ──────────────────────────────────────
             var startsNewParagraph = index == 0
             if index > 0 {
-                let previousEnd = matches[index - 1].range.upperBound
-                if let prevEndIndex = Range(NSRange(location: previousEnd, length: match.range.location - previousEnd), in: text) {
-                    let textBetween = String(text[prevEndIndex])
-                    startsNewParagraph = textBetween.contains("\n\n") || textBetween.contains("\n    ") || textBetween.contains("\n\t")
+                let prevEnd = matches[index - 1].range.upperBound
+                if let br = Range(NSRange(location: prevEnd,
+                                          length: match.range.location - prevEnd), in: text) {
+                    let between = String(text[br])
+                    startsNewParagraph = between.contains("\n\n")
+                        || between.contains("\n    ")
+                        || between.contains("\n\t")
                 }
             }
 
-            // Find end of verse text
+            // ── Section heading extraction ─────────────────────────────────────
+            if index > 0 {
+                let prevEnd = matches[index - 1].range.upperBound
+                if let br = Range(NSRange(location: prevEnd,
+                                          length: match.range.location - prevEnd), in: text) {
+                    let between = String(text[br])
+                    if let h = extractSectionHeading(from: between, isFirstVerse: false) {
+                        headings[verseNum] = h
+                        // Retroactively strip the heading text from the previous verse body
+                        if !verses.isEmpty {
+                            let last = verses[verses.count - 1]
+                            if let r = last.text.range(of: h, options: .caseInsensitive) {
+                                let patched = String(last.text[..<r.lowerBound])
+                                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                                verses[verses.count - 1] = ParsedVerse(
+                                    id: last.id, number: last.number,
+                                    text: patched.isEmpty ? last.text : patched,
+                                    reference: last.reference,
+                                    startsNewParagraph: last.startsNewParagraph,
+                                    sectionHeading: last.sectionHeading
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Text before the first verse marker may contain a chapter heading
+                let before = String(text[text.startIndex..<matchRange.lowerBound])
+                if let h = extractSectionHeading(from: before, isFirstVerse: true) {
+                    headings[verseNum] = h
+                }
+            }
+
+            // ── Verse text ────────────────────────────────────────────────────
             let textEnd: String.Index
             if index + 1 < matches.count,
-               let nextMatchRange = Range(matches[index + 1].range, in: text) {
-                textEnd = nextMatchRange.lowerBound
+               let next = Range(matches[index + 1].range, in: text) {
+                textEnd = next.lowerBound
             } else {
                 textEnd = text.endIndex
             }
@@ -523,29 +567,71 @@ class ApiBibleService {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "\n", with: " ")
                 .cleanApiBibleContent()
-
-            // Remove any trailing section headers (all caps)
-            let headerPattern = #"\s+[A-Z][A-Z\s]+$"#
-            if let headerRegex = try? NSRegularExpression(pattern: headerPattern, options: []) {
-                let verseRange = NSRange(verseText.startIndex..., in: verseText)
-                verseText = headerRegex.stringByReplacingMatches(in: verseText, options: [], range: verseRange, withTemplate: "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            while verseText.contains("  ") {
+                verseText = verseText.replacingOccurrences(of: "  ", with: " ")
             }
 
             if !verseText.isEmpty {
                 let reference = "\(book) \(chapter):\(verseNum)"
                 verses.append(ParsedVerse(
-                    id: reference,
-                    number: verseNum,
-                    text: verseText,
-                    reference: reference,
-                    startsNewParagraph: startsNewParagraph
+                    id: reference, number: verseNum,
+                    text: verseText, reference: reference,
+                    startsNewParagraph: startsNewParagraph,
+                    sectionHeading: headings[verseNum]
                 ))
             }
         }
 
         verses.sort { $0.number < $1.number }
         return verses
+    }
+
+    /// Extracts a section heading from the gap between two verse markers.
+    ///
+    /// API.Bible places headings as plain-text lines inside the chapter text.
+    /// Uses the same backward-scan strategy as ESVService: the heading always
+    /// sits at the END of the gap immediately before the next `[N]` marker.
+    /// A sentence-terminator guard (`.`, `,`, `;`, `:`) prevents verse text
+    /// that ends mid-clause from being mistaken for a heading.
+    private func extractSectionHeading(from text: String, isFirstVerse: Bool) -> String? {
+        guard text.contains("\n") else { return nil }
+
+        let lines = text.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        let sentenceEnders: Set<Character> = [".", ",", ";", ":"]
+
+        if isFirstVerse {
+            var prevWasEmpty = true
+            for (i, line) in lines.enumerated() {
+                if line.isEmpty { prevWasEmpty = true; continue }
+                if prevWasEmpty,
+                   line.count >= 3, line.count <= 80,
+                   !sentenceEnders.contains(line.last ?? " "),
+                   line.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil {
+                    let next = i + 1
+                    let followedByBlankOrEnd = next >= lines.count || lines[next].isEmpty
+                    if followedByBlankOrEnd { return line }
+                }
+                prevWasEmpty = false
+            }
+        } else {
+            guard text.contains("\n\n") else { return nil }
+            var nextWasEmpty = true
+            for i in stride(from: lines.count - 1, through: 0, by: -1) {
+                let line = lines[i]
+                if line.isEmpty { nextWasEmpty = true; continue }
+                if nextWasEmpty,
+                   line.count >= 3, line.count <= 80,
+                   !sentenceEnders.contains(line.last ?? " "),
+                   line.range(of: #"[A-Za-z]"#, options: .regularExpression) != nil {
+                    let prev = i - 1
+                    let precededByBlankOrStart = prev < 0 || lines[prev].isEmpty
+                    if precededByBlankOrStart { return line }
+                }
+                nextWasEmpty = false
+            }
+        }
+        return nil
     }
 }
 

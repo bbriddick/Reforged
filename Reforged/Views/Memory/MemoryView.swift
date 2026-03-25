@@ -9,6 +9,8 @@ struct MemoryView: View {
     @State private var verseToDelete: MemoryVerse?
     @State private var showDeleteConfirmation = false
     @State private var showHowItWorks = false
+    @State private var showMatchingGame = false
+    @State private var showCompleteTheVerse = false
 
     var versesForReview: [MemoryVerse] {
         appState.getVersesForReview()
@@ -58,6 +60,14 @@ struct MemoryView: View {
         }
         .sheet(isPresented: $showHowItWorks) {
             SpacedRepetitionInfoSheet()
+        }
+        .sheet(isPresented: $showMatchingGame) {
+            MatchingGameView()
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showCompleteTheVerse) {
+            CompleteTheVerseView()
+                .environmentObject(appState)
         }
         .alert("Delete Verse", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {
@@ -140,6 +150,36 @@ struct MemoryView: View {
                 // Review Card (prominent CTA)
                 if !versesForReview.isEmpty {
                     ReviewCard(count: versesForReview.count)
+                }
+
+                // Practice Games
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Practice")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    HStack(spacing: 12) {
+                        PracticeGameCard(
+                            title: "Matching Game",
+                            subtitle: "Match references to verses",
+                            icon: "square.grid.2x2.fill",
+                            xpRange: "150–200 XP",
+                            color: Color.reforgedNavy
+                        ) {
+                            showMatchingGame = true
+                        }
+
+                        PracticeGameCard(
+                            title: "Complete the Verse",
+                            subtitle: "Fill in the missing words",
+                            icon: "pencil.and.outline",
+                            xpRange: "75–315 XP",
+                            color: Color.reforgedGold
+                        ) {
+                            showCompleteTheVerse = true
+                        }
+                    }
                 }
 
                 // Verses List
@@ -225,6 +265,62 @@ struct MemoryStatCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
         .gamifiedStatCard(accent: color)
+    }
+}
+
+// MARK: - Practice Game Card
+
+struct PracticeGameCard: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let xpRange: String
+    let color: Color
+    let action: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    ZStack {
+                        Circle()
+                            .fill(color.opacity(0.15))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: icon)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(color)
+                    }
+                    Spacer()
+                    Text(xpRange)
+                        .font(Font.custom("Roboto", size: 11).bold())
+                        .foregroundStyle(Color.reforgedGold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.reforgedGold.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+
+                Text(title)
+                    .font(Font.custom("Roboto", size: 14).bold())
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .multilineTextAlignment(.leading)
+
+                Text(subtitle)
+                    .font(Font.custom("Roboto", size: 12))
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(color.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -565,6 +661,11 @@ struct SuggestedVerseCard: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var isAdded = false
     @State private var isFetching = false
+    @State private var liveText: String? = nil
+    @State private var isLoadingPreview = false
+
+    /// Text to display in the card — live-fetched translation or ESV fallback while loading
+    private var displayText: String { liveText ?? verse.text }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -574,20 +675,30 @@ struct SuggestedVerseCard: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.reforgedGold)
-                    Text(translation.rawValue)
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.reforgedNavy.opacity(0.7))
-                        .clipShape(Capsule())
+                    HStack(spacing: 4) {
+                        if isLoadingPreview {
+                            ProgressView()
+                                .scaleEffect(0.55)
+                                .frame(width: 10, height: 10)
+                        }
+                        Text(translation.rawValue)
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.reforgedNavy.opacity(0.7))
+                    .clipShape(Capsule())
                 }
 
-                Text(verse.text)
+                Text(displayText)
                     .font(.caption)
                     .foregroundStyle(Color.adaptiveText(colorScheme))
                     .lineLimit(2)
+            }
+            .task(id: translation) {
+                await fetchPreviewText()
             }
 
             Spacer()
@@ -616,8 +727,31 @@ struct SuggestedVerseCard: View {
     }
 
     func addVerse() {
+        // If the preview text has already been fetched, use it directly — no second network call
+        if let ready = liveText {
+            let memoryVerse = MemoryVerse(
+                id: UUID().uuidString,
+                reference: verse.reference,
+                text: ready,
+                esvText: translation == .esv ? ready : nil,
+                category: verse.category,
+                translation: translation.rawValue,
+                lastFetched: ISO8601DateFormatter().string(from: Date()),
+                nextReviewDate: Date(),
+                reviewCount: 0,
+                easeFactor: 2.5,
+                interval: 1,
+                isLearning: true,
+                accuracy: nil,
+                modeStats: nil
+            )
+            withAnimation { appState.addMemoryVerse(memoryVerse); isAdded = true }
+            HapticManager.shared.lightImpact()
+            return
+        }
+
         if translation == .esv {
-            // ESV text is already stored in suggested verse data
+            // ESV text is already stored in suggested verse data — no fetch needed
             let memoryVerse = MemoryVerse(
                 id: UUID().uuidString,
                 reference: verse.reference,
@@ -637,7 +771,7 @@ struct SuggestedVerseCard: View {
             withAnimation { appState.addMemoryVerse(memoryVerse); isAdded = true }
             HapticManager.shared.lightImpact()
         } else {
-            // Fetch verse text in the user's preferred translation
+            // Preview fetch didn't finish yet — fetch on demand
             isFetching = true
             Task {
                 do {
@@ -645,15 +779,17 @@ struct SuggestedVerseCard: View {
                     var fetchedRef = verse.reference
                     switch translation {
                     case .esv:
-                        break // handled above
+                        break
                     case .kjv:
                         let result = try await KJVService.shared.fetchVerseForMemory(reference: verse.reference)
                         fetchedText = result.text
                         fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
-                    case .csb, .nkjv, .nasb:
+                    case .csb, .nkjv, .nasb, .rvr1960:
                         let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
                         fetchedText = result.text
                         fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
+                    case .tr, .wlc:
+                        break  // not applicable for memory verses
                     }
                     let memoryVerse = MemoryVerse(
                         id: UUID().uuidString,
@@ -681,6 +817,40 @@ struct SuggestedVerseCard: View {
                 }
             }
         }
+    }
+
+    /// Fetches and caches preview text for the current translation.
+    /// Called via `.task(id: translation)` so it re-runs on every translation switch.
+    private func fetchPreviewText() async {
+        // ESV text is bundled in SuggestedVersesData — no network call needed
+        if translation == .esv {
+            liveText = verse.text
+            return
+        }
+
+        isLoadingPreview = true
+        liveText = nil
+
+        do {
+            var fetched = ""
+            switch translation {
+            case .esv:
+                fetched = verse.text
+            case .kjv:
+                let result = try await KJVService.shared.fetchVerseForMemory(reference: verse.reference)
+                fetched = result.text
+            case .csb, .nkjv, .nasb, .rvr1960:
+                let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
+                fetched = result.text
+            case .tr, .wlc:
+                break  // not applicable for memory verses
+            }
+            liveText = fetched
+        } catch {
+            liveText = nil // fall back to ESV preview text shown via displayText
+        }
+
+        isLoadingPreview = false
     }
 }
 
@@ -745,7 +915,7 @@ struct AddVerseSheet: View {
     @State private var reference = ""
     @State private var text = ""
     @State private var category = "General"
-    @State private var selectedTranslation: BibleTranslation = .esv
+    @State private var selectedTranslation: BibleTranslation = .kjv
     @State private var isFetching = false
     @State private var fetchError: String?
     @State private var canonicalReference = ""
@@ -951,10 +1121,12 @@ struct AddVerseSheet: View {
                     let result = try await KJVService.shared.fetchVerseForMemory(reference: reference)
                     fetchedText = result.text
                     fetchedCanonical = result.canonical
-                case .csb, .nkjv, .nasb:
+                case .csb, .nkjv, .nasb, .rvr1960:
                     let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: reference, translation: selectedTranslation)
                     fetchedText = result.text
                     fetchedCanonical = result.canonical
+                case .tr, .wlc:
+                    break  // not applicable for memory verse picker
                 }
 
                 await MainActor.run {
@@ -1349,9 +1521,11 @@ struct VersePickerSheet: View {
                 case .kjv:
                     let result = try await KJVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
                     fetchedVerses = result.verses
-                case .csb, .nkjv, .nasb:
+                case .csb, .nkjv, .nasb, .rvr1960:
                     let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)
                     fetchedVerses = result.verses
+                case .tr, .wlc:
+                    break  // not applicable for memory verse picker
                 }
 
                 await MainActor.run {

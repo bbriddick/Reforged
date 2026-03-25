@@ -13,5 +13,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>LibreBaskerville.ttf</string>
+		<string>LibreBaskerville-Italic.ttf</string>
+		<string>Roboto.ttf</string>
+		<string>Roboto-Italic.ttf</string>
+		<string>SILEOT.ttf</string>
+	</array>
 </dict>
 </plist>

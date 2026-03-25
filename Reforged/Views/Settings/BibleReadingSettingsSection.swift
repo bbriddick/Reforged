@@ -89,26 +89,43 @@ struct BibleReadingSettingsSection: View {
             // Day Boundary
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Day Ends At")
+                    Text("Bedtime")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text("Activities before this time count toward the previous day's streak. Useful if your devotional time is late at night.")
+                    Text("Reading before your bedtime counts toward that day's streak. Set this if you're a night owl who reads past midnight.")
                         .font(.caption)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Picker("Day ends at", selection: $settings.dayStartHour) {
-                    Text("Midnight (default)").tag(0)
-                    ForEach([20, 21, 22, 23], id: \.self) { hour in
-                        let displayHour = hour > 12 ? hour - 12 : hour
-                        Text("\(displayHour):00 PM").tag(hour)
-                    }
+                Picker("Bedtime", selection: $settings.dayStartHour) {
+                    Text("Midnight").tag(0)
+                    Text("1:00 AM").tag(1)
+                    Text("2:00 AM").tag(2)
+                    Text("3:00 AM").tag(3)
                 }
                 .pickerStyle(.segmented)
             }
             .padding(.vertical, 10)
+
+            SettingsDivider()
+
+            // Original Language Text (Word Study)
+            SettingsToggleRow(
+                title: "Original Language Text",
+                subtitle: "Show Textus Receptus (Greek NT) and Westminster Leningrad Codex (Hebrew OT) in word study",
+                isOn: $settings.showOriginalLanguageText
+            )
+
+            SettingsDivider()
+
+            // Original Languages in Version Switcher
+            SettingsToggleRow(
+                title: "Original Languages in Switcher",
+                subtitle: "Add TR (Greek NT) and WLC (Hebrew OT) as readable versions in the translation menu",
+                isOn: $settings.showOriginalLanguagesInSwitcher
+            )
 
             SettingsDivider()
 

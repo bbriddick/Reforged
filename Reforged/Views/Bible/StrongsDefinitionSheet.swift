@@ -8,12 +8,17 @@ struct StrongsDefinitionSheet: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
+    @ObservedObject private var settings = SettingsManager.shared
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     headerSection
+
+                    if settings.showOriginalLanguageText {
+                        originalLanguageCard
+                    }
 
                     if result.isFromAPI {
                         interlinearCard
@@ -103,6 +108,23 @@ struct StrongsDefinitionSheet: View {
             }
         }
     }
+
+    // MARK: - Original Language Card (TR / WLC)
+
+    @ViewBuilder
+    private var originalLanguageCard: some View {
+        OriginalLanguageCardBuilder(result: result, colorScheme: colorScheme)
+            .onAppear {
+                // Trigger lazy loading of TR/WLC data
+                let bookNum = OriginalLanguageService.bookNumber(for: result.bookName) ?? 0
+                if bookNum >= 40 {
+                    OriginalLanguageService.shared.preloadTR()
+                } else if bookNum >= 1 {
+                    OriginalLanguageService.shared.preloadWLC()
+                }
+            }
+    }
+
 
     // MARK: - Interlinear Card (API result)
 
@@ -505,7 +527,7 @@ struct StrongsDefinitionSheet: View {
     private var attributionSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Divider()
-            Text("Data from Complete Study Bible via Strong's Concordance, BDB & Thayer's Lexicons (public domain)")
+            Text("Lexical data: Strong's Concordance, BDB & Thayer's Lexicons (public domain). Greek text: Textus Receptus. Hebrew text: Westminster Leningrad Codex.")
                 .font(.caption2)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
         }
@@ -513,6 +535,114 @@ struct StrongsDefinitionSheet: View {
     }
 }
 
+
+// MARK: - Original Language Card
+
+/// Resolves and displays the TR (Greek) or WLC (Hebrew) text for the looked-up word.
+struct OriginalLanguageCardBuilder: View {
+    let result: WordLookupResult
+    let colorScheme: ColorScheme
+    @ObservedObject private var olService = OriginalLanguageService.shared
+
+    var body: some View {
+        let bookNum = OriginalLanguageService.bookNumber(for: result.bookName) ?? 0
+        if bookNum >= 40 {
+            greekCard(bookNum: bookNum)
+        } else if bookNum >= 1 {
+            hebrewCard(bookNum: bookNum)
+        }
+    }
+
+    @ViewBuilder
+    private func greekCard(bookNum: Int) -> some View {
+        if let token = OriginalLanguageService.shared.trToken(
+            bookNumber: bookNum,
+            chapter: result.chapterNumber,
+            verse: result.verseNumber,
+            strongsNumber: result.strongsNumber
+        ) {
+            let morphLine = token.morph.isEmpty ? nil : "\(token.morph)  ·  \(token.morphDescription)"
+            originalTextCard(
+                label: "Textus Receptus",
+                badge: "Ελληνικά",
+                mainText: token.word,
+                verseText: nil,
+                morphLine: morphLine,
+                isHebrew: false
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func hebrewCard(bookNum: Int) -> some View {
+        let words = OriginalLanguageService.shared.wlcWords(
+            bookNumber: bookNum,
+            chapter: result.chapterNumber,
+            verse: result.verseNumber
+        )
+        if !words.isEmpty {
+            originalTextCard(
+                label: "Westminster Leningrad Codex",
+                badge: "עברית",
+                mainText: nil,
+                verseText: words.joined(separator: " "),
+                morphLine: nil,
+                isHebrew: true
+            )
+        }
+    }
+
+    private func originalTextCard(
+        label: String,
+        badge: String,
+        mainText: String?,
+        verseText: String?,
+        morphLine: String?,
+        isHebrew: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(label)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Spacer()
+                Text(badge)
+                    .font(.caption2)
+                    .foregroundStyle(Color.reforgedGold.opacity(0.85))
+            }
+
+            if let mainText {
+                Text(mainText)
+                    .font(Font.custom("Roboto", size: 30))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+            }
+
+            if let verseText {
+                Text(verseText)
+                    .font(Font.custom("Ezra SIL", size: 22))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .environment(\.layoutDirection, .rightToLeft)
+            }
+
+            if let morphLine {
+                Text(morphLine)
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.reforgedGold.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.reforgedGold.opacity(0.25), lineWidth: 1)
+        )
+    }
+}
 
 // MARK: - Fallback Entry Card (bundled dictionary)
 

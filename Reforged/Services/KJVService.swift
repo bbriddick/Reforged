@@ -110,8 +110,16 @@ class KJVService {
     private func loadCacheFromDisk() {
         if let data = UserDefaults.standard.data(forKey: cacheKey),
            let cache = try? JSONDecoder().decode([String: KJVCachedChapter].self, from: data) {
-            chapterCache = cache
-            print("Loaded \(cache.count) KJV chapters from cache")
+            // Evict any previously-poisoned entries that contain fewer than 2 verses
+            // (caused by the bible-api.com single-chapter book URL bug).
+            let cleaned = cache.filter { $0.value.verses.count >= 2 }
+            chapterCache = cleaned
+            let evicted = cache.count - cleaned.count
+            if evicted > 0 {
+                saveCacheToDisk()
+                print("KJV cache: evicted \(evicted) under-populated entries on load")
+            }
+            print("Loaded \(cleaned.count) KJV chapters from cache")
         }
     }
 
@@ -125,7 +133,8 @@ class KJVService {
         let key = cacheKeyFor(book: book, chapter: chapter)
         guard let cached = chapterCache[key] else { return nil }
 
-        if !cached.isStale {
+        // Reject stale entries and entries with suspiciously few verses (cache poisoning guard)
+        if !cached.isStale && cached.verses.count >= 2 {
             return cached
         }
         return nil
@@ -146,7 +155,7 @@ class KJVService {
     /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
     func injectBundle(_ bundle: [String: KJVCachedChapter]) {
         let now = Date()
-        for (key, chapter) in bundle where chapterCache[key] == nil {
+        for (key, chapter) in bundle where chapterCache[key] == nil || (chapterCache[key]?.verses.count ?? 0) < 2 {
             chapterCache[key] = KJVCachedChapter(
                 book: chapter.book,
                 chapter: chapter.chapter,
@@ -161,6 +170,71 @@ class KJVService {
     }
 
     var cachedChapterCount: Int { chapterCache.count }
+
+    // MARK: - Bundled JSON Loading
+
+    /// Parses `kjvpce.json` from the app bundle and fills missing/stale cache entries.
+    /// Safe to call from a background thread.
+    func loadBundledJSON() {
+        guard let url = Bundle.main.url(forResource: "kjvpce", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else {
+            print("KJV: bundled JSON not found in app bundle")
+            return
+        }
+
+        struct BundledJSON: Decodable {
+            struct Verse: Decodable {
+                let book_name: String
+                let chapter: Int
+                let verse: Int
+                let text: String
+            }
+            let verses: [Verse]
+        }
+
+        guard let json = try? JSONDecoder().decode(BundledJSON.self, from: data) else {
+            print("KJV: failed to decode bundled JSON")
+            return
+        }
+
+        var chapterMap: [String: [BundledJSON.Verse]] = [:]
+        for v in json.verses {
+            chapterMap["\(v.book_name)_\(v.chapter)", default: []].append(v)
+        }
+
+        let now = Date()
+        var injected = 0
+        for (key, verses) in chapterMap {
+            if let existing = chapterCache[key], !existing.isStale, existing.verses.count >= 2 { continue }
+            let sorted = verses.sorted { $0.verse < $1.verse }
+            guard let first = sorted.first else { continue }
+            let book = first.book_name
+            let chapter = first.chapter
+            let canonical = "\(book) \(chapter)"
+            let cachedVerses = sorted.map { v in
+                KJVCachedVerse(
+                    number: v.verse,
+                    text: v.text.trimmingCharacters(in: .whitespacesAndNewlines),
+                    reference: "\(book) \(chapter):\(v.verse)"
+                )
+            }
+            chapterCache[key] = KJVCachedChapter(
+                book: book,
+                chapter: chapter,
+                passages: sorted.map(\.text).joined(separator: " "),
+                canonical: canonical,
+                cachedAt: now,
+                verses: cachedVerses
+            )
+            injected += 1
+        }
+        if injected > 0 {
+            saveCacheToDisk()
+            print("KJV: loaded \(injected) chapters from bundled JSON")
+        } else {
+            print("KJV: bundled JSON — all chapters already fresh in cache")
+        }
+    }
 
     // MARK: - Book Name Conversion
 
@@ -190,18 +264,48 @@ class KJVService {
         return mapping[book] ?? book
     }
 
+    // MARK: - KJV Text Parsing Helpers
+
+    /// Extracts a ‹‹psalm title›› from the start of a KJV verse, returning (cleanText, title?).
+    /// Used for Psalms that embed their heading in verse 1.
+    static func extractTitleAndCleanText(from raw: String) -> (text: String, heading: String?) {
+        // The PCE edition marks psalm titles with ‹‹ ... ›› at the very start of verse text.
+        // U+2039 = ‹  U+203A = ›
+        let open = "‹‹"
+        let close = "›› "
+        guard raw.hasPrefix(open),
+              let closeRange = raw.range(of: close) else {
+            return (raw, nil)
+        }
+        let headingStart = raw.index(raw.startIndex, offsetBy: open.count)
+        let heading = String(raw[headingStart..<closeRange.lowerBound])
+        let rest = String(raw[closeRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return (rest, heading)
+    }
+
+    /// Strips KJV supplied-word brackets [word] from text, returning clean display text.
+    /// The brackets are preserved so italic rendering can be applied at display time;
+    /// this variant removes them for plain-text contexts (search, memory, etc.).
+    static func stripSuppliedWordBrackets(_ text: String) -> String {
+        (try? NSRegularExpression(pattern: #"\[([^\]]+)\]"#))
+            .map { $0.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "$1") }
+            ?? text
+    }
+
     // MARK: - Fetch Chapter Parsed
 
     func fetchChapterParsed(book: String, chapter: Int) async throws -> (verses: [ParsedVerse], canonical: String) {
         // Check local cache first
         if let cached = getCachedChapter(book: book, chapter: chapter) {
-            let verses = cached.verses.map { cachedVerse in
-                ParsedVerse(
+            let verses = cached.verses.map { cachedVerse -> ParsedVerse in
+                let (cleanText, heading) = KJVService.extractTitleAndCleanText(from: cachedVerse.text)
+                return ParsedVerse(
                     id: cachedVerse.reference,
                     number: cachedVerse.number,
-                    text: cachedVerse.text,
+                    text: cleanText,
                     reference: cachedVerse.reference,
-                    startsNewParagraph: cachedVerse.number == 1
+                    startsNewParagraph: cachedVerse.number == 1,
+                    sectionHeading: heading
                 )
             }
             return (verses: verses, canonical: cached.canonical)
@@ -209,7 +313,15 @@ class KJVService {
 
         // Fetch from API
         let apiBook = apiBookName(for: book)
-        let reference = "\(apiBook)+\(chapter)?translation=kjv"
+
+        // Single-chapter books (Obadiah, Philemon, 2 John, 3 John, Jude) must be
+        // requested by book name only — appending "+1" causes bible-api.com to treat
+        // "1" as a verse index rather than a chapter index, returning only verse 1.
+        let singleChapterBooks: Set<String> = ["Obadiah", "Philemon", "2John", "3John", "Jude"]
+        let isSingleChapter = singleChapterBooks.contains(apiBook)
+        let reference = isSingleChapter
+            ? "\(apiBook)?translation=kjv"
+            : "\(apiBook)+\(chapter)?translation=kjv"
 
         guard let url = URL(string: baseURL + reference) else {
             throw KJVError.invalidURL
@@ -231,17 +343,18 @@ class KJVService {
             var verses: [ParsedVerse] = []
 
             for kjvVerse in decoded.verses {
-                let cleanText = kjvVerse.text
+                let raw = kjvVerse.text
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .replacingOccurrences(of: "\n", with: " ")
-
+                let (cleanText, heading) = KJVService.extractTitleAndCleanText(from: raw)
                 let reference = "\(book) \(chapter):\(kjvVerse.verse)"
                 verses.append(ParsedVerse(
                     id: reference,
                     number: kjvVerse.verse,
                     text: cleanText,
                     reference: reference,
-                    startsNewParagraph: kjvVerse.verse == 1
+                    startsNewParagraph: kjvVerse.verse == 1,
+                    sectionHeading: heading
                 ))
             }
 
@@ -290,10 +403,12 @@ class KJVService {
 
         let decoded = try JSONDecoder().decode(KJVPassageResponse.self, from: data)
 
-        let cleanText = decoded.text
+        var cleanText = decoded.text
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "\n", with: " ")
-
-        return (text: cleanText, canonical: decoded.reference)
+        // Strip supplied-word brackets for plain-text memory usage
+        cleanText = KJVService.stripSuppliedWordBrackets(cleanText)
+        let (displayText, _) = KJVService.extractTitleAndCleanText(from: cleanText)
+        return (text: displayText, canonical: decoded.reference)
     }
 }

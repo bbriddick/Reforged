@@ -65,6 +65,11 @@
 		B1A0000A279B9E0000000001 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00009279B9E0000000001 /* FlowLayout.swift */; };
 		B1A0000C279B9E0000000001 /* StrongHebrewDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */; };
 		B1A0000E279B9E0000000001 /* StrongGreekDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */; };
+		B1A0001C279B9E0000000001 /* kjvpce.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0001B279B9E0000000001 /* kjvpce.json */; };
+		RG000009279B9E0000000001 /* trparsed.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000A279B9E0000000001 /* trparsed.json */; };
+		RG00000B279B9E0000000001 /* wlc.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000C279B9E0000000001 /* wlc.json */; };
+		RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000001 /* OriginalLanguageService.swift */; };
+		RG00000F279B9E0000000001 /* SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* SILEOT.ttf */; };
 		B1A00012279B9E0000000001 /* ConcordanceSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */; };
 		BDD100000000000000000001 /* BibleDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD100000000000000000002 /* BibleDownloadManager.swift */; };
 		BDD100000000000000000005 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD100000000000000000006 /* NowPlayingView.swift */; };
@@ -85,6 +90,12 @@
 		F51AB00E9FE5CB264ECF20DF /* AudioSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */; };
 		RF0000A1279B9E0000000001 /* ReflectionNoteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */; };
 		RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RF0000A4279B9E0000000001 /* DeepDrillView.swift */; };
+		RG000001279B9E0000000001 /* LibreBaskerville.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000002279B9E0000000001 /* LibreBaskerville.ttf */; };
+		RG000013279B9E0000000001 /* LibreBaskerville-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */; };
+		RG000003279B9E0000000001 /* Roboto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000004279B9E0000000001 /* Roboto.ttf */; };
+		RG000011279B9E0000000001 /* Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Roboto-Italic.ttf */; };
+		RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000006279B9E0000000001 /* MatchingGameView.swift */; };
+		RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000008279B9E0000000001 /* CompleteTheVerseView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -181,6 +192,11 @@
 		B1A00009279B9E0000000001 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = StrongHebrewDictionary.json; sourceTree = "<group>"; };
 		B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = StrongGreekDictionary.json; sourceTree = "<group>"; };
+		B1A0001B279B9E0000000001 /* kjvpce.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjvpce.json; sourceTree = "<group>"; };
+		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trparsed.json; sourceTree = "<group>"; };
+		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wlc.json; sourceTree = "<group>"; };
+		RG00000E279B9E0000000001 /* OriginalLanguageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLanguageService.swift; sourceTree = "<group>"; };
+		RG000010279B9E0000000001 /* SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/SILEOT.ttf"; sourceTree = "<group>"; };
 		B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcordanceSearchView.swift; sourceTree = "<group>"; };
 		BDD100000000000000000002 /* BibleDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleDownloadManager.swift; sourceTree = "<group>"; };
 		BDD100000000000000000006 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
@@ -196,6 +212,12 @@
 		E1A00003279B9E0000000001 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
 		FDAFE317A9066691D3A47C88 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Reforged/Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
 		RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionNoteSheet.swift; sourceTree = "<group>"; };
+		RG000002279B9E0000000001 /* LibreBaskerville.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/LibreBaskerville.ttf"; sourceTree = "<group>"; };
+		RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/LibreBaskerville-Italic.ttf"; sourceTree = "<group>"; };
+		RG000004279B9E0000000001 /* Roboto.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto.ttf"; sourceTree = "<group>"; };
+		RG000012279B9E0000000001 /* Roboto-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto-Italic.ttf"; sourceTree = "<group>"; };
+		RG000006279B9E0000000001 /* MatchingGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingGameView.swift; sourceTree = "<group>"; };
+		RG000008279B9E0000000001 /* CompleteTheVerseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTheVerseView.swift; sourceTree = "<group>"; };
 		RF0000A4279B9E0000000001 /* DeepDrillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepDrillView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -337,6 +359,7 @@
 				A1000093279B9E0000000001 /* AppleSignInService.swift */,
 				A1000095279B9E0000000001 /* CloudKitSyncService.swift */,
 				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
+				RG00000E279B9E0000000001 /* OriginalLanguageService.swift */,
 				A10000D1279B9E0000000001 /* UnsplashService.swift */,
 				E1A00001279B9E0000000001 /* ProfileImageService.swift */,
 			);
@@ -384,6 +407,8 @@
 				A100003D279B9E0000000001 /* MemoryPracticeView.swift */,
 				RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */,
 				RF0000A4279B9E0000000001 /* DeepDrillView.swift */,
+				RG000006279B9E0000000001 /* MatchingGameView.swift */,
+				RG000008279B9E0000000001 /* CompleteTheVerseView.swift */,
 			);
 			path = Memory;
 			sourceTree = "<group>";
@@ -425,6 +450,14 @@
 			children = (
 				B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */,
 				B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */,
+				B1A0001B279B9E0000000001 /* kjvpce.json */,
+				RG000002279B9E0000000001 /* LibreBaskerville.ttf */,
+				RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */,
+				RG000004279B9E0000000001 /* Roboto.ttf */,
+				RG000012279B9E0000000001 /* Roboto-Italic.ttf */,
+				RG000010279B9E0000000001 /* SILEOT.ttf */,
+				RG00000A279B9E0000000001 /* trparsed.json */,
+				RG00000C279B9E0000000001 /* wlc.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -544,6 +577,14 @@
 				A1000050279B9E0000000002 /* Devotional Tracks Export Feb 1 2026.csv in Resources */,
 				B1A0000C279B9E0000000001 /* StrongHebrewDictionary.json in Resources */,
 				B1A0000E279B9E0000000001 /* StrongGreekDictionary.json in Resources */,
+				B1A0001C279B9E0000000001 /* kjvpce.json in Resources */,
+				RG000001279B9E0000000001 /* LibreBaskerville.ttf in Resources */,
+				RG000013279B9E0000000001 /* LibreBaskerville-Italic.ttf in Resources */,
+				RG000003279B9E0000000001 /* Roboto.ttf in Resources */,
+				RG000011279B9E0000000001 /* Roboto-Italic.ttf in Resources */,
+				RG00000F279B9E0000000001 /* SILEOT.ttf in Resources */,
+				RG000009279B9E0000000001 /* trparsed.json in Resources */,
+				RG00000B279B9E0000000001 /* wlc.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -580,6 +621,8 @@
 				A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */,
 				RF0000A1279B9E0000000001 /* ReflectionNoteSheet.swift in Sources */,
 				RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */,
+				RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */,
+				RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */,
 				A100003E279B9E0000000001 /* BibleView.swift in Sources */,
 				BDD100000000000000000005 /* NowPlayingView.swift in Sources */,
 				DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */,
@@ -616,6 +659,7 @@
 				CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */,
 				B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */,
 				B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */,
+				RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */,
 				B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */,
 				B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */,
 				B1A0000A279B9E0000000001 /* FlowLayout.swift in Sources */,
@@ -649,7 +693,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -661,7 +705,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -679,7 +723,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -691,7 +735,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -833,7 +877,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
@@ -856,7 +900,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -878,7 +922,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Reforged/Info.plist;
@@ -898,7 +942,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

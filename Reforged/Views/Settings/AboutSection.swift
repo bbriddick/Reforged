@@ -373,7 +373,7 @@ struct AboutSection: View {
 
         2. Description of Service
 
-        Reforged is a Bible study and Scripture memorization app. We provide access to multiple Bible translations including the ESV, KJV, CSB, NKJV, and NASB under license from their respective publishers.
+        Reforged is a Bible study and Scripture memorization app. We provide access to multiple Bible translations including the ESV, KJV, CSB, NKJV, NASB, and RVR1960 under license from their respective publishers.
 
         3. User Accounts
 
@@ -388,7 +388,7 @@ struct AboutSection: View {
 
         5. Intellectual Property
 
-        Scripture quotations are from the ESV® Bible (© 2001 Crossway), KJV (Public Domain), CSB® (© 2017 Holman Bible Publishers), NKJV® (© 1982 Thomas Nelson), and NASB® (© 1995 The Lockman Foundation). Used by permission. All rights reserved. Hebrew and Greek word study data is derived from Strong's Exhaustive Concordance (public domain) and the Open Scriptures lexicon project (CC BY-SA 4.0). Enriched definitions from Brown-Driver-Briggs and Thayer's lexicons (public domain) via Bolls.life. All other content and features are owned by Reforged.
+        Scripture quotations are from the ESV® Bible (© 2001 Crossway), KJV (Public Domain), CSB® (© 2017 Holman Bible Publishers), NKJV® (© 1982 Thomas Nelson), NASB® (© 1995 The Lockman Foundation), and Reina-Valera 1960® (© Sociedades Bíblicas en América Latina, 1960; © Renovado Sociedades Bíblicas Unidas, 1988). Used by permission. All rights reserved. Hebrew and Greek word study data is derived from Strong's Exhaustive Concordance (public domain) and the Open Scriptures lexicon project (CC BY-SA 4.0). Enriched definitions from Brown-Driver-Briggs and Thayer's lexicons (public domain) via Bolls.life. All other content and features are owned by Reforged.
 
         6. Disclaimer of Warranties
 

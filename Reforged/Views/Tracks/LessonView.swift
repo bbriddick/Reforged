@@ -224,11 +224,13 @@ struct ScriptureContentView: View {
                 result = try await ESVService.shared.fetchVerseForMemory(reference: content.reference)
             case .kjv:
                 result = try await KJVService.shared.fetchVerseForMemory(reference: content.reference)
-            case .csb, .nkjv, .nasb:
+            case .csb, .nkjv, .nasb, .rvr1960:
                 result = try await ApiBibleService.shared.fetchVerseForMemory(
                     reference: content.reference,
                     translation: translation
                 )
+            case .tr, .wlc:
+                fetchedText = nil; return  // not applicable for lesson verses
             }
             fetchedText = result.text
         } catch {

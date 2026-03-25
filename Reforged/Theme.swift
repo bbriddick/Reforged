@@ -214,32 +214,44 @@ class BibleReadingSettings: ObservableObject {
     }
 
     enum FontSize: String, CaseIterable {
-        case small, medium, large, extraLarge
+        case tiny, extraSmall, small, medium, large, extraLarge, huge, massive
 
         var displayName: String {
             switch self {
-            case .small: return "Small"
-            case .medium: return "Medium"
-            case .large: return "Large"
+            case .tiny:       return "Tiny"
+            case .extraSmall: return "Extra Small"
+            case .small:      return "Small"
+            case .medium:     return "Medium"
+            case .large:      return "Large"
             case .extraLarge: return "Extra Large"
+            case .huge:       return "Huge"
+            case .massive:    return "Massive"
             }
         }
 
         var size: CGFloat {
             switch self {
-            case .small: return 15
-            case .medium: return 17
-            case .large: return 20
+            case .tiny:       return 10
+            case .extraSmall: return 12
+            case .small:      return 15
+            case .medium:     return 17
+            case .large:      return 20
             case .extraLarge: return 24
+            case .huge:       return 29
+            case .massive:    return 36
             }
         }
 
         var verseNumberSize: CGFloat {
             switch self {
-            case .small: return 10
-            case .medium: return 12
-            case .large: return 14
+            case .tiny:       return 7
+            case .extraSmall: return 8
+            case .small:      return 10
+            case .medium:     return 12
+            case .large:      return 14
             case .extraLarge: return 16
+            case .huge:       return 19
+            case .massive:    return 22
             }
         }
 
@@ -263,6 +275,19 @@ class BibleReadingSettings: ObservableObject {
             switch self {
             case .serif: return .serif
             case .sansSerif: return .default
+            }
+        }
+
+        func font(size: CGFloat, weight: Font.Weight = .regular, italic: Bool = false) -> Font {
+            switch self {
+            case .serif:
+                return italic
+                    ? .system(size: size, weight: weight, design: .serif).italic()
+                    : .system(size: size, weight: weight, design: .serif)
+            case .sansSerif:
+                return italic
+                    ? Font.custom("Roboto-Italic", size: size)
+                    : Font.custom("Roboto", size: size)
             }
         }
     }

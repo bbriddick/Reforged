@@ -4,12 +4,16 @@ import SwiftUI
 
 /// A layout that arranges views in a flowing, word-wrap style.
 /// Used by MemoryPracticeView (word chips) and WordTappableVerseText (word-level tap targets).
+/// Set `isRTL = true` for Hebrew/Arabic text so words flow right-to-left and wrap RTL.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
     var lineSpacing: CGFloat?
+    var isRTL: Bool = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = arrange(proposal: proposal, subviews: subviews)
+        let result = isRTL
+            ? arrangeRTL(proposal: proposal, subviews: subviews)
+            : arrange(proposal: proposal, subviews: subviews)
         return result.size
     }
 
@@ -17,11 +21,15 @@ struct FlowLayout: Layout {
         // Always use the actual bounds width for placement so words wrap
         // correctly even if sizeThatFits was called with an unconstrained proposal.
         let constrainedProposal = ProposedViewSize(width: bounds.width, height: proposal.height)
-        let result = arrange(proposal: constrainedProposal, subviews: subviews)
+        let result = isRTL
+            ? arrangeRTL(proposal: constrainedProposal, subviews: subviews)
+            : arrange(proposal: constrainedProposal, subviews: subviews)
         for (index, position) in result.positions.enumerated() {
             subviews[index].place(at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y), proposal: .unspecified)
         }
     }
+
+    // MARK: - LTR arrangement (default)
 
     private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
         // Guard against nil or infinite width (can occur during SwiftUI's measurement
@@ -47,6 +55,41 @@ struct FlowLayout: Layout {
 
             positions.append(CGPoint(x: currentX, y: currentY))
             currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+            totalHeight = currentY + lineHeight
+        }
+
+        return (CGSize(width: maxWidth, height: totalHeight), positions)
+    }
+
+    // MARK: - RTL arrangement (Hebrew/Arabic)
+
+    /// Places words right-to-left. The first word sits at the far right; each subsequent
+    /// word is placed to its left. When a line is full the next line starts at the far right.
+    private func arrangeRTL(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        let rawWidth = proposal.width ?? UIScreen.main.bounds.width
+        let maxWidth = rawWidth.isFinite ? rawWidth : UIScreen.main.bounds.width
+        let verticalGap = lineSpacing ?? spacing
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = maxWidth   // cursor starts at right edge
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        var totalHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            // Wrap to new line when the word doesn't fit (and we're not at the line start)
+            if currentX - size.width < 0 && currentX < maxWidth {
+                currentX = maxWidth
+                currentY += lineHeight + verticalGap
+                lineHeight = 0
+            }
+
+            // Place word so its right edge aligns with cursor
+            let xPos = max(0, currentX - size.width)
+            positions.append(CGPoint(x: xPos, y: currentY))
+            currentX -= size.width + spacing
             lineHeight = max(lineHeight, size.height)
             totalHeight = currentY + lineHeight
         }

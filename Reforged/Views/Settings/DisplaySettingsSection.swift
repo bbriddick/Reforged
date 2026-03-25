@@ -14,24 +14,46 @@ struct DisplaySettingsSection: View {
         VStack(spacing: 0) {
             // Font Size
             VStack(alignment: .leading, spacing: 10) {
-                Text("Font Size")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                HStack(spacing: 8) {
-                    ForEach(FontSizeSetting.allCases, id: \.self) { size in
-                        FontSizeButton(
-                            size: size,
-                            isSelected: settings.fontSize == size
-                        ) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                settings.fontSize = size
-                            }
-                        }
-                    }
+                HStack {
+                    Text("Font Size")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                    Text(settings.fontSize.rawValue)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.reforgedGold)
+                        .animation(.easeInOut(duration: 0.15), value: settings.fontSize)
                 }
-                .frame(maxWidth: optionRowMaxWidth, alignment: .leading)
+
+                HStack(spacing: 10) {
+                    Text("A")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+                    Slider(
+                        value: Binding(
+                            get: { Double(FontSizeSetting.allCases.firstIndex(of: settings.fontSize) ?? 3) },
+                            set: { newIndex in
+                                let idx = max(0, min(FontSizeSetting.allCases.count - 1, Int(newIndex.rounded())))
+                                let newSize = FontSizeSetting.allCases[idx]
+                                guard newSize != settings.fontSize else { return }
+                                withAnimation(.easeInOut(duration: 0.1)) {
+                                    settings.fontSize = newSize
+                                }
+                            }
+                        ),
+                        in: 0...Double(FontSizeSetting.allCases.count - 1),
+                        step: 1
+                    )
+                    .tint(Color.reforgedGold)
+                    .frame(maxWidth: optionRowMaxWidth)
+
+                    Text("A")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
             }
             .padding(.vertical, 10)
 
@@ -181,42 +203,6 @@ struct DisplaySettingsSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-// MARK: - Font Size Button
-
-struct FontSizeButton: View {
-    let size: FontSizeSetting
-    let isSelected: Bool
-    let action: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        Button(action: action) {
-            Text("Aa")
-                .font(.system(size: fontSize, design: .serif))
-                .fontWeight(.medium)
-                .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(isSelected ? Color.reforgedNavy : Color.adaptiveCardBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSelected ? Color.clear : Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
-    var fontSize: CGFloat {
-        switch size {
-        case .small: return 12
-        case .medium: return 15
-        case .large: return 18
-        case .extraLarge: return 21
-        }
     }
 }
 

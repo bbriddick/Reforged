@@ -78,6 +78,14 @@ class SettingsManager: ObservableObject {
         didSet { save(persistentChapterNavigation, forKey: Keys.persistentChapterNavigation) }
     }
 
+    @Published var showOriginalLanguageText: Bool {
+        didSet { save(showOriginalLanguageText, forKey: Keys.showOriginalLanguageText) }
+    }
+
+    @Published var showOriginalLanguagesInSwitcher: Bool {
+        didSet { save(showOriginalLanguagesInSwitcher, forKey: Keys.showOriginalLanguagesInSwitcher) }
+    }
+
     // MARK: - Audio Settings
 
     @Published var playbackSpeed: PlaybackSpeed {
@@ -152,7 +160,12 @@ class SettingsManager: ObservableObject {
     /// The hour at which a new "logical day" begins (0 = midnight, 22 = 10 PM, etc.).
     /// When set to a non-zero value, activity before that hour counts toward the previous day.
     @Published var dayStartHour: Int {
-        didSet { save(dayStartHour, forKey: Keys.dayStartHour) }
+        didSet {
+            save(dayStartHour, forKey: Keys.dayStartHour)
+            // Mirror to the shared app-group suite so the widget can apply the same
+            // day boundary when computing streaks.
+            UserDefaults(suiteName: "group.com.reforged.app")?.set(dayStartHour, forKey: Keys.dayStartHour)
+        }
     }
 
     // MARK: - Keys
@@ -171,6 +184,8 @@ class SettingsManager: ObservableObject {
         static let showParagraphHeadings = "settings.showParagraphHeadings"
         static let autoRestoreReadingLocation = "settings.autoRestoreReadingLocation"
         static let persistentChapterNavigation = "settings.persistentChapterNavigation"
+        static let showOriginalLanguageText = "settings.showOriginalLanguageText"
+        static let showOriginalLanguagesInSwitcher = "settings.showOriginalLanguagesInSwitcher"
         static let playbackSpeed = "settings.playbackSpeed"
         static let skipInterval = "settings.skipInterval"
         static let continueAudioOnNavigate = "settings.continueAudioOnNavigate"
@@ -202,18 +217,20 @@ class SettingsManager: ObservableObject {
         self.keepScreenOn = UserDefaults.standard.object(forKey: Keys.keepScreenOn) as? Bool ?? false
 
         // Load Bible Reading Settings
-        self.defaultTranslation = BibleTranslation(rawValue: UserDefaults.standard.string(forKey: Keys.defaultTranslation) ?? "") ?? .esv
+        self.defaultTranslation = BibleTranslation(rawValue: UserDefaults.standard.string(forKey: Keys.defaultTranslation) ?? "") ?? .kjv
         if let raw = UserDefaults.standard.array(forKey: Keys.translationOrder) as? [String] {
-            let ordered = raw.compactMap { BibleTranslation(rawValue: $0) }
-            let missing = BibleTranslation.allCases.filter { !ordered.contains($0) }
+            let ordered = raw.compactMap { BibleTranslation(rawValue: $0) }.filter { !$0.isOriginalLanguage }
+            let missing = BibleTranslation.allCases.filter { !$0.isOriginalLanguage && !ordered.contains($0) }
             self.translationOrder = ordered + missing
         } else {
-            self.translationOrder = BibleTranslation.allCases
+            self.translationOrder = BibleTranslation.allCases.filter { !$0.isOriginalLanguage }
         }
         self.showSuperscriptVerseNumbers = UserDefaults.standard.object(forKey: Keys.showSuperscriptVerseNumbers) as? Bool ?? true
         self.showParagraphHeadings = UserDefaults.standard.object(forKey: Keys.showParagraphHeadings) as? Bool ?? true
         self.autoRestoreReadingLocation = UserDefaults.standard.object(forKey: Keys.autoRestoreReadingLocation) as? Bool ?? true
         self.persistentChapterNavigation = UserDefaults.standard.object(forKey: Keys.persistentChapterNavigation) as? Bool ?? true
+        self.showOriginalLanguageText = UserDefaults.standard.object(forKey: Keys.showOriginalLanguageText) as? Bool ?? true
+        self.showOriginalLanguagesInSwitcher = UserDefaults.standard.object(forKey: Keys.showOriginalLanguagesInSwitcher) as? Bool ?? false
 
         // Load Audio Settings
         self.playbackSpeed = PlaybackSpeed(rawValue: UserDefaults.standard.string(forKey: Keys.playbackSpeed) ?? "") ?? .normal
@@ -279,24 +296,28 @@ class SettingsManager: ObservableObject {
         let now = Date()
         let calendar = Calendar.current
         let currentHour = calendar.component(.hour, from: now)
-        let logicalDate: Date
-        if dayStartHour > 0 && currentHour < dayStartHour {
-            // Before the day-start threshold — still "yesterday" logically
-            logicalDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
-        } else {
-            logicalDate = now
-        }
-        return String(ISO8601DateFormatter().string(from: logicalDate).prefix(10))
+        let logicalDate = (dayStartHour > 0 && currentHour < dayStartHour)
+            ? (calendar.date(byAdding: .day, value: -1, to: now) ?? now)
+            : now
+        // Use local-timezone DateFormatter — ISO8601DateFormatter formats in UTC and
+        // produces wrong date keys for users in UTC-negative timezones reading in the evening.
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: logicalDate)
     }
 
     // MARK: - Computed Properties
 
     var scriptureFontSize: CGFloat {
         switch fontSize {
-        case .small: return 14
-        case .medium: return 17
-        case .large: return 20
+        case .tiny:       return 10
+        case .extraSmall: return 12
+        case .small:      return 15
+        case .medium:     return 17
+        case .large:      return 20
         case .extraLarge: return 24
+        case .huge:       return 29
+        case .massive:    return 36
         }
     }
 
@@ -325,12 +346,14 @@ class SettingsManager: ObservableObject {
     }
 
     func resetBibleSettings() {
-        defaultTranslation = .esv
-        translationOrder = BibleTranslation.allCases
+        defaultTranslation = .kjv
+        translationOrder = BibleTranslation.allCases.filter { !$0.isOriginalLanguage }
         showSuperscriptVerseNumbers = true
         showParagraphHeadings = true
         autoRestoreReadingLocation = true
         persistentChapterNavigation = true
+        showOriginalLanguageText = true
+        showOriginalLanguagesInSwitcher = false
         dayStartHour = 0
     }
 
@@ -400,14 +423,14 @@ extension SettingsManager {
 
         // Sync font size
         switch fontSize {
-        case .small:
-            bibleSettings.fontSize = .small
-        case .medium:
-            bibleSettings.fontSize = .medium
-        case .large:
-            bibleSettings.fontSize = .large
-        case .extraLarge:
-            bibleSettings.fontSize = .extraLarge
+        case .tiny:       bibleSettings.fontSize = .tiny
+        case .extraSmall: bibleSettings.fontSize = .extraSmall
+        case .small:      bibleSettings.fontSize = .small
+        case .medium:     bibleSettings.fontSize = .medium
+        case .large:      bibleSettings.fontSize = .large
+        case .extraLarge: bibleSettings.fontSize = .extraLarge
+        case .huge:       bibleSettings.fontSize = .huge
+        case .massive:    bibleSettings.fontSize = .massive
         }
 
         // Sync font type

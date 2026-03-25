@@ -56,10 +56,20 @@ struct ReadingStreakProvider: TimelineProvider {
         )
     }
 
+    /// Returns the current "logical date" string, matching ReadingStreakManager's todayString.
+    /// Reads dayStartHour from the shared app group so the widget boundary matches the app.
     private func todayString() -> String {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.reforged.app")
+        let dayStartHour = sharedDefaults?.object(forKey: "settings.dayStartHour") as? Int ?? 0
+        let now = Date()
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: now)
+        let logicalDate = (dayStartHour > 0 && currentHour < dayStartHour)
+            ? (calendar.date(byAdding: .day, value: -1, to: now) ?? now)
+            : now
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
+        return formatter.string(from: logicalDate)
     }
 
     private func calculateStreak(from readingDates: Set<String>) -> Int {
@@ -69,29 +79,26 @@ struct ReadingStreakProvider: TimelineProvider {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
+        // Anchor on todayString so the widget respects dayStartHour, matching the app.
+        let todayStr = todayString()
+        guard let todayDate = formatter.date(from: todayStr) else { return 0 }
         var streak = 0
-        var currentDate = calendar.startOfDay(for: Date())
 
-        // Check if today counts
-        if readingDates.contains(formatter.string(from: currentDate)) {
+        if readingDates.contains(todayStr) {
             streak = 1
-            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
-        }
-
-        // Count consecutive days backwards
-        while readingDates.contains(formatter.string(from: currentDate)) {
-            streak += 1
-            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
-        }
-
-        // If user hasn't read today, check if yesterday was the last day
-        if streak == 0 {
-            let yesterday = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: Date()))!
+            var cur = calendar.date(byAdding: .day, value: -1, to: todayDate)!
+            while readingDates.contains(formatter.string(from: cur)) {
+                streak += 1
+                cur = calendar.date(byAdding: .day, value: -1, to: cur)!
+            }
+        } else {
+            // Grace period: streak still live if yesterday was read
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: todayDate)!
             if readingDates.contains(formatter.string(from: yesterday)) {
-                currentDate = yesterday
-                while readingDates.contains(formatter.string(from: currentDate)) {
+                var cur = yesterday
+                while readingDates.contains(formatter.string(from: cur)) {
                     streak += 1
-                    currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
+                    cur = calendar.date(byAdding: .day, value: -1, to: cur)!
                 }
             }
         }

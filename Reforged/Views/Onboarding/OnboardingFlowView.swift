@@ -11,6 +11,7 @@ enum OnboardingStep: Int, CaseIterable {
     case name
     case avatar
     case goals
+    case versionPicker        // Choose preferred Bible translation
     case notifications        // Ask about notifications (permission requested only on confirm)
     case final
 
@@ -55,10 +56,12 @@ struct OnboardingFlowView: View {
                 AvatarStepView(onNext: { nextStep() })
             case .goals:
                 GoalsStepView(onNext: { nextStep() })
+            case .versionPicker:
+                VersionPickerStepView(onNext: { nextStep() })
             case .notifications:
                 NotificationsStepView(onNext: { nextStep() })
             case .final:
-                FinalStepView(onComplete: { completeOnboarding() })
+                FinalStepView(onComplete: { tab in completeOnboarding(navigatingTo: tab) })
             }
         }
         .animation(.easeInOut(duration: 0.3), value: currentStep)
@@ -78,8 +81,20 @@ struct OnboardingFlowView: View {
         }
     }
 
-    func completeOnboarding() {
+    /// Marks onboarding complete and optionally navigates to a specific tab.
+    /// - Parameter tab: The tab index to land on (0=Home, 1=Learn, 2=Bible, 3=Memory). Defaults to Bible.
+    func completeOnboarding(navigatingTo tab: Int = 2) {
         appState.user.onboardingCompleted = true
+        // The SwitchTab notification is handled by ContentView.
+        // Post after a brief delay so AdaptiveNavigationView has time to appear.
+        guard tab != 2 else { return }   // Bible is the default; no notification needed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SwitchTab"),
+                object: nil,
+                userInfo: ["tab": tab]
+            )
+        }
     }
 }
 
@@ -967,10 +982,117 @@ struct NotificationsStepView: View {
     }
 }
 
+// MARK: - Version Picker Step
+
+struct VersionPickerStepView: View {
+    let onNext: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+    @StateObject private var settingsManager = SettingsManager.shared
+
+    /// Standard translations shown during onboarding (exclude original-language editions)
+    private let translations = BibleTranslation.allCases.filter { !$0.isOriginalLanguage }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 28) {
+                    Spacer().frame(height: 16)
+
+                    // Header
+                    VStack(spacing: 10) {
+                        Text("Choose Your Bible")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        Text("Pick the translation you're most\ncomfortable reading")
+                            .font(.body)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
+                    }
+                    .padding(.horizontal, 24)
+
+                    // Translation cards
+                    VStack(spacing: 12) {
+                        ForEach(translations) { translation in
+                            let isSelected = settingsManager.defaultTranslation == translation
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    settingsManager.defaultTranslation = translation
+                                }
+                                HapticManager.shared.lightImpact()
+                            } label: {
+                                HStack(spacing: 16) {
+                                    // Abbreviation badge
+                                    Text(translation.rawValue)
+                                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(isSelected ? .white : Color.adaptiveNavyText(colorScheme))
+                                        .frame(width: 64)
+                                        .padding(.vertical, 8)
+                                        .background(isSelected ? Color.reforgedNavy : Color.reforgedNavy.opacity(0.08))
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(translation.fullName)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                                        Text(translation.copyright)
+                                            .font(.caption2)
+                                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                        .font(.title3)
+                                        .foregroundStyle(isSelected ? Color.reforgedGold : Color.adaptiveTextSecondary(colorScheme))
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                        .fill(isSelected
+                                              ? Color.reforgedGold.opacity(0.07)
+                                              : Color.adaptiveCardBackground(colorScheme))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                        .stroke(isSelected ? Color.reforgedGold : Color.adaptiveBorder(colorScheme),
+                                                lineWidth: isSelected ? 2 : 1)
+                                )
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+
+                    Text("You can change this anytime in Settings")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+                    Spacer().frame(height: 8)
+                }
+                .frame(maxWidth: 500)
+                .frame(maxWidth: .infinity)
+            }
+
+            // Continue button pinned at bottom
+            Button(action: onNext) {
+                Text("Continue")
+                    .reforgedPrimaryButton()
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+        }
+    }
+}
+
 // MARK: - Final Step
 
 struct FinalStepView: View {
-    let onComplete: () -> Void
+    /// Called with the tab index the user wants to land on (1 = Learn, 2 = Bible).
+    let onComplete: (Int) -> Void
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     @State private var showConfetti = false
@@ -999,7 +1121,7 @@ struct FinalStepView: View {
                     .font(.title2)
                     .foregroundStyle(Color.reforgedGold)
 
-                Text("Start reading Scripture, memorizing\nverses, and growing in your faith")
+                Text("Where would you like to begin?")
                     .font(.body)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     .multilineTextAlignment(.center)
@@ -1008,14 +1130,43 @@ struct FinalStepView: View {
 
             Spacer()
 
-            Button(action: {
-                HapticManager.shared.success()
-                onComplete()
-            }) {
-                Text("Start Reading")
+            VStack(spacing: 14) {
+                // Primary CTA — open the Bible reader
+                Button {
+                    HapticManager.shared.success()
+                    onComplete(2)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "text.book.closed.fill")
+                        Text("Open the Bible")
+                    }
                     .reforgedPrimaryButton()
+                }
+
+                // Secondary CTA — jump straight to a lesson
+                Button {
+                    HapticManager.shared.lightImpact()
+                    onComplete(1)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "book.fill")
+                        Text("Start a Lesson")
+                    }
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.reforgedNavy.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                            .stroke(Color.reforgedNavy.opacity(0.25), lineWidth: 1.5)
+                    )
+                }
             }
             .padding(.horizontal, 24)
+            .padding(.bottom, 16)
         }
         .padding()
         .frame(maxWidth: 500)

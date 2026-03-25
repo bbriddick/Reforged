@@ -236,7 +236,13 @@ class AppState: ObservableObject {
                 if !cloudProfile.avatar.isEmpty { user.avatar = cloudProfile.avatar }
                 if !cloudProfile.goals.isEmpty { user.goals = cloudProfile.goals }
                 if cloudProfile.xp > 0 { user.xp = max(user.xp, cloudProfile.xp) }
-                if cloudProfile.streak > 0 { user.streak = max(user.streak, cloudProfile.streak) }
+                if cloudProfile.streak > 0 {
+                    user.streak = max(user.streak, cloudProfile.streak)
+                    // If local reading-date history is empty (fresh install), seed it from
+                    // the synced streak count so the HomeView StreakCard shows the correct
+                    // value immediately rather than showing 0.
+                    ReadingStreakManager.shared.seedStreak(count: user.streak)
+                }
                 user.longestStreak = max(user.longestStreak, cloudProfile.longestStreak)
                 if !cloudProfile.lastActiveDate.isEmpty { user.lastActiveDate = cloudProfile.lastActiveDate }
                 if !cloudProfile.completedLessons.isEmpty {
