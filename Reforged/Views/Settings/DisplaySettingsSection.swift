@@ -355,6 +355,7 @@ struct ThemeButton: View {
         switch theme {
         case .light: return .orange
         case .dark: return .indigo
+        case .amoled: return Color.adaptiveText(colorScheme)
         case .system: return Color.adaptiveText(colorScheme)
         }
     }

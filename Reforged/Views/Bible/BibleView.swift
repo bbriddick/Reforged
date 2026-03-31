@@ -157,7 +157,7 @@ struct BibleView: View {
 
     // Icon color for iPad toolbar buttons
     var toolbarIconColor: Color {
-        colorScheme == .dark ? Color(white: 0.9) : Color.reforgedNavy
+        Color.adaptivePrimaryIcon(colorScheme)
     }
 
     // MARK: - Toolbar action closures (shared between BibleTopBar and .toolbar)
@@ -1906,7 +1906,7 @@ struct BibleTopBar: View {
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
     var iconColor: Color {
-        colorScheme == .dark ? Color(white: 0.9) : Color.reforgedNavy
+        Color.adaptivePrimaryIcon(colorScheme)
     }
 
     // Abbreviated names for long books
@@ -2277,7 +2277,7 @@ private struct FormattingThemeSection: View {
     }
 }
 
-private struct FormattingThemeButton: View {
+    private struct FormattingThemeButton: View {
     let mode: ThemeMode
     let isSelected: Bool
     let action: () -> Void
@@ -2294,7 +2294,7 @@ private struct FormattingThemeButton: View {
             .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(isSelected ? Color.reforgedNavy : Color.adaptiveBackground(colorScheme))
+            .background(isSelected ? Color.reforgedNavy : Color.adaptiveCardBackground(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }

@@ -14,7 +14,7 @@ struct FilterChip: View {
                 .foregroundStyle(isSelected ? .white : Color.adaptiveNavyText(colorScheme))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.reforgedNavy : (colorScheme == .dark ? Color(white: 0.25) : Color.reforgedNavy.opacity(0.1)))
+                .background(isSelected ? Color.reforgedNavy : Color.adaptiveChipBackground(colorScheme))
                 .clipShape(Capsule())
         }
     }

@@ -24,6 +24,7 @@ struct ContentView: View {
             .environmentObject(themeManager)
             .environmentObject(settingsManager)
             .preferredColorScheme(themeManager.colorScheme)
+            .id(themeManager.currentMode)
             .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active {
                     // Refresh daily insight when app becomes active

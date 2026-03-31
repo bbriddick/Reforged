@@ -433,7 +433,7 @@ struct BibleAudioBar: View {
     }
 
     var iconColor: Color {
-        colorScheme == .dark ? Color(white: 0.9) : Color.reforgedNavy
+        Color.adaptivePrimaryIcon(colorScheme)
     }
 
     /// Whether the audio is playing a different chapter than the one being read

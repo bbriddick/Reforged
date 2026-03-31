@@ -456,7 +456,7 @@ struct VerseCard: View {
                         .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(colorScheme == .dark ? Color(white: 0.26) : Color.reforgedNavy.opacity(0.1))
+                        .background(Color.adaptiveChipBackground(colorScheme))
                         .clipShape(Capsule())
                 }
 
@@ -1684,7 +1684,7 @@ struct FilterChipMemory: View {
                 .foregroundStyle(isSelected ? .white : Color.adaptiveNavyText(colorScheme))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(isSelected ? Color.reforgedNavy : (colorScheme == .dark ? Color(white: 0.25) : Color.reforgedNavy.opacity(0.1)))
+                .background(isSelected ? Color.reforgedNavy : Color.adaptiveChipBackground(colorScheme))
                 .clipShape(Capsule())
         }
     }

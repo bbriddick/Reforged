@@ -16,6 +16,10 @@ class ThemeManager: ObservableObject {
 
     @Published var colorScheme: ColorScheme?
 
+    var isAMOLED: Bool {
+        currentMode == .amoled
+    }
+
     private init() {
         let saved = UserDefaults.standard.string(forKey: "theme_mode") ?? "system"
         currentMode = ThemeMode(rawValue: saved) ?? .system
@@ -26,7 +30,7 @@ class ThemeManager: ObservableObject {
         switch currentMode {
         case .light:
             colorScheme = .light
-        case .dark:
+        case .dark, .amoled:
             colorScheme = .dark
         case .system:
             colorScheme = nil
@@ -37,6 +41,10 @@ class ThemeManager: ObservableObject {
 // MARK: - Reforged Theme Colors (Light/Dark Adaptive)
 
 extension Color {
+    static var isAMOLEDActive: Bool {
+        ThemeManager.shared.isAMOLED
+    }
+
     // Primary Brand Colors (from logo)
     static let reforgedCharcoal = Color(red: 0.20, green: 0.20, blue: 0.20) // #333333 - dark charcoal from logo
     static let reforgedBrandCream = Color(red: 0.91, green: 0.89, blue: 0.86) // #E8E4DC - cream from logo
@@ -64,14 +72,16 @@ extension Color {
     // Fallback colors for when asset catalog colors aren't available
     static func adaptiveBackground(_ scheme: ColorScheme?) -> Color {
         if scheme == .dark {
-            return Color(red: 0.11, green: 0.11, blue: 0.12)
+            return isAMOLEDActive ? .black : Color(red: 0.11, green: 0.11, blue: 0.12)
         }
         return Color(red: 0.980, green: 0.973, blue: 0.961)
     }
 
     static func adaptiveCardBackground(_ scheme: ColorScheme?) -> Color {
         if scheme == .dark {
-            return Color(red: 0.17, green: 0.17, blue: 0.18)
+            return isAMOLEDActive
+                ? Color(red: 0.08, green: 0.08, blue: 0.09)
+                : Color(red: 0.17, green: 0.17, blue: 0.18)
         }
         return .white
     }
@@ -92,7 +102,9 @@ extension Color {
 
     static func adaptiveBorder(_ scheme: ColorScheme?) -> Color {
         if scheme == .dark {
-            return Color(red: 0.25, green: 0.25, blue: 0.27)
+            return isAMOLEDActive
+                ? Color(red: 0.18, green: 0.18, blue: 0.20)
+                : Color(red: 0.25, green: 0.25, blue: 0.27)
         }
         return Color(red: 0.9, green: 0.9, blue: 0.9)
     }
@@ -100,9 +112,47 @@ extension Color {
     /// Adaptive foreground variant of reforgedNavy — dark in light mode, light in dark mode
     static func adaptiveNavyText(_ scheme: ColorScheme?) -> Color {
         if scheme == .dark {
-            return Color(red: 0.85, green: 0.85, blue: 0.90) // Light off-white with slight blue tint
+            return isAMOLEDActive
+                ? Color(red: 0.96, green: 0.96, blue: 0.97)
+                : Color(red: 0.85, green: 0.85, blue: 0.90) // Light off-white with slight blue tint
         }
         return Color.reforgedNavy
+    }
+
+    static func adaptiveSecondaryBackground(_ scheme: ColorScheme?) -> Color {
+        if scheme == .dark {
+            return isAMOLEDActive
+                ? Color(red: 0.10, green: 0.10, blue: 0.11)
+                : Color(white: 0.15)
+        }
+        return Color(.systemGray6)
+    }
+
+    static func adaptiveTertiaryBackground(_ scheme: ColorScheme?) -> Color {
+        if scheme == .dark {
+            return isAMOLEDActive
+                ? Color(red: 0.14, green: 0.14, blue: 0.15)
+                : Color(white: 0.20)
+        }
+        return Color(.systemGray6)
+    }
+
+    static func adaptiveChipBackground(_ scheme: ColorScheme?) -> Color {
+        if scheme == .dark {
+            return isAMOLEDActive
+                ? Color(red: 0.16, green: 0.16, blue: 0.17)
+                : Color(white: 0.25)
+        }
+        return Color.reforgedNavy.opacity(0.1)
+    }
+
+    static func adaptivePrimaryIcon(_ scheme: ColorScheme?) -> Color {
+        if scheme == .dark {
+            return isAMOLEDActive
+                ? Color(red: 0.96, green: 0.96, blue: 0.97)
+                : Color(white: 0.9)
+        }
+        return .reforgedNavy
     }
 }
 

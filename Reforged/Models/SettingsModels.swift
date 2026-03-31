@@ -109,12 +109,13 @@ enum VerseFormattingMode: String, CaseIterable, Codable {
 enum ThemeMode: String, CaseIterable, Codable {
     case light = "Light"
     case dark = "Dark"
+    case amoled = "AMOLED"
     case system = "System"
 
     var colorScheme: ColorScheme? {
         switch self {
         case .light: return .light
-        case .dark: return .dark
+        case .dark, .amoled: return .dark
         case .system: return nil
         }
     }
@@ -123,6 +124,7 @@ enum ThemeMode: String, CaseIterable, Codable {
         switch self {
         case .light: return "sun.max.fill"
         case .dark: return "moon.fill"
+        case .amoled: return "circle.fill"
         case .system: return "circle.lefthalf.filled"
         }
     }

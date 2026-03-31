@@ -104,7 +104,7 @@ struct ActionBarButton: View {
         if isActive {
             return Color.reforgedGold
         }
-        return colorScheme == .dark ? Color(white: 0.9) : Color.reforgedNavy
+        return Color.adaptivePrimaryIcon(colorScheme)
     }
 
     var body: some View {

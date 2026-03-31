@@ -178,7 +178,7 @@ struct UnifiedNavigationView: View {
                                         .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(colorScheme == .dark ? Color(white: 0.25) : Color.reforgedNavy.opacity(0.1))
+                                        .background(Color.adaptiveChipBackground(colorScheme))
                                         .clipShape(Capsule())
                                 }
                             }
@@ -209,7 +209,7 @@ struct UnifiedNavigationView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(colorScheme == .dark ? Color(white: 0.15) : Color(.systemGray6))
+            .background(Color.adaptiveSecondaryBackground(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .padding(.horizontal)
 
@@ -242,7 +242,7 @@ struct UnifiedNavigationView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(colorScheme == .dark ? Color(white: 0.18) : Color.reforgedGold.opacity(0.08))
+                    .background(colorScheme == .dark ? Color.adaptiveTertiaryBackground(colorScheme) : Color.reforgedGold.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
@@ -351,7 +351,7 @@ struct UnifiedNavigationView: View {
                                                     .background(
                                                         (book.id == selectedBook.id && chapter == selectedChapter)
                                                         ? Color.reforgedNavy
-                                                        : (colorScheme == .dark ? Color(white: 0.2) : Color(.systemGray6))
+                                                        : Color.adaptiveTertiaryBackground(colorScheme)
                                                     )
                                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                             }
@@ -457,7 +457,7 @@ struct UnifiedNavigationView: View {
                                     .foregroundStyle(Color.adaptiveText(colorScheme))
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 52)
-                                    .background(colorScheme == .dark ? Color(white: 0.2) : Color(.systemGray6))
+                                    .background(Color.adaptiveTertiaryBackground(colorScheme))
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
                         }
@@ -549,7 +549,7 @@ struct UnifiedNavigationView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(sortOrder == .traditional
-                        ? (colorScheme == .dark ? Color(white: 0.25) : .white)
+                        ? (colorScheme == .dark ? Color.adaptiveChipBackground(colorScheme) : .white)
                         : Color.clear
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -567,14 +567,14 @@ struct UnifiedNavigationView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(sortOrder == .alphabetical
-                        ? (colorScheme == .dark ? Color(white: 0.25) : .white)
+                        ? (colorScheme == .dark ? Color.adaptiveChipBackground(colorScheme) : .white)
                         : Color.clear
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
         .padding(4)
-        .background(colorScheme == .dark ? Color(white: 0.15) : Color(.systemGray6))
+        .background(Color.adaptiveSecondaryBackground(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal)
         .padding(.vertical, 10)
