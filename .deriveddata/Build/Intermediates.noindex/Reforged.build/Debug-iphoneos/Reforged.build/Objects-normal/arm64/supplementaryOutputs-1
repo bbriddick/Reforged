@@ -1,0 +1,51 @@
+{
+  "/Users/boazbriddick/Documents/Reforged/Reforged/AppDelegate.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppDelegate.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppDelegate.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppDelegate.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppDelegate.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppDelegate.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/ContentView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ContentView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ContentView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Models/MemoryVerse.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemoryVerse.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemoryVerse.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemoryVerse.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemoryVerse.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemoryVerse.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Models/Models.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Models.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Models.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Models.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Models.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Models.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Models/UserProfile.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UserProfile.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UserProfile.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UserProfile.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UserProfile.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UserProfile.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/NotificationManager.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationManager.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationManager.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationManager.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationManager.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationManager.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/ReforgedApp.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReforgedApp.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReforgedApp.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReforgedApp.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReforgedApp.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReforgedApp.swiftdeps"
+  }
+}

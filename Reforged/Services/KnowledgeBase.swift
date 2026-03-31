@@ -95,25 +95,21 @@ class KnowledgeBase: ObservableObject {
 
         // Convert bundled verses to our VerseEntry format
         // The bundled service stores verses with reference as key
-        guard let url = Bundle.main.url(forResource: "Bible Verse Cache Export Feb 1 2026", withExtension: "csv"),
-              let content = try? String(contentsOf: url, encoding: .utf8) else {
+        guard let rows = BundledCSVSupport.loadRows(resource: BundledCSVSupport.verseCacheResource) else {
             return
         }
 
-        let lines = content.components(separatedBy: "\n")
-        guard lines.count > 1 else { return }
-
-        for i in 1..<lines.count {
-            let line = lines[i].trimmingCharacters(in: .whitespacesAndNewlines)
+        for row in rows {
+            let line = row.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !line.isEmpty else { continue }
 
-            let columns = parseCSVLine(line, separator: ";")
+            let columns = BundledCSVSupport.parseLine(line)
             guard columns.count >= 4 else { continue }
 
             let entry = VerseEntry(
                 id: columns[0],
                 reference: columns[1],
-                text: cleanText(columns[2]),
+                text: BundledCSVSupport.cleanText(columns[2]),
                 canonicalReference: columns[3]
             )
 
@@ -126,19 +122,15 @@ class KnowledgeBase: ObservableObject {
     private func loadDailyInsights() {
         bundledService.loadDailyInsights()
 
-        guard let url = Bundle.main.url(forResource: "Daily Insights Export Feb 1 2026", withExtension: "csv"),
-              let content = try? String(contentsOf: url, encoding: .utf8) else {
+        guard let rows = BundledCSVSupport.loadRows(resource: BundledCSVSupport.dailyInsightsResource) else {
             return
         }
 
-        let lines = content.components(separatedBy: "\n")
-        guard lines.count > 1 else { return }
-
-        for i in 1..<lines.count {
-            let line = lines[i].trimmingCharacters(in: .whitespacesAndNewlines)
+        for row in rows {
+            let line = row.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !line.isEmpty else { continue }
 
-            let columns = parseCSVLine(line, separator: ";")
+            let columns = BundledCSVSupport.parseLine(line)
             guard columns.count >= 7, let dayOfYear = Int(columns[1]) else { continue }
 
             let entry = InsightEntry(
@@ -147,7 +139,7 @@ class KnowledgeBase: ObservableObject {
                 title: columns[2],
                 reflection: columns[3],
                 verseReference: columns[4],
-                verseText: cleanText(columns[5]),
+                verseText: BundledCSVSupport.cleanText(columns[5]),
                 category: columns[6],
                 prayerPrompt: "Reflect on how \(columns[4]) applies to your life today."
             )
@@ -241,35 +233,6 @@ class KnowledgeBase: ObservableObject {
         return Array(suggestions.shuffled().prefix(limit))
     }
 
-    // MARK: - Helpers
-
-    private func parseCSVLine(_ line: String, separator: Character) -> [String] {
-        var result: [String] = []
-        var current = ""
-        var inQuotes = false
-
-        for char in line {
-            if char == "\"" {
-                inQuotes.toggle()
-            } else if char == separator && !inQuotes {
-                result.append(current)
-                current = ""
-            } else {
-                current.append(char)
-            }
-        }
-        result.append(current)
-
-        return result
-    }
-
-    private func cleanText(_ text: String) -> String {
-        var cleaned = text
-        if cleaned.hasPrefix("\"") { cleaned.removeFirst() }
-        if cleaned.hasSuffix("\"") { cleaned.removeLast() }
-        cleaned = cleaned.replacingOccurrences(of: "\"\"", with: "\"")
-        return cleaned
-    }
 }
 
 // MARK: - Quick Access Extensions

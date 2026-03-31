@@ -90,9 +90,9 @@ struct OnboardingFlowView: View {
         guard tab != 2 else { return }   // Bible is the default; no notification needed
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NotificationCenter.default.post(
-                name: NSNotification.Name("SwitchTab"),
+                name: .switchTab,
                 object: nil,
-                userInfo: ["tab": tab]
+                userInfo: [AppNotificationUserInfoKey.tab: tab]
             )
         }
     }

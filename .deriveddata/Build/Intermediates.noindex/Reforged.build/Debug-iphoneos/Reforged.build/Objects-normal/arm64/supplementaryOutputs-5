@@ -1,0 +1,51 @@
+{
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/BibleDownloadManager.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleDownloadManager.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleDownloadManager.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleDownloadManager.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleDownloadManager.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleDownloadManager.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/ESVService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ESVService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ESVService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ESVService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ESVService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ESVService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/NetworkRetry.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NetworkRetry.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NetworkRetry.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NetworkRetry.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NetworkRetry.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NetworkRetry.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Bible/VerseShareCardView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/VerseShareCardView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/VerseShareCardView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/VerseShareCardView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/VerseShareCardView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/VerseShareCardView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Onboarding/OnboardingFlowView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/OnboardingFlowView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/OnboardingFlowView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/OnboardingFlowView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/OnboardingFlowView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/OnboardingFlowView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Profile/JournalView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Profile/StreakShareCardView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StreakShareCardView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StreakShareCardView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StreakShareCardView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StreakShareCardView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StreakShareCardView.swiftdeps"
+  }
+}

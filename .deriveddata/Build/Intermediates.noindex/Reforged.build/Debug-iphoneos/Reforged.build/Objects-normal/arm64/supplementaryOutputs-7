@@ -1,0 +1,51 @@
+{
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Models/BibleModels.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleModels.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleModels.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleModels.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleModels.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleModels.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/AppleSignInService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppleSignInService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppleSignInService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppleSignInService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppleSignInService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AppleSignInService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/BundledDataService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BundledDataService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BundledDataService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BundledDataService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BundledDataService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BundledDataService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/CloudKitSyncService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/SettingsManager.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsManager.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsManager.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsManager.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsManager.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsManager.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/iCloudSyncService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/iCloudSyncService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/iCloudSyncService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/iCloudSyncService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/iCloudSyncService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/iCloudSyncService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Bible/ChapterNavigationWheel.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ChapterNavigationWheel.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ChapterNavigationWheel.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ChapterNavigationWheel.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ChapterNavigationWheel.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ChapterNavigationWheel.swiftdeps"
+  }
+}

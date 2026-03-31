@@ -1,0 +1,51 @@
+{
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/ApiBibleService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ApiBibleService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ApiBibleService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ApiBibleService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ApiBibleService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ApiBibleService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/JournalStorageManager.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalStorageManager.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalStorageManager.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalStorageManager.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalStorageManager.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/JournalStorageManager.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/KJVService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KJVService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KJVService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KJVService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KJVService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KJVService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/KnowledgeBase.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KnowledgeBase.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KnowledgeBase.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KnowledgeBase.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KnowledgeBase.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/KnowledgeBase.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/ReadingStreakManager.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReadingStreakManager.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReadingStreakManager.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReadingStreakManager.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReadingStreakManager.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ReadingStreakManager.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/UnsplashService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnsplashService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnsplashService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnsplashService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnsplashService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnsplashService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Theme.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Theme.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Theme.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Theme.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Theme.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/.deriveddata/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/Theme.swiftdeps"
+  }
+}

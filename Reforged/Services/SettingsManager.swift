@@ -70,6 +70,10 @@ class SettingsManager: ObservableObject {
         didSet { save(showParagraphHeadings, forKey: Keys.showParagraphHeadings) }
     }
 
+    @Published var showRedLetterText: Bool {
+        didSet { save(showRedLetterText, forKey: Keys.showRedLetterText) }
+    }
+
     @Published var autoRestoreReadingLocation: Bool {
         didSet { save(autoRestoreReadingLocation, forKey: Keys.autoRestoreReadingLocation) }
     }
@@ -200,6 +204,7 @@ class SettingsManager: ObservableObject {
         static let keepScreenOn = "settings.keepScreenOn"
         static let showSuperscriptVerseNumbers = "settings.showSuperscriptVerseNumbers"
         static let showParagraphHeadings = "settings.showParagraphHeadings"
+        static let showRedLetterText = "settings.showRedLetterText"
         static let autoRestoreReadingLocation = "settings.autoRestoreReadingLocation"
         static let persistentChapterNavigation = "settings.persistentChapterNavigation"
         static let showOriginalLanguageText = "settings.showOriginalLanguageText"
@@ -247,6 +252,7 @@ class SettingsManager: ObservableObject {
         }
         self.showSuperscriptVerseNumbers = UserDefaults.standard.object(forKey: Keys.showSuperscriptVerseNumbers) as? Bool ?? true
         self.showParagraphHeadings = UserDefaults.standard.object(forKey: Keys.showParagraphHeadings) as? Bool ?? true
+        self.showRedLetterText = UserDefaults.standard.object(forKey: Keys.showRedLetterText) as? Bool ?? false
         self.autoRestoreReadingLocation = UserDefaults.standard.object(forKey: Keys.autoRestoreReadingLocation) as? Bool ?? true
         self.persistentChapterNavigation = UserDefaults.standard.object(forKey: Keys.persistentChapterNavigation) as? Bool ?? true
         self.showOriginalLanguageText = UserDefaults.standard.object(forKey: Keys.showOriginalLanguageText) as? Bool ?? true

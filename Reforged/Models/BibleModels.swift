@@ -353,8 +353,17 @@ struct BibleData {
 
 // MARK: - Notifications
 
+enum AppNotificationUserInfoKey {
+    static let reference = "reference"
+    static let tab = "tab"
+    static let url = "url"
+}
+
 extension Notification.Name {
     static let bibleDataDidChange = Notification.Name("bibleDataDidChange")
+    static let switchTab = Notification.Name("SwitchTab")
+    static let navigateToBibleVerse = Notification.Name("NavigateToBibleVerse")
+    static let navigateToURL = Notification.Name("NavigateToURL")
 }
 
 // MARK: - Bible Reading State

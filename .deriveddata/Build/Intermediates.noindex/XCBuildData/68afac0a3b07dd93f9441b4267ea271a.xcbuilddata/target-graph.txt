@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'Reforged' in project 'Reforged'
+➜ Explicit dependency on target 'ReforgedWidgetExtension' in project 'Reforged'
+Target 'ReforgedWidgetExtension' in project 'Reforged' (no dependencies)

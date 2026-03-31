@@ -42,12 +42,12 @@ struct ContentView: View {
                     }
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchTab"))) { notification in
-                if let tab = notification.userInfo?["tab"] as? Int {
+            .onReceive(NotificationCenter.default.publisher(for: .switchTab)) { notification in
+                if let tab = notification.userInfo?[AppNotificationUserInfoKey.tab] as? Int {
                     selectedTab = tab
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToBibleVerse"))) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: .navigateToBibleVerse)) { _ in
                 selectedTab = 2
             }
 

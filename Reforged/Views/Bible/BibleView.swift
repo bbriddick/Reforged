@@ -61,6 +61,10 @@ struct BibleView: View {
     // Chapter transition animation state
     @State private var chapterTransitionOffset: CGFloat = 0
     @State private var chapterTransitionOpacity: Double = 1.0
+    /// Direction-lock for the horizontal swipe gesture. nil = undecided, true = horizontal, false = vertical.
+    @State private var isHorizontalDrag: Bool? = nil
+    /// True while animateChapterChange is running. Blocks the swipe gesture from interfering.
+    @State private var isChapterTransitioning = false
 
     // Search state
     @State private var searchQuery = ""
@@ -73,6 +77,10 @@ struct BibleView: View {
     @State private var firstVisibleVerseNumber: Int = 1
     @State private var hasAppeared = false
     @State private var isRestoringPosition = false
+    /// Per-chapter last-read verse: "Book Chapter" → verse number. Used to restore position on backward navigation.
+    @State private var chapterScrollPositions: [String: Int] = [:]
+    /// Verse number to scroll to on the next loadChapter() call. nil = scroll to top.
+    @State private var pendingScrollVerse: Int? = nil
 
     // Verse interaction state
     @State private var selectedVerseForAction: ParsedVerse?
@@ -241,6 +249,20 @@ struct BibleView: View {
                         VStack(alignment: .leading, spacing: 0) {
                             chapterContentView
                         }
+                        // contentShape makes the entire column (including empty margins) hittable.
+                        // SwiftUI's gesture priority means child verse-text views consume their own
+                        // taps first; this handler only fires when empty space is tapped.
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard settingsManager.readingMode else { return }
+                            readingModeHideTask?.cancel()
+                            readingModeHideTask = nil
+                            let showing = !readingModeOverride
+                            barsPinnedByTap = showing
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                                readingModeOverride = showing
+                            }
+                        }
                         .frame(maxWidth: maxContentWidth)
                         .frame(maxWidth: .infinity)
                         .padding(.bottom, 60) // Space for bottom nav buttons
@@ -254,6 +276,7 @@ struct BibleView: View {
                             }
                         )
                     }
+                    .scrollIndicators(.hidden)
                     .coordinateSpace(name: "bibleScroll")
                     .onPreferenceChange(ScrollOffsetPreferenceKey.self) { maxY in
                         // Check if user has scrolled near the bottom
@@ -296,57 +319,102 @@ struct BibleView: View {
                         }
                     }
                     .simultaneousGesture(
-                        DragGesture(minimumDistance: 50)
-                            .onEnded { value in
-                                let horizontalAmount = value.translation.width
-                                let verticalAmount = value.translation.height
+                        DragGesture(minimumDistance: 10)
+                            .onChanged { value in
+                                // Do not interfere with a programmatic chapter transition
+                                guard !isChapterTransitioning else { return }
 
-                                // Only trigger if horizontal swipe is greater than vertical (to avoid interfering with scroll)
-                                if abs(horizontalAmount) > abs(verticalAmount) * 1.5 {
-                                    if horizontalAmount < -80 {
-                                        // Swipe left -> next chapter, or first chapter of next book
-                                        animateChapterChange(direction: .forward) {
-                                            if selectedChapter < selectedBook.chapters {
-                                                selectedChapter += 1
+                                let h = value.translation.width
+                                let v = value.translation.height
+
+                                // Lock drag direction on the first definitive movement
+                                if isHorizontalDrag == nil {
+                                    if abs(h) > 12 && abs(h) > abs(v) * 1.5 {
+                                        isHorizontalDrag = true
+                                    } else if abs(v) > 12 {
+                                        isHorizontalDrag = false
+                                    }
+                                }
+
+                                // Track finger position in real time for horizontal swipes
+                                guard isHorizontalDrag == true else { return }
+                                chapterTransitionOffset = h
+                            }
+                            .onEnded { value in
+                                // Do not interfere with a programmatic chapter transition
+                                guard !isChapterTransitioning else {
+                                    isHorizontalDrag = nil
+                                    return
+                                }
+
+                                let wasHorizontal = isHorizontalDrag == true
+                                isHorizontalDrag = nil
+
+                                guard wasHorizontal else {
+                                    // Not a horizontal drag — snap content back if it moved at all
+                                    if chapterTransitionOffset != 0 {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                            chapterTransitionOffset = 0
+                                        }
+                                    }
+                                    return
+                                }
+
+                                let h = value.translation.width
+                                let predictedH = value.predictedEndTranslation.width
+                                // Commit if dragged past threshold or finger velocity is high enough
+                                let commitForward  = h < -60 || predictedH < -200
+                                let commitBackward = h >  60 || predictedH >  200
+
+                                if commitForward {
+                                    // Swipe left → next chapter / first chapter of next book
+                                    animateChapterChange(direction: .forward, fromDrag: true) {
+                                        // Save current position, then go to top of new chapter
+                                        chapterScrollPositions["\(selectedBook.name) \(selectedChapter)"] = firstVisibleVerseNumber
+                                        pendingScrollVerse = nil
+                                        if selectedChapter < selectedBook.chapters {
+                                            selectedChapter += 1
+                                        } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }),
+                                                  idx + 1 < BibleData.books.count {
+                                            selectedBook = BibleData.books[idx + 1]
+                                            selectedChapter = 1
+                                        }
+                                        loadChapter()
+                                    }
+                                } else if commitBackward {
+                                    // Swipe right → previous chapter / last chapter of previous book
+                                    if value.startLocation.x < 50 {
+                                        withAnimation(.spring(response: 0.35)) {
+                                            showSearchPanel = true
+                                        }
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                            chapterTransitionOffset = 0
+                                        }
+                                    } else {
+                                        animateChapterChange(direction: .backward, fromDrag: true) {
+                                            // Save current position and restore last-read position of previous chapter
+                                            chapterScrollPositions["\(selectedBook.name) \(selectedChapter)"] = firstVisibleVerseNumber
+                                            if selectedChapter > 1 {
+                                                pendingScrollVerse = chapterScrollPositions["\(selectedBook.name) \(selectedChapter - 1)"]
+                                                selectedChapter -= 1
                                             } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }),
-                                                      idx + 1 < BibleData.books.count {
-                                                selectedBook = BibleData.books[idx + 1]
-                                                selectedChapter = 1
+                                                      idx > 0 {
+                                                let prevBook = BibleData.books[idx - 1]
+                                                pendingScrollVerse = chapterScrollPositions["\(prevBook.name) \(prevBook.chapters)"]
+                                                selectedBook = prevBook
+                                                selectedChapter = selectedBook.chapters
                                             }
                                             loadChapter()
                                         }
-                                    } else if horizontalAmount > 80 {
-                                        // Swipe right -> previous chapter, or last chapter of previous book
-                                        if value.startLocation.x < 50 {
-                                            withAnimation(.spring(response: 0.35)) {
-                                                showSearchPanel = true
-                                            }
-                                        } else {
-                                            animateChapterChange(direction: .backward) {
-                                                if selectedChapter > 1 {
-                                                    selectedChapter -= 1
-                                                } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }),
-                                                          idx > 0 {
-                                                    selectedBook = BibleData.books[idx - 1]
-                                                    selectedChapter = selectedBook.chapters
-                                                }
-                                                loadChapter()
-                                            }
-                                        }
+                                    }
+                                } else {
+                                    // Didn't reach threshold — spring back to rest
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                        chapterTransitionOffset = 0
                                     }
                                 }
                             }
                     )
-                    .simultaneousGesture(TapGesture().onEnded {
-                        guard settingsManager.readingMode else { return }
-                        readingModeHideTask?.cancel()
-                        readingModeHideTask = nil
-                        let showing = !readingModeOverride
-                        barsPinnedByTap = showing        // pin when showing, unpin when hiding
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                            readingModeOverride = showing
-                        }
-                    })
                     .simultaneousGesture(
                         MagnificationGesture()
                             .onChanged { value in
@@ -421,18 +489,24 @@ struct BibleView: View {
                         hasNext: selectedChapter < selectedBook.chapters
                             || (BibleData.books.firstIndex(where: { $0.name == selectedBook.name }) ?? BibleData.books.count - 1) < BibleData.books.count - 1,
                         onPrevious: {
-                            animateChapterChange(direction: .backward) {
+                            animateChapterChange(direction: .backward, fromDrag: true) {
+                                chapterScrollPositions["\(selectedBook.name) \(selectedChapter)"] = firstVisibleVerseNumber
                                 if selectedChapter > 1 {
+                                    pendingScrollVerse = chapterScrollPositions["\(selectedBook.name) \(selectedChapter - 1)"]
                                     selectedChapter -= 1
                                 } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }), idx > 0 {
-                                    selectedBook = BibleData.books[idx - 1]
+                                    let prevBook = BibleData.books[idx - 1]
+                                    pendingScrollVerse = chapterScrollPositions["\(prevBook.name) \(prevBook.chapters)"]
+                                    selectedBook = prevBook
                                     selectedChapter = selectedBook.chapters
                                 }
                                 loadChapter()
                             }
                         },
                         onNext: {
-                            animateChapterChange(direction: .forward) {
+                            animateChapterChange(direction: .forward, fromDrag: true) {
+                                chapterScrollPositions["\(selectedBook.name) \(selectedChapter)"] = firstVisibleVerseNumber
+                                pendingScrollVerse = nil
                                 if selectedChapter < selectedBook.chapters {
                                     selectedChapter += 1
                                 } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }), idx + 1 < BibleData.books.count {
@@ -690,6 +764,7 @@ struct BibleView: View {
         .toolbarBackground(Color.adaptiveBackground(colorScheme), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar(barsVisible ? .visible : .hidden, for: .navigationBar)
+        .toolbar(barsVisible ? .visible : .hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: settingsManager.readingMode) { isOn in
             if !isOn {
@@ -791,8 +866,8 @@ struct BibleView: View {
         .onChange(of: themeManager.currentMode) { newMode in
             settingsManager.themeMode = newMode
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToBibleVerse"))) { notification in
-            if let reference = notification.userInfo?["reference"] as? String {
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToBibleVerse)) { notification in
+            if let reference = notification.userInfo?[AppNotificationUserInfoKey.reference] as? String {
                 navigateToVerseReference(reference)
             }
         }
@@ -871,6 +946,7 @@ struct BibleView: View {
                     verseByVerse: true,
                     translation: currentTranslation,
                     highlightedWord: highlightedWord,
+                    showRedLetterText: settingsManager.showRedLetterText,
                     onTap: {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             readingState.toggleSelection(verse.reference)
@@ -951,6 +1027,12 @@ struct BibleView: View {
                 settings: readingSettings,
                 colorScheme: colorScheme,
                 highlightedWord: highlightedWord,
+                wocSegmentsMap: settingsManager.showRedLetterText
+                    ? Dictionary(uniqueKeysWithValues: section.verses.compactMap { v -> (String, [WOCSegment])? in
+                        guard let segs = WordsOfChristData.shared.segments(for: v.reference) else { return nil }
+                        return (v.reference, segs)
+                    })
+                    : [:],
                 onVerseTap: { verse in
                     withAnimation(.easeInOut(duration: 0.15)) {
                         readingState.toggleSelection(verse.reference)
@@ -1060,24 +1142,46 @@ struct BibleView: View {
         case backward
     }
 
-    func animateChapterChange(direction: ChapterDirection, action: @escaping () -> Void) {
+    func animateChapterChange(direction: ChapterDirection,
+                              fromDrag: Bool = false,
+                              action: @escaping () -> Void) {
         let screenWidth: CGFloat = UIScreen.main.bounds.width
-        let exitOffset: CGFloat = direction == .forward ? -screenWidth : screenWidth
-        let enterOffset: CGFloat = direction == .forward ? screenWidth : -screenWidth
+        let exitOffset: CGFloat  = direction == .forward ? -screenWidth : screenWidth
+        let enterOffset: CGFloat = direction == .forward ?  screenWidth : -screenWidth
 
-        // Phase 1: Slide current content fully off screen with ease-in
-        withAnimation(.easeIn(duration: 0.18)) {
+        // Lock out the swipe gesture for the duration of this transition.
+        isChapterTransitioning = true
+        isHorizontalDrag = nil
+
+        // Scale exit duration by the fraction of screen still left to travel.
+        // For drag commits the content is already partway off screen so the exit is very short.
+        let remaining = abs(exitOffset - chapterTransitionOffset)
+        let ratio = min(1.0, remaining / screenWidth)
+        // 0.12 s at full screen — noticeably snappier than 0.18 s and short enough that
+        // the easeIn ramp-up is imperceptible.
+        let exitDuration = max(0.03, 0.12 * ratio)
+
+        // Phase 1: Exit with an aggressive accelerating curve.
+        // timingCurve(0.55, 0, 1, 1) reaches ~50 % travel by the 60 % time mark, so the
+        // content visibly moves from the first frame instead of easing up slowly.
+        withAnimation(Animation.timingCurve(0.55, 0, 1, 1, duration: exitDuration)) {
             chapterTransitionOffset = exitOffset
         }
 
-        // Phase 2: Instantly reposition off the opposite edge, load new content,
-        // then spring it into place — mimicking a paged horizontal scroll snap.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-            chapterTransitionOffset = enterOffset   // no animation — just reposition
-            action()                                // swap chapter content
+        // Phase 2: Trigger just before the exit visually completes (one frame early) so
+        // there is no blank frame between the exit ending and the enter spring starting.
+        let phase2Delay = max(0.02, exitDuration - 0.016)
+        DispatchQueue.main.asyncAfter(deadline: .now() + phase2Delay) {
+            self.chapterTransitionOffset = enterOffset  // no animation — instant reposition
+            action()                                    // swap chapter content
 
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-                chapterTransitionOffset = 0
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                self.chapterTransitionOffset = 0
+            }
+
+            // Release the gesture lock after the enter animation would finish.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                self.isChapterTransitioning = false
             }
         }
     }
@@ -1133,10 +1237,14 @@ struct BibleView: View {
         let chapter     = selectedChapter
         currentTranslation = translation
 
-        // Capture restore intent: only restore on first load after cold start
-        let restoreVerse = isRestoringPosition && readingSettings.lastVerse > 1
-        let savedVerse   = readingSettings.lastVerse
-        if restoreVerse { isRestoringPosition = false }
+        // Capture restore intent: cold-start restore OR backward navigation position restore
+        let coldRestore  = isRestoringPosition && readingSettings.lastVerse > 1
+        let pendingVerse = pendingScrollVerse
+        pendingScrollVerse = nil  // consume
+
+        let restoreVerse = coldRestore || ((pendingVerse ?? 0) > 1)
+        let savedVerse   = coldRestore ? readingSettings.lastVerse : (pendingVerse ?? 1)
+        if coldRestore { isRestoringPosition = false }
         if !restoreVerse { firstVisibleVerseNumber = 1 }
 
         // ── Cache hit: apply instantly so the swipe animation plays with content ──
@@ -2026,1587 +2134,6 @@ struct FloatingChapterNav: View {
     }
 }
 
-// MARK: - Bible Audio Bar (Collapsible)
-
-class BibleAudioPlayer: ObservableObject {
-    @Published var isPlaying = false
-    @Published var isLoading = false
-    @Published var currentTime: TimeInterval = 0
-    @Published var duration: TimeInterval = 0
-    @Published var playbackRate: Float = 1.0
-    @Published var skipInterval: TimeInterval = 10.0
-    @Published var currentBook: String = ""
-    @Published var currentChapter: Int = 0
-
-    // Sleep timer
-    @Published var sleepTimerRemaining: TimeInterval = 0   // 0 = off
-    @Published var sleepTimerEndOfChapter: Bool = false
-    private var sleepTimer: Timer?
-
-    private var player: AVPlayer?
-    private var timeObserver: Any?
-
-    /// Called when a chapter finishes playing (for marking as read + auto-advance).
-    /// Parameters: (book, chapter) of the completed chapter.
-    var onChapterCompleted: ((String, Int) -> Void)?
-
-    // Persistence keys for resuming audio across app backgrounding
-    private let audioBookKey = "audio_last_book"
-    private let audioChapterKey = "audio_last_chapter"
-    private let audioWasPlayingKey = "audio_was_playing"
-    private let audioTimeKey = "audio_last_time"
-
-    init() {
-        setupRemoteCommandCenter()
-    }
-
-    /// Update settings from SettingsManager (call from view)
-    @MainActor
-    func updateFromSettings() {
-        playbackRate = SettingsManager.shared.playbackSpeed.rate
-        skipInterval = TimeInterval(SettingsManager.shared.skipInterval.seconds)
-        if skipInterval == 0 { skipInterval = 10 } // Default for "By Verse" mode
-        player?.rate = isPlaying ? playbackRate : 0
-    }
-
-    func play(book: String, chapter: Int) {
-        guard let url = ESVService.shared.getAudioURL(book: book, chapter: chapter) else { return }
-
-        stop()
-        isLoading = true
-        currentBook = book
-        currentChapter = chapter
-
-        // Persist current audio state for resume
-        saveAudioState()
-
-        do {
-            // Configure audio session for background playback
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [])
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("Audio session error: \(error)")
-        }
-
-        let asset = AVURLAsset(url: url, options: [
-            "AVURLAssetHTTPHeaderFieldsKey": ["Authorization": "Token \(ESVConfig.apiKey)"]
-        ])
-
-        let playerItem = AVPlayerItem(asset: asset)
-        player = AVPlayer(playerItem: playerItem)
-        player?.rate = playbackRate
-
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: playerItem,
-            queue: .main
-        ) { [weak self] _ in
-            self?.handleChapterPlaybackEnded()
-        }
-
-        timeObserver = player?.addPeriodicTimeObserver(
-            forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
-            queue: .main
-        ) { [weak self] time in
-            guard let self = self else { return }
-            self.currentTime = time.seconds
-
-            if let duration = self.player?.currentItem?.duration.seconds,
-               !duration.isNaN {
-                self.duration = duration
-            }
-
-            if self.isLoading && time.seconds > 0 {
-                self.isLoading = false
-            }
-
-            // Update Now Playing info periodically
-            self.updateNowPlayingInfo()
-
-            // Periodically save audio position for resume (every ~5 seconds)
-            if Int(time.seconds) % 5 == 0 && time.seconds > 0 {
-                self.saveAudioState()
-            }
-        }
-
-        player?.play()
-        isPlaying = true
-        updateNowPlayingInfo()
-    }
-
-    func togglePlayPause() {
-        if isPlaying {
-            player?.pause()
-        } else {
-            player?.play()
-        }
-        isPlaying.toggle()
-        saveAudioState()
-        updateNowPlayingInfo()
-    }
-
-    func stop() {
-        player?.pause()
-        if let observer = timeObserver {
-            player?.removeTimeObserver(observer)
-        }
-        player = nil
-        isPlaying = false
-        isLoading = false
-        currentTime = 0
-        duration = 0
-        currentBook = ""
-        currentChapter = 0
-        clearAudioState()
-        clearNowPlayingInfo()
-    }
-
-    // MARK: - Chapter Completion & Auto-Advance
-
-    /// Called when AVPlayer finishes playing the current chapter.
-    private func handleChapterPlaybackEnded() {
-        let finishedBook = currentBook
-        let finishedChapter = currentChapter
-
-        // Notify BibleView to mark chapter as read
-        onChapterCompleted?(finishedBook, finishedChapter)
-
-        // Sleep timer: end of chapter mode stops here
-        if sleepTimerEndOfChapter {
-            cancelSleepTimer()
-            isPlaying = false
-            currentTime = 0
-            updateNowPlayingInfo()
-            return
-        }
-
-        // Auto-advance to next chapter
-        if let nextChapter = nextChapterInfo(book: finishedBook, chapter: finishedChapter) {
-            play(book: nextChapter.book, chapter: nextChapter.chapter)
-        } else {
-            // No more chapters (end of Revelation) — just stop
-            isPlaying = false
-            currentTime = 0
-            updateNowPlayingInfo()
-        }
-    }
-
-    /// Returns the next book/chapter in canonical order, or nil if at end of Bible.
-    private func nextChapterInfo(book: String, chapter: Int) -> (book: String, chapter: Int)? {
-        guard let bookData = BibleData.books.first(where: { $0.name == book }) else { return nil }
-
-        // If there are more chapters in this book, go to next chapter
-        if chapter < bookData.chapters {
-            return (book: book, chapter: chapter + 1)
-        }
-
-        // Otherwise, go to next book chapter 1
-        guard let bookIndex = BibleData.books.firstIndex(where: { $0.name == book }),
-              bookIndex + 1 < BibleData.books.count else {
-            return nil // End of Bible
-        }
-
-        let nextBook = BibleData.books[bookIndex + 1]
-        return (book: nextBook.name, chapter: 1)
-    }
-
-    // MARK: - Audio State Persistence (for resume on foreground)
-
-    private func saveAudioState() {
-        UserDefaults.standard.set(currentBook, forKey: audioBookKey)
-        UserDefaults.standard.set(currentChapter, forKey: audioChapterKey)
-        UserDefaults.standard.set(isPlaying, forKey: audioWasPlayingKey)
-        UserDefaults.standard.set(currentTime, forKey: audioTimeKey)
-    }
-
-    /// Public wrapper for saving audio state (called from BibleView on resign active).
-    func saveAudioStatePublic() {
-        saveAudioState()
-    }
-
-    func clearAudioState() {
-        UserDefaults.standard.removeObject(forKey: audioBookKey)
-        UserDefaults.standard.removeObject(forKey: audioChapterKey)
-        UserDefaults.standard.removeObject(forKey: audioWasPlayingKey)
-        UserDefaults.standard.removeObject(forKey: audioTimeKey)
-    }
-
-    /// Returns saved audio state, or nil if none exists.
-    func savedAudioState() -> (book: String, chapter: Int, time: TimeInterval)? {
-        guard let book = UserDefaults.standard.string(forKey: audioBookKey),
-              !book.isEmpty else { return nil }
-        let chapter = UserDefaults.standard.integer(forKey: audioChapterKey)
-        let wasPlaying = UserDefaults.standard.bool(forKey: audioWasPlayingKey)
-        let time = UserDefaults.standard.double(forKey: audioTimeKey)
-        guard chapter > 0, wasPlaying else { return nil }
-        return (book: book, chapter: chapter, time: time)
-    }
-
-    /// Resumes playback from saved state (call on app foreground / view appear).
-    func resumeFromSavedState() {
-        guard let saved = savedAudioState() else { return }
-        // Only resume if not already playing something
-        guard !isPlaying && player == nil else { return }
-
-        play(book: saved.book, chapter: saved.chapter)
-
-        // Seek to the saved position after a short delay to let the player load
-        if saved.time > 0 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                self?.seek(to: saved.time)
-            }
-        }
-    }
-
-    func seek(to time: TimeInterval) {
-        player?.seek(to: CMTime(seconds: time, preferredTimescale: 600))
-        updateNowPlayingInfo()
-    }
-
-    func skipForward(_ seconds: TimeInterval? = nil) {
-        let interval = seconds ?? skipInterval
-        let newTime = min(currentTime + interval, duration)
-        seek(to: newTime)
-    }
-
-    func skipBackward(_ seconds: TimeInterval? = nil) {
-        let interval = seconds ?? skipInterval
-        let newTime = max(currentTime - interval, 0)
-        seek(to: newTime)
-    }
-
-    func setPlaybackRate(_ rate: Float) {
-        playbackRate = rate
-        player?.rate = isPlaying ? rate : 0
-        updateNowPlayingInfo()
-    }
-
-    // MARK: - Chapter Navigation
-
-    func playNextChapter() {
-        guard let next = nextChapterInfo(book: currentBook, chapter: currentChapter) else { return }
-        play(book: next.book, chapter: next.chapter)
-    }
-
-    func playPreviousChapter() {
-        // If more than 3 seconds in, restart current chapter
-        if currentTime > 3 {
-            seek(to: 0)
-            return
-        }
-        guard let bookData = BibleData.books.first(where: { $0.name == currentBook }) else { return }
-        let prevChapter: (book: String, chapter: Int)
-        if currentChapter > 1 {
-            prevChapter = (book: currentBook, chapter: currentChapter - 1)
-        } else if let bookIndex = BibleData.books.firstIndex(where: { $0.name == currentBook }), bookIndex > 0 {
-            let prevBook = BibleData.books[bookIndex - 1]
-            prevChapter = (book: prevBook.name, chapter: prevBook.chapters)
-        } else {
-            seek(to: 0)
-            return
-        }
-        _ = bookData // suppress warning
-        play(book: prevChapter.book, chapter: prevChapter.chapter)
-    }
-
-    // MARK: - Now Playing Info (Lock Screen & Control Center)
-
-    private func updateNowPlayingInfo() {
-        var nowPlayingInfo = [String: Any]()
-
-        nowPlayingInfo[MPMediaItemPropertyTitle] = "\(currentBook) \(currentChapter)"
-        nowPlayingInfo[MPMediaItemPropertyArtist] = "ESV Audio Bible"
-        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "Reforged"
-        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
-        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? playbackRate : 0.0
-
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-    }
-
-    private func clearNowPlayingInfo() {
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-    }
-
-    // MARK: - Remote Command Center (Headphones, Lock Screen Controls)
-
-    private func setupRemoteCommandCenter() {
-        let commandCenter = MPRemoteCommandCenter.shared()
-
-        // Play/Pause
-        commandCenter.playCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            if !self.isPlaying {
-                self.player?.play()
-                self.isPlaying = true
-                self.updateNowPlayingInfo()
-            }
-            return .success
-        }
-
-        commandCenter.pauseCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            if self.isPlaying {
-                self.player?.pause()
-                self.isPlaying = false
-                self.updateNowPlayingInfo()
-            }
-            return .success
-        }
-
-        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            self.togglePlayPause()
-            return .success
-        }
-
-        // Skip forward/backward
-        commandCenter.skipForwardCommand.preferredIntervals = [NSNumber(value: 15)]
-        commandCenter.skipForwardCommand.addTarget { [weak self] _ in
-            self?.skipForward(15)
-            return .success
-        }
-
-        commandCenter.skipBackwardCommand.preferredIntervals = [NSNumber(value: 15)]
-        commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
-            self?.skipBackward(15)
-            return .success
-        }
-
-        // Previous / Next chapter
-        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            self?.playPreviousChapter()
-            return .success
-        }
-
-        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            self?.playNextChapter()
-            return .success
-        }
-
-        // Seek
-        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-            guard let self = self,
-                  let positionEvent = event as? MPChangePlaybackPositionCommandEvent else {
-                return .commandFailed
-            }
-            self.seek(to: positionEvent.positionTime)
-            return .success
-        }
-    }
-
-    // MARK: - Sleep Timer
-
-    func setSleepTimer(minutes: Int) {
-        sleepTimerEndOfChapter = false
-        sleepTimerRemaining = TimeInterval(minutes * 60)
-        sleepTimer?.invalidate()
-        sleepTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            if self.isPlaying { self.sleepTimerRemaining -= 1 }
-            if self.sleepTimerRemaining <= 0 {
-                DispatchQueue.main.async {
-                    self.cancelSleepTimer()
-                    self.player?.pause()
-                    self.isPlaying = false
-                    self.updateNowPlayingInfo()
-                }
-            }
-        }
-    }
-
-    func setSleepTimerEndOfChapter() {
-        sleepTimer?.invalidate()
-        sleepTimer = nil
-        sleepTimerRemaining = 0
-        sleepTimerEndOfChapter = true
-    }
-
-    func cancelSleepTimer() {
-        sleepTimer?.invalidate()
-        sleepTimer = nil
-        sleepTimerRemaining = 0
-        sleepTimerEndOfChapter = false
-    }
-
-    deinit {
-        sleepTimer?.invalidate()
-        stop()
-    }
-}
-
-struct BibleAudioBar: View {
-    @ObservedObject var audioPlayer: BibleAudioPlayer
-    let book: String
-    let chapter: Int
-    var translation: BibleTranslation = .esv
-    let onClose: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-
-    var timeString: String {
-        let current = formatTime(audioPlayer.currentTime)
-        let total = formatTime(audioPlayer.duration)
-        return "\(current) / \(total)"
-    }
-
-    func formatTime(_ time: TimeInterval) -> String {
-        guard !time.isNaN && time > 0 else { return "0:00" }
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
-    }
-
-    var iconColor: Color {
-        colorScheme == .dark ? Color(white: 0.9) : Color.reforgedNavy
-    }
-
-    /// Whether the audio is playing a different chapter than the one being read
-    var isPlayingDifferentChapter: Bool {
-        !audioPlayer.currentBook.isEmpty &&
-        (audioPlayer.currentBook != book || audioPlayer.currentChapter != chapter)
-    }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            // "Now playing" label when audio has auto-advanced to a different chapter
-            if isPlayingDifferentChapter {
-                HStack(spacing: 4) {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color.reforgedGold)
-                    Text("Now playing: \(audioPlayer.currentBook) \(audioPlayer.currentChapter)")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.reforgedGold)
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top, 4)
-            }
-
-            // Progress bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.reforgedNavy.opacity(0.15))
-
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.reforgedGold)
-                        .frame(width: audioPlayer.duration > 0 ? geo.size.width * (audioPlayer.currentTime / audioPlayer.duration) : 0)
-                }
-            }
-            .frame(height: 3)
-            .padding(.horizontal)
-
-            HStack(spacing: 16) {
-                // Close button
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundStyle(iconColor)
-                        .frame(width: 28, height: 28)
-                        .background(Color.adaptiveBorder(colorScheme))
-                        .clipShape(Circle())
-                }
-
-                // Skip backward
-                Button { audioPlayer.skipBackward() } label: {
-                    Image(systemName: "gobackward.15")
-                        .font(.callout)
-                        .foregroundStyle(iconColor)
-                }
-
-                // Play/Pause button
-                Button {
-                    if audioPlayer.isPlaying || audioPlayer.currentTime > 0 {
-                        audioPlayer.togglePlayPause()
-                    } else {
-                        audioPlayer.play(book: book, chapter: chapter)
-                    }
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(Color.reforgedNavy)
-                            .frame(width: 36, height: 36)
-
-                        if audioPlayer.isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.6)
-                        } else {
-                            Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                }
-
-                // Skip forward
-                Button { audioPlayer.skipForward() } label: {
-                    Image(systemName: "goforward.15")
-                        .font(.callout)
-                        .foregroundStyle(iconColor)
-                }
-
-                // Time
-                Text(timeString)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    .frame(width: 70)
-
-                Spacer()
-
-                // Speed button
-                Menu {
-                    ForEach([0.75, 1.0, 1.25, 1.5, 2.0], id: \.self) { rate in
-                        Button {
-                            audioPlayer.setPlaybackRate(Float(rate))
-                        } label: {
-                            HStack {
-                                Text("\(String(format: "%.2g", rate))x")
-                                if audioPlayer.playbackRate == Float(rate) {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    Text("\(String(format: "%.1f", audioPlayer.playbackRate))x")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(iconColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.adaptiveBorder(colorScheme))
-                        .clipShape(Capsule())
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-        }
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .shadow(color: Color.black.opacity(0.04), radius: 4, y: 2)
-    }
-}
-
-// MARK: - Unified Navigation View (YouVersion-style)
-
-struct UnifiedNavigationView: View {
-    @Binding var selectedBook: BibleBook
-    @Binding var selectedChapter: Int
-    var recentPassages: [(book: String, chapter: Int)]
-    @Binding var isPresented: Bool
-    let onSelect: () -> Void
-    var onSelectVerse: ((Int) -> Void)? = nil
-    var translation: BibleTranslation = .esv
-    var translationOrder: [BibleTranslation] = BibleTranslation.allCases
-    @ObservedObject private var olService = OriginalLanguageService.shared
-    @Environment(\.colorScheme) var colorScheme
-
-    enum ActiveTab { case books, history }
-    enum SortOrder { case traditional, alphabetical }
-
-    @State private var activeTab: ActiveTab = .books
-    @State private var searchText = ""
-    @State private var selectedTestament: BibleBook.Testament? = nil
-    @State private var expandedBookID: String? = nil
-    @State private var sortOrder: SortOrder = .traditional
-    @State private var showVersePicker = false
-    @State private var chapterVerses: [ParsedVerse] = []
-    @State private var isLoadingVerses = false
-
-    struct ParsedBibleRef {
-        let book: BibleBook
-        let chapter: Int
-        let verse: Int?
-
-        var displayString: String {
-            if let verse { return "\(book.name) \(chapter):\(verse)" }
-            return "\(book.name) \(chapter)"
-        }
-    }
-
-    var parsedReference: ParsedBibleRef? {
-        let trimmed = searchText.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return nil }
-        let lower = trimmed.lowercased()
-
-        // Try longer names first so "1 John" beats "John" for "1 john 3"
-        let sorted = BibleData.books.sorted { $0.name.count > $1.name.count }
-
-        for book in sorted {
-            for candidate in [book.name.lowercased(), book.abbreviation.lowercased()] {
-                guard lower.hasPrefix(candidate) else { continue }
-                let afterBook = lower.dropFirst(candidate.count)
-                // Candidate must be followed by whitespace (or end — but end means no chapter)
-                guard let first = afterBook.first, first.isWhitespace else { continue }
-                let rest = afterBook.trimmingCharacters(in: .whitespaces)
-                guard !rest.isEmpty else { break }
-
-                // Parse chapter[:verse]
-                let colonIdx = rest.firstIndex(of: ":")
-                let chapterPart: String
-                let versePart: String?
-                if let colon = colonIdx {
-                    chapterPart = String(rest[rest.startIndex..<colon]).trimmingCharacters(in: .whitespaces)
-                    versePart = String(rest[rest.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
-                } else {
-                    chapterPart = rest
-                    versePart = nil
-                }
-
-                guard let chapter = Int(chapterPart), chapter >= 1, chapter <= book.chapters else { break }
-                let verse = versePart.flatMap { Int($0) }
-                return ParsedBibleRef(book: book, chapter: chapter, verse: verse)
-            }
-        }
-        return nil
-    }
-
-    var filteredBooks: [BibleBook] {
-        var books = BibleData.books
-
-        if let testament = selectedTestament {
-            books = books.filter { $0.testament == testament }
-        }
-
-        if !searchText.isEmpty {
-            if let ref = parsedReference {
-                // Show only the matched book when a reference is detected
-                books = books.filter { $0.id == ref.book.id }
-            } else {
-                books = books.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-            }
-        }
-
-        if sortOrder == .alphabetical {
-            books = books.sorted { $0.name < $1.name }
-        }
-
-        return books
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                if showVersePicker {
-                    versePickerView
-                } else if activeTab == .history {
-                    historyView
-                } else {
-                    booksView
-                }
-            }
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .navigationTitle(showVersePicker ? "\(selectedBook.name) \(selectedChapter)" : "Books")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    if showVersePicker {
-                        Button {
-                            withAnimation(.spring(response: 0.3)) {
-                                showVersePicker = false
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.subheadline)
-                                Text("Back")
-                            }
-                            .foregroundStyle(Color.reforgedGold)
-                        }
-                    } else {
-                        Button("Cancel") {
-                            isPresented = false
-                        }
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    if !showVersePicker {
-                        Button(activeTab == .books ? "History" : "Books") {
-                            withAnimation(.spring(response: 0.3)) {
-                                activeTab = activeTab == .books ? .history : .books
-                            }
-                        }
-                        .foregroundStyle(Color.reforgedGold)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Books View
-
-    @ViewBuilder
-    private var booksView: some View {
-        VStack(spacing: 0) {
-            // Recent passages
-            if !recentPassages.isEmpty && searchText.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recent")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .padding(.horizontal)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(Array(recentPassages.prefix(5).enumerated()), id: \.offset) { _, passage in
-                                Button {
-                                    if let book = BibleData.books.first(where: { $0.name == passage.book }) {
-                                        selectedBook = book
-                                        selectedChapter = passage.chapter
-                                        isPresented = false
-                                        onSelect()
-                                    }
-                                } label: {
-                                    Text("\(passage.book) \(passage.chapter)")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(colorScheme == .dark ? Color(white: 0.25) : Color.reforgedNavy.opacity(0.1))
-                                        .clipShape(Capsule())
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                .padding(.top, 8)
-                .padding(.bottom, 12)
-            }
-
-            // Search bar
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                TextField("Search or go to reference...", text: $searchText)
-                    .font(.subheadline)
-
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(colorScheme == .dark ? Color(white: 0.15) : Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .padding(.horizontal)
-
-            // Reference jump row
-            if let ref = parsedReference {
-                Button {
-                    selectedBook = ref.book
-                    selectedChapter = ref.chapter
-                    if let verse = ref.verse, let selectVerse = onSelectVerse {
-                        isPresented = false
-                        onSelect()
-                        selectVerse(verse)
-                    } else {
-                        isPresented = false
-                        onSelect()
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "arrow.right.circle.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.reforgedGold)
-                        Text("Go to \(ref.displayString)")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(colorScheme == .dark ? Color(white: 0.18) : Color.reforgedGold.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.reforgedGold.opacity(0.3), lineWidth: 1)
-                    )
-                }
-                .padding(.horizontal)
-                .padding(.top, 6)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-
-            // Testament filter
-            HStack(spacing: 10) {
-                FilterChip(title: "All", isSelected: selectedTestament == nil) {
-                    selectedTestament = nil
-                }
-                FilterChip(title: "OT", isSelected: selectedTestament == .old) {
-                    selectedTestament = .old
-                }
-                FilterChip(title: "NT", isSelected: selectedTestament == .new) {
-                    selectedTestament = .new
-                }
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-
-            // Book list with expandable chapter grids
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filteredBooks) { book in
-                            VStack(spacing: 0) {
-                                // Book row
-                                Button {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                        if expandedBookID == book.id {
-                                            expandedBookID = nil
-                                        } else {
-                                            expandedBookID = book.id
-                                        }
-                                    }
-                                } label: {
-                                    HStack(spacing: 12) {
-                                        Text(book.name)
-                                            .font(.body)
-                                            .fontWeight(book.id == selectedBook.id ? .bold : .regular)
-                                            .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                                        Spacer()
-
-                                        // Audio icon (ESV only)
-                                        Image(systemName: "speaker.wave.2.fill")
-                                            .font(.subheadline)
-                                            .foregroundStyle(translation == .esv ? Color.adaptiveTextSecondary(colorScheme) : Color.adaptiveTextSecondary(colorScheme).opacity(0.3))
-
-                                        // Expand/collapse chevron
-                                        Image(systemName: "chevron.down")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                            .rotationEffect(.degrees(expandedBookID == book.id ? 180 : 0))
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 14)
-                                    .contentShape(Rectangle())
-                                }
-                                .id(book.id)
-
-                                // Expanded chapter grid
-                                if expandedBookID == book.id {
-                                    let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
-
-                                    LazyVGrid(columns: columns, spacing: 8) {
-                                        ForEach(1...book.chapters, id: \.self) { chapter in
-                                            Button {
-                                                selectedBook = book
-                                                selectedChapter = chapter
-                                                // TR is NT-only and WLC is OT-only.
-                                                // Skip the verse picker when the selected book
-                                                // is incompatible with the current translation
-                                                // and navigate directly instead.
-                                                let incompatible =
-                                                    (translation == .tr  && book.testament == .old) ||
-                                                    (translation == .wlc && book.testament == .new)
-                                                if incompatible {
-                                                    isPresented = false
-                                                    onSelect()
-                                                } else {
-                                                    loadVersesForChapter()
-                                                    withAnimation(.spring(response: 0.3)) {
-                                                        showVersePicker = true
-                                                    }
-                                                }
-                                            } label: {
-                                                Text("\(chapter)")
-                                                    .font(.headline)
-                                                    .fontWeight(.semibold)
-                                                    .foregroundStyle(
-                                                        (book.id == selectedBook.id && chapter == selectedChapter)
-                                                        ? .white
-                                                        : Color.adaptiveText(colorScheme)
-                                                    )
-                                                    .frame(maxWidth: .infinity)
-                                                    .frame(height: 52)
-                                                    .background(
-                                                        (book.id == selectedBook.id && chapter == selectedChapter)
-                                                        ? Color.reforgedNavy
-                                                        : (colorScheme == .dark ? Color(white: 0.2) : Color(.systemGray6))
-                                                    )
-                                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.bottom, 16)
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
-                                }
-
-                                // Separator
-                                if filteredBooks.last?.id != book.id {
-                                    Divider()
-                                        .padding(.leading, 16)
-                                }
-                            }
-                        }
-                    }
-                }
-                .onAppear {
-                    // Auto-expand and scroll to the currently active book
-                    let bookID = selectedBook.id
-                    expandedBookID = bookID
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation {
-                            proxy.scrollTo(bookID, anchor: .center)
-                        }
-                    }
-                }
-                .onChange(of: expandedBookID) { newID in
-                    if let newID {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            withAnimation {
-                                proxy.scrollTo(newID, anchor: .top)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Bottom sort toggle
-            sortToggle
-        }
-    }
-
-    // MARK: - Verse Picker View
-
-    @ViewBuilder
-    private var versePickerView: some View {
-        VStack(spacing: 12) {
-            // "Go to Chapter Start" button
-            Button {
-                isPresented = false
-                onSelect()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.right.circle.fill")
-                        .font(.subheadline)
-                    Text("Go to Chapter Start")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.reforgedNavy)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-
-            Text("Or select a verse:")
-                .font(.caption)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-            // If TR/WLC data is still being parsed in the background, show a spinner
-            // and retry automatically once it's ready.
-            let waitingForOL = (translation == .tr  && !olService.trReady  && selectedBook.testament == .new)
-                            || (translation == .wlc && !olService.wlcReady && selectedBook.testament == .old)
-            if isLoadingVerses || waitingForOL {
-                Spacer()
-                ProgressView("Loading verses...")
-                Spacer()
-                    .onChange(of: olService.trReady) { isReady in
-                        if isReady && translation == .tr { loadVersesForChapter() }
-                    }
-                    .onChange(of: olService.wlcReady) { isReady in
-                        if isReady && translation == .wlc { loadVersesForChapter() }
-                    }
-            } else {
-                let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 8) {
-                        ForEach(chapterVerses) { verse in
-                            Button {
-                                isPresented = false
-                                onSelect()
-                                onSelectVerse?(verse.number)
-                            } label: {
-                                Text("\(verse.number)")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 52)
-                                    .background(colorScheme == .dark ? Color(white: 0.2) : Color(.systemGray6))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom)
-                }
-            }
-        }
-    }
-
-    // MARK: - History View
-
-    @ViewBuilder
-    private var historyView: some View {
-        if recentPassages.isEmpty {
-            VStack(spacing: 16) {
-                Spacer()
-                Image(systemName: "clock")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                Text("No reading history yet")
-                    .font(.headline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                Text("Your recently viewed passages will appear here.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    .multilineTextAlignment(.center)
-                Spacer()
-            }
-            .padding()
-        } else {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(recentPassages.enumerated()), id: \.offset) { index, passage in
-                        Button {
-                            if let book = BibleData.books.first(where: { $0.name == passage.book }) {
-                                selectedBook = book
-                                selectedChapter = passage.chapter
-                                isPresented = false
-                                onSelect()
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                    .frame(width: 28)
-
-                                Text("\(passage.book) \(passage.chapter)")
-                                    .font(.body)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                                Spacer()
-
-                                Image(systemName: "chevron.right")
-                                    .font(.caption2)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .contentShape(Rectangle())
-                        }
-
-                        if index < recentPassages.count - 1 {
-                            Divider()
-                                .padding(.leading, 56)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Sort Toggle
-
-    @ViewBuilder
-    private var sortToggle: some View {
-        HStack(spacing: 0) {
-            Button {
-                withAnimation(.spring(response: 0.3)) {
-                    sortOrder = .traditional
-                }
-            } label: {
-                Text("Traditional")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(sortOrder == .traditional ? Color.adaptiveText(colorScheme) : Color.adaptiveTextSecondary(colorScheme))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(sortOrder == .traditional
-                        ? (colorScheme == .dark ? Color(white: 0.25) : .white)
-                        : Color.clear
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-
-            Button {
-                withAnimation(.spring(response: 0.3)) {
-                    sortOrder = .alphabetical
-                }
-            } label: {
-                Text("Alphabetical")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(sortOrder == .alphabetical ? Color.adaptiveText(colorScheme) : Color.adaptiveTextSecondary(colorScheme))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(sortOrder == .alphabetical
-                        ? (colorScheme == .dark ? Color(white: 0.25) : .white)
-                        : Color.clear
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-        }
-        .padding(4)
-        .background(colorScheme == .dark ? Color(white: 0.15) : Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-    }
-
-    // MARK: - Load Verses
-
-    func loadVersesForChapter() {
-        isLoadingVerses = true
-        chapterVerses = []
-        Task {
-            do {
-                var fetchedVerses: [ParsedVerse] = []
-                switch translation {
-                case .esv:
-                    let result = try await ESVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
-                    fetchedVerses = result.verses
-                case .kjv:
-                    let result = try await KJVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
-                    fetchedVerses = result.verses
-                case .csb, .nkjv, .nasb, .rvr1960:
-                    let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)
-                    fetchedVerses = result.verses
-                case .tr:
-                    // TR covers the NT only. Preload and read verse numbers from the index.
-                    if selectedBook.testament == .new {
-                        OriginalLanguageService.shared.preloadTR()
-                        let bookNum = OriginalLanguageService.bookNumber(for: selectedBook.name) ?? 0
-                        let trVerses = OriginalLanguageService.shared.trChapter(bookNumber: bookNum, chapter: selectedChapter)
-                        fetchedVerses = trVerses.map { v in
-                            let ref = "\(selectedBook.name) \(selectedChapter):\(v.verse)"
-                            return ParsedVerse(id: ref, number: v.verse, text: "", reference: ref)
-                        }
-                    }
-                case .wlc:
-                    // WLC covers the OT only. Preload and read verse numbers from the index.
-                    if selectedBook.testament == .old {
-                        OriginalLanguageService.shared.preloadWLC()
-                        let bookNum = OriginalLanguageService.bookNumber(for: selectedBook.name) ?? 0
-                        let wlcVerses = OriginalLanguageService.shared.wlcChapter(bookNumber: bookNum, chapter: selectedChapter)
-                        fetchedVerses = wlcVerses.map { v in
-                            let ref = "\(selectedBook.name) \(selectedChapter):\(v.verse)"
-                            return ParsedVerse(id: ref, number: v.verse, text: "", reference: ref)
-                        }
-                    }
-                }
-                await MainActor.run {
-                    chapterVerses = fetchedVerses
-                    isLoadingVerses = false
-                }
-            } catch {
-                await MainActor.run {
-                    isLoadingVerses = false
-                }
-            }
-        }
-    }
-}
-
-struct FilterChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(isSelected ? .white : Color.adaptiveNavyText(colorScheme))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.reforgedNavy : (colorScheme == .dark ? Color(white: 0.25) : Color.reforgedNavy.opacity(0.1)))
-                .clipShape(Capsule())
-        }
-    }
-}
-
-// MARK: - Search Panel View
-
-struct SearchPanelView: View {
-    @Binding var searchQuery: String
-    @Binding var searchResults: [BibleSearchResult]
-    @Binding var searchHistory: [String]
-    var recentPassages: [(book: String, chapter: Int)]
-    @Binding var isSearching: Bool
-    @Binding var isPresented: Bool
-    let onSelectResult: (BibleSearchResult) -> Void
-    let onSelectRecent: (String, Int) -> Void
-    var translation: BibleTranslation = .esv
-    @Environment(\.colorScheme) var colorScheme
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
-    @FocusState private var isSearchFocused: Bool
-    @State private var selectedCategory: BookCategory? = nil
-
-    /// Determine which BookCategory a verse reference belongs to.
-    ///
-    /// Books are checked longest-name-first so that e.g. "1 John" matches before
-    /// the plain "John" entry.  A space is appended to every prefix to guarantee
-    /// a word-boundary match ("John " won't accidentally absorb "Johnny…").
-    /// Known API spelling variants (e.g. ESV returns "Psalm" not "Psalms",
-    /// "Song of Songs" vs "Song of Solomon") are handled explicitly.
-    private func bookCategory(for reference: String) -> BookCategory? {
-        // Sort longest name first to prevent short names swallowing longer ones
-        let sortedBooks = BibleData.books.sorted { $0.name.count > $1.name.count }
-        for book in sortedBooks {
-            // Match on full name or abbreviation, both with a trailing space guard
-            if reference.hasPrefix(book.name + " ") ||
-               reference.hasPrefix(book.abbreviation + " ") {
-                return book.category
-            }
-        }
-        // ESV (and most APIs) use "Psalm" (singular); our data has "Psalms"
-        if reference.hasPrefix("Psalm ") { return .poetryWisdom }
-        // Some translations use "Song of Songs" instead of "Song of Solomon"
-        if reference.hasPrefix("Song of Songs ") { return .poetryWisdom }
-        return nil
-    }
-
-    /// Filter search results by book category
-    var filteredResults: [BibleSearchResult] {
-        guard let category = selectedCategory else { return searchResults }
-        return searchResults.filter { bookCategory(for: $0.reference) == category }
-    }
-
-    /// Count results per book category for the chart
-    var categoryCounts: [BookCategory: Int] {
-        var counts: [BookCategory: Int] = [:]
-        for cat in BookCategory.allCases {
-            counts[cat] = searchResults.filter { bookCategory(for: $0.reference) == cat }.count
-        }
-        return counts
-    }
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Transparent tap-to-dismiss area
-                Color.clear
-                    .contentShape(Rectangle())
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.35)) {
-                            isPresented = false
-                        }
-                    }
-
-                // Panel
-                let availableWidth = geometry.size.width
-                let panelWidth: CGFloat = horizontalSizeClass == .regular
-                    ? min(380, availableWidth * 0.55)
-                    : availableWidth * 0.85
-                HStack(spacing: 0) {
-                    VStack(spacing: 0) {
-                    // Header
-                    HStack {
-                        Text("Search")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                        Spacer()
-
-                        Button {
-                            withAnimation(.spring(response: 0.35)) {
-                                isPresented = false
-                            }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        }
-                    }
-                    .padding()
-
-                    // Search bar
-                    HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                        TextField("Search verses...", text: $searchQuery)
-                            .font(.subheadline)
-                            .focused($isSearchFocused)
-                            .onSubmit {
-                                performSearch()
-                            }
-
-                        if !searchQuery.isEmpty {
-                            Button {
-                                searchQuery = ""
-                                searchResults = []
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.adaptiveBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding(.horizontal)
-
-                    // Search button
-                    if !searchQuery.isEmpty {
-                        Button {
-                            performSearch()
-                        } label: {
-                            Text("Search \(translation.rawValue)")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color.reforgedNavy)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        .padding()
-                    }
-
-                    // Category summary + filter chips
-                    if !searchResults.isEmpty {
-                        // Result count summary
-                        Text("\(searchResults.count) verses in \(translation.rawValue). Tap chart to filter.")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            .padding(.horizontal)
-                            .padding(.top, 4)
-
-                        // Category breakdown chart
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(categoryCounts.sorted(by: { $0.value > $1.value }), id: \.key) { category, count in
-                                if count > 0 {
-                                    Button {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            selectedCategory = selectedCategory == category ? nil : category
-                                        }
-                                    } label: {
-                                        HStack(spacing: 8) {
-                                            Text(category.rawValue)
-                                                .font(.caption2)
-                                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                                                .frame(width: 100, alignment: .trailing)
-
-                                            GeometryReader { geo in
-                                                let maxCount = categoryCounts.values.max() ?? 1
-                                                let barWidth = max(4, geo.size.width * CGFloat(count) / CGFloat(maxCount))
-                                                RoundedRectangle(cornerRadius: 3)
-                                                    .fill(selectedCategory == category ? Color.reforgedGold : Color.reforgedNavy)
-                                                    .frame(width: barWidth)
-                                            }
-                                            .frame(height: 14)
-
-                                            Text("\(count)")
-                                                .font(.caption2)
-                                                .fontWeight(.semibold)
-                                                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .background(Color.adaptiveBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal)
-
-                        // Book category filter chips
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                FilterChip(title: "All", isSelected: selectedCategory == nil) {
-                                    selectedCategory = nil
-                                }
-                                ForEach(BookCategory.allCases) { cat in
-                                    let count = categoryCounts[cat] ?? 0
-                                    if count > 0 {
-                                        FilterChip(title: cat.rawValue, isSelected: selectedCategory == cat) {
-                                            selectedCategory = cat
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding(.vertical, 4)
-                    }
-
-                    // Content
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            if isSearching {
-                                HStack {
-                                    Spacer()
-                                    ProgressView("Searching...")
-                                    Spacer()
-                                }
-                                .padding(.top, 40)
-                            } else if !searchResults.isEmpty {
-                                // Results
-                                if filteredResults.isEmpty {
-                                    Text("No results in this category")
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                        .padding(.top, 20)
-                                        .frame(maxWidth: .infinity)
-                                }
-                                ForEach(filteredResults) { result in
-                                    Button {
-                                        onSelectResult(result)
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            HStack {
-                                                Text(result.reference)
-                                                    .font(.subheadline)
-                                                    .fontWeight(.bold)
-                                                    .foregroundStyle(Color.reforgedGold)
-                                                Spacer()
-                                                Image(systemName: "chevron.right")
-                                                    .font(.caption)
-                                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                            }
-
-                                            Text(result.content)
-                                                .font(.caption)
-                                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                                                .lineLimit(3)
-                                                .multilineTextAlignment(.leading)
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding()
-                                        .background(Color.adaptiveBackground(colorScheme))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    }
-                                }
-                            } else {
-                                // Search history
-                                if !searchHistory.isEmpty {
-                                    Text("Recent Searches")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                                    ForEach(searchHistory.prefix(5), id: \.self) { query in
-                                        Button {
-                                            searchQuery = query
-                                            performSearch()
-                                        } label: {
-                                            HStack {
-                                                Image(systemName: "clock.arrow.circlepath")
-                                                    .font(.caption)
-                                                Text(query)
-                                                    .font(.subheadline)
-                                                Spacer()
-                                            }
-                                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                                            .padding(.vertical, 8)
-                                        }
-                                    }
-                                }
-
-                                // Recent passages
-                                if !recentPassages.isEmpty {
-                                    Text("Recent Passages")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                        .padding(.top, 8)
-
-                                    ForEach(recentPassages.prefix(5), id: \.book) { passage in
-                                        Button {
-                                            onSelectRecent(passage.book, passage.chapter)
-                                        } label: {
-                                            HStack {
-                                                Image(systemName: "book")
-                                                    .font(.caption)
-                                                Text("\(passage.book) \(passage.chapter)")
-                                                    .font(.subheadline)
-                                                Spacer()
-                                            }
-                                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                                            .padding(.vertical, 8)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding()
-                    }
-                }
-                .frame(width: panelWidth)
-                .frame(maxHeight: .infinity)
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .shadow(color: Color.black.opacity(0.15), radius: 12, x: 4, y: 0)
-
-                Spacer()
-            }
-        }
-        }
-        .onAppear {
-            isSearchFocused = true
-        }
-    }
-
-    func performSearch() {
-        guard !searchQuery.isEmpty else { return }
-        isSearching = true
-        selectedCategory = nil
-
-        Task {
-            do {
-                var results: [BibleSearchResult] = []
-                switch translation {
-                case .esv:
-                    let esvResults = try await ESVService.shared.searchPassages(query: searchQuery, pageSize: 100)
-                    results = esvResults.map { BibleSearchResult(reference: $0.reference, content: $0.content) }
-                case .kjv:
-                    // KJV doesn't have a search API - fall back to ESV search
-                    let esvResults = try await ESVService.shared.searchPassages(query: searchQuery, pageSize: 100)
-                    results = esvResults.map { BibleSearchResult(reference: $0.reference, content: $0.content) }
-                case .csb, .nkjv, .nasb, .rvr1960:
-                    let apiResults = try await ApiBibleService.shared.searchPassages(query: searchQuery, translation: translation, pageSize: 100)
-                    results = apiResults.map { BibleSearchResult(reference: $0.reference, content: $0.text) }
-                case .tr, .wlc:
-                    break  // search not supported for original languages
-                }
-                await MainActor.run {
-                    searchResults = results
-                    isSearching = false
-                }
-            } catch {
-                await MainActor.run {
-                    searchResults = []
-                    isSearching = false
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Formatting Panel View
 
 struct FormattingPanelView: View {
@@ -3719,6 +2246,7 @@ private struct FormattingPanelScrollContent: View {
                 FormattingLineSpacingSection(settings: settings)
                 FormattingVerseLayoutSection(settings: settings)
                 FormattingReadingModeSection(isOn: $settingsManager.readingMode)
+                FormattingRedLetterSection(isOn: $settingsManager.showRedLetterText)
             }
             .padding()
         }
@@ -3976,6 +2504,34 @@ private struct FormattingReadingModeSection: View {
     }
 }
 
+// MARK: - Red Letter Section
+
+private struct FormattingRedLetterSection: View {
+    @Binding var isOn: Bool
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Red Letter")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            Toggle(isOn: $isOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Words of Christ")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("Display the words of Jesus in red throughout the Gospels.")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+            .tint(Color(red: 0.75, green: 0.1, blue: 0.1))
+        }
+    }
+}
+
 // MARK: - Section Heading View
 
 struct SectionHeadingView: View {
@@ -4036,11 +2592,20 @@ struct VerseRow: View {
     let verseByVerse: Bool
     var translation: BibleTranslation = .esv
     var highlightedWord: (verseID: String, word: String)? = nil
+    var showRedLetterText: Bool = false
     let onTap: () -> Void
     var onNoteTap: (() -> Void)? = nil
     var onWordLongPress: ((String, ParsedVerse) -> Void)? = nil
     @ObservedObject var readingState: BibleReadingState
     @Environment(\.colorScheme) var colorScheme
+
+    private static let wocColor = Color(red: 0.75, green: 0.1, blue: 0.1)
+
+    /// Segment-level WOC data for this verse (nil when red-letter is off or verse has no WOC data).
+    private var wocSegments: [WOCSegment]? {
+        guard showRedLetterText else { return nil }
+        return WordsOfChristData.shared.segments(for: verse.reference)
+    }
 
     /// Font to use for the verse body text. Overridden for Greek (TR) and Hebrew (WLC).
     private var verseFont: Font {
@@ -4096,16 +2661,19 @@ struct VerseRow: View {
                                 isSelected: isSelected,
                                 highlightedWord: highlightedWord,
                                 colorScheme: colorScheme,
+                                wocSegments: wocSegments,
                                 onWordLongPress: wordLookup
                             )
                             .fixedSize(horizontal: false, vertical: true)
                         }
                     } else {
                         // No word-lookup callback — plain text fallback with bracket italics.
-                        italicizedVerseText(
+                        segmentedItalicizedVerseText(
                             verse.text,
+                            wocSegments: wocSegments,
                             font: verseFont,
-                            color: Color.adaptiveText(colorScheme)
+                            defaultColor: Color.adaptiveText(colorScheme),
+                            wocColor: VerseRow.wocColor
                         )
                         .lineSpacing(settings.lineSpacing.spacing * (translation == .wlc ? 1.4 : 1.0))
                         .multilineTextAlignment(translation == .wlc ? .trailing : .leading)
@@ -4203,6 +2771,27 @@ private func italicizedVerseText(_ raw: String, font: Font, color: Color) -> Tex
     return result
 }
 
+// MARK: - Segment-Aware Italic Text Helper
+
+/// Renders verse text with per-segment red-letter colouring.
+///
+/// When `wocSegments` is non-nil each segment is rendered through `italicizedVerseText`
+/// with the appropriate colour (red for Christ's words, `defaultColor` otherwise).
+/// When nil the whole verse is rendered in `defaultColor`.
+private func segmentedItalicizedVerseText(_ raw: String,
+                                          wocSegments: [WOCSegment]?,
+                                          font: Font,
+                                          defaultColor: Color,
+                                          wocColor: Color) -> Text {
+    guard let segments = wocSegments else {
+        return italicizedVerseText(raw, font: font, color: defaultColor)
+    }
+    return segments.reduce(Text("")) { acc, seg in
+        acc + italicizedVerseText(seg.text, font: font,
+                                  color: seg.isRed ? wocColor : defaultColor)
+    }
+}
+
 // Note: Word-level text selection uses iOS native text selection.
 // Users can long-press on verse text to select specific words using the native iOS selection handles,
 // then copy the selected text. The verse highlighting feature applies to the entire verse.
@@ -4278,431 +2867,6 @@ private struct OriginalLanguageVerseRow: View {
         // RTL environment flips the HStack child order: number on right, text flows left.
         .environment(\.layoutDirection, isWLC ? .rightToLeft : .leftToRight)
         .frame(maxWidth: .infinity, alignment: isWLC ? .trailing : .leading)
-    }
-}
-
-// MARK: - Selection Action Bar
-
-enum SelectionAction {
-    case highlight(HighlightColor)
-    case removeHighlight
-    case addNote
-    case addToMemory
-    case copy
-    case share
-}
-
-struct SelectionActionBar: View {
-    @ObservedObject var readingState: BibleReadingState
-    let onAction: (SelectionAction) -> Void
-    @State private var showColorPicker = false
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Color picker
-            if showColorPicker {
-                HStack(spacing: 12) {
-                    ForEach(HighlightColor.allCases) { color in
-                        Button {
-                            onAction(.highlight(color))
-                            withAnimation { showColorPicker = false }
-                        } label: {
-                            Circle()
-                                .fill(color.color)
-                                .frame(width: 36, height: 36)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                .shadow(color: color.color.opacity(0.4), radius: 4, y: 2)
-                        }
-                    }
-
-                    // Clear highlight
-                    Button {
-                        onAction(.removeHighlight)
-                        withAnimation { showColorPicker = false }
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.adaptiveCardBackground(colorScheme))
-                                .frame(width: 36, height: 36)
-                            Image(systemName: "xmark")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        }
-                    }
-                }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 20)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .padding(.bottom, 8)
-                .transition(.scale.combined(with: .opacity))
-            }
-
-            // Action buttons
-            HStack(spacing: 16) {
-                ActionBarButton(icon: "highlighter", label: "Highlight") {
-                    withAnimation(.spring(response: 0.3)) {
-                        showColorPicker.toggle()
-                    }
-                }
-
-                ActionBarButton(icon: "note.text", label: "Note") {
-                    onAction(.addNote)
-                }
-
-                ActionBarButton(icon: "brain.head.profile", label: "Memory") {
-                    onAction(.addToMemory)
-                }
-
-                ActionBarButton(icon: "doc.on.doc", label: "Copy") {
-                    onAction(.copy)
-                }
-
-                ActionBarButton(icon: "square.and.arrow.up", label: "Share") {
-                    onAction(.share)
-                }
-            }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 24)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .shadow(color: Color.black.opacity(0.15), radius: 20, y: -5)
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-    }
-}
-
-struct ActionBarButton: View {
-    let icon: String
-    let label: String
-    var isActive: Bool = false
-    let action: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-
-    var iconColor: Color {
-        if isActive {
-            return Color.reforgedGold
-        }
-        return colorScheme == .dark ? Color(white: 0.9) : Color.reforgedNavy
-    }
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.title3)
-                Text(label)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-            }
-            .foregroundStyle(iconColor)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(
-                isActive ? Color.reforgedGold.opacity(0.15) : Color.clear
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-    }
-}
-
-// MARK: - Take Note View (Improved Verse Action Sheet)
-
-struct TakeNoteView: View {
-    let verses: [ParsedVerse]
-    @ObservedObject var readingState: BibleReadingState
-    let onDismiss: () -> Void
-
-    @State private var noteText: String = ""
-    @State private var crossReferences: [String] = []
-    @State private var showCrossRefPicker = false
-    @State private var crossRefBook = BibleData.books[0]
-    @State private var crossRefChapter: Int = 1
-    @State private var crossRefVerseStart: Int = 0
-    @State private var crossRefVerseEnd: Int = 0
-    @State private var showNoteShareSheet = false
-    @FocusState private var isNoteFocused: Bool
-    @Environment(\.colorScheme) var colorScheme
-
-    // Convenience: first verse for single-verse operations
-    private var primaryVerse: ParsedVerse { verses[0] }
-
-    // Reference covering the full range: "John 3:16" or "John 3:16-18"
-    private var noteReference: String {
-        guard verses.count > 1 else { return primaryVerse.reference }
-        let first = verses.first!
-        let last = verses.last!
-        // Build "Book Chapter:start-end"
-        return "\(readingState.currentBook) \(readingState.currentChapter):\(first.number)-\(last.number)"
-    }
-
-    var existingNote: VerseNote? {
-        readingState.getNote(for: noteReference)
-    }
-
-    var existingHighlight: VerseHighlight? {
-        readingState.getHighlight(for: primaryVerse.reference)
-    }
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-
-                    // Verse preview
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(noteReference)
-                            .font(.headline)
-                            .foregroundStyle(Color.reforgedGold)
-
-                        ForEach(verses) { v in
-                            Text(v.text)
-                                .font(.subheadline)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                        }
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.adaptiveBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-
-                    // Highlight section (applies to primary verse)
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Highlight")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                        HStack(spacing: 12) {
-                            ForEach(HighlightColor.allCases) { color in
-                                Button {
-                                    HapticManager.shared.verseHighlighted()
-                                    for v in verses {
-                                        readingState.highlight(
-                                            reference: v.reference,
-                                            book: readingState.currentBook,
-                                            chapter: readingState.currentChapter,
-                                            verse: v.number,
-                                            color: color
-                                        )
-                                    }
-                                } label: {
-                                    Circle()
-                                        .fill(color.color)
-                                        .frame(width: 40, height: 40)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(
-                                                    existingHighlight?.color == color.rawValue ? Color.reforgedNavy : Color.clear,
-                                                    lineWidth: 3
-                                                )
-                                        )
-                                }
-                            }
-
-                            Spacer()
-
-                            if existingHighlight != nil {
-                                Button {
-                                    HapticManager.shared.lightImpact()
-                                    for v in verses {
-                                        readingState.removeHighlight(reference: v.reference)
-                                    }
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.title2)
-                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                }
-                            }
-                        }
-                    }
-
-                    // Note section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Note")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                        TextEditor(text: $noteText)
-                            .frame(minHeight: 120)
-                            .padding(12)
-                            .scrollContentBackground(.hidden)
-                            .background(Color.adaptiveCardBackground(colorScheme))
-                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                            )
-                            .focused($isNoteFocused)
-
-                        // Cross-references section
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Label("Cross-References", systemImage: "arrow.triangle.branch")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                Spacer()
-                                Button {
-                                    showCrossRefPicker = true
-                                } label: {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "plus")
-                                        Text("Add")
-                                    }
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(Color.reforgedNavy)
-                                }
-                            }
-
-                            if crossReferences.isEmpty {
-                                Text("Link related verses to this note")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
-                                    .padding(.vertical, 2)
-                            } else {
-                                ForEach(crossReferences, id: \.self) { ref in
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "book.closed")
-                                            .font(.caption)
-                                            .foregroundStyle(Color.reforgedNavy)
-                                        Text(ref)
-                                            .font(.subheadline)
-                                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                                        Spacer()
-                                        Button {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                crossReferences.removeAll { $0 == ref }
-                                            }
-                                        } label: {
-                                            Image(systemName: "xmark")
-                                                .font(.caption2)
-                                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                        }
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.adaptiveCardBackground(colorScheme))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Delete + Share action row
-                        HStack(spacing: 12) {
-                            // Delete — only visible when a saved note exists
-                            if existingNote != nil {
-                                Button {
-                                    HapticManager.shared.lightImpact()
-                                    readingState.removeNote(reference: noteReference)
-                                    noteText = ""
-                                    crossReferences = []
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(Color.reforgedCoral)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 13)
-                                        .background(Color.reforgedCoral.opacity(0.12))
-                                        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                                                .stroke(Color.reforgedCoral.opacity(0.3), lineWidth: 1)
-                                        )
-                                }
-                            }
-
-                            // Share — always visible; shares verse + current note text
-                            Button {
-                                HapticManager.shared.lightImpact()
-                                showNoteShareSheet = true
-                            } label: {
-                                Label("Share", systemImage: "square.and.arrow.up")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 13)
-                                    .background(Color.reforgedNavy)
-                                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                            }
-                        }
-                    }
-                }
-                .padding()
-            }
-            .background(Color.adaptiveCardBackground(colorScheme).ignoresSafeArea())
-            .navigationTitle("Take Note")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        // Auto-save on dismiss if there's content
-                        if !noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            HapticManager.shared.noteSaved()
-                            if existingNote != nil {
-                                readingState.updateNote(
-                                    reference: noteReference,
-                                    content: noteText,
-                                    crossReferences: crossReferences
-                                )
-                            } else {
-                                readingState.addNote(
-                                    reference: noteReference,
-                                    book: readingState.currentBook,
-                                    chapter: readingState.currentChapter,
-                                    verse: primaryVerse.number,
-                                    content: noteText,
-                                    crossReferences: crossReferences
-                                )
-                            }
-                        }
-                        onDismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-            .onAppear {
-                noteText = existingNote?.content ?? ""
-                crossReferences = existingNote?.crossReferences ?? []
-            }
-            .sheet(isPresented: $showCrossRefPicker) {
-                VersePickerSheet(
-                    selectedBook: $crossRefBook,
-                    selectedChapter: $crossRefChapter,
-                    selectedVerseStart: $crossRefVerseStart,
-                    selectedVerseEnd: $crossRefVerseEnd,
-                    translation: SettingsManager.shared.defaultTranslation
-                ) { _, reference in
-                    if !crossReferences.contains(reference) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            crossReferences.append(reference)
-                        }
-                    }
-                }
-            }
-            .sheet(isPresented: $showNoteShareSheet) {
-                let shareSelection = VerseShareSelection(
-                    verses: verses,
-                    book: readingState.currentBook,
-                    chapter: readingState.currentChapter,
-                    translation: SettingsManager.shared.defaultTranslation.rawValue
-                )
-                VerseShareSheet(
-                    selection: shareSelection,
-                    noteText: noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : noteText
-                )
-            }
-        }
     }
 }
 

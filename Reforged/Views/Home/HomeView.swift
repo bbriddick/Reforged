@@ -969,14 +969,14 @@ struct DailyInsightCard: View {
                         // Read more — primary capsule button
                         Button {
                             NotificationCenter.default.post(
-                                name: NSNotification.Name("NavigateToBibleVerse"),
+                                name: .navigateToBibleVerse,
                                 object: nil,
-                                userInfo: ["reference": insight.verse]
+                                userInfo: [AppNotificationUserInfoKey.reference: insight.verse]
                             )
                             NotificationCenter.default.post(
-                                name: NSNotification.Name("SwitchTab"),
+                                name: .switchTab,
                                 object: nil,
-                                userInfo: ["tab": 2]
+                                userInfo: [AppNotificationUserInfoKey.tab: 2]
                             )
                         } label: {
                             HStack(spacing: 6) {
@@ -1484,9 +1484,9 @@ struct ShareGospelDetailView: View {
         dismiss()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
             NotificationCenter.default.post(
-                name: NSNotification.Name("NavigateToBibleVerse"),
+                name: .navigateToBibleVerse,
                 object: nil,
-                userInfo: ["reference": reference]
+                userInfo: [AppNotificationUserInfoKey.reference: reference]
             )
         }
     }

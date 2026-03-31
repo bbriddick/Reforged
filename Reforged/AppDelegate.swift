@@ -51,7 +51,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Build the chapter list: remaining chapters of current book + next 2 books
         var toFetch: [(book: String, chapter: Int)] = []
         let curBook = BibleData.books[startBookIdx]
-        for ch in startChapter...curBook.chapters { toFetch.append((curBook.name, ch)) }
+        if startChapter <= curBook.chapters {
+            for ch in startChapter...curBook.chapters { toFetch.append((curBook.name, ch)) }
+        }
         for offset in 1...2 {
             let idx = startBookIdx + offset
             guard idx < BibleData.books.count else { break }
@@ -119,9 +121,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
            let url = URL(string: urlString) {
             // Post notification to navigate to URL in WebView
             NotificationCenter.default.post(
-                name: NSNotification.Name("NavigateToURL"),
+                name: .navigateToURL,
                 object: nil,
-                userInfo: ["url": url]
+                userInfo: [AppNotificationUserInfoKey.url: url]
             )
         }
         
@@ -130,15 +132,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             switch action {
             case "open-bible":
                 NotificationCenter.default.post(
-                    name: NSNotification.Name("SwitchTab"),
+                    name: .switchTab,
                     object: nil,
-                    userInfo: ["tab": 2]
+                    userInfo: [AppNotificationUserInfoKey.tab: 2]
                 )
             case "open-memory":
                 NotificationCenter.default.post(
-                    name: NSNotification.Name("SwitchTab"),
+                    name: .switchTab,
                     object: nil,
-                    userInfo: ["tab": 3]
+                    userInfo: [AppNotificationUserInfoKey.tab: 3]
                 )
             default:
                 break

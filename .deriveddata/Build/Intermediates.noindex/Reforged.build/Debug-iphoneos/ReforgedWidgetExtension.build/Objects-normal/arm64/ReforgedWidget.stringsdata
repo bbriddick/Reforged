@@ -1,0 +1,136 @@
+{
+  "source": "/Users/boazbriddick/Documents/Reforged/ReforgedWidget/ReforgedWidget.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 237
+        }
+      },
+      {
+        "comment": "",
+        "key": "day%@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "Read today",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "Read to continue",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 328
+        }
+      },
+      {
+        "comment": "",
+        "key": "day streak",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 330
+        }
+      },
+      {
+        "comment": "",
+        "key": "Read today",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 342
+        }
+      },
+      {
+        "comment": "",
+        "key": "Read to continue",
+        "location": {
+          "startingColumn": 62,
+          "startingLine": 342
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reading Streak",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 380
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 392
+        }
+      },
+      {
+        "comment": "",
+        "key": "days",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 395
+        }
+      },
+      {
+        "comment": "",
+        "key": "You've read Scripture today!",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 406
+        }
+      },
+      {
+        "comment": "",
+        "key": "Read today to continue your streak",
+        "location": {
+          "startingColumn": 76,
+          "startingLine": 406
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 526
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reading Streak",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 577
+        }
+      },
+      {
+        "comment": "",
+        "key": "Track your daily Bible reading streak.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 578
+        }
+      }
+    ]
+  },
+  "version": 1
+}

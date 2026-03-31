@@ -177,6 +177,15 @@ struct DisplaySettingsSection: View {
 
             SettingsDivider()
 
+            // Red Letter Text
+            SettingsToggleRow(
+                title: "Red Letter Text",
+                subtitle: "Display the words of Christ in red.",
+                isOn: $settings.showRedLetterText
+            )
+
+            SettingsDivider()
+
             // Preview
             VStack(alignment: .leading, spacing: 10) {
                 Text("Preview")

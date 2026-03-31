@@ -68,6 +68,7 @@
 		B1A0001C279B9E0000000001 /* kjvpce.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0001B279B9E0000000001 /* kjvpce.json */; };
 		RG000009279B9E0000000001 /* trparsed.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000A279B9E0000000001 /* trparsed.json */; };
 		RG00000B279B9E0000000001 /* wlc.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000C279B9E0000000001 /* wlc.json */; };
+		WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */ = {isa = PBXBuildFile; fileRef = WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */; };
 		RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000001 /* OriginalLanguageService.swift */; };
 		RG00000F279B9E0000000001 /* SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* SILEOT.ttf */; };
 		B1A00012279B9E0000000001 /* ConcordanceSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */; };
@@ -80,6 +81,7 @@
 		D1A00006279B9E0000000001 /* DevotionalTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00002279B9E0000000001 /* DevotionalTracks.swift */; };
 		D1A00007279B9E0000000001 /* DoctrineTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00003279B9E0000000001 /* DoctrineTracks.swift */; };
 		D1A00008279B9E0000000001 /* DoctrineTracksExtended.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */; };
+		WOC00002279B9E0000000001 /* WordsOfChristData.swift in Sources */ = {isa = PBXBuildFile; fileRef = WOC00001279B9E0000000001 /* WordsOfChristData.swift */; };
 		D1B00002279B9E0000000001 /* LearningPathView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B00001279B9E0000000001 /* LearningPathView.swift */; };
 		DC9594E35E6746C572ABE7A5 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11826B8D31CD2DF20F878856 /* SettingsManager.swift */; };
 		DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 667642CA8ACE4CCE82FCC6E8 /* BibleProgressView.swift */; };
@@ -96,6 +98,10 @@
 		RG000011279B9E0000000001 /* Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Roboto-Italic.ttf */; };
 		RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000006279B9E0000000001 /* MatchingGameView.swift */; };
 		RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000008279B9E0000000001 /* CompleteTheVerseView.swift */; };
+		EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000002279B9E0000000001 /* BibleAudioPlayer.swift */; };
+		EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000004279B9E0000000001 /* UnifiedNavigationView.swift */; };
+		EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000006279B9E0000000001 /* SearchPanelView.swift */; };
+		EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000008279B9E0000000001 /* TakeNoteView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -190,11 +196,12 @@
 		B1A00005279B9E0000000001 /* WordTappableVerseText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTappableVerseText.swift; sourceTree = "<group>"; };
 		B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsDefinitionSheet.swift; sourceTree = "<group>"; };
 		B1A00009279B9E0000000001 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
-		B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = StrongHebrewDictionary.json; sourceTree = "<group>"; };
-		B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = StrongGreekDictionary.json; sourceTree = "<group>"; };
-		B1A0001B279B9E0000000001 /* kjvpce.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjvpce.json; sourceTree = "<group>"; };
-		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trparsed.json; sourceTree = "<group>"; };
-		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wlc.json; sourceTree = "<group>"; };
+		B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = StrongHebrewDictionary.json; sourceTree = "<group>"; };
+		B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = StrongGreekDictionary.json; sourceTree = "<group>"; };
+		B1A0001B279B9E0000000001 /* kjvpce.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = kjvpce.json; sourceTree = "<group>"; };
+		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = trparsed.json; sourceTree = "<group>"; };
+		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = wlc.json; sourceTree = "<group>"; };
+		WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = kjv_words_of_christ_red_markup.json; sourceTree = "<group>"; };
 		RG00000E279B9E0000000001 /* OriginalLanguageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLanguageService.swift; sourceTree = "<group>"; };
 		RG000010279B9E0000000001 /* SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/SILEOT.ttf"; sourceTree = "<group>"; };
 		B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcordanceSearchView.swift; sourceTree = "<group>"; };
@@ -207,6 +214,7 @@
 		D1A00002279B9E0000000001 /* DevotionalTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevotionalTracks.swift; sourceTree = "<group>"; };
 		D1A00003279B9E0000000001 /* DoctrineTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracks.swift; sourceTree = "<group>"; };
 		D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracksExtended.swift; sourceTree = "<group>"; };
+		WOC00001279B9E0000000001 /* WordsOfChristData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordsOfChristData.swift; sourceTree = "<group>"; };
 		D1B00001279B9E0000000001 /* LearningPathView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningPathView.swift; sourceTree = "<group>"; };
 		E1A00001279B9E0000000001 /* ProfileImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageService.swift; sourceTree = "<group>"; };
 		E1A00003279B9E0000000001 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
@@ -219,6 +227,10 @@
 		RG000006279B9E0000000001 /* MatchingGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingGameView.swift; sourceTree = "<group>"; };
 		RG000008279B9E0000000001 /* CompleteTheVerseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTheVerseView.swift; sourceTree = "<group>"; };
 		RF0000A4279B9E0000000001 /* DeepDrillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepDrillView.swift; sourceTree = "<group>"; };
+		EX000002279B9E0000000001 /* BibleAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAudioPlayer.swift; sourceTree = "<group>"; };
+		EX000004279B9E0000000001 /* UnifiedNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedNavigationView.swift; sourceTree = "<group>"; };
+		EX000006279B9E0000000001 /* SearchPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPanelView.swift; sourceTree = "<group>"; };
+		EX000008279B9E0000000001 /* TakeNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNoteView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -337,6 +349,7 @@
 				D1A00002279B9E0000000001 /* DevotionalTracks.swift */,
 				D1A00003279B9E0000000001 /* DoctrineTracks.swift */,
 				D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */,
+				WOC00001279B9E0000000001 /* WordsOfChristData.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -417,6 +430,10 @@
 			isa = PBXGroup;
 			children = (
 				A100003F279B9E0000000001 /* BibleView.swift */,
+				EX000002279B9E0000000001 /* BibleAudioPlayer.swift */,
+				EX000004279B9E0000000001 /* UnifiedNavigationView.swift */,
+				EX000006279B9E0000000001 /* SearchPanelView.swift */,
+				EX000008279B9E0000000001 /* TakeNoteView.swift */,
 				BDD100000000000000000006 /* NowPlayingView.swift */,
 				A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */,
 				B1A00005279B9E0000000001 /* WordTappableVerseText.swift */,
@@ -458,6 +475,7 @@
 				RG000010279B9E0000000001 /* SILEOT.ttf */,
 				RG00000A279B9E0000000001 /* trparsed.json */,
 				RG00000C279B9E0000000001 /* wlc.json */,
+				WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -578,6 +596,7 @@
 				B1A0000C279B9E0000000001 /* StrongHebrewDictionary.json in Resources */,
 				B1A0000E279B9E0000000001 /* StrongGreekDictionary.json in Resources */,
 				B1A0001C279B9E0000000001 /* kjvpce.json in Resources */,
+				WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */,
 				RG000001279B9E0000000001 /* LibreBaskerville.ttf in Resources */,
 				RG000013279B9E0000000001 /* LibreBaskerville-Italic.ttf in Resources */,
 				RG000003279B9E0000000001 /* Roboto.ttf in Resources */,
@@ -624,6 +643,10 @@
 				RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */,
 				RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */,
 				A100003E279B9E0000000001 /* BibleView.swift in Sources */,
+				EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */,
+				EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */,
+				EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */,
+				EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */,
 				BDD100000000000000000005 /* NowPlayingView.swift in Sources */,
 				DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */,
 				A1000040279B9E0000000001 /* ProfileView.swift in Sources */,
@@ -669,6 +692,7 @@
 				D1A00006279B9E0000000001 /* DevotionalTracks.swift in Sources */,
 				D1A00007279B9E0000000001 /* DoctrineTracks.swift in Sources */,
 				D1A00008279B9E0000000001 /* DoctrineTracksExtended.swift in Sources */,
+				WOC00002279B9E0000000001 /* WordsOfChristData.swift in Sources */,
 				D1B00002279B9E0000000001 /* LearningPathView.swift in Sources */,
 				E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */,
 				E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */,
