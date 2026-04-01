@@ -81,6 +81,7 @@ struct BibleView: View {
     @State private var chapterScrollPositions: [String: Int] = [:]
     /// Verse number to scroll to on the next loadChapter() call. nil = scroll to top.
     @State private var pendingScrollVerse: Int? = nil
+    @State private var pendingNavigationVerse: Int? = nil
 
     // Verse interaction state
     @State private var selectedVerseForAction: ParsedVerse?
@@ -778,6 +779,7 @@ struct BibleView: View {
             guard !hasAppeared else {
                 // Tab switch back — do NOT reload; scroll position is already preserved
                 audioPlayer.updateFromSettings()
+                consumePendingBibleNavigationIfNeeded()
                 return
             }
             hasAppeared = true
@@ -791,6 +793,7 @@ struct BibleView: View {
             loadSearchHistory()
             loadRecentPassages()
             loadChapter()
+            consumePendingBibleNavigationIfNeeded()
             audioPlayer.updateFromSettings()
 
             // Wire up audio chapter completion callback (once)
@@ -866,10 +869,8 @@ struct BibleView: View {
         .onChange(of: themeManager.currentMode) { newMode in
             settingsManager.themeMode = newMode
         }
-        .onReceive(NotificationCenter.default.publisher(for: .navigateToBibleVerse)) { notification in
-            if let reference = notification.userInfo?[AppNotificationUserInfoKey.reference] as? String {
-                navigateToVerseReference(reference)
-            }
+        .onChange(of: appState.pendingBibleVerseReference) { _ in
+            consumePendingBibleNavigationIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
             // Save audio state when app loses focus
@@ -1240,12 +1241,18 @@ struct BibleView: View {
         // Capture restore intent: cold-start restore OR backward navigation position restore
         let coldRestore  = isRestoringPosition && readingSettings.lastVerse > 1
         let pendingVerse = pendingScrollVerse
+        let explicitNavigationVerse = pendingNavigationVerse
         pendingScrollVerse = nil  // consume
+        pendingNavigationVerse = nil
 
-        let restoreVerse = coldRestore || ((pendingVerse ?? 0) > 1)
-        let savedVerse   = coldRestore ? readingSettings.lastVerse : (pendingVerse ?? 1)
+        let restoreVerse = coldRestore || ((pendingVerse ?? 0) > 1) || explicitNavigationVerse != nil
+        let savedVerse   = explicitNavigationVerse ?? (coldRestore ? readingSettings.lastVerse : (pendingVerse ?? 1))
         if coldRestore { isRestoringPosition = false }
-        if !restoreVerse { firstVisibleVerseNumber = 1 }
+        let topVerseID = "\(book) \(chapter):1"
+        if !restoreVerse {
+            firstVisibleVerseNumber = 1
+            immediateScrollToVerseID = topVerseID
+        }
 
         // ── Cache hit: apply instantly so the swipe animation plays with content ──
         let cacheKey = ChapterCacheKey(book: book, chapter: chapter, translation: translation)
@@ -1257,6 +1264,8 @@ struct BibleView: View {
             if restoreVerse {
                 let verseID = "\(book) \(chapter):\(savedVerse)"
                 DispatchQueue.main.async { immediateScrollToVerseID = verseID }
+            } else {
+                DispatchQueue.main.async { immediateScrollToVerseID = topVerseID }
             }
             // Kick off neighbour pre-fetch so next swipe is also instant
             prefetchNeighborChapters(book: book, chapter: chapter, translation: translation)
@@ -1281,6 +1290,8 @@ struct BibleView: View {
                     if restoreVerse {
                         let verseID = "\(book) \(chapter):\(savedVerse)"
                         DispatchQueue.main.async { immediateScrollToVerseID = verseID }
+                    } else {
+                        DispatchQueue.main.async { immediateScrollToVerseID = topVerseID }
                     }
                 }
 
@@ -1445,12 +1456,8 @@ struct BibleView: View {
                 // Parse verse number to scroll to after loading
                 if chapterVerseParts.count > 1,
                    let verseNum = Int(chapterVerseParts[1].components(separatedBy: "-").first ?? "") {
-                    let targetVerseID = "\(bookName) \(selectedChapter):\(verseNum)"
+                    pendingNavigationVerse = verseNum
                     loadChapter()
-                    // Set scroll target after a brief delay to let verses render
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        scrollToVerseID = targetVerseID
-                    }
                 } else {
                     loadChapter()
                 }
@@ -1464,6 +1471,11 @@ struct BibleView: View {
         // Reuse search result navigation by creating a BibleSearchResult
         let result = BibleSearchResult(reference: reference, content: "")
         navigateToSearchResult(result)
+    }
+
+    private func consumePendingBibleNavigationIfNeeded() {
+        guard let reference = appState.consumePendingBibleVerseNavigation() else { return }
+        navigateToVerseReference(reference)
     }
 
     func handleSelectionAction(_ action: SelectionAction) {

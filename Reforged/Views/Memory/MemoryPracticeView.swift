@@ -1,5 +1,9 @@
 import SwiftUI
 
+private func normalizedVerseWords(from text: String) -> [String] {
+    text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+}
+
 struct MemoryPracticeView: View {
     let verse: MemoryVerse
     let mode: MemoryMode
@@ -636,7 +640,7 @@ struct DragAndDropView: View {
     }
 
     func setupBlanks() {
-        let words = verse.text.components(separatedBy: " ")
+        let words = normalizedVerseWords(from: verse.text)
         displayWords = words
 
         // Select significant words to blank (not short words like "the", "a", etc.)
@@ -799,7 +803,7 @@ struct FillInBlankView: View {
 
     // Split long verses into sentence-sized chunks (~20 words each, breaking at punctuation)
     var segments: [[String]] {
-        let words = verse.text.components(separatedBy: " ")
+        let words = normalizedVerseWords(from: verse.text)
         guard words.count > 25 else { return [words] }
         var result: [[String]] = []
         var current: [String] = []
@@ -1008,13 +1012,13 @@ struct FirstLetterView: View {
     @Environment(\.colorScheme) var colorScheme
 
     var firstLetters: String {
-        verse.text.components(separatedBy: " ")
+        normalizedVerseWords(from: verse.text)
             .compactMap { $0.first.map { String($0).uppercased() } }
             .joined(separator: " ")
     }
 
     var hintWords: String {
-        let words = verse.text.components(separatedBy: " ")
+        let words = normalizedVerseWords(from: verse.text)
         return words.prefix(3).joined(separator: " ") + "..."
     }
 
@@ -1124,7 +1128,7 @@ struct TypingPracticeView: View {
     @Environment(\.colorScheme) var colorScheme
 
     var hintWords: String {
-        let words = verse.text.components(separatedBy: " ")
+        let words = normalizedVerseWords(from: verse.text)
         return words.prefix(3).joined(separator: " ") + "..."
     }
 

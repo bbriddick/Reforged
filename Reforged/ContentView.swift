@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var selectedTab = 2 // Default to Bible
     @State private var showFreezeEncouragement = false
     @State private var showDonationPrompt = false
+    @State private var donationPromptMessage = ""
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.requestReview) private var requestReview
 
@@ -48,7 +49,10 @@ struct ContentView: View {
                     selectedTab = tab
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .navigateToBibleVerse)) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: .navigateToBibleVerse)) { notification in
+                if let reference = notification.userInfo?[AppNotificationUserInfoKey.reference] as? String {
+                    appState.queueBibleVerseNavigation(reference)
+                }
                 selectedTab = 2
             }
 
@@ -61,7 +65,10 @@ struct ContentView: View {
 
             // Donation prompt overlay
             if showDonationPrompt {
-                DonationPromptView(isPresented: $showDonationPrompt)
+                DonationPromptView(
+                    isPresented: $showDonationPrompt,
+                    message: donationPromptMessage
+                )
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
@@ -99,9 +106,26 @@ struct ContentView: View {
             }
         }
 
-        // Donation prompt at 20 opens
-        guard count == 20 else { return }
+        let promptConfig: (flag: String, message: String)?
+        switch count {
+        case 14:
+            promptConfig = (
+                flag: "hasShownDonationPrompt14",
+                message: "Supporting Reforged helps us cover the essential API and hosting fees that keep Reforged fast, reliable, and accessible to everyone."
+            )
+        case 60:
+            promptConfig = (
+                flag: "hasShownDonationPrompt60",
+                message: "Supporting Reforged Bible app directly funds the server costs and development hours required to keep Reforged growing and ad-free."
+            )
+        default:
+            promptConfig = nil
+        }
+
+        guard let promptConfig, !UserDefaults.standard.bool(forKey: promptConfig.flag) else { return }
+        UserDefaults.standard.set(true, forKey: promptConfig.flag)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            donationPromptMessage = promptConfig.message
             showDonationPrompt = true
         }
     }
@@ -275,6 +299,7 @@ struct FreezeEncouragementView: View {
 
 struct DonationPromptView: View {
     @Binding var isPresented: Bool
+    let message: String
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -308,7 +333,7 @@ struct DonationPromptView: View {
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                         .multilineTextAlignment(.center)
 
-                    Text("Reforged is free and built to help you grow in God's Word. If it's been a blessing, consider buying me a coffee — it goes a long way in keeping the app going!")
+                    Text(message)
                         .font(.subheadline)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .multilineTextAlignment(.center)
@@ -325,7 +350,7 @@ struct DonationPromptView: View {
                         HStack(spacing: 8) {
                             Text("☕")
                                 .font(.system(size: 18))
-                            Text("Buy Me a Coffee")
+                            Text("Support Reforged")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }

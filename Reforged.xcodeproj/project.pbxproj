@@ -17,6 +17,7 @@
 		6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6B3C67E02F3303EB008165D9 /* ReforgedWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3C67E12F3303EB008165D9 /* ReforgedWidget.swift */; };
 		6B3C67E22F3303EB008165D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B3C67E32F3303EB008165D9 /* Assets.xcassets */; };
+		9A7E0011279B9E0000000001 /* VerseOfTheDayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */; };
 		9F25489E7841AF60EE0BEF00 /* DisplaySettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */; };
 		A1000001279B9E0000000001 /* ReforgedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002279B9E0000000001 /* ReforgedApp.swift */; };
 		A1000003279B9E0000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004279B9E0000000001 /* ContentView.swift */; };
@@ -144,6 +145,7 @@
 		6B3C67E32F3303EB008165D9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6B3C67E42F3303EB008165D9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6B3C67E52F3303EB008165D9 /* ReforgedWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedWidget.entitlements; sourceTree = "<group>"; };
+		9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseOfTheDayWidget.swift; sourceTree = "<group>"; };
 		6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MemorySettingsSection.swift; path = Reforged/Views/Settings/MemorySettingsSection.swift; sourceTree = "<group>"; };
 		A1000002279B9E0000000001 /* ReforgedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReforgedApp.swift; sourceTree = "<group>"; };
 		A1000004279B9E0000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -266,6 +268,7 @@
 			isa = PBXGroup;
 			children = (
 				6B3C67E12F3303EB008165D9 /* ReforgedWidget.swift */,
+				9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */,
 				6B3C67E32F3303EB008165D9 /* Assets.xcassets */,
 				6B3C67E42F3303EB008165D9 /* Info.plist */,
 				6B3C67E52F3303EB008165D9 /* ReforgedWidget.entitlements */,
@@ -615,6 +618,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6B3C67E02F3303EB008165D9 /* ReforgedWidget.swift in Sources */,
+				9A7E0011279B9E0000000001 /* VerseOfTheDayWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

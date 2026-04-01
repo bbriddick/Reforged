@@ -119,7 +119,7 @@ struct MemoryView: View {
                         value: "\(totalVerses)",
                         label: "Verses",
                         icon: "text.book.closed.fill",
-                        color: .reforgedNavy
+                        color: Color.adaptivePrimaryIcon(colorScheme)
                     )
 
                     MemoryStatCard(
@@ -165,7 +165,7 @@ struct MemoryView: View {
                             subtitle: "Match references to verses",
                             icon: "square.grid.2x2.fill",
                             xpRange: "150–200 XP",
-                            color: Color.reforgedNavy
+                            color: Color.adaptivePrimaryIcon(colorScheme)
                         ) {
                             showMatchingGame = true
                         }
@@ -712,7 +712,7 @@ struct SuggestedVerseCard: View {
                 } else {
                     Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(isAdded ? Color.green : Color.reforgedNavy)
+                        .foregroundStyle(isAdded ? Color.green : Color.adaptivePrimaryIcon(colorScheme))
                 }
             }
             .disabled(isAdded || isFetching)

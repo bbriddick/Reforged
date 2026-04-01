@@ -149,6 +149,7 @@ struct ProfileHeader: View {
 struct StatsGrid: View {
     let user: UserProfile
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @Environment(\.colorScheme) var colorScheme
 
     var columns: [GridItem] {
         if horizontalSizeClass == .regular {
@@ -162,7 +163,7 @@ struct StatsGrid: View {
         LazyVGrid(columns: columns, spacing: 12) {
             ProfileStatCard(icon: "flame.fill", iconColor: .reforgedCoral, value: "\(user.streak)", label: "Day Streak")
             ProfileStatCard(icon: "trophy.fill", iconColor: .reforgedGold, value: "\(user.longestStreak)", label: "Best Streak")
-            ProfileStatCard(icon: "star.fill", iconColor: .reforgedNavy, value: "\(user.xp)", label: "Total XP")
+            ProfileStatCard(icon: "star.fill", iconColor: Color.adaptivePrimaryIcon(colorScheme), value: "\(user.xp)", label: "Total XP")
             ProfileStatCard(icon: "checkmark.circle.fill", iconColor: Color(red: 0.2, green: 0.6, blue: 0.4), value: "\(user.completedLessons.count)", label: "Lessons Done")
         }
     }

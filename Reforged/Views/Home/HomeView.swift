@@ -132,11 +132,11 @@ struct BibleProgressCard: View {
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(Color.reforgedNavy.opacity(0.12))
+                        .fill(Color.adaptiveChipBackground(colorScheme))
                         .frame(width: 44, height: 44)
                     Image(systemName: "chart.bar.fill")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.reforgedNavy)
+                        .foregroundStyle(Color.adaptivePrimaryIcon(colorScheme))
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -174,7 +174,7 @@ struct BuyMeACoffeeButton: View {
             HStack(spacing: 10) {
                 Text("☕")
                     .font(.title3)
-                Text("Buy Me a Coffee")
+                Text("Support Reforged")
                     .font(.subheadline)
                     .fontWeight(.semibold)
             }
@@ -969,15 +969,17 @@ struct DailyInsightCard: View {
                         // Read more — primary capsule button
                         Button {
                             NotificationCenter.default.post(
-                                name: .navigateToBibleVerse,
-                                object: nil,
-                                userInfo: [AppNotificationUserInfoKey.reference: insight.verse]
-                            )
-                            NotificationCenter.default.post(
                                 name: .switchTab,
                                 object: nil,
                                 userInfo: [AppNotificationUserInfoKey.tab: 2]
                             )
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                NotificationCenter.default.post(
+                                    name: .navigateToBibleVerse,
+                                    object: nil,
+                                    userInfo: [AppNotificationUserInfoKey.reference: insight.verse]
+                                )
+                            }
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "book.fill")
@@ -1483,6 +1485,13 @@ struct ShareGospelDetailView: View {
     private func navigateToVerse(_ reference: String) {
         dismiss()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            NotificationCenter.default.post(
+                name: .switchTab,
+                object: nil,
+                userInfo: [AppNotificationUserInfoKey.tab: 2]
+            )
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
             NotificationCenter.default.post(
                 name: .navigateToBibleVerse,
                 object: nil,

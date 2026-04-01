@@ -586,6 +586,7 @@ struct ReadingStreakWidget: Widget {
 struct ReforgedWidgetBundle: WidgetBundle {
     var body: some Widget {
         ReadingStreakWidget()
+        // VerseOfTheDayWidget()
     }
 }
 

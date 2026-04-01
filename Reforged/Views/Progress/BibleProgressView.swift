@@ -353,18 +353,23 @@ struct BibleProgressRing: View {
     let size: CGFloat
     let lineWidth: CGFloat
     let color: Color
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var foregroundColor: Color {
+        colorScheme == .dark ? Color.adaptivePrimaryIcon(colorScheme) : color
+    }
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(color.opacity(0.15), lineWidth: lineWidth)
+                .stroke(foregroundColor.opacity(0.18), lineWidth: lineWidth)
             Circle()
                 .trim(from: 0, to: min(progress, 1.0))
-                .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .stroke(foregroundColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text("\(Int(progress * 100))%")
                 .font(.system(size: size * 0.18, weight: .bold))
-                .foregroundStyle(color)
+                .foregroundStyle(foregroundColor)
         }
         .frame(width: size, height: size)
         .animation(.easeInOut(duration: 0.6), value: progress)

@@ -1,5 +1,8 @@
 import Foundation
 import Combine
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 // MARK: - App State Manager
 
@@ -11,6 +14,7 @@ class AppState: ObservableObject {
     @Published var memoryVerses: [MemoryVerse] = []
     @Published var tracks: [Track] = []
     @Published var dailyInsight: DailyInsight?
+    @Published var pendingBibleVerseReference: String?
     @Published var isLoading = true
     @Published var hasSyncedFromCloud = false
     @Published var isSyncing = false
@@ -31,6 +35,7 @@ class AppState: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var saveTask: Task<Void, Never>?
     private var syncDebounceTask: Task<Void, Never>?
+    private let widgetInsightDefaultsKey = "reforged_widget_daily_insight"
 
     private init() {
         // One-time migration: clean up old Supabase session data
@@ -102,6 +107,18 @@ class AppState: ObservableObject {
         if let date = lastSyncDate {
             UserDefaults.standard.set(date, forKey: "reforged_last_sync")
         }
+    }
+
+    // MARK: - Cross-Tab Navigation
+
+    func queueBibleVerseNavigation(_ reference: String) {
+        pendingBibleVerseReference = reference
+    }
+
+    func consumePendingBibleVerseNavigation() -> String? {
+        let reference = pendingBibleVerseReference
+        pendingBibleVerseReference = nil
+        return reference
     }
 
     // MARK: - Cloud Sync
@@ -375,6 +392,8 @@ class AppState: ObservableObject {
             // Check if the cached insight is from today
             if insight.date.hasPrefix(todayString) {
                 self.dailyInsight = insight
+                syncWidgetInsight()
+                saveToLocalStorage()
                 return
             }
         }
@@ -382,6 +401,7 @@ class AppState: ObservableObject {
         // Load fresh insight for today from bundled data
         if let bundledInsight = BundledDataService.shared.getTodaysInsight() {
             self.dailyInsight = BundledDataService.shared.convertToDailyInsight(bundledInsight)
+            syncWidgetInsight()
             saveToLocalStorage()
         }
     }
@@ -403,6 +423,22 @@ class AppState: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
+    }
+
+    private func syncWidgetInsight() {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.reforged.app")
+        if let insight = dailyInsight, let data = try? JSONEncoder().encode(insight) {
+            sharedDefaults?.set(data, forKey: widgetInsightDefaultsKey)
+        } else {
+            sharedDefaults?.removeObject(forKey: widgetInsightDefaultsKey)
+        }
+        reloadWidgets()
+    }
+
+    private func reloadWidgets() {
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
     }
 
     // MARK: - Legacy methods for backwards compatibility

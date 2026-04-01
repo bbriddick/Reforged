@@ -21,5 +21,16 @@
 		<string>Roboto-Italic.ttf</string>
 		<string>SILEOT.ttf</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.reforged.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>reforged</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
