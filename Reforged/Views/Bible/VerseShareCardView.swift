@@ -15,9 +15,10 @@ struct VerseShareSelection: Identifiable {
         if numbers.count == 1 {
             return "\(book) \(chapter):\(numbers[0])"
         }
-        let isConsecutive = numbers.count == (numbers.last! - numbers.first! + 1)
+        guard let firstNum = numbers.first, let lastNum = numbers.last else { return "" }
+        let isConsecutive = numbers.count == (lastNum - firstNum + 1)
         if isConsecutive {
-            return "\(book) \(chapter):\(numbers.first!)-\(numbers.last!)"
+            return "\(book) \(chapter):\(firstNum)-\(lastNum)"
         }
         let refs = numbers.map { String($0) }.joined(separator: ", ")
         return "\(book) \(chapter):\(refs)"

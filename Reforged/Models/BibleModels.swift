@@ -18,11 +18,70 @@ struct ParsedVerse: Identifiable, Equatable {
 
 // MARK: - Bible Search Result (Unified)
 
-struct BibleSearchResult: Identifiable {
+struct BibleSearchResult: Identifiable, Equatable {
     let reference: String
     let content: String
+    let translation: BibleTranslation
+    let metadata: String?
 
-    var id: String { reference }
+    init(reference: String,
+         content: String,
+         translation: BibleTranslation = .esv,
+         metadata: String? = nil) {
+        self.reference = reference
+        self.content = content
+        self.translation = translation
+        self.metadata = metadata
+    }
+
+    var id: String { "\(translation.rawValue):\(reference)" }
+}
+
+enum BibleSearchHistoryScope: String, Codable, CaseIterable, Identifiable {
+    case textVersion
+    case allTextVersions
+    case strongsNumber
+    case originalForm
+    case lexicalForm
+    case kjvUsage
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .textVersion: return "Text"
+        case .allTextVersions: return "All Versions"
+        case .strongsNumber: return "Strong's"
+        case .originalForm: return "Original"
+        case .lexicalForm: return "Lexical"
+        case .kjvUsage: return "KJV Usage"
+        }
+    }
+}
+
+struct BibleSearchHistoryEntry: Codable, Identifiable, Hashable {
+    let query: String
+    let scope: BibleSearchHistoryScope
+    let translation: BibleTranslation?
+    let createdAt: Date
+
+    var id: String {
+        "\(scope.rawValue):\(translation?.rawValue ?? "all"):\(query.lowercased())"
+    }
+
+    var subtitle: String {
+        switch scope {
+        case .textVersion:
+            return translation?.rawValue ?? scope.displayName
+        case .allTextVersions:
+            return scope.displayName
+        case .strongsNumber, .originalForm, .lexicalForm, .kjvUsage:
+            if let translation {
+                return "\(scope.displayName) • \(translation.rawValue)"
+            }
+            return scope.displayName
+        }
+    }
 }
 
 // MARK: - Verse Highlight
@@ -355,6 +414,7 @@ struct BibleData {
 
 enum AppNotificationUserInfoKey {
     static let reference = "reference"
+    static let translation = "translation"
     static let tab = "tab"
     static let url = "url"
 }

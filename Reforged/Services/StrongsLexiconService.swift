@@ -25,6 +25,7 @@ class StrongsLexiconService {
 
     private let verseCacheKey = "strongs_verse_interlinear_cache"
     private let detailCacheKey = "strongs_detail_cache"
+    private var concordanceCache: [String: [BibleSearchResult]] = [:]
     private let maxVerseCacheSize = 200
     private let maxDetailCacheSize = 500
 
@@ -715,6 +716,178 @@ class StrongsLexiconService {
             .sorted { $0.score > $1.score }
             .prefix(10)
             .map { $0.entry }
+    }
+
+    // MARK: - Concordance Search
+
+    func searchOriginalLanguageOccurrences(strongsNumber: String,
+                                           originalWord: String,
+                                           lexicalForm: String,
+                                           isHebrew: Bool,
+                                           mode: ConcordanceSearchMode) async -> [BibleSearchResult] {
+        if isHebrew {
+            await waitForOriginalLanguageData(isHebrew: true)
+            if !strongsNumber.isEmpty && (mode == .strongsNumber || mode == .lexicalForm) {
+                let cacheKey = "hebrew:\(mode.rawValue):\(strongsNumber)"
+                if let cached = concordanceCache[cacheKey] {
+                    return cached
+                }
+                let results = await searchHebrewOccurrencesByStrongs(strongsNumber: strongsNumber)
+                concordanceCache[cacheKey] = results
+                return results
+            }
+            return searchHebrewOccurrences(originalWord: originalWord, lexicalForm: lexicalForm, mode: mode)
+        }
+
+        await waitForOriginalLanguageData(isHebrew: false)
+        return searchGreekOccurrences(strongsNumber: strongsNumber,
+                                      originalWord: originalWord,
+                                      lexicalForm: lexicalForm,
+                                      mode: mode)
+    }
+
+    private func waitForOriginalLanguageData(isHebrew: Bool) async {
+        if isHebrew {
+            OriginalLanguageService.shared.preloadWLC()
+        } else {
+            OriginalLanguageService.shared.preloadTR()
+        }
+
+        let maxAttempts = 100
+        for _ in 0..<maxAttempts {
+            if isHebrew, OriginalLanguageService.shared.wlcReady { return }
+            if !isHebrew, OriginalLanguageService.shared.trReady { return }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
+    private func searchGreekOccurrences(strongsNumber: String,
+                                        originalWord: String,
+                                        lexicalForm: String,
+                                        mode: ConcordanceSearchMode) -> [BibleSearchResult] {
+        let ntBooks = BibleData.books.filter { $0.testament == .new }
+        let normalizedOriginal = originalWord.lowercased()
+        let normalizedLexical = lexicalForm.lowercased()
+        var results: [BibleSearchResult] = []
+
+        for book in ntBooks {
+            guard let bookNumber = OriginalLanguageService.bookNumber(for: book.name) else { continue }
+
+            for chapter in 1...book.chapters {
+                for verse in OriginalLanguageService.shared.trChapter(bookNumber: bookNumber, chapter: chapter) {
+                    let matchedTokens = verse.tokens.filter { token in
+                        switch mode {
+                        case .strongsNumber:
+                            return !strongsNumber.isEmpty && token.strongs == strongsNumber
+                        case .originalForm:
+                            return !normalizedOriginal.isEmpty && token.word.lowercased() == normalizedOriginal
+                        case .lexicalForm:
+                            if !strongsNumber.isEmpty {
+                                return token.strongs == strongsNumber
+                            }
+                            return !normalizedLexical.isEmpty && token.word.lowercased() == normalizedLexical
+                        case .kjvTranslations:
+                            return false
+                        }
+                    }
+
+                    guard !matchedTokens.isEmpty else { continue }
+
+                    let reference = "\(book.name) \(chapter):\(verse.verse)"
+                    let content = verse.tokens.map(\.word).joined(separator: " ")
+                    let metadata = matchedTokens
+                        .compactMap { token in
+                            token.morph.isEmpty ? nil : "\(token.morph) · \(token.morphDescription)"
+                        }
+                        .first
+
+                    results.append(BibleSearchResult(
+                        reference: reference,
+                        content: content,
+                        translation: .tr,
+                        metadata: metadata
+                    ))
+                }
+            }
+        }
+
+        return results
+    }
+
+    private func searchHebrewOccurrences(originalWord: String,
+                                         lexicalForm: String,
+                                         mode: ConcordanceSearchMode) -> [BibleSearchResult] {
+        let otBooks = BibleData.books.filter { $0.testament == .old }
+        let normalizedOriginal = OriginalLanguageService.stripCantillation(originalWord)
+        let normalizedLexical = OriginalLanguageService.stripCantillation(lexicalForm)
+        var results: [BibleSearchResult] = []
+
+        for book in otBooks {
+            guard let bookNumber = OriginalLanguageService.bookNumber(for: book.name) else { continue }
+
+            for chapter in 1...book.chapters {
+                for verse in OriginalLanguageService.shared.wlcChapter(bookNumber: bookNumber, chapter: chapter) {
+                    let matched = verse.words.contains { word in
+                        let normalizedWord = OriginalLanguageService.stripCantillation(word)
+                        switch mode {
+                        case .strongsNumber, .originalForm:
+                            return !normalizedOriginal.isEmpty && normalizedWord == normalizedOriginal
+                        case .lexicalForm:
+                            return !normalizedLexical.isEmpty && normalizedWord == normalizedLexical
+                        case .kjvTranslations:
+                            return false
+                        }
+                    }
+
+                    guard matched else { continue }
+
+                    let reference = "\(book.name) \(chapter):\(verse.verse)"
+                    results.append(BibleSearchResult(
+                        reference: reference,
+                        content: verse.words.joined(separator: " "),
+                        translation: .wlc,
+                        metadata: nil
+                    ))
+                }
+            }
+        }
+
+        return results
+    }
+
+    private func searchHebrewOccurrencesByStrongs(strongsNumber: String) async -> [BibleSearchResult] {
+        let otBooks = BibleData.books.filter { $0.testament == .old }
+        var results: [BibleSearchResult] = []
+
+        for book in otBooks {
+            let apiBookName = book.studyBibleAPIName
+
+            for chapter in 1...book.chapters {
+                guard let origVerses = await fetchORIGChapter(book: apiBookName, chapter: chapter) else { continue }
+
+                for verse in origVerses {
+                    let matchedPhrases = verse.orig_json.filter { phrase in
+                        (phrase.data_nums ?? []).contains(strongsNumber)
+                    }
+                    guard !matchedPhrases.isEmpty else { continue }
+
+                    let reference = "\(book.name) \(chapter):\(verse.verse)"
+                    let content = verse.orig_json
+                        .map(\.phrase)
+                        .joined()
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                    results.append(BibleSearchResult(
+                        reference: reference,
+                        content: content,
+                        translation: .wlc,
+                        metadata: strongsNumber
+                    ))
+                }
+            }
+        }
+
+        return results
     }
 
     // MARK: - Text Cleaning Helpers

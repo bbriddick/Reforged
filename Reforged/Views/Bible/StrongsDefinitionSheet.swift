@@ -5,15 +5,24 @@ import SwiftUI
 /// Bottom sheet showing Hebrew/Greek word study results for a tapped word.
 struct StrongsDefinitionSheet: View {
     let result: WordLookupResult
+    @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
     @ObservedObject private var settings = SettingsManager.shared
 
+    @State private var aiSummary: String? = nil
+    @State private var aiSummaryLoading = false
+    @State private var aiSummaryError: String? = nil
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    if settings.aiEnabled && result.isFromAPI {
+                        aiSummaryCard
+                    }
+
                     headerSection
 
                     if settings.showOriginalLanguageText {
@@ -48,6 +57,70 @@ struct StrongsDefinitionSheet: View {
                         .foregroundStyle(Color.reforgedGold)
                 }
             }
+        }
+    }
+
+    // MARK: - AI Summary Card
+
+    private var aiSummaryCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.reforgedGold)
+
+                Text("AI Summary")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                Spacer()
+
+                Text("Gemini")
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+
+            if aiSummaryLoading {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Loading AI summary for this word...")
+                        .font(.subheadline)
+                    Text("Analyzing biblical usage and theological context.")
+                        .font(.subheadline)
+                    Text("One moment please.")
+                        .font(.subheadline)
+                }
+                .redacted(reason: .placeholder)
+            } else if let summary = aiSummary {
+                Text(summary)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let error = aiSummaryError {
+                Text("⚠️ \(error)")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.reforgedGold.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.reforgedGold.opacity(0.25), lineWidth: 1)
+        )
+        .task {
+            guard aiSummary == nil else { return }
+            aiSummaryLoading = true
+            do {
+                aiSummary = try await GeminiService.shared.generateWordStudySummary(result)
+            } catch {
+                aiSummaryError = error.localizedDescription
+                print("[WordStudy] AI error: \(error)")
+            }
+            aiSummaryLoading = false
         }
     }
 
@@ -345,7 +418,6 @@ struct StrongsDefinitionSheet: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-            // "See all occurrences" — concordance search button
             if result.isFromAPI && !result.strongsNumber.isEmpty {
                 NavigationLink {
                     ConcordanceSearchView(
@@ -355,44 +427,63 @@ struct StrongsDefinitionSheet: View {
                         englishWord: result.tappedWord,
                         isHebrew: result.isHebrew,
                         occurrenceCount: result.occurrenceCount,
-                        translationCounts: result.translationCounts
+                        translationCounts: result.translationCounts,
+                        initialMode: .strongsNumber,
+                        onSelectResult: handleConcordanceSelection
                     )
                 } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "text.magnifyingglass")
-                            .font(.body)
-                            .foregroundStyle(.white)
-                            .frame(width: 32, height: 32)
-                            .background(Color.reforgedGold)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    searchActionRow(
+                        title: "Search \(result.strongsNumber)",
+                        subtitle: concordanceSubtitle,
+                        icon: "number.square.fill",
+                        iconBackground: Color.reforgedGold
+                    )
+                }
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("See All Occurrences")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                            Text(concordanceSubtitle)
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                if !result.lexicalForm.isEmpty && result.lexicalForm != result.originalWord {
+                    NavigationLink {
+                        ConcordanceSearchView(
+                            strongsNumber: result.strongsNumber,
+                            originalWord: result.originalWord,
+                            lexicalForm: result.lexicalForm,
+                            englishWord: result.tappedWord,
+                            isHebrew: result.isHebrew,
+                            occurrenceCount: result.occurrenceCount,
+                            translationCounts: result.translationCounts,
+                            initialMode: .lexicalForm,
+                            onSelectResult: handleConcordanceSelection
+                        )
+                    } label: {
+                        searchActionRow(
+                            title: "Search Lexical Form",
+                            subtitle: "Find verses that use \(result.lexicalForm)",
+                            icon: "character.book.closed.fill",
+                            iconBackground: Color.adaptiveNavyText(colorScheme)
+                        )
                     }
-                    .padding(12)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.reforgedGold.opacity(0.3), lineWidth: 1)
+                }
+
+                NavigationLink {
+                    ConcordanceSearchView(
+                        strongsNumber: result.strongsNumber,
+                        originalWord: result.originalWord,
+                        lexicalForm: result.lexicalForm,
+                        englishWord: result.tappedWord,
+                        isHebrew: result.isHebrew,
+                        occurrenceCount: result.occurrenceCount,
+                        translationCounts: result.translationCounts,
+                        initialMode: .kjvTranslations,
+                        onSelectResult: handleConcordanceSelection
+                    )
+                } label: {
+                    searchActionRow(
+                        title: "Search KJV Usage",
+                        subtitle: "Search KJV translations tied to this study word",
+                        icon: "text.book.closed.fill",
+                        iconBackground: Color.reforgedGold
                     )
                 }
             } else if !result.isFromAPI, let entry = result.strongsEntries.first {
-                // Fallback: search by bundled entry
                 NavigationLink {
                     ConcordanceSearchView(
                         strongsNumber: entry.number,
@@ -401,40 +492,16 @@ struct StrongsDefinitionSheet: View {
                         englishWord: result.tappedWord,
                         isHebrew: entry.isHebrew,
                         occurrenceCount: 0,
-                        translationCounts: []
+                        translationCounts: [],
+                        initialMode: .originalForm,
+                        onSelectResult: handleConcordanceSelection
                     )
                 } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "text.magnifyingglass")
-                            .font(.body)
-                            .foregroundStyle(.white)
-                            .frame(width: 32, height: 32)
-                            .background(Color.reforgedGold)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("See All Occurrences")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                            Text("Search \"\(result.tappedWord)\" across the Bible")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                    .padding(12)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.reforgedGold.opacity(0.3), lineWidth: 1)
+                    searchActionRow(
+                        title: "Search \(entry.number)",
+                        subtitle: "Browse occurrences for \(entry.lemma)",
+                        icon: "text.magnifyingglass",
+                        iconBackground: Color.reforgedGold
                     )
                 }
             }
@@ -499,6 +566,41 @@ struct StrongsDefinitionSheet: View {
         return "Search \"\(result.tappedWord)\" on blueletterbible.org"
     }
 
+    private func searchActionRow(title: String, subtitle: String, icon: String, iconBackground: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(iconBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        }
+        .padding(12)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.reforgedGold.opacity(0.3), lineWidth: 1)
+        )
+    }
+
     private func openBlueLetterBible() {
         let baseURL = "https://www.blueletterbible.org"
         var urlString: String
@@ -520,6 +622,12 @@ struct StrongsDefinitionSheet: View {
         if let url = URL(string: urlString) {
             openURL(url)
         }
+    }
+
+    private func handleConcordanceSelection(_ selected: BibleSearchResult) {
+        let targetTranslation = selected.translation.isTextSearchable ? selected.translation : selected.translation
+        appState.queueBibleVerseNavigation(selected.reference, translation: targetTranslation)
+        dismiss()
     }
 
     // MARK: - Attribution

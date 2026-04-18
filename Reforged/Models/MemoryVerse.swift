@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Memory Verse Models
 
-struct MemoryVerse: Codable, Identifiable {
+struct MemoryVerse: Codable, Identifiable, Equatable {
     let id: String
     let reference: String
     let text: String
@@ -82,7 +82,7 @@ struct MemoryVerse: Codable, Identifiable {
     }
 }
 
-struct MemoryVerseModeStats: Codable {
+struct MemoryVerseModeStats: Codable, Equatable {
     var fillInBlank: ModeAttemptStats
     var firstLetter: ModeAttemptStats
     var typing: TypingStats
@@ -91,18 +91,18 @@ struct MemoryVerseModeStats: Codable {
     var dragAndDrop: ModeAttemptStats?
 }
 
-struct ModeAttemptStats: Codable {
+struct ModeAttemptStats: Codable, Equatable {
     var attempts: Int
     var accuracy: Double
 }
 
-struct TypingStats: Codable {
+struct TypingStats: Codable, Equatable {
     var attempts: Int
     var accuracy: Double
     var bestWpm: Int?
 }
 
-struct FlashcardStats: Codable {
+struct FlashcardStats: Codable, Equatable {
     var attempts: Int
     var confidence: Double
 }

@@ -150,6 +150,39 @@ struct AboutSection: View {
 
             SettingsDivider()
 
+            // AI Features
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(Color.reforgedGold)
+
+                    Text("AI Features")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Google Gemini")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    Text("Journal prompts, word study summaries, and Smart Search are powered by Google Gemini 2.0 Flash (gemini.google.com). AI-generated content is provided for reflection and study and may be imperfect; always verify insights with Scripture.")
+                        .font(.caption2)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineSpacing(3)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.reforgedGold.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.vertical, 10)
+
+            SettingsDivider()
+
             // Image Assets
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {

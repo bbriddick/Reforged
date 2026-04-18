@@ -725,11 +725,14 @@ struct NewJournalEntrySheet: View {
     @EnvironmentObject var appState: AppState
     @Binding var entries: [JournalEntry]
     var usePrompt: Bool = false
+    var verseReference: String? = nil
+    var verseText: String? = nil
     var onSave: (() -> Void)?
     @State private var content = ""
     @State private var linkedVerses: [String] = []
     @State private var selectedPrompt: String?
     @State private var displayedPrompts: [String] = randomJournalPrompts()
+    @State private var isLoadingPrompts = false
     @State private var showVersePicker = false
     @State private var pickerBook = BibleData.books[0]
     @State private var pickerChapter: Int = 1
@@ -756,26 +759,69 @@ struct NewJournalEntrySheet: View {
                     // Prompt Suggestions
                     if usePrompt {
                         VStack(alignment: .leading, spacing: 14) {
-                            Text("Choose a Prompt")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                            HStack(spacing: 6) {
+                                Text("Choose a Prompt")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                                if isLoadingPrompts {
+                                    ProgressView()
+                                        .scaleEffect(0.75)
+                                }
+
+                                if verseReference != nil && SettingsManager.shared.aiEnabled {
+                                    Spacer()
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "sparkles")
+                                            .font(.caption2)
+                                        Text("AI")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                    }
+                                    .foregroundStyle(Color.reforgedGold)
+                                }
+                            }
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 10) {
-                                    ForEach(displayedPrompts, id: \.self) { prompt in
-                                        PromptChip(
-                                            prompt: prompt,
-                                            isSelected: selectedPrompt == prompt
-                                        ) {
-                                            selectedPrompt = prompt
-                                            if content.isEmpty {
-                                                content = prompt + "\n\n"
+                                    if isLoadingPrompts {
+                                        ForEach(0..<3, id: \.self) { _ in
+                                            Text("Generating prompt for this verse...")
+                                                .font(.caption)
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 8)
+                                                .background(Color.adaptiveChipBackground(colorScheme))
+                                                .clipShape(Capsule())
+                                                .redacted(reason: .placeholder)
+                                        }
+                                    } else {
+                                        ForEach(displayedPrompts, id: \.self) { prompt in
+                                            PromptChip(
+                                                prompt: prompt,
+                                                isSelected: selectedPrompt == prompt
+                                            ) {
+                                                selectedPrompt = prompt
+                                                if content.isEmpty {
+                                                    content = prompt + "\n\n"
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
+                        }
+                        .task {
+                            guard usePrompt,
+                                  let ref = verseReference,
+                                  let text = verseText,
+                                  SettingsManager.shared.aiEnabled else { return }
+                            isLoadingPrompts = true
+                            if let generated = try? await GeminiService.shared.generateJournalPrompts(
+                                reference: ref, verseText: text) {
+                                displayedPrompts = generated
+                            }
+                            isLoadingPrompts = false
                         }
                     }
 
@@ -928,6 +974,12 @@ struct NewJournalEntrySheet: View {
                             linkedVerses.append(reference)
                         }
                     }
+                }
+            }
+            .onAppear {
+                // Auto-link the verse that triggered this journal entry
+                if let ref = verseReference, !linkedVerses.contains(ref) {
+                    linkedVerses.append(ref)
                 }
             }
         }

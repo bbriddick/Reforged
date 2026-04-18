@@ -144,15 +144,17 @@ struct TakeNoteView: View {
     @State private var showNoteShareSheet = false
     @FocusState private var isNoteFocused: Bool
     @Environment(\.colorScheme) var colorScheme
+    @ObservedObject private var settings = SettingsManager.shared
+    @State private var studyPrompts: [String] = []
+    @State private var isLoadingPrompts = false
 
     // Convenience: first verse for single-verse operations
-    private var primaryVerse: ParsedVerse { verses[0] }
+    private var primaryVerse: ParsedVerse? { verses.first }
 
     // Reference covering the full range: "John 3:16" or "John 3:16-18"
     private var noteReference: String {
-        guard verses.count > 1 else { return primaryVerse.reference }
-        let first = verses.first!
-        let last = verses.last!
+        guard let first = verses.first else { return "" }
+        guard let last = verses.last, verses.count > 1 else { return first.reference }
         // Build "Book Chapter:start-end"
         return "\(readingState.currentBook) \(readingState.currentChapter):\(first.number)-\(last.number)"
     }
@@ -162,7 +164,8 @@ struct TakeNoteView: View {
     }
 
     var existingHighlight: VerseHighlight? {
-        readingState.getHighlight(for: primaryVerse.reference)
+        guard let primaryVerse else { return nil }
+        return readingState.getHighlight(for: primaryVerse.reference)
     }
 
     var body: some View {
@@ -315,6 +318,73 @@ struct TakeNoteView: View {
                             }
                         }
 
+                        // Study prompts (AI)
+                        if settings.aiEnabled {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "sparkles")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(Color.reforgedGold)
+                                    Text("Study Prompts")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                    Spacer()
+                                    Text("Tap to add")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.6))
+                                }
+
+                                if isLoadingPrompts {
+                                    HStack(spacing: 8) {
+                                        ForEach(0..<3, id: \.self) { _ in
+                                            Text("                    ")
+                                                .font(.caption)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 8)
+                                                .background(Color.adaptiveBackground(colorScheme))
+                                                .clipShape(Capsule())
+                                                .redacted(reason: .placeholder)
+                                        }
+                                    }
+                                } else if !studyPrompts.isEmpty {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(studyPrompts, id: \.self) { prompt in
+                                            Button {
+                                                let prefix = noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : "\n\n"
+                                                noteText += prefix + prompt
+                                                isNoteFocused = true
+                                            } label: {
+                                                Text(prompt)
+                                                    .font(.caption)
+                                                    .multilineTextAlignment(.leading)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    .padding(.horizontal, 12)
+                                                    .padding(.vertical, 8)
+                                                    .background(Color.reforgedGold.opacity(0.08))
+                                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 10)
+                                                            .stroke(Color.reforgedGold.opacity(0.25), lineWidth: 1)
+                                                    )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .task {
+                                guard studyPrompts.isEmpty else { return }
+                                isLoadingPrompts = true
+                                let verseText = verses.map { $0.text }.joined(separator: " ")
+                                studyPrompts = (try? await GeminiService.shared.generateJournalPrompts(
+                                    reference: noteReference,
+                                    verseText: verseText
+                                )) ?? []
+                                isLoadingPrompts = false
+                            }
+                        }
+
                         // Delete + Share action row
                         HStack(spacing: 12) {
                             // Delete — only visible when a saved note exists
@@ -379,7 +449,7 @@ struct TakeNoteView: View {
                                     reference: noteReference,
                                     book: readingState.currentBook,
                                     chapter: readingState.currentChapter,
-                                    verse: primaryVerse.number,
+                                    verse: primaryVerse?.number ?? 1,
                                     content: noteText,
                                     crossReferences: crossReferences
                                 )

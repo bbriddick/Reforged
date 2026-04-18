@@ -187,6 +187,10 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         self == .tr || self == .wlc
     }
 
+    var isTextSearchable: Bool {
+        !isOriginalLanguage
+    }
+
     var fullName: String {
         switch self {
         case .esv: return "English Standard Version"
@@ -198,6 +202,10 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .tr: return "Textus Receptus (Greek NT)"
         case .wlc: return "Westminster Leningrad Codex (Hebrew OT)"
         }
+    }
+
+    static var searchableTextVersions: [BibleTranslation] {
+        allCases.filter(\.isTextSearchable)
     }
 
     /// BCP 47 language tag — used for accessibility and UI hints
@@ -276,6 +284,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case memory = "Memory"
     case notifications = "Notifications"
     case account = "Account & Data"
+    case ai = "AI Features"
     case about = "About"
 
     var id: String { rawValue }
@@ -288,6 +297,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .memory: return "brain.head.profile"
         case .notifications: return "bell.fill"
         case .account: return "person.circle.fill"
+        case .ai: return "sparkles"
         case .about: return "info.circle.fill"
         }
     }
@@ -300,6 +310,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .memory: return .reforgedGold
         case .notifications: return .reforgedCoral
         case .account: return .reforgedNavy
+        case .ai: return .reforgedGold
         case .about: return .gray
         }
     }

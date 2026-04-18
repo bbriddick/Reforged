@@ -10,7 +10,7 @@ class ThemeManager: ObservableObject {
     @Published var currentMode: ThemeMode {
         didSet {
             UserDefaults.standard.set(currentMode.rawValue, forKey: "theme_mode")
-            updateColorScheme()
+            DispatchQueue.main.async { self.updateColorScheme() }
         }
     }
 

@@ -20,10 +20,14 @@ struct MemoryView: View {
         appState.memoryVerses.count
     }
 
-    var averageMastery: Int {
-        guard !appState.memoryVerses.isEmpty else { return 0 }
-        let total = appState.memoryVerses.reduce(0) { $0 + Int(($1.accuracy ?? 0)) }
-        return total / appState.memoryVerses.count
+    // Cached so the O(n) reduce doesn't run on every body evaluation.
+    // Updated only when memoryVerses actually changes (see .onChange below).
+    @State private var averageMastery: Int = 0
+
+    private func computeAverageMastery(_ verses: [MemoryVerse]) -> Int {
+        guard !verses.isEmpty else { return 0 }
+        let total = verses.reduce(0) { $0 + Int(($1.accuracy ?? 0)) }
+        return total / verses.count
     }
 
     // Adaptive grid columns for stats
@@ -68,6 +72,12 @@ struct MemoryView: View {
         .sheet(isPresented: $showCompleteTheVerse) {
             CompleteTheVerseView()
                 .environmentObject(appState)
+        }
+        .onAppear {
+            averageMastery = computeAverageMastery(appState.memoryVerses)
+        }
+        .onChange(of: appState.memoryVerses) { verses in
+            averageMastery = computeAverageMastery(verses)
         }
         .alert("Delete Verse", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {
@@ -1488,7 +1498,7 @@ struct VersePickerSheet: View {
 
         // Parse book name and chapter (last word = chapter number)
         let parts = bookChapterStr.components(separatedBy: " ")
-        guard parts.count >= 2, let chapter = Int(parts.last!) else { return }
+        guard parts.count >= 2, let lastPart = parts.last, let chapter = Int(lastPart) else { return }
         let bookName = parts.dropLast().joined(separator: " ")
 
         // Find matching book (partial match)

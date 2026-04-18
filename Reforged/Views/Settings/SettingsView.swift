@@ -126,6 +126,8 @@ struct SettingsSectionView: View {
             NotificationSettingsSection()
         case .account:
             AccountSettingsSection()
+        case .ai:
+            AISettingsSection()
         case .about:
             AboutSection()
         }

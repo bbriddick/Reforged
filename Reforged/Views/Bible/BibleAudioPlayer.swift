@@ -255,6 +255,10 @@ class BibleAudioPlayer: ObservableObject {
         playbackRate = rate
         player?.rate = isPlaying ? rate : 0
         updateNowPlayingInfo()
+        // Persist so updateFromSettings() restores the correct speed on next .onAppear
+        if let matched = PlaybackSpeed.allCases.first(where: { $0.rate == rate }) {
+            Task { @MainActor in SettingsManager.shared.playbackSpeed = matched }
+        }
     }
 
     // MARK: - Chapter Navigation

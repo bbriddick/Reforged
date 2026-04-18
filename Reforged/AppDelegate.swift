@@ -13,6 +13,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             KJVService.shared.loadBundledJSON()
         }
 
+        // Warm the WordsOfChristData singleton on a background thread so that
+        // red-letter markup is ready before the user opens BibleView. Without
+        // this, the 655 KB JSON decode would run synchronously on whichever
+        // thread first accesses the singleton, potentially blocking the main thread.
+        Task.detached(priority: .utility) {
+            _ = WordsOfChristData.shared
+        }
+
         // Silently warm the disk cache around the user's last-read position for
         // their default translation. Runs at .background priority with 100 ms pacing
         // between requests so it never competes with UI or the KJV bundle load.

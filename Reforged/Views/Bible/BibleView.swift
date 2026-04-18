@@ -49,6 +49,8 @@ struct BibleView: View {
     @State private var verses: [ParsedVerse] = []
     @State private var passageText: String = ""
     @State private var canonicalReference = ""
+    @State private var chapterSections: [VerseSection] = []
+    @State private var wordsOfChristSegmentsByReference: [String: [WOCSegment]] = [:]
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var loadTask: Task<Void, Never>? = nil   // tracks in-flight chapter fetch
@@ -69,7 +71,7 @@ struct BibleView: View {
     // Search state
     @State private var searchQuery = ""
     @State private var searchResults: [BibleSearchResult] = []
-    @State private var searchHistory: [String] = []
+    @State private var searchHistory: [BibleSearchHistoryEntry] = []
     @State private var recentPassages: [(book: String, chapter: Int)] = []
     @State private var isSearching = false
     @State private var scrollToVerseID: String? = nil
@@ -330,7 +332,7 @@ struct BibleView: View {
 
                                 // Lock drag direction on the first definitive movement
                                 if isHorizontalDrag == nil {
-                                    if abs(h) > 12 && abs(h) > abs(v) * 1.5 {
+                                    if abs(h) > abs(v) * 1.5 {
                                         isHorizontalDrag = true
                                     } else if abs(v) > 12 {
                                         isHorizontalDrag = false
@@ -585,7 +587,7 @@ struct BibleView: View {
                     isPresented: $showSearchPanel,
                     onSelectResult: { result in
                         navigateToSearchResult(result)
-                        addSearchToHistory(searchQuery)
+                        addSearchToHistory(searchQuery, translation: result.translation)
                     },
                     onSelectRecent: { book, chapter in
                         if let foundBook = BibleData.books.first(where: { $0.name == book }) {
@@ -798,10 +800,15 @@ struct BibleView: View {
 
             // Wire up audio chapter completion callback (once)
             audioPlayer.onChapterCompleted = { [self] book, chapter in
-                streakManager.recordChapterRead(book: book, chapter: chapter)
-                _ = appState.markChapterRead(book: book, chapter: chapter)
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // All state mutations must happen on the main actor regardless of
+                // which thread the audio player fires this callback on.
+                Task { @MainActor in
+                    streakManager.recordChapterRead(book: book, chapter: chapter)
+                    _ = appState.markChapterRead(book: book, chapter: chapter)
+                    // Brief delay so the audio player's currentBook/currentChapter
+                    // have advanced to the next chapter before we read them.
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
                     if !audioPlayer.currentBook.isEmpty && audioPlayer.currentChapter > 0 {
                         if let newBook = BibleData.books.first(where: { $0.name == audioPlayer.currentBook }) {
                             selectedBook = newBook
@@ -829,6 +836,9 @@ struct BibleView: View {
             if currentTranslation != newTranslation {
                 loadChapter()
             }
+        }
+        .onChange(of: settingsManager.showRedLetterText) { _ in
+            refreshChapterDerivedState()
         }
         .onChange(of: olService.trReady) { isReady in
             if isReady && currentTranslation == .tr { loadChapter() }
@@ -936,7 +946,7 @@ struct BibleView: View {
 
     @ViewBuilder
     private var verseByVerseContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        LazyVStack(alignment: .leading, spacing: 12) {
             ForEach(verses) { verse in
                 VerseRow(
                     verse: verse,
@@ -947,7 +957,7 @@ struct BibleView: View {
                     verseByVerse: true,
                     translation: currentTranslation,
                     highlightedWord: highlightedWord,
-                    showRedLetterText: settingsManager.showRedLetterText,
+                    wocSegments: wordsOfChristSegmentsByReference[verse.reference],
                     onTap: {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             readingState.toggleSelection(verse.reference)
@@ -959,8 +969,7 @@ struct BibleView: View {
                     },
                     onWordLongPress: { word, tappedVerse in
                         performWordLookup(word: word, verse: tappedVerse)
-                    },
-                    readingState: readingState
+                    }
                 )
                 .id(verse.id)
                 .background(
@@ -979,7 +988,7 @@ struct BibleView: View {
     @ViewBuilder
     private var paragraphContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(groupVersesBySection(verses).enumerated()), id: \.offset) { _, section in
+            ForEach(Array(chapterSections.enumerated()), id: \.offset) { _, section in
                 VStack(alignment: .leading, spacing: 0) {
                     if let heading = section.heading {
                         SectionHeadingView(heading: heading)
@@ -1028,12 +1037,7 @@ struct BibleView: View {
                 settings: readingSettings,
                 colorScheme: colorScheme,
                 highlightedWord: highlightedWord,
-                wocSegmentsMap: settingsManager.showRedLetterText
-                    ? Dictionary(uniqueKeysWithValues: section.verses.compactMap { v -> (String, [WOCSegment])? in
-                        guard let segs = WordsOfChristData.shared.segments(for: v.reference) else { return nil }
-                        return (v.reference, segs)
-                    })
-                    : [:],
+                wocSegmentsMap: wordsOfChristSegmentsByReference,
                 onVerseTap: { verse in
                     withAnimation(.easeInOut(duration: 0.15)) {
                         readingState.toggleSelection(verse.reference)
@@ -1194,6 +1198,26 @@ struct BibleView: View {
         let verses: [ParsedVerse]
     }
 
+    private func refreshChapterDerivedState() {
+        chapterSections = groupVersesBySection(verses)
+
+        guard settingsManager.showRedLetterText else {
+            wordsOfChristSegmentsByReference = [:]
+            return
+        }
+
+        var segmentsByReference: [String: [WOCSegment]] = [:]
+        segmentsByReference.reserveCapacity(verses.count)
+
+        for verse in verses {
+            if let segments = WordsOfChristData.shared.segments(for: verse.reference) {
+                segmentsByReference[verse.reference] = segments
+            }
+        }
+
+        wordsOfChristSegmentsByReference = segmentsByReference
+    }
+
     private func groupVersesBySection(_ verses: [ParsedVerse]) -> [VerseSection] {
         var sections: [VerseSection] = []
         var currentHeading: String? = nil
@@ -1260,12 +1284,15 @@ struct BibleView: View {
             if restoreVerse { chapterTransitionOpacity = 0 }
             verses = cached.verses
             canonicalReference = cached.canonical
+            refreshChapterDerivedState()
             isLoading = false
             if restoreVerse {
                 let verseID = "\(book) \(chapter):\(savedVerse)"
-                DispatchQueue.main.async { immediateScrollToVerseID = verseID }
+                // Defer scroll assignment to the next run-loop cycle so SwiftUI
+                // has finished processing the verse state update above.
+                Task { @MainActor in immediateScrollToVerseID = verseID }
             } else {
-                DispatchQueue.main.async { immediateScrollToVerseID = topVerseID }
+                Task { @MainActor in immediateScrollToVerseID = topVerseID }
             }
             // Kick off neighbour pre-fetch so next swipe is also instant
             prefetchNeighborChapters(book: book, chapter: chapter, translation: translation)
@@ -1284,14 +1311,15 @@ struct BibleView: View {
                     if restoreVerse { chapterTransitionOpacity = 0 }
                     verses = entry.verses
                     canonicalReference = entry.canonical
+                    refreshChapterDerivedState()
                     isLoading = false
                     // Store in cache for future instant navigation
                     chapterCache[cacheKey] = entry
                     if restoreVerse {
                         let verseID = "\(book) \(chapter):\(savedVerse)"
-                        DispatchQueue.main.async { immediateScrollToVerseID = verseID }
+                        Task { @MainActor in immediateScrollToVerseID = verseID }
                     } else {
-                        DispatchQueue.main.async { immediateScrollToVerseID = topVerseID }
+                        Task { @MainActor in immediateScrollToVerseID = topVerseID }
                     }
                 }
 
@@ -1431,6 +1459,11 @@ struct BibleView: View {
     func navigateToSearchResult(_ result: BibleSearchResult) {
         let parts = result.reference.components(separatedBy: " ")
         if parts.count >= 2 {
+            if result.translation != currentTranslation {
+                settingsManager.defaultTranslation = result.translation
+                currentTranslation = result.translation
+            }
+
             var bookName = ""
             var chapterVerse = ""
 
@@ -1467,15 +1500,15 @@ struct BibleView: View {
         showSearchPanel = false
     }
 
-    func navigateToVerseReference(_ reference: String) {
+    func navigateToVerseReference(_ reference: String, translation: BibleTranslation? = nil) {
         // Reuse search result navigation by creating a BibleSearchResult
-        let result = BibleSearchResult(reference: reference, content: "")
+        let result = BibleSearchResult(reference: reference, content: "", translation: translation ?? currentTranslation)
         navigateToSearchResult(result)
     }
 
     private func consumePendingBibleNavigationIfNeeded() {
-        guard let reference = appState.consumePendingBibleVerseNavigation() else { return }
-        navigateToVerseReference(reference)
+        guard let pending = appState.consumePendingBibleVerseNavigation() else { return }
+        navigateToVerseReference(pending.reference, translation: pending.translation)
     }
 
     func handleSelectionAction(_ action: SelectionAction) {
@@ -1554,6 +1587,7 @@ struct BibleView: View {
             withAnimation { readingState.clearSelection() }
 
         }
+
     }
 
     func addToRecentPassages() {
@@ -1566,22 +1600,15 @@ struct BibleView: View {
         saveRecentPassages()
     }
 
-    func addSearchToHistory(_ query: String) {
+    func addSearchToHistory(_ query: String, translation: BibleTranslation? = nil) {
         guard !query.isEmpty else { return }
-        searchHistory.removeAll { $0.lowercased() == query.lowercased() }
-        searchHistory.insert(query, at: 0)
-        if searchHistory.count > 20 {
-            searchHistory = Array(searchHistory.prefix(20))
-        }
-        saveSearchHistory()
+        let scope: BibleSearchHistoryScope = translation == nil ? .allTextVersions : .textVersion
+        appState.addBibleSearchHistoryEntry(query: query, scope: scope, translation: translation)
+        loadSearchHistory()
     }
 
     func loadSearchHistory() {
-        searchHistory = UserDefaults.standard.stringArray(forKey: "bible_search_history") ?? []
-    }
-
-    func saveSearchHistory() {
-        UserDefaults.standard.set(searchHistory, forKey: "bible_search_history")
+        searchHistory = appState.loadBibleSearchHistory()
     }
 
     func loadRecentPassages() {
@@ -2604,20 +2631,13 @@ struct VerseRow: View {
     let verseByVerse: Bool
     var translation: BibleTranslation = .esv
     var highlightedWord: (verseID: String, word: String)? = nil
-    var showRedLetterText: Bool = false
+    var wocSegments: [WOCSegment]? = nil
     let onTap: () -> Void
     var onNoteTap: (() -> Void)? = nil
     var onWordLongPress: ((String, ParsedVerse) -> Void)? = nil
-    @ObservedObject var readingState: BibleReadingState
     @Environment(\.colorScheme) var colorScheme
 
     private static let wocColor = Color(red: 0.75, green: 0.1, blue: 0.1)
-
-    /// Segment-level WOC data for this verse (nil when red-letter is off or verse has no WOC data).
-    private var wocSegments: [WOCSegment]? {
-        guard showRedLetterText else { return nil }
-        return WordsOfChristData.shared.segments(for: verse.reference)
-    }
 
     /// Font to use for the verse body text. Overridden for Greek (TR) and Hebrew (WLC).
     private var verseFont: Font {

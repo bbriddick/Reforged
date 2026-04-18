@@ -2,8 +2,16 @@ import SwiftUI
 
 // MARK: - Concordance Search View
 
+enum ConcordanceSearchMode: String, CaseIterable, Identifiable {
+    case strongsNumber = "Strong's"
+    case originalForm = "Original"
+    case lexicalForm = "Lexical"
+    case kjvTranslations = "KJV"
+
+    var id: String { rawValue }
+}
+
 /// Shows all occurrences of a Hebrew/Greek word across the Bible.
-/// Searches by Strong's number English translations or by the word itself.
 struct ConcordanceSearchView: View {
     let strongsNumber: String
     let originalWord: String
@@ -12,19 +20,42 @@ struct ConcordanceSearchView: View {
     let isHebrew: Bool
     let occurrenceCount: Int
     let translationCounts: [(word: String, count: Int)]
+    var initialMode: ConcordanceSearchMode = .strongsNumber
+    var onSelectResult: ((BibleSearchResult) -> Void)? = nil
 
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
 
     @State private var results: [BibleSearchResult] = []
     @State private var isSearching = false
     @State private var searchedTerms: [String] = []
     @State private var selectedCategory: BookCategory? = nil
     @State private var errorMessage: String? = nil
+    @State private var selectedMode: ConcordanceSearchMode = .strongsNumber
+
+    // Cached derived state — rebuilt only when results or selectedCategory changes
+    @State private var cachedFilteredResults: [BibleSearchResult] = []
+    @State private var cachedCategoryCounts: [BookCategory: Int] = [:]
+
+    // Sorted once to avoid O(n log n) on every book lookup
+    private static let sortedBooks = BibleData.books.sorted { $0.name.count > $1.name.count }
+
+    private func rebuildCaches() {
+        var counts: [BookCategory: Int] = [:]
+        var filtered: [BibleSearchResult] = []
+        for result in results {
+            let cat = Self.sortedBooks.first(where: { result.reference.hasPrefix($0.name) })?.category
+            if let cat { counts[cat, default: 0] += 1 }
+            if selectedCategory == nil || cat == selectedCategory {
+                filtered.append(result)
+            }
+        }
+        cachedCategoryCounts = counts
+        cachedFilteredResults = filtered
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header info
             headerBar
 
             if isSearching {
@@ -32,7 +63,7 @@ struct ConcordanceSearchView: View {
                 VStack(spacing: 12) {
                     ProgressView()
                         .tint(Color.reforgedGold)
-                    Text("Searching the Bible…")
+                    Text(searchingMessage)
                         .font(.subheadline)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
@@ -68,9 +99,19 @@ struct ConcordanceSearchView: View {
         .background(Color.adaptiveBackground(colorScheme))
         .navigationTitle("All Occurrences")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            selectedMode = availableModes.contains(initialMode) ? initialMode : (availableModes.first ?? .kjvTranslations)
+        }
         .task {
             await performConcordanceSearch()
         }
+        .onChange(of: selectedMode) { _ in
+            Task {
+                await performConcordanceSearch()
+            }
+        }
+        .onChange(of: results) { _ in rebuildCaches() }
+        .onChange(of: selectedCategory) { _ in rebuildCaches() }
     }
 
     // MARK: - Header
@@ -78,7 +119,6 @@ struct ConcordanceSearchView: View {
     private var headerBar: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                // Strong's badge
                 if !strongsNumber.isEmpty {
                     Text(strongsNumber)
                         .font(.caption)
@@ -90,7 +130,6 @@ struct ConcordanceSearchView: View {
                         .clipShape(Capsule())
                 }
 
-                // Language badge
                 Text(isHebrew ? "Hebrew" : "Greek")
                     .font(.caption2)
                     .fontWeight(.semibold)
@@ -102,17 +141,29 @@ struct ConcordanceSearchView: View {
 
                 Spacer()
 
-                if !results.isEmpty {
+                if occurrenceCount > 0 && selectedMode == .strongsNumber {
+                    Text("\(occurrenceCount) tagged")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                } else if !results.isEmpty {
                     Text("\(results.count) verses found")
                         .font(.caption)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
             }
 
-            // Original word + definition context
+            if availableModes.count > 1 {
+                Picker("Search Mode", selection: $selectedMode) {
+                    ForEach(availableModes) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
             if !originalWord.isEmpty || !lexicalForm.isEmpty {
                 HStack(spacing: 6) {
-                    Text(lexicalForm.isEmpty ? originalWord : lexicalForm)
+                    Text(displayForm)
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
@@ -125,7 +176,6 @@ struct ConcordanceSearchView: View {
                 }
             }
 
-            // Search terms used
             if !searchedTerms.isEmpty {
                 HStack(spacing: 4) {
                     Text("Searched:")
@@ -146,7 +196,6 @@ struct ConcordanceSearchView: View {
                 }
             }
 
-            // Category filter chips (when results available)
             if !results.isEmpty {
                 categoryFilterChips
             }
@@ -156,12 +205,42 @@ struct ConcordanceSearchView: View {
         .background(Color.adaptiveCardBackground(colorScheme))
     }
 
+    private var displayForm: String {
+        switch selectedMode {
+        case .lexicalForm:
+            return lexicalForm.isEmpty ? originalWord : lexicalForm
+        default:
+            return originalWord.isEmpty ? lexicalForm : originalWord
+        }
+    }
+
+    private var availableModes: [ConcordanceSearchMode] {
+        var modes: [ConcordanceSearchMode] = []
+        if !strongsNumber.isEmpty { modes.append(.strongsNumber) }
+        if !originalWord.isEmpty { modes.append(.originalForm) }
+        if !lexicalForm.isEmpty && lexicalForm != originalWord { modes.append(.lexicalForm) }
+        if !translationCounts.isEmpty || !englishWord.isEmpty { modes.append(.kjvTranslations) }
+        return modes.isEmpty ? [.kjvTranslations] : modes
+    }
+
+    private var searchingMessage: String {
+        switch selectedMode {
+        case .strongsNumber:
+            return "Searching tagged occurrences…"
+        case .originalForm:
+            return "Searching original-language text…"
+        case .lexicalForm:
+            return "Searching lexical form…"
+        case .kjvTranslations:
+            return "Searching KJV usage…"
+        }
+    }
+
     // MARK: - Category Filter
 
     private var categoryFilterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                // "All" chip
                 Button {
                     selectedCategory = nil
                 } label: {
@@ -176,7 +255,7 @@ struct ConcordanceSearchView: View {
                 }
 
                 ForEach(BookCategory.allCases, id: \.self) { category in
-                    let count = countForCategory(category)
+                    let count = cachedCategoryCounts[category] ?? 0
                     if count > 0 {
                         Button {
                             selectedCategory = selectedCategory == category ? nil : category
@@ -196,35 +275,20 @@ struct ConcordanceSearchView: View {
         }
     }
 
-    private func countForCategory(_ category: BookCategory) -> Int {
-        let booksInCategory = BibleData.books.filter { $0.category == category }.map { $0.name }
-        return results.filter { result in
-            booksInCategory.contains { bookName in
-                result.reference.hasPrefix(bookName)
-            }
-        }.count
-    }
-
-    private var filteredResults: [BibleSearchResult] {
-        guard let category = selectedCategory else { return results }
-        let booksInCategory = BibleData.books.filter { $0.category == category }.map { $0.name }
-        return results.filter { result in
-            booksInCategory.contains { bookName in
-                result.reference.hasPrefix(bookName)
-            }
-        }
-    }
 
     // MARK: - Results List
 
     private var resultsList: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                ForEach(filteredResults) { result in
+                ForEach(cachedFilteredResults) { result in
                     ConcordanceResultRow(
                         result: result,
                         highlightWords: searchedTerms,
-                        colorScheme: colorScheme
+                        colorScheme: colorScheme,
+                        onTap: {
+                            onSelectResult?(result)
+                        }
                     )
                 }
             }
@@ -237,98 +301,146 @@ struct ConcordanceSearchView: View {
     private func performConcordanceSearch() async {
         isSearching = true
         errorMessage = nil
+        selectedCategory = nil
 
-        // Build search terms from translation counts (most common English words for this Strong's number)
-        var terms: [String] = []
+        let sorted: [BibleSearchResult]
 
-        // Use the top translation words if available
-        if !translationCounts.isEmpty {
-            // Take the top 3-5 most frequent translations
-            let topTranslations = translationCounts
-                .sorted { $0.count > $1.count }
-                .prefix(5)
-                .map { $0.word.lowercased() }
-                .filter { !$0.isEmpty && $0 != "miscellaneous" && $0.count > 1 }
-
-            terms.append(contentsOf: topTranslations)
-        }
-
-        // If no translation counts, use the English word itself
-        if terms.isEmpty && !englishWord.isEmpty {
-            terms.append(englishWord.lowercased())
-        }
-
-        // Deduplicate
-        var uniqueTerms: [String] = []
-        for term in terms {
-            if !uniqueTerms.contains(term) {
-                uniqueTerms.append(term)
-            }
-        }
-
-        guard !uniqueTerms.isEmpty else {
+        switch selectedMode {
+        case .strongsNumber, .originalForm, .lexicalForm:
+            sorted = sortInBibleOrder(await StrongsLexiconService.shared.searchOriginalLanguageOccurrences(
+                strongsNumber: strongsNumber,
+                originalWord: originalWord,
+                lexicalForm: lexicalForm,
+                isHebrew: isHebrew,
+                mode: selectedMode
+            ))
             await MainActor.run {
-                isSearching = false
-                errorMessage = "No English translations available to search."
+                searchedTerms = searchLabels(for: selectedMode)
+                appState.addBibleSearchHistoryEntry(
+                    query: searchLabels(for: selectedMode).first ?? displayForm,
+                    scope: historyScope(for: selectedMode),
+                    translation: selectedMode == .kjvTranslations ? .kjv : nil
+                )
             }
-            return
-        }
 
-        await MainActor.run {
-            searchedTerms = uniqueTerms
-        }
-
-        // Search for each term and merge results (deduplicating by reference)
-        var allResults: [String: BibleSearchResult] = [:]
-
-        for term in uniqueTerms {
-            do {
-                let esvResults = try await ESVService.shared.searchPassages(query: term, pageSize: 100)
-                for esvResult in esvResults {
-                    if allResults[esvResult.reference] == nil {
-                        allResults[esvResult.reference] = BibleSearchResult(
-                            reference: esvResult.reference,
-                            content: esvResult.content
-                        )
-                    }
+        case .kjvTranslations:
+            let terms = buildKJVSearchTerms()
+            await MainActor.run {
+                searchedTerms = terms
+                if let primaryTerm = terms.first {
+                    appState.addBibleSearchHistoryEntry(query: primaryTerm, scope: .kjvUsage, translation: .kjv)
                 }
-            } catch {
-                print("ConcordanceSearch: Failed to search for '\(term)': \(error)")
             }
-        }
 
-        // Sort results in Bible order
-        let sorted = sortInBibleOrder(Array(allResults.values))
+            guard !terms.isEmpty else {
+                await MainActor.run {
+                    isSearching = false
+                    errorMessage = "No KJV search terms were available for this study result."
+                }
+                return
+            }
+
+            var allResults: [String: BibleSearchResult] = [:]
+            for term in terms {
+                let kjvResults = await KJVService.shared.searchPassages(query: term, pageSize: 100)
+                for result in kjvResults {
+                    allResults[result.id] = result
+                }
+            }
+            sorted = sortInBibleOrder(Array(allResults.values))
+        }
 
         await MainActor.run {
             results = sorted
             isSearching = false
             if results.isEmpty {
-                errorMessage = "No verses found containing these words."
+                errorMessage = emptyStateMessage
             }
         }
     }
 
+    private var emptyStateMessage: String {
+        switch selectedMode {
+        case .strongsNumber:
+            return "No occurrences were found for this Strong's entry."
+        case .originalForm:
+            return "No occurrences were found for this original word form."
+        case .lexicalForm:
+            return "No occurrences were found for this lexical form."
+        case .kjvTranslations:
+            return "No KJV verses were found for these study terms."
+        }
+    }
+
+    private func searchLabels(for mode: ConcordanceSearchMode) -> [String] {
+        switch mode {
+        case .strongsNumber:
+            return strongsNumber.isEmpty ? [] : [strongsNumber]
+        case .originalForm:
+            return originalWord.isEmpty ? [] : [originalWord]
+        case .lexicalForm:
+            return lexicalForm.isEmpty ? [] : [lexicalForm]
+        case .kjvTranslations:
+            return buildKJVSearchTerms()
+        }
+    }
+
+    private func historyScope(for mode: ConcordanceSearchMode) -> BibleSearchHistoryScope {
+        switch mode {
+        case .strongsNumber: return .strongsNumber
+        case .originalForm: return .originalForm
+        case .lexicalForm: return .lexicalForm
+        case .kjvTranslations: return .kjvUsage
+        }
+    }
+
+    private func buildKJVSearchTerms() -> [String] {
+        var terms: [String] = []
+
+        if !translationCounts.isEmpty {
+            terms.append(contentsOf: translationCounts
+                .sorted { $0.count > $1.count }
+                .prefix(5)
+                .map(\.word)
+                .map { $0.lowercased() }
+                .filter { !$0.isEmpty && $0 != "miscellaneous" && $0.count > 1 })
+        }
+
+        if terms.isEmpty && !englishWord.isEmpty {
+            terms.append(englishWord.lowercased())
+        }
+
+        var uniqueTerms: [String] = []
+        for term in terms where !uniqueTerms.contains(term) {
+            uniqueTerms.append(term)
+        }
+        return uniqueTerms
+    }
+
     /// Sorts search results in canonical Bible order.
+    /// Pre-computes book metadata for each result before sorting to avoid O(n × 66) inside the comparator.
     private func sortInBibleOrder(_ results: [BibleSearchResult]) -> [BibleSearchResult] {
         let bookOrder = Dictionary(uniqueKeysWithValues: BibleData.books.enumerated().map { ($1.name, $0) })
 
-        return results.sorted { a, b in
-            let aBook = BibleData.books.first { a.reference.hasPrefix($0.name) }?.name ?? ""
-            let bBook = BibleData.books.first { b.reference.hasPrefix($0.name) }?.name ?? ""
-
-            let aOrder = bookOrder[aBook] ?? 99
-            let bOrder = bookOrder[bBook] ?? 99
-
-            if aOrder != bOrder { return aOrder < bOrder }
-
-            // Same book — compare chapter:verse numerically
-            let aNumbers = extractChapterVerse(from: a.reference, bookName: aBook)
-            let bNumbers = extractChapterVerse(from: b.reference, bookName: bBook)
-
-            if aNumbers.chapter != bNumbers.chapter { return aNumbers.chapter < bNumbers.chapter }
-            return aNumbers.verse < bNumbers.verse
+        struct Annotated {
+            let result: BibleSearchResult
+            let order: Int
+            let chapter: Int
+            let verse: Int
         }
+
+        let annotated = results.map { r -> Annotated in
+            let bookName = Self.sortedBooks.first(where: { r.reference.hasPrefix($0.name) })?.name ?? ""
+            let order = bookOrder[bookName] ?? 99
+            let cv = extractChapterVerse(from: r.reference, bookName: bookName)
+            return Annotated(result: r, order: order, chapter: cv.chapter, verse: cv.verse)
+        }
+
+        return annotated.sorted { a, b in
+            if a.order != b.order { return a.order < b.order }
+            if a.chapter != b.chapter { return a.chapter < b.chapter }
+            return a.verse < b.verse
+        }.map(\.result)
     }
 
     private func extractChapterVerse(from reference: String, bookName: String) -> (chapter: Int, verse: Int) {
@@ -346,13 +458,34 @@ struct ConcordanceResultRow: View {
     let result: BibleSearchResult
     let highlightWords: [String]
     let colorScheme: ColorScheme
+    let onTap: () -> Void
 
     var body: some View {
+        Button(action: onTap) {
         VStack(alignment: .leading, spacing: 6) {
-            Text(result.reference)
-                .font(.subheadline)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.reforgedGold)
+            HStack(alignment: .firstTextBaseline) {
+                Text(result.reference)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.reforgedGold)
+
+                Spacer()
+
+                Text(result.translation.rawValue)
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.adaptiveNavyText(colorScheme).opacity(0.1))
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .clipShape(Capsule())
+            }
+
+            if let metadata = result.metadata, !metadata.isEmpty {
+                Text(metadata)
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
 
             highlightedText
                 .font(.caption)
@@ -360,6 +493,8 @@ struct ConcordanceResultRow: View {
                 .lineLimit(4)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        }
+        .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(Color.adaptiveCardBackground(colorScheme))
@@ -370,14 +505,12 @@ struct ConcordanceResultRow: View {
         )
     }
 
-    /// Renders verse text with search terms highlighted in gold.
     private var highlightedText: Text {
         let content = result.content
         guard !content.isEmpty, !highlightWords.isEmpty else {
             return Text(content)
         }
 
-        // Find all ranges of highlight words (case-insensitive)
         let lowered = content.lowercased()
         var highlights: [(range: Range<String.Index>, word: String)] = []
 
@@ -387,7 +520,6 @@ struct ConcordanceResultRow: View {
             while searchStart < lowered.endIndex {
                 guard let range = lowered.range(of: searchTerm, range: searchStart..<lowered.endIndex) else { break }
 
-                // Check word boundaries — don't highlight partial words
                 let beforeOK = range.lowerBound == lowered.startIndex || !lowered[lowered.index(before: range.lowerBound)].isLetter
                 let afterOK = range.upperBound == lowered.endIndex || !lowered[range.upperBound].isLetter
 
@@ -399,39 +531,32 @@ struct ConcordanceResultRow: View {
             }
         }
 
-        // Sort by position
         highlights.sort { $0.range.lowerBound < $1.range.lowerBound }
 
-        // Remove overlapping highlights
         var filtered: [(range: Range<String.Index>, word: String)] = []
         for hl in highlights {
             if let last = filtered.last, hl.range.lowerBound < last.range.upperBound {
-                continue // Skip overlap
+                continue
             }
             filtered.append(hl)
         }
 
-        // Build attributed Text
-        var result = Text("")
+        var resultText = Text("")
         var current = content.startIndex
 
         for hl in filtered {
-            // Text before highlight
             if current < hl.range.lowerBound {
-                result = result + Text(content[current..<hl.range.lowerBound])
+                resultText = resultText + Text(String(content[current..<hl.range.lowerBound]))
             }
-            // Highlighted text
-            result = result + Text(content[hl.range])
-                .fontWeight(.bold)
+            resultText = resultText + Text(String(content[hl.range]))
                 .foregroundColor(Color.reforgedGold)
             current = hl.range.upperBound
         }
 
-        // Remaining text
         if current < content.endIndex {
-            result = result + Text(content[current..<content.endIndex])
+            resultText = resultText + Text(String(content[current..<content.endIndex]))
         }
 
-        return result
+        return resultText
     }
 }

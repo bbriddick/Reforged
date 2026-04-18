@@ -51,6 +51,11 @@ enum BundledCSVSupport {
 /// Service for loading pre-bundled CSV data from the app bundle
 class BundledDataService {
     static let shared = BundledDataService()
+    private static let dailyInsightDateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        return formatter
+    }()
 
     private init() {}
 
@@ -113,6 +118,7 @@ class BundledDataService {
     }
 
     private var dailyInsights: [Int: BundledDailyInsight] = [:]
+    private var sortedInsightDays: [Int] = []
 
     func loadDailyInsights() {
         guard dailyInsights.isEmpty else { return }
@@ -144,15 +150,16 @@ class BundledDataService {
             dailyInsights[dayOfYear] = insight
         }
 
+        sortedInsightDays = dailyInsights.keys.sorted()
+
         print("Loaded \(dailyInsights.count) daily insights")
     }
 
     func getDailyInsight(forDayOfYear day: Int) -> BundledDailyInsight? {
         loadDailyInsights()
-        guard !dailyInsights.isEmpty else { return nil }
-        let sortedKeys = dailyInsights.keys.sorted()
-        let index = (day - 1) % sortedKeys.count
-        return dailyInsights[sortedKeys[index]]
+        guard !sortedInsightDays.isEmpty else { return nil }
+        let index = (day - 1) % sortedInsightDays.count
+        return dailyInsights[sortedInsightDays[index]]
     }
 
     func getTodaysInsight() -> BundledDailyInsight? {
@@ -167,9 +174,7 @@ extension BundledDataService {
 
     /// Convert bundled daily insight to app DailyInsight model
     func convertToDailyInsight(_ bundled: BundledDailyInsight) -> DailyInsight {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        let dateString = formatter.string(from: Date())
+        let dateString = Self.dailyInsightDateFormatter.string(from: Date())
 
         return DailyInsight(
             id: bundled.id,

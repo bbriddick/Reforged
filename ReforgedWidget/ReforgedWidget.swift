@@ -32,7 +32,7 @@ struct ReadingStreakProvider: TimelineProvider {
 
         // Update at midnight
         let calendar = Calendar.current
-        let tomorrow = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: Date())!)
+        let tomorrow = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date().addingTimeInterval(86_400))
 
         let timeline = Timeline(entries: [entry], policy: .after(tomorrow))
         completion(timeline)
@@ -86,19 +86,21 @@ struct ReadingStreakProvider: TimelineProvider {
 
         if readingDates.contains(todayStr) {
             streak = 1
-            var cur = calendar.date(byAdding: .day, value: -1, to: todayDate)!
+            var cur = calendar.date(byAdding: .day, value: -1, to: todayDate) ?? todayDate
             while readingDates.contains(formatter.string(from: cur)) {
                 streak += 1
-                cur = calendar.date(byAdding: .day, value: -1, to: cur)!
+                guard let prev = calendar.date(byAdding: .day, value: -1, to: cur) else { break }
+                cur = prev
             }
         } else {
             // Grace period: streak still live if yesterday was read
-            let yesterday = calendar.date(byAdding: .day, value: -1, to: todayDate)!
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: todayDate) else { return streak }
             if readingDates.contains(formatter.string(from: yesterday)) {
                 var cur = yesterday
                 while readingDates.contains(formatter.string(from: cur)) {
                     streak += 1
-                    cur = calendar.date(byAdding: .day, value: -1, to: cur)!
+                    guard let prev = calendar.date(byAdding: .day, value: -1, to: cur) else { break }
+                    cur = prev
                 }
             }
         }
@@ -171,13 +173,12 @@ struct MiniCalendarView: View {
     }
 
     private func daysInMonth() -> Int {
-        let range = calendar.range(of: .day, in: .month, for: currentMonth)!
-        return range.count
+        return calendar.range(of: .day, in: .month, for: currentMonth)?.count ?? 30
     }
 
     private func firstDayOfMonthWeekday() -> Int {
         let components = calendar.dateComponents([.year, .month], from: currentMonth)
-        let firstOfMonth = calendar.date(from: components)!
+        guard let firstOfMonth = calendar.date(from: components) else { return 0 }
         return calendar.component(.weekday, from: firstOfMonth) - 1
     }
 
@@ -273,7 +274,7 @@ struct WeekDotsView: View {
     var body: some View {
         HStack(spacing: 6) {
             ForEach(0..<7, id: \.self) { offset in
-                let date = calendar.date(byAdding: .day, value: -(6 - offset), to: Date())!
+                let date = calendar.date(byAdding: .day, value: -(6 - offset), to: Date()) ?? Date()
                 let dateString = formatter.string(from: date)
                 let hasRead = readingDates.contains(dateString)
                 let isToday = offset == 6
@@ -469,13 +470,12 @@ struct LargeCalendarView: View {
     }
 
     private func daysInMonth() -> Int {
-        let range = calendar.range(of: .day, in: .month, for: currentMonth)!
-        return range.count
+        return calendar.range(of: .day, in: .month, for: currentMonth)?.count ?? 30
     }
 
     private func firstDayOfMonthWeekday() -> Int {
         let components = calendar.dateComponents([.year, .month], from: currentMonth)
-        let firstOfMonth = calendar.date(from: components)!
+        guard let firstOfMonth = calendar.date(from: components) else { return 0 }
         return calendar.component(.weekday, from: firstOfMonth) - 1
     }
 

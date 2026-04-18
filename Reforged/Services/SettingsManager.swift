@@ -171,6 +171,16 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    // MARK: - AI Settings
+
+    @Published var aiEnabled: Bool {
+        didSet { save(aiEnabled, forKey: Keys.aiEnabled) }
+    }
+
+    @Published var geminiAPIKey: String {
+        didSet { save(geminiAPIKey, forKey: Keys.geminiAPIKey) }
+    }
+
     // MARK: - Sync Preferences
 
     @Published var syncEnabled: Bool {
@@ -225,6 +235,8 @@ class SettingsManager: ObservableObject {
         static let notificationsEnabled = "settings.notificationsEnabled"
         static let syncEnabled = "settings.syncEnabled"
         static let dayStartHour = "settings.dayStartHour"
+        static let aiEnabled = "settings.aiEnabled"
+        static let geminiAPIKey = "settings.geminiAPIKey"
     }
 
     // MARK: - Initialization
@@ -287,6 +299,10 @@ class SettingsManager: ObservableObject {
         self.memoryReminderDays = savedMemoryDays.map { Set($0) } ?? Set(1...7)
         self.lessonReminders = UserDefaults.standard.object(forKey: Keys.lessonReminders) as? Bool ?? true
         self.notificationsEnabled = UserDefaults.standard.object(forKey: Keys.notificationsEnabled) as? Bool ?? true
+
+        // Load AI Settings
+        self.aiEnabled = UserDefaults.standard.object(forKey: Keys.aiEnabled) as? Bool ?? true
+        self.geminiAPIKey = UserDefaults.standard.string(forKey: Keys.geminiAPIKey) ?? "AIzaSyB8cR2dNpsEHUVq6jN9hm2GsjGHf-A3YWI"
 
         // Load Sync Settings
         self.syncEnabled = UserDefaults.standard.object(forKey: Keys.syncEnabled) as? Bool ?? true

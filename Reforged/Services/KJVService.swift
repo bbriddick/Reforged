@@ -93,12 +93,17 @@ class KJVService {
 
     private let baseURL = KJVConfig.baseURL
 
-    // Local cache for chapters
+    // Local cache for chapters — protected by cacheQueue
     private var chapterCache: [String: KJVCachedChapter] = [:]
     private let cacheKey = "kjv_chapter_cache"
+    private let cacheQueue = DispatchQueue(label: "com.reforged.kjvcache")
+    // Guard against concurrent/duplicate calls to loadBundledJSON
+    private var bundleLoaded = false
 
     private init() {
-        loadCacheFromDisk()
+        // Load chapter cache on a background thread so the main thread
+        // (and thus the splash screen) is never blocked by JSON decoding.
+        cacheQueue.async { self.loadCacheFromDisk() }
     }
 
     // MARK: - Cache Management
@@ -108,10 +113,9 @@ class KJVService {
     }
 
     private func loadCacheFromDisk() {
+        // Always called on cacheQueue
         if let data = UserDefaults.standard.data(forKey: cacheKey),
            let cache = try? JSONDecoder().decode([String: KJVCachedChapter].self, from: data) {
-            // Evict any previously-poisoned entries that contain fewer than 2 verses
-            // (caused by the bible-api.com single-chapter book URL bug).
             let cleaned = cache.filter { $0.value.verses.count >= 2 }
             chapterCache = cleaned
             let evicted = cache.count - cleaned.count
@@ -124,58 +128,115 @@ class KJVService {
     }
 
     private func saveCacheToDisk() {
+        // Always called on cacheQueue
         if let data = try? JSONEncoder().encode(chapterCache) {
             UserDefaults.standard.set(data, forKey: cacheKey)
         }
     }
 
     private func getCachedChapter(book: String, chapter: Int) -> KJVCachedChapter? {
-        let key = cacheKeyFor(book: book, chapter: chapter)
-        guard let cached = chapterCache[key] else { return nil }
-
-        // Reject stale entries and entries with suspiciously few verses (cache poisoning guard)
-        if !cached.isStale && cached.verses.count >= 2 {
-            return cached
+        cacheQueue.sync {
+            let key = cacheKeyFor(book: book, chapter: chapter)
+            guard let cached = chapterCache[key] else { return nil }
+            if !cached.isStale && cached.verses.count >= 2 { return cached }
+            return nil
         }
-        return nil
     }
 
     private func cacheChapter(_ chapter: KJVCachedChapter) {
-        let key = cacheKeyFor(book: chapter.book, chapter: chapter.chapter)
-        chapterCache[key] = chapter
-        saveCacheToDisk()
+        cacheQueue.async {
+            let key = self.cacheKeyFor(book: chapter.book, chapter: chapter.chapter)
+            self.chapterCache[key] = chapter
+            self.saveCacheToDisk()
+        }
     }
 
     func clearCache() {
-        chapterCache.removeAll()
-        UserDefaults.standard.removeObject(forKey: cacheKey)
-        print("KJV chapter cache cleared.")
+        cacheQueue.async {
+            self.chapterCache.removeAll()
+            UserDefaults.standard.removeObject(forKey: self.cacheKey)
+            print("KJV chapter cache cleared.")
+        }
     }
 
     /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
     func injectBundle(_ bundle: [String: KJVCachedChapter]) {
-        let now = Date()
-        for (key, chapter) in bundle where chapterCache[key] == nil || (chapterCache[key]?.verses.count ?? 0) < 2 {
-            chapterCache[key] = KJVCachedChapter(
-                book: chapter.book,
-                chapter: chapter.chapter,
-                passages: chapter.passages,
-                canonical: chapter.canonical,
-                cachedAt: now,
-                verses: chapter.verses
-            )
+        cacheQueue.async {
+            let now = Date()
+            for (key, chapter) in bundle where self.chapterCache[key] == nil || (self.chapterCache[key]?.verses.count ?? 0) < 2 {
+                self.chapterCache[key] = KJVCachedChapter(
+                    book: chapter.book,
+                    chapter: chapter.chapter,
+                    passages: chapter.passages,
+                    canonical: chapter.canonical,
+                    cachedAt: now,
+                    verses: chapter.verses
+                )
+            }
+            self.saveCacheToDisk()
+            print("KJV bundle injected: \(bundle.count) chapters.")
         }
-        saveCacheToDisk()
-        print("KJV bundle injected: \(bundle.count) chapters.")
     }
 
-    var cachedChapterCount: Int { chapterCache.count }
+    var cachedChapterCount: Int { cacheQueue.sync { chapterCache.count } }
+
+    // MARK: - Search
+
+    func searchPassages(query: String, pageSize: Int = 50) async -> [BibleSearchResult] {
+        // AppDelegate pre-loads the bundle on startup; skip the fallback call here
+        // if loading is already in progress to avoid a concurrent-write race.
+        if chapterCache.isEmpty && !bundleLoaded {
+            loadBundledJSON()
+        }
+
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedQuery.isEmpty else { return [] }
+
+        var matches: [(result: BibleSearchResult, score: Int)] = []
+
+        for chapter in chapterCache.values {
+            for verse in chapter.verses {
+                let searchableText = Self.stripSuppliedWordBrackets(verse.text)
+                let lowered = searchableText.lowercased()
+                guard lowered.contains(normalizedQuery) else { continue }
+
+                var score = 1
+                if lowered == normalizedQuery { score += 10 }
+                if lowered.hasPrefix(normalizedQuery) { score += 4 }
+                if lowered.range(of: "\\b\(NSRegularExpression.escapedPattern(for: normalizedQuery))\\b",
+                                 options: .regularExpression) != nil {
+                    score += 6
+                }
+
+                matches.append((
+                    result: BibleSearchResult(
+                        reference: verse.reference,
+                        content: searchableText,
+                        translation: .kjv
+                    ),
+                    score: score
+                ))
+            }
+        }
+
+        return matches
+            .sorted { lhs, rhs in
+                if lhs.score != rhs.score {
+                    return lhs.score > rhs.score
+                }
+                return lhs.result.reference < rhs.result.reference
+            }
+            .prefix(pageSize)
+            .map(\.result)
+    }
 
     // MARK: - Bundled JSON Loading
 
     /// Parses `kjvpce.json` from the app bundle and fills missing/stale cache entries.
-    /// Safe to call from a background thread.
+    /// Idempotent — returns immediately if already loaded. Safe to call from a background thread.
     func loadBundledJSON() {
+        guard !bundleLoaded else { return }
+        bundleLoaded = true
         guard let url = Bundle.main.url(forResource: "kjvpce", withExtension: "json"),
               let data = try? Data(contentsOf: url) else {
             print("KJV: bundled JSON not found in app bundle")

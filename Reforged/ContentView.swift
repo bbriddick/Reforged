@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var showFreezeEncouragement = false
     @State private var showDonationPrompt = false
     @State private var donationPromptMessage = ""
+    @State private var showWhatsNew = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.requestReview) private var requestReview
 
@@ -36,6 +37,8 @@ struct ContentView: View {
                     checkFreezeEncouragement()
                     // Track app opens and show donation prompt at milestone
                     checkDonationPrompt()
+                    // Show What's New on first launch after an update
+                    checkWhatsNew()
                     // Pull latest data from CloudKit every time the app foregrounds,
                     // throttled to at most once every 2 minutes to avoid excessive API calls.
                     let twoMinutesAgo = Date().addingTimeInterval(-120)
@@ -51,7 +54,9 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .navigateToBibleVerse)) { notification in
                 if let reference = notification.userInfo?[AppNotificationUserInfoKey.reference] as? String {
-                    appState.queueBibleVerseNavigation(reference)
+                    let rawTranslation = notification.userInfo?[AppNotificationUserInfoKey.translation] as? String
+                    let translation = rawTranslation.flatMap(BibleTranslation.init(rawValue:))
+                    appState.queueBibleVerseNavigation(reference, translation: translation)
                 }
                 selectedTab = 2
             }
@@ -71,9 +76,17 @@ struct ContentView: View {
                 )
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
+
+            // What's New overlay (shown once per app version update)
+            if showWhatsNew {
+                WhatsNewView(isPresented: $showWhatsNew)
+                    .environmentObject(settingsManager)
+                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showFreezeEncouragement)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showDonationPrompt)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showWhatsNew)
     }
 
     private func checkFreezeEncouragement() {
@@ -127,6 +140,20 @@ struct ContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             donationPromptMessage = promptConfig.message
             showDonationPrompt = true
+        }
+    }
+
+    private func checkWhatsNew() {
+        guard appState.user.onboardingCompleted else { return }
+        guard AppVersionTracker.shouldShowWhatsNew else {
+            // Seed version on first active if not yet seeded (covers case where
+            // onboarding was completed before this feature was added).
+            AppVersionTracker.markAsSeen()
+            return
+        }
+        AppVersionTracker.markAsSeen()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            showWhatsNew = true
         }
     }
 }

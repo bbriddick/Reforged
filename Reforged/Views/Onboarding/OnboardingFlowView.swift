@@ -12,6 +12,7 @@ enum OnboardingStep: Int, CaseIterable {
     case avatar
     case goals
     case versionPicker        // Choose preferred Bible translation
+    case aiFeatures           // Opt in/out of AI features
     case notifications        // Ask about notifications (permission requested only on confirm)
     case final
 
@@ -58,6 +59,8 @@ struct OnboardingFlowView: View {
                 GoalsStepView(onNext: { nextStep() })
             case .versionPicker:
                 VersionPickerStepView(onNext: { nextStep() })
+            case .aiFeatures:
+                AIFeaturesStepView(onNext: { nextStep() })
             case .notifications:
                 NotificationsStepView(onNext: { nextStep() })
             case .final:
@@ -85,6 +88,8 @@ struct OnboardingFlowView: View {
     /// - Parameter tab: The tab index to land on (0=Home, 1=Learn, 2=Bible, 3=Memory). Defaults to Bible.
     func completeOnboarding(navigatingTo tab: Int = 2) {
         appState.user.onboardingCompleted = true
+        // Seed the current version so What's New doesn't appear on a fresh install.
+        AppVersionTracker.seedVersion()
         // The SwitchTab notification is handled by ContentView.
         // Post after a brief delay so AdaptiveNavigationView has time to appear.
         guard tab != 2 else { return }   // Bible is the default; no notification needed
@@ -869,6 +874,152 @@ struct GoalRow: View {
                     .stroke(isSelected ? Color.reforgedNavy : Color.adaptiveBorder(colorScheme), lineWidth: isSelected ? 2 : 1.5)
             )
         }
+    }
+}
+
+// MARK: - AI Features Step
+
+struct AIFeaturesStepView: View {
+    let onNext: () -> Void
+    @StateObject private var settings = SettingsManager.shared
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 32) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(Color.reforgedGold.opacity(0.12))
+                        .frame(width: 120, height: 120)
+
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 50))
+                        .foregroundStyle(Color.reforgedGold)
+                }
+
+                VStack(spacing: 12) {
+                    Text("AI Study Tools")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    Text("Reforged includes optional AI-powered features to enhance your study time. You can always change this later in Settings.")
+                        .font(.body)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .padding(.horizontal, 8)
+                }
+
+                // Feature cards
+                VStack(spacing: 12) {
+                    AIFeatureRow(
+                        icon: "pencil.and.outline",
+                        color: Color.reforgedGold,
+                        title: "Journal Prompts",
+                        description: "AI-generated reflection questions based on your reading"
+                    )
+                    AIFeatureRow(
+                        icon: "book.and.wrench",
+                        color: Color.reforgedNavy,
+                        title: "Word Study Summaries",
+                        description: "Instant explanations of original Greek and Hebrew words"
+                    )
+                    AIFeatureRow(
+                        icon: "magnifyingglass.circle",
+                        color: Color.reforgedCoral,
+                        title: "Smart Search",
+                        description: "Find related passages by concept, not just exact words"
+                    )
+                }
+                .padding(.horizontal, 8)
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+
+            // Toggle + buttons
+            VStack(spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Enable AI Features")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("Uses Gemini AI — no data is stored")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    Spacer()
+                    Toggle("", isOn: $settings.aiEnabled)
+                        .labelsHidden()
+                        .tint(Color.reforgedGold)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                )
+                .padding(.horizontal, 24)
+
+                Button(action: onNext) {
+                    Text("Continue")
+                        .reforgedPrimaryButton()
+                }
+                .padding(.horizontal, 24)
+            }
+            .padding(.bottom, 40)
+        }
+        .frame(maxWidth: 600)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct AIFeatureRow: View {
+    let icon: String
+    let color: Color
+    let title: String
+    let description: String
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(color.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(color)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
     }
 }
 

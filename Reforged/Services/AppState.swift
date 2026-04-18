@@ -15,6 +15,7 @@ class AppState: ObservableObject {
     @Published var tracks: [Track] = []
     @Published var dailyInsight: DailyInsight?
     @Published var pendingBibleVerseReference: String?
+    @Published var pendingBibleTranslation: BibleTranslation?
     @Published var isLoading = true
     @Published var hasSyncedFromCloud = false
     @Published var isSyncing = false
@@ -36,6 +37,7 @@ class AppState: ObservableObject {
     private var saveTask: Task<Void, Never>?
     private var syncDebounceTask: Task<Void, Never>?
     private let widgetInsightDefaultsKey = "reforged_widget_daily_insight"
+    private let bibleSearchHistoryKey = "bible_search_history_v2"
 
     private init() {
         // One-time migration: clean up old Supabase session data
@@ -53,14 +55,15 @@ class AppState: ObservableObject {
     // MARK: - Local Storage
 
     private func loadFromLocalStorage() {
+        let dec = Self.decoder
         if let data = UserDefaults.standard.data(forKey: "reforged_user"),
-           let user = try? JSONDecoder().decode(UserProfile.self, from: data) {
+           let user = try? dec.decode(UserProfile.self, from: data) {
             self.user = user
             migrateBadgesAndPerks()
         }
 
         if let data = UserDefaults.standard.data(forKey: "reforged_verses"),
-           let verses = try? JSONDecoder().decode([MemoryVerse].self, from: data) {
+           let verses = try? dec.decode([MemoryVerse].self, from: data) {
             self.memoryVerses = verses
         }
 
@@ -91,17 +94,24 @@ class AppState: ObservableObject {
         isLoading = false
     }
 
+    // Shared encoder/decoder — JSONEncoder/JSONDecoder are not thread-safe, but
+    // saveToLocalStorage() and loadFromLocalStorage() always run on the MainActor,
+    // so a single shared instance is safe and avoids repeated heap allocations.
+    private static let encoder = JSONEncoder()
+    private static let decoder = JSONDecoder()
+
     private func saveToLocalStorage() {
-        if let data = try? JSONEncoder().encode(user) {
+        let enc = Self.encoder
+        if let data = try? enc.encode(user) {
             UserDefaults.standard.set(data, forKey: "reforged_user")
         }
-        if let data = try? JSONEncoder().encode(memoryVerses) {
+        if let data = try? enc.encode(memoryVerses) {
             UserDefaults.standard.set(data, forKey: "reforged_verses")
         }
-        if let data = try? JSONEncoder().encode(tracks) {
+        if let data = try? enc.encode(tracks) {
             UserDefaults.standard.set(data, forKey: "reforged_tracks")
         }
-        if let insight = dailyInsight, let data = try? JSONEncoder().encode(insight) {
+        if let insight = dailyInsight, let data = try? enc.encode(insight) {
             UserDefaults.standard.set(data, forKey: "reforged_daily_insight")
         }
         if let date = lastSyncDate {
@@ -111,14 +121,69 @@ class AppState: ObservableObject {
 
     // MARK: - Cross-Tab Navigation
 
-    func queueBibleVerseNavigation(_ reference: String) {
+    func queueBibleVerseNavigation(_ reference: String, translation: BibleTranslation? = nil) {
         pendingBibleVerseReference = reference
+        pendingBibleTranslation = translation
     }
 
-    func consumePendingBibleVerseNavigation() -> String? {
+    func consumePendingBibleVerseNavigation() -> (reference: String, translation: BibleTranslation?)? {
         let reference = pendingBibleVerseReference
+        let translation = pendingBibleTranslation
         pendingBibleVerseReference = nil
-        return reference
+        pendingBibleTranslation = nil
+        guard let reference else { return nil }
+        return (reference, translation)
+    }
+
+    // MARK: - Shared Bible Search History
+
+    func loadBibleSearchHistory() -> [BibleSearchHistoryEntry] {
+        if let data = UserDefaults.standard.data(forKey: bibleSearchHistoryKey),
+           let decoded = try? Self.decoder.decode([BibleSearchHistoryEntry].self, from: data) {
+            return decoded.sorted { $0.createdAt > $1.createdAt }
+        }
+
+        let legacyQueries = UserDefaults.standard.stringArray(forKey: "bible_search_history") ?? []
+        let migrated = legacyQueries.map {
+            BibleSearchHistoryEntry(
+                query: $0,
+                scope: .textVersion,
+                translation: .esv,
+                createdAt: Date.distantPast
+            )
+        }
+        if !migrated.isEmpty {
+            saveBibleSearchHistory(migrated)
+        }
+        return migrated
+    }
+
+    func addBibleSearchHistoryEntry(query: String,
+                                    scope: BibleSearchHistoryScope,
+                                    translation: BibleTranslation? = nil) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        var history = loadBibleSearchHistory()
+        let entry = BibleSearchHistoryEntry(
+            query: trimmed,
+            scope: scope,
+            translation: translation,
+            createdAt: Date()
+        )
+
+        history.removeAll { $0.id == entry.id }
+        history.insert(entry, at: 0)
+        if history.count > 30 {
+            history = Array(history.prefix(30))
+        }
+        saveBibleSearchHistory(history)
+    }
+
+    private func saveBibleSearchHistory(_ history: [BibleSearchHistoryEntry]) {
+        if let data = try? JSONEncoder().encode(history) {
+            UserDefaults.standard.set(data, forKey: bibleSearchHistoryKey)
+        }
     }
 
     // MARK: - Cloud Sync
@@ -388,7 +453,7 @@ class AppState: ObservableObject {
 
         // Check if we have a cached insight from today
         if let data = UserDefaults.standard.data(forKey: "reforged_daily_insight"),
-           let insight = try? JSONDecoder().decode(DailyInsight.self, from: data) {
+           let insight = try? Self.decoder.decode(DailyInsight.self, from: data) {
             // Check if the cached insight is from today
             if insight.date.hasPrefix(todayString) {
                 self.dailyInsight = insight

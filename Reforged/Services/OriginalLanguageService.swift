@@ -35,6 +35,8 @@ class OriginalLanguageService: ObservableObject {
     // Key: "bookNumber-chapter-verse", value: array of tokens
     private var trIndex: [String: [TRToken]]?
     private var wlcIndex: [String: [String]]?
+    private var trChapterIndex: [String: [(verse: Int, tokens: [TRToken])]]?
+    private var wlcChapterIndex: [String: [(verse: Int, words: [String])]]?
 
     private var trLoaded = false
     private var wlcLoaded = false
@@ -71,31 +73,13 @@ class OriginalLanguageService: ObservableObject {
     /// Returns all TR token arrays for a NT chapter, sorted by verse number.
     func trChapter(bookNumber: Int, chapter: Int) -> [(verse: Int, tokens: [TRToken])] {
         ensureTRLoaded()
-        guard let index = trIndex else { return [] }
-        let prefix = "\(bookNumber)-\(chapter)-"
-        return index
-            .filter { $0.key.hasPrefix(prefix) }
-            .compactMap { key, tokens -> (verse: Int, tokens: [TRToken])? in
-                let versePart = String(key.dropFirst(prefix.count))
-                guard let v = Int(versePart) else { return nil }
-                return (verse: v, tokens: tokens)
-            }
-            .sorted { $0.verse < $1.verse }
+        return trChapterIndex?["\(bookNumber)-\(chapter)"] ?? []
     }
 
     /// Returns all WLC word arrays for an OT chapter, sorted by verse number.
     func wlcChapter(bookNumber: Int, chapter: Int) -> [(verse: Int, words: [String])] {
         ensureWLCLoaded()
-        guard let index = wlcIndex else { return [] }
-        let prefix = "\(bookNumber)-\(chapter)-"
-        return index
-            .filter { $0.key.hasPrefix(prefix) }
-            .compactMap { key, words -> (verse: Int, words: [String])? in
-                let versePart = String(key.dropFirst(prefix.count))
-                guard let v = Int(versePart) else { return nil }
-                return (verse: v, words: words)
-            }
-            .sorted { $0.verse < $1.verse }
+        return wlcChapterIndex?["\(bookNumber)-\(chapter)"] ?? []
     }
 
     /// Maps a Bible book name (English) to its standard book number (1–66).
@@ -144,13 +128,19 @@ class OriginalLanguageService: ObservableObject {
             }
             guard let file = try? JSONDecoder().decode(TRFile.self, from: data) else { return }
             var index: [String: [TRToken]] = [:]
+            var chapterIndex: [String: [(verse: Int, tokens: [TRToken])]] = [:]
             for v in file.verses {
                 let tokens = self.parseTRText(v.text)
                 guard !tokens.isEmpty else { continue }
                 index["\(v.book)-\(v.chapter)-\(v.verse)"] = tokens
+                chapterIndex["\(v.book)-\(v.chapter)", default: []].append((verse: v.verse, tokens: tokens))
+            }
+            for key in chapterIndex.keys {
+                chapterIndex[key]?.sort { $0.verse < $1.verse }
             }
             DispatchQueue.main.async {
                 self.trIndex = index
+                self.trChapterIndex = chapterIndex
                 self.trReady = true
             }
         }
@@ -174,13 +164,19 @@ class OriginalLanguageService: ObservableObject {
             }
             guard let file = try? JSONDecoder().decode(WLCFile.self, from: data) else { return }
             var index: [String: [String]] = [:]
+            var chapterIndex: [String: [(verse: Int, words: [String])]] = [:]
             for v in file.verses {
                 let words = self.parseWLCWords(v.text)
                 guard !words.isEmpty else { continue }
                 index["\(v.book)-\(v.chapter)-\(v.verse)"] = words
+                chapterIndex["\(v.book)-\(v.chapter)", default: []].append((verse: v.verse, words: words))
+            }
+            for key in chapterIndex.keys {
+                chapterIndex[key]?.sort { $0.verse < $1.verse }
             }
             DispatchQueue.main.async {
                 self.wlcIndex = index
+                self.wlcChapterIndex = chapterIndex
                 self.wlcReady = true
             }
         }
