@@ -7,7 +7,8 @@ class ProfileImageService {
     private init() {}
 
     private var documentsDirectory: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
     }
 
     /// Save a profile image, resized to 400x400 max

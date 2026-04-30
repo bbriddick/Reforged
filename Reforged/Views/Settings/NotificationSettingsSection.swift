@@ -111,6 +111,33 @@ struct NotificationSettingsSection: View {
                     subtitle: "Reminders to continue learning tracks",
                     isOn: $settings.lessonReminders
                 )
+
+                SettingsDivider()
+
+                // Walk Talks Podcast
+                SettingsToggleRow(
+                    title: "Walk Talks Episodes",
+                    subtitle: "Get notified when new episodes drop",
+                    isOn: $settings.podcastNewEpisodeNotifications
+                )
+
+                if settings.podcastNewEpisodeNotifications && settings.notificationsEnabled {
+                    SettingsDivider()
+                    HStack {
+                        Text("Notification Time")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Spacer()
+                        DatePicker(
+                            "",
+                            selection: $settings.podcastNotificationTime,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .labelsHidden()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                }
             }
 
             SettingsDivider()

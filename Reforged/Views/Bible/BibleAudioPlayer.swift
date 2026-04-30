@@ -13,6 +13,7 @@ class BibleAudioPlayer: ObservableObject {
     @Published var skipInterval: TimeInterval = 10.0
     @Published var currentBook: String = ""
     @Published var currentChapter: Int = 0
+    @Published var currentTranslation: BibleTranslation = .esv
 
     // Sleep timer
     @Published var sleepTimerRemaining: TimeInterval = 0   // 0 = off
@@ -31,6 +32,7 @@ class BibleAudioPlayer: ObservableObject {
     private let audioChapterKey = "audio_last_chapter"
     private let audioWasPlayingKey = "audio_was_playing"
     private let audioTimeKey = "audio_last_time"
+    private let audioTranslationKey = "audio_last_translation"
 
     init() {
         setupRemoteCommandCenter()
@@ -45,29 +47,47 @@ class BibleAudioPlayer: ObservableObject {
         player?.rate = isPlaying ? playbackRate : 0
     }
 
-    func play(book: String, chapter: Int) {
-        guard let url = ESVService.shared.getAudioURL(book: book, chapter: chapter) else { return }
-
+    func play(book: String, chapter: Int, translation: BibleTranslation = .esv) {
         stop()
         isLoading = true
         currentBook = book
         currentChapter = chapter
-
-        // Persist current audio state for resume
+        currentTranslation = translation
         saveAudioState()
 
         do {
-            // Configure audio session for background playback
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("Audio session error: \(error)")
         }
 
-        let asset = AVURLAsset(url: url, options: [
-            "AVURLAssetHTTPHeaderFieldsKey": ["Authorization": "Token \(ESVConfig.apiKey)"]
-        ])
+        if translation == .kjv {
+            Task { @MainActor in
+                do {
+                    let url = try await KJVAudioService.shared.getAudioURL(book: book, chapter: chapter)
+                    self.startPlayback(url: url, authHeader: nil)
+                } catch {
+                    print("KJV audio error: \(error)")
+                    self.isLoading = false
+                }
+            }
+        } else {
+            guard let url = ESVService.shared.getAudioURL(book: book, chapter: chapter) else {
+                isLoading = false
+                return
+            }
+            startPlayback(url: url, authHeader: "Token \(ESVConfig.apiKey)")
+        }
+    }
 
+    private func startPlayback(url: URL, authHeader: String?) {
+        var options: [String: Any] = [:]
+        if let header = authHeader {
+            options["AVURLAssetHTTPHeaderFieldsKey"] = ["Authorization": header]
+        }
+
+        let asset = AVURLAsset(url: url, options: options.isEmpty ? nil : options)
         let playerItem = AVPlayerItem(asset: asset)
         player = AVPlayer(playerItem: playerItem)
         player?.rate = playbackRate
@@ -96,10 +116,8 @@ class BibleAudioPlayer: ObservableObject {
                 self.isLoading = false
             }
 
-            // Update Now Playing info periodically
             self.updateNowPlayingInfo()
 
-            // Periodically save audio position for resume (every ~5 seconds)
             if Int(time.seconds) % 5 == 0 && time.seconds > 0 {
                 self.saveAudioState()
             }
@@ -158,7 +176,7 @@ class BibleAudioPlayer: ObservableObject {
 
         // Auto-advance to next chapter
         if let nextChapter = nextChapterInfo(book: finishedBook, chapter: finishedChapter) {
-            play(book: nextChapter.book, chapter: nextChapter.chapter)
+            play(book: nextChapter.book, chapter: nextChapter.chapter, translation: currentTranslation)
         } else {
             // No more chapters (end of Revelation) — just stop
             isPlaying = false
@@ -193,6 +211,7 @@ class BibleAudioPlayer: ObservableObject {
         UserDefaults.standard.set(currentChapter, forKey: audioChapterKey)
         UserDefaults.standard.set(isPlaying, forKey: audioWasPlayingKey)
         UserDefaults.standard.set(currentTime, forKey: audioTimeKey)
+        UserDefaults.standard.set(currentTranslation.rawValue, forKey: audioTranslationKey)
     }
 
     /// Public wrapper for saving audio state (called from BibleView on resign active).
@@ -205,6 +224,7 @@ class BibleAudioPlayer: ObservableObject {
         UserDefaults.standard.removeObject(forKey: audioChapterKey)
         UserDefaults.standard.removeObject(forKey: audioWasPlayingKey)
         UserDefaults.standard.removeObject(forKey: audioTimeKey)
+        UserDefaults.standard.removeObject(forKey: audioTranslationKey)
     }
 
     /// Returns saved audio state, or nil if none exists.
@@ -221,12 +241,13 @@ class BibleAudioPlayer: ObservableObject {
     /// Resumes playback from saved state (call on app foreground / view appear).
     func resumeFromSavedState() {
         guard let saved = savedAudioState() else { return }
-        // Only resume if not already playing something
         guard !isPlaying && player == nil else { return }
 
-        play(book: saved.book, chapter: saved.chapter)
+        let savedTranslationRaw = UserDefaults.standard.string(forKey: audioTranslationKey) ?? ""
+        let translation = BibleTranslation(rawValue: savedTranslationRaw) ?? .esv
 
-        // Seek to the saved position after a short delay to let the player load
+        play(book: saved.book, chapter: saved.chapter, translation: translation)
+
         if saved.time > 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                 self?.seek(to: saved.time)
@@ -265,11 +286,10 @@ class BibleAudioPlayer: ObservableObject {
 
     func playNextChapter() {
         guard let next = nextChapterInfo(book: currentBook, chapter: currentChapter) else { return }
-        play(book: next.book, chapter: next.chapter)
+        play(book: next.book, chapter: next.chapter, translation: currentTranslation)
     }
 
     func playPreviousChapter() {
-        // If more than 3 seconds in, restart current chapter
         if currentTime > 3 {
             seek(to: 0)
             return
@@ -285,8 +305,8 @@ class BibleAudioPlayer: ObservableObject {
             seek(to: 0)
             return
         }
-        _ = bookData // suppress warning
-        play(book: prevChapter.book, chapter: prevChapter.chapter)
+        _ = bookData
+        play(book: prevChapter.book, chapter: prevChapter.chapter, translation: currentTranslation)
     }
 
     // MARK: - Now Playing Info (Lock Screen & Control Center)
@@ -295,7 +315,7 @@ class BibleAudioPlayer: ObservableObject {
         var nowPlayingInfo = [String: Any]()
 
         nowPlayingInfo[MPMediaItemPropertyTitle] = "\(currentBook) \(currentChapter)"
-        nowPlayingInfo[MPMediaItemPropertyArtist] = "ESV Audio Bible"
+        nowPlayingInfo[MPMediaItemPropertyArtist] = currentTranslation == .kjv ? "KJV Audio Bible" : "ESV Audio Bible"
         nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "Reforged"
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration

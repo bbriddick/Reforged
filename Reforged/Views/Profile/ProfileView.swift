@@ -447,8 +447,55 @@ struct ProfileSettingsSection: View {
 
                 Divider().padding(.leading, 50)
 
-                SettingsRow(icon: "questionmark.circle.fill", title: "Help & Support", color: .blue) {
-                    openSupportEmail()
+                NavigationLink(destination: HelpAndSupportView()
+                    .navigationTitle("Help & Support")
+                    .navigationBarTitleDisplayMode(.inline)
+                ) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.blue.opacity(0.12))
+                                .frame(width: 30, height: 30)
+                            Image(systemName: "questionmark.circle.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.blue)
+                        }
+                        Text("Help & Support")
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    .padding()
+                }
+
+                Divider().padding(.leading, 50)
+
+                NavigationLink(destination: ScrollView {
+                    AboutSection().padding()
+                }
+                .navigationTitle("About")
+                .navigationBarTitleDisplayMode(.inline)
+                .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+                ) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.12))
+                                .frame(width: 30, height: 30)
+                            Image(systemName: "info.circle.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.gray)
+                        }
+                        Text("About")
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    .padding()
                 }
 
                 Divider().padding(.leading, 50)
@@ -464,7 +511,7 @@ struct ProfileSettingsSection: View {
 
     func openSupportEmail() {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let email = "support@reforgedapp.com"
+        let email = "support@reforgedapp.org"
         let subject = "Reforged Support Request"
         let body = "App Version: \(appVersion)\n\nDescribe your issue or feedback:\n\n"
 

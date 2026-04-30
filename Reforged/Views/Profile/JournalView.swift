@@ -7,6 +7,8 @@ struct JournalView: View {
     @State private var searchText = ""
     @State private var selectedTab = 0
     @State private var showPrivacyInfo = false
+    @State private var showExport = false
+    @State private var entryToEdit: JournalEntry? = nil
     @ObservedObject private var readingState = BibleReadingState.shared
     @Environment(\.colorScheme) var colorScheme
 
@@ -40,6 +42,16 @@ struct JournalView: View {
                                 .foregroundStyle(Color.adaptiveText(colorScheme))
 
                             Spacer()
+
+                            // Export button
+                            Button(action: { showExport = true }) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.callout)
+                                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                                    .frame(width: 36, height: 36)
+                                    .background(Color.adaptiveCardBackground(colorScheme))
+                                    .clipShape(Circle())
+                            }
 
                             // Privacy indicator button
                             Button(action: { showPrivacyInfo = true }) {
@@ -134,9 +146,13 @@ struct JournalView: View {
                                 EmptyBibleNotesView()
                             } else {
                                 ForEach(filteredBibleNotes) { note in
-                                    BibleNoteRow(note: note, onDelete: {
-                                        readingState.removeNote(reference: note.reference)
-                                    })
+                                    SwipeToDeleteContainer(
+                                        confirmTitle: "Delete Note",
+                                        confirmMessage: "This note will be permanently deleted.",
+                                        onDelete: { readingState.removeNote(reference: note.reference) }
+                                    ) {
+                                        BibleNoteRow(note: note)
+                                    }
                                 }
                             }
                         } else {
@@ -145,9 +161,13 @@ struct JournalView: View {
                                 EmptyJournalView(onAdd: { showNewEntry = true })
                             } else {
                                 ForEach(filteredEntries) { entry in
-                                    JournalEntryRow(entry: entry, onDelete: {
-                                        deleteEntry(entry)
-                                    })
+                                    SwipeToDeleteContainer(
+                                        confirmTitle: "Delete Entry",
+                                        confirmMessage: "This journal entry will be permanently deleted from your device.",
+                                        onDelete: { deleteEntry(entry) }
+                                    ) {
+                                        JournalEntryRow(entry: entry, onEdit: { entryToEdit = entry })
+                                    }
                                 }
                             }
                         }
@@ -165,6 +185,17 @@ struct JournalView: View {
             }
             .sheet(isPresented: $showPrivacyInfo) {
                 JournalPrivacySheet()
+            }
+            .sheet(isPresented: $showExport) {
+                ExportNotesSheet(journalEntries: entries, bibleNotes: readingState.allNotes)
+            }
+            .sheet(item: $entryToEdit) { entry in
+                NewJournalEntrySheet(
+                    entries: $entries,
+                    usePrompt: entry.prompt != nil,
+                    entryToEdit: entry,
+                    onSave: saveEntries
+                )
             }
             .onAppear {
                 loadEntries()
@@ -515,13 +546,91 @@ struct EmptyBibleNotesView: View {
     }
 }
 
+// MARK: - Swipe To Delete Container
+
+struct SwipeToDeleteContainer<Content: View>: View {
+    let confirmTitle: String
+    let confirmMessage: String
+    let onDelete: () -> Void
+    @ViewBuilder let content: () -> Content
+
+    @State private var offset: CGFloat = 0
+    @State private var dragStarted = false
+    @State private var startOffset: CGFloat = 0
+    @State private var showConfirmation = false
+
+    private let actionWidth: CGFloat = 80
+    private let revealThreshold: CGFloat = 40
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // Red delete action revealed behind the card
+            Button {
+                showConfirmation = true
+            } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: "trash.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Delete")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                }
+                .foregroundStyle(.white)
+                .frame(width: max(0, -offset))
+                .frame(maxHeight: .infinity)
+                .background(Color.red)
+                .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+            }
+            .opacity(-offset > 12 ? 1 : 0)
+
+            content()
+                .offset(x: offset)
+                .gesture(
+                    DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                        .onChanged { value in
+                            if !dragStarted {
+                                guard abs(value.translation.width) > abs(value.translation.height) * 1.3 else { return }
+                                dragStarted = true
+                                startOffset = offset
+                            }
+                            let newOffset = startOffset + value.translation.width
+                            withAnimation(.interactiveSpring()) {
+                                offset = max(min(newOffset, 0), -actionWidth)
+                            }
+                        }
+                        .onEnded { _ in
+                            dragStarted = false
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                offset = -offset > revealThreshold ? -actionWidth : 0
+                            }
+                        }
+                )
+                .onTapGesture {
+                    guard offset != 0 else { return }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        offset = 0
+                    }
+                }
+        }
+        .confirmationDialog(confirmTitle, isPresented: $showConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { offset = 0 }
+                onDelete()
+            }
+            Button("Cancel", role: .cancel) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { offset = 0 }
+            }
+        } message: {
+            Text(confirmMessage)
+        }
+    }
+}
+
 // MARK: - Bible Note Row
 
 struct BibleNoteRow: View {
     let note: VerseNote
-    var onDelete: (() -> Void)?
     @Environment(\.colorScheme) var colorScheme
-    @State private var showDeleteConfirmation = false
 
     var formattedDate: String {
         let formatter = DateFormatter()
@@ -559,15 +668,6 @@ struct BibleNoteRow: View {
                 }
 
                 Spacer()
-
-                // Delete button
-                if onDelete != nil {
-                    Button(action: { showDeleteConfirmation = true }) {
-                        Image(systemName: "trash")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                }
             }
 
             // Note content
@@ -592,15 +692,6 @@ struct BibleNoteRow: View {
         }
         .padding(ReforgedTheme.spacingM)
         .reforgedCard()
-        .confirmationDialog("Delete Note", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                HapticManager.shared.lightImpact()
-                onDelete?()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This note will be permanently deleted.")
-        }
     }
 }
 
@@ -608,9 +699,8 @@ struct BibleNoteRow: View {
 
 struct JournalEntryRow: View {
     let entry: JournalEntry
-    var onDelete: (() -> Void)?
+    var onEdit: (() -> Void)?
     @Environment(\.colorScheme) var colorScheme
-    @State private var showDeleteConfirmation = false
 
     var formattedDate: String {
         let formatter = DateFormatter()
@@ -672,10 +762,10 @@ struct JournalEntryRow: View {
 
                 Spacer()
 
-                // Delete button
-                if onDelete != nil {
-                    Button(action: { showDeleteConfirmation = true }) {
-                        Image(systemName: "trash")
+                // Edit button
+                if onEdit != nil {
+                    Button(action: { onEdit?() }) {
+                        Image(systemName: "pencil")
                             .font(.caption)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
@@ -683,7 +773,7 @@ struct JournalEntryRow: View {
             }
 
             // Content preview
-            Text(entry.content)
+            Text(entry.renderedContentText)
                 .font(.subheadline)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 .lineLimit(3)
@@ -706,14 +796,6 @@ struct JournalEntryRow: View {
         }
         .padding(ReforgedTheme.spacingM)
         .reforgedCard()
-        .confirmationDialog("Delete Entry", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                onDelete?()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This journal entry will be permanently deleted from your device.")
-        }
     }
 }
 
@@ -727,17 +809,23 @@ struct NewJournalEntrySheet: View {
     var usePrompt: Bool = false
     var verseReference: String? = nil
     var verseText: String? = nil
+    var entryToEdit: JournalEntry? = nil
     var onSave: (() -> Void)?
-    @State private var content = ""
+    @State private var contentAttributedText = NSAttributedString()
     @State private var linkedVerses: [String] = []
     @State private var selectedPrompt: String?
     @State private var displayedPrompts: [String] = randomJournalPrompts()
     @State private var isLoadingPrompts = false
     @State private var showVersePicker = false
-    @State private var pickerBook = BibleData.books[0]
+    @State private var pickerBook = BibleData.defaultBook
     @State private var pickerChapter: Int = 1
     @State private var pickerVerseStart: Int = 0
     @State private var pickerVerseEnd: Int = 0
+
+    private var isEditing: Bool { entryToEdit != nil }
+    private var contentIsEmpty: Bool {
+        contentAttributedText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         NavigationStack {
@@ -802,8 +890,8 @@ struct NewJournalEntrySheet: View {
                                                 isSelected: selectedPrompt == prompt
                                             ) {
                                                 selectedPrompt = prompt
-                                                if content.isEmpty {
-                                                    content = prompt + "\n\n"
+                                                if contentAttributedText.string.isEmpty {
+                                                    contentAttributedText = NSAttributedString.from(prompt + "\n\n")
                                                 }
                                             }
                                         }
@@ -832,16 +920,11 @@ struct NewJournalEntrySheet: View {
                             .fontWeight(.bold)
                             .foregroundStyle(Color.adaptiveText(colorScheme))
 
-                        TextEditor(text: $content)
-                            .frame(minHeight: 220)
-                            .padding(12)
-                            .scrollContentBackground(.hidden)
-                            .background(Color.adaptiveCardBackground(colorScheme))
-                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                            )
+                        RichTextEditor(
+                            attributedText: $contentAttributedText,
+                            placeholder: "Write your reflection…",
+                            minHeight: 220
+                        )
                     }
 
                     // Linked Verses
@@ -944,7 +1027,7 @@ struct NewJournalEntrySheet: View {
                 .padding()
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-            .navigationTitle(usePrompt ? "Prompted Entry" : "Free Write")
+            .navigationTitle(isEditing ? "Edit Entry" : (usePrompt ? "Prompted Entry" : "Free Write"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -952,13 +1035,13 @@ struct NewJournalEntrySheet: View {
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(isEditing ? "Update" : "Save") {
                         saveEntry()
                         dismiss()
                     }
                     .fontWeight(.semibold)
                     .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                    .disabled(content.isEmpty)
+                    .disabled(contentIsEmpty)
                 }
             }
             .sheet(isPresented: $showVersePicker) {
@@ -977,8 +1060,18 @@ struct NewJournalEntrySheet: View {
                 }
             }
             .onAppear {
-                // Auto-link the verse that triggered this journal entry
-                if let ref = verseReference, !linkedVerses.contains(ref) {
+                if let existing = entryToEdit {
+                    // Load existing entry for editing
+                    if let rich = existing.formattedContent {
+                        contentAttributedText = rich.attributedString
+                    } else {
+                        contentAttributedText = existing.content.isEmpty
+                            ? NSAttributedString()
+                            : NSAttributedString.from(existing.content)
+                    }
+                    linkedVerses = existing.allLinkedVerses
+                    selectedPrompt = existing.prompt
+                } else if let ref = verseReference, !linkedVerses.contains(ref) {
                     linkedVerses.append(ref)
                 }
             }
@@ -988,17 +1081,41 @@ struct NewJournalEntrySheet: View {
     func saveEntry() {
         HapticManager.shared.journalSaved()
 
-        let entry = JournalEntry(
-            id: UUID().uuidString,
-            date: ISO8601DateFormatter().string(from: Date()),
-            content: content,
-            tags: [],
-            linkedVerses: linkedVerses,
-            prompt: selectedPrompt
-        )
-        entries.insert(entry, at: 0)
-        JournalStorageManager.shared.addEntry(entry)
-        appState.addXP(20, source: "reflection")
+        let plainText      = contentAttributedText.string
+        let richContent    = RichTextNoteContent(attributedString: contentAttributedText)
+
+        if let existing = entryToEdit {
+            // Update in-place
+            let updated = JournalEntry(
+                id: existing.id,
+                date: existing.date,
+                content: plainText,
+                tags: existing.tags,
+                formattedContent: richContent,
+                linkedVerse: existing.linkedVerse,
+                linkedVerses: linkedVerses,
+                linkedLesson: existing.linkedLesson,
+                linkedInsight: existing.linkedInsight,
+                prompt: selectedPrompt
+            )
+            if let idx = entries.firstIndex(where: { $0.id == existing.id }) {
+                entries[idx] = updated
+            }
+            JournalStorageManager.shared.updateEntry(updated)
+        } else {
+            let entry = JournalEntry(
+                id: UUID().uuidString,
+                date: ISO8601DateFormatter().string(from: Date()),
+                content: plainText,
+                tags: [],
+                formattedContent: richContent,
+                linkedVerses: linkedVerses,
+                prompt: selectedPrompt
+            )
+            entries.insert(entry, at: 0)
+            JournalStorageManager.shared.addEntry(entry)
+            appState.addXP(20, source: "reflection")
+        }
         onSave?()
     }
 }
@@ -1029,6 +1146,215 @@ struct PromptChip: View {
                 .shadow(color: isSelected ? Color.reforgedNavy.opacity(0.2) : Color.clear, radius: 4, y: 2)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Export Notes Sheet
+
+struct ExportNotesSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    let journalEntries: [JournalEntry]
+    let bibleNotes: [VerseNote]
+
+    @State private var includeJournal = true
+    @State private var includeBibleNotes = true
+    @State private var isExporting = false
+    @State private var exportURL: URL?
+    @State private var showShareSheet = false
+    @State private var exportError = false
+
+    private var activeEntries: [JournalEntry] { includeJournal ? journalEntries : [] }
+    private var activeNotes: [VerseNote]      { includeBibleNotes ? bibleNotes : [] }
+    private var hasContent: Bool              { !activeEntries.isEmpty || !activeNotes.isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+
+                    // Content toggles
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Content to Export")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        Toggle(isOn: $includeJournal) {
+                            Label(
+                                "Journal Reflections (\(journalEntries.count))",
+                                systemImage: "pencil.line"
+                            )
+                            .font(.subheadline)
+                        }
+                        .tint(Color.reforgedNavy)
+
+                        Toggle(isOn: $includeBibleNotes) {
+                            Label(
+                                "Bible Notes (\(bibleNotes.count))",
+                                systemImage: "book.fill"
+                            )
+                            .font(.subheadline)
+                        }
+                        .tint(Color.reforgedNavy)
+                    }
+                    .padding(ReforgedTheme.spacingM)
+                    .reforgedCard()
+
+                    // Format options
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Choose Format")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        ExportFormatRow(
+                            icon: "doc.richtext.fill",
+                            iconColor: .red,
+                            title: "PDF Document",
+                            subtitle: "Best for reading and printing",
+                            isLoading: isExporting,
+                            isDisabled: !hasContent
+                        ) {
+                            performExport { ExportService.shared.exportAsPDF(journalEntries: activeEntries, bibleNotes: activeNotes) }
+                        }
+
+                        ExportFormatRow(
+                            icon: "doc.text.fill",
+                            iconColor: Color(red: 0.18, green: 0.35, blue: 0.75),
+                            title: "Word Document (.docx)",
+                            subtitle: "Opens in Word, Pages, Google Docs",
+                            isLoading: isExporting,
+                            isDisabled: !hasContent
+                        ) {
+                            performExport { ExportService.shared.exportAsDocx(journalEntries: activeEntries, bibleNotes: activeNotes) }
+                        }
+
+                        ExportFormatRow(
+                            icon: "doc.plaintext.fill",
+                            iconColor: .gray,
+                            title: "Plain Text (.txt)",
+                            subtitle: "Works with any app or text editor",
+                            isLoading: isExporting,
+                            isDisabled: !hasContent
+                        ) {
+                            performExport { ExportService.shared.exportAsText(journalEntries: activeEntries, bibleNotes: activeNotes) }
+                        }
+
+                        ExportFormatRow(
+                            icon: "archivebox.fill",
+                            iconColor: .orange,
+                            title: "ZIP Archive",
+                            subtitle: "Bundle of all notes as individual files",
+                            isLoading: isExporting,
+                            isDisabled: !hasContent
+                        ) {
+                            performExport { ExportService.shared.exportAsZip(journalEntries: activeEntries, bibleNotes: activeNotes) }
+                        }
+                    }
+
+                    // Privacy note
+                    HStack(spacing: 8) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.green)
+                        Text("Your notes are only shared with apps you choose")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.green.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                }
+                .padding()
+            }
+            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            .navigationTitle("Export Notes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                }
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = exportURL {
+                    ShareSheet(activityItems: [url])
+                }
+            }
+            .alert("Export Failed", isPresented: $exportError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Could not generate the export file. Please try again.")
+            }
+        }
+    }
+
+    private func performExport(_ generate: @escaping () -> URL?) {
+        guard !isExporting else { return }
+        isExporting = true
+        Task { @MainActor in
+            if let url = generate() {
+                exportURL = url
+                showShareSheet = true
+            } else {
+                exportError = true
+            }
+            isExporting = false
+        }
+    }
+}
+
+struct ExportFormatRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let subtitle: String
+    var isLoading: Bool
+    var isDisabled: Bool
+    let action: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(iconColor.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: icon)
+                        .font(.title3)
+                        .foregroundStyle(iconColor)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+
+                Spacer()
+
+                if isLoading {
+                    ProgressView().scaleEffect(0.8)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+            .padding(ReforgedTheme.spacingM)
+            .reforgedCard()
+            .opacity(isDisabled ? 0.5 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled || isLoading)
     }
 }
 

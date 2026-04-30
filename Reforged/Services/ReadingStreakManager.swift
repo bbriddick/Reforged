@@ -10,9 +10,13 @@ class ReadingStreakManager: ObservableObject {
     private let sharedDefaults = UserDefaults(suiteName: "group.com.reforged.app")
     private let readingDatesKey = "reforged_reading_dates"
     private let chaptersReadByDateKey = "reforged_chapters_read_by_date"
+    private let frozenDatesKey = "reforged_frozen_dates"
 
     /// Dates when user read at least one chapter (stored as ISO date strings YYYY-MM-DD)
     @Published var readingDates: Set<String> = []
+
+    /// Dates that were covered by a streak freeze (not read, but protected)
+    @Published var frozenDates: Set<String> = []
 
     /// Chapters read by date (date string -> array of chapter keys like "John 3")
     @Published var chaptersReadByDate: [String: [String]] = [:]
@@ -145,7 +149,9 @@ class ReadingStreakManager: ObservableObject {
     }
 
     private func calculateCurrentStreak() -> Int {
-        guard !readingDates.isEmpty else { return 0 }
+        // A day counts toward the streak if the user read OR used a freeze on that day.
+        let covered = readingDates.union(frozenDates)
+        guard !covered.isEmpty else { return 0 }
 
         let calendar = Calendar.current
         // Use todayString so the anchor respects both the local timezone and the
@@ -157,19 +163,21 @@ class ReadingStreakManager: ObservableObject {
         if readingDates.contains(todayStr) {
             // Today has been read — count today then walk backwards.
             streak = 1
-            var cur = calendar.date(byAdding: .day, value: -1, to: todayDate)!
-            while readingDates.contains(dateToString(cur)) {
+            var cur = calendar.date(byAdding: .day, value: -1, to: todayDate) ?? todayDate
+            while covered.contains(dateToString(cur)) {
                 streak += 1
-                cur = calendar.date(byAdding: .day, value: -1, to: cur)!
+                guard let prev = calendar.date(byAdding: .day, value: -1, to: cur) else { break }
+                cur = prev
             }
         } else {
-            // Grace period: streak is still live until end of today if yesterday was read.
-            let yesterday = calendar.date(byAdding: .day, value: -1, to: todayDate)!
-            if readingDates.contains(dateToString(yesterday)) {
+            // Grace period: streak is still live until end of today if yesterday was covered.
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: todayDate) else { return streak }
+            if covered.contains(dateToString(yesterday)) {
                 var cur = yesterday
-                while readingDates.contains(dateToString(cur)) {
+                while covered.contains(dateToString(cur)) {
                     streak += 1
-                    cur = calendar.date(byAdding: .day, value: -1, to: cur)!
+                    guard let prev = calendar.date(byAdding: .day, value: -1, to: cur) else { break }
+                    cur = prev
                 }
             }
         }
@@ -193,11 +201,31 @@ class ReadingStreakManager: ObservableObject {
         objectWillChange.send()
     }
 
+    /// Records that a streak freeze was used to protect the given date string.
+    /// Call this from AppState.recordActivity() whenever a freeze fires.
+    func noteFreezeUsed(on dateString: String) {
+        frozenDates.insert(dateString)
+        saveToStorage()
+        objectWillChange.send()
+    }
+
+    /// Seeds historical freeze dates from UserProfile.freezeUsedDates on first launch /
+    /// CloudKit restore so old freeze records are immediately honoured by calculateCurrentStreak.
+    func seedFrozenDates(_ dates: [String]) {
+        guard !dates.isEmpty else { return }
+        frozenDates.formUnion(dates)
+        saveToStorage()
+        objectWillChange.send()
+    }
+
     // MARK: - Persistence
 
     private func loadFromStorage() {
         if let dates = userDefaults.array(forKey: readingDatesKey) as? [String] {
             readingDates = Set(dates)
+        }
+        if let dates = userDefaults.array(forKey: frozenDatesKey) as? [String] {
+            frozenDates = Set(dates)
         }
 
         if let data = userDefaults.data(forKey: chaptersReadByDateKey),
@@ -209,6 +237,7 @@ class ReadingStreakManager: ObservableObject {
     private func saveToStorage() {
         let datesArray = Array(readingDates)
         userDefaults.set(datesArray, forKey: readingDatesKey)
+        userDefaults.set(Array(frozenDates), forKey: frozenDatesKey)
 
         // Also save to shared defaults for widget access
         sharedDefaults?.set(datesArray, forKey: readingDatesKey)

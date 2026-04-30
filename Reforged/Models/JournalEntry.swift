@@ -1,11 +1,81 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Journal & Bible Models
+
+struct RichTextNoteContent: Codable, Equatable {
+    let plainText: String
+    let rtfBase64: String
+
+    init(plainText: String, rtfBase64: String) {
+        self.plainText = plainText
+        self.rtfBase64 = rtfBase64
+    }
+
+    var isEffectivelyEmpty: Bool {
+        plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    static func fromPlainText(_ text: String) -> RichTextNoteContent? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        #if canImport(UIKit)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 17),
+            .foregroundColor: UIColor.label
+        ]
+        let attributed = NSAttributedString(string: trimmed, attributes: attributes)
+        return RichTextNoteContent(attributedString: attributed)
+        #else
+        return nil
+        #endif
+    }
+
+    #if canImport(UIKit)
+    init?(attributedString: NSAttributedString) {
+        let plainText = attributedString.string
+        let trimmed = plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let range = NSRange(location: 0, length: attributedString.length)
+        guard let data = try? attributedString.data(
+            from: range,
+            documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
+        ) else {
+            return nil
+        }
+        self.plainText = plainText
+        self.rtfBase64 = data.base64EncodedString()
+    }
+
+    var attributedString: NSAttributedString {
+        guard let data = Data(base64Encoded: rtfBase64),
+              let attributed = try? NSMutableAttributedString(
+                data: data,
+                options: [
+                    .documentType: NSAttributedString.DocumentType.rtf
+                ],
+                documentAttributes: nil
+              ) else {
+            return NSAttributedString(
+                string: plainText,
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 17),
+                    .foregroundColor: UIColor.label
+                ]
+            )
+        }
+        return attributed
+    }
+    #endif
+}
 
 struct JournalEntry: Codable, Identifiable {
     let id: String
     let date: String
     var content: String
+    var formattedContent: RichTextNoteContent?
     var tags: [String]
     var linkedVerse: String?       // legacy single-verse field (kept for backward compat)
     var linkedVerses: [String]     // multi-verse support
@@ -22,13 +92,23 @@ struct JournalEntry: Codable, Identifiable {
         return result
     }
 
+    var renderedContentText: String {
+        let richText = formattedContent?.plainText.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !richText.isEmpty {
+            return richText
+        }
+        return content
+    }
+
     init(id: String, date: String, content: String, tags: [String],
+         formattedContent: RichTextNoteContent? = nil,
          linkedVerse: String? = nil, linkedVerses: [String] = [],
          linkedLesson: String? = nil, linkedInsight: String? = nil,
          prompt: String? = nil) {
         self.id = id
         self.date = date
         self.content = content
+        self.formattedContent = formattedContent ?? RichTextNoteContent.fromPlainText(content)
         self.tags = tags
         self.linkedVerse = linkedVerse
         self.linkedVerses = linkedVerses
@@ -42,12 +122,16 @@ struct JournalEntry: Codable, Identifiable {
         id            = try c.decode(String.self,   forKey: .id)
         date          = try c.decode(String.self,   forKey: .date)
         content       = try c.decode(String.self,   forKey: .content)
+        formattedContent = try c.decodeIfPresent(RichTextNoteContent.self, forKey: .formattedContent)
         tags          = try c.decode([String].self, forKey: .tags)
         linkedVerse   = try c.decodeIfPresent(String.self,   forKey: .linkedVerse)
         linkedVerses  = (try c.decodeIfPresent([String].self, forKey: .linkedVerses)) ?? []
         linkedLesson  = try c.decodeIfPresent(String.self,   forKey: .linkedLesson)
         linkedInsight = try c.decodeIfPresent(String.self,   forKey: .linkedInsight)
         prompt        = try c.decodeIfPresent(String.self,   forKey: .prompt)
+        if formattedContent == nil {
+            formattedContent = RichTextNoteContent.fromPlainText(content)
+        }
     }
 }
 

@@ -18,21 +18,27 @@ struct ContentView: View {
             Group {
                 if !appState.user.onboardingCompleted {
                     OnboardingFlowView()
+                        .preferredColorScheme(themeManager.colorScheme)
+                        // No .id() here — theme changes must NOT reset onboarding state
                 } else {
                     AdaptiveNavigationView(selectedTab: $selectedTab)
+                        .preferredColorScheme(themeManager.colorScheme)
+                        .id(themeManager.currentMode) // Safe to reset main nav on theme change
                 }
             }
             .environmentObject(appState)
             .environmentObject(themeManager)
             .environmentObject(settingsManager)
-            .preferredColorScheme(themeManager.colorScheme)
-            .id(themeManager.currentMode)
             .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active {
+                    // Re-apply Focus Shield blocking rules every time app foregrounds
+                    FocusBlockingService.shared.applyBlockingIfEnabled()
                     // Refresh daily insight when app becomes active
                     appState.refreshDailyInsightIfNeeded()
                     // Update notification content based on today's progress
                     NotificationManager.shared.rescheduleWithSmartContent()
+                    // Regenerate personalized reading reminders (once per day via Gemini)
+                    NotificationManager.shared.schedulePersonalizedReadingReminders()
                     // Check if freeze encouragement should show
                     checkFreezeEncouragement()
                     // Track app opens and show donation prompt at milestone
@@ -42,7 +48,7 @@ struct ContentView: View {
                     // Pull latest data from CloudKit every time the app foregrounds,
                     // throttled to at most once every 2 minutes to avoid excessive API calls.
                     let twoMinutesAgo = Date().addingTimeInterval(-120)
-                    if appState.lastSyncDate == nil || appState.lastSyncDate! < twoMinutesAgo {
+                    if appState.lastSyncDate.map({ $0 < twoMinutesAgo }) ?? true {
                         Task { await appState.performFullSync() }
                     }
                 }
@@ -452,7 +458,7 @@ struct SidebarNavigationView: View {
             List {
                 Section {
                     NavigationRow(icon: "house.fill", title: "Home", tag: 0, selectedTab: $selectedTab)
-                    NavigationRow(icon: "book.fill", title: "Learn", tag: 1, selectedTab: $selectedTab)
+                    NavigationRow(icon: "shield.lefthalf.filled", title: "Discipleship", tag: 1, selectedTab: $selectedTab)
                     NavigationRow(icon: "text.book.closed.fill", title: "Bible", tag: 2, selectedTab: $selectedTab)
                     NavigationRow(icon: "brain.head.profile", title: "Memory", tag: 3, selectedTab: $selectedTab)
                 } header: {
@@ -484,7 +490,7 @@ struct SidebarNavigationView: View {
                 HomeView()
                     .environment(\.isSidebarNavigation, true)
             case 1:
-                LearningPathView()
+                DiscipleshipView()
                     .environment(\.isSidebarNavigation, true)
             case 2:
                 BibleView()
@@ -508,12 +514,51 @@ struct SidebarNavigationView: View {
     }
 }
 
+// MARK: - Composite Icon Helper
+
+/// Composites two SF Symbol images into a single template UIImage for use in tab bars.
+func compositeTabIcon(back: String, front: String, backScale: CGFloat = 1.0, frontScale: CGFloat = 0.55, frontOffset: CGPoint = .init(x: 6, y: 6)) -> UIImage {
+    let size = CGSize(width: 28, height: 28)
+    let renderer = UIGraphicsImageRenderer(size: size)
+    let image = renderer.image { ctx in
+        let backConfig = UIImage.SymbolConfiguration(pointSize: size.width * backScale * 0.8, weight: .semibold)
+        let frontConfig = UIImage.SymbolConfiguration(pointSize: size.width * frontScale * 0.8, weight: .bold)
+
+        if let backImg = UIImage(systemName: back, withConfiguration: backConfig) {
+            let backSize = backImg.size
+            let backRect = CGRect(
+                x: (size.width - backSize.width) / 2,
+                y: (size.height - backSize.height) / 2,
+                width: backSize.width,
+                height: backSize.height
+            )
+            backImg.draw(in: backRect)
+        }
+        if let frontImg = UIImage(systemName: front, withConfiguration: frontConfig) {
+            let frontSize = frontImg.size
+            let frontRect = CGRect(
+                x: (size.width - frontSize.width) / 2 + frontOffset.x,
+                y: (size.height - frontSize.height) / 2 + frontOffset.y,
+                width: frontSize.width,
+                height: frontSize.height
+            )
+            ctx.cgContext.setBlendMode(.clear)
+            let pad: CGFloat = 1.0
+            ctx.cgContext.fill(frontRect.insetBy(dx: -pad, dy: -pad))
+            ctx.cgContext.setBlendMode(.normal)
+            frontImg.draw(in: frontRect)
+        }
+    }
+    return image.withRenderingMode(.alwaysTemplate)
+}
+
 // MARK: - Navigation Row for Sidebar
 
 struct NavigationRow: View {
     let icon: String
     let title: String
     let tag: Int
+    var customImage: Image? = nil
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) var colorScheme
 
@@ -526,10 +571,18 @@ struct NavigationRow: View {
             selectedTab = tag
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? Color.adaptiveNavyText(colorScheme) : Color.adaptiveTextSecondary(colorScheme))
-                    .frame(width: 28)
+                Group {
+                    if let customImage {
+                        customImage
+                            .resizable()
+                            .scaledToFit()
+                    } else {
+                        Image(systemName: icon)
+                    }
+                }
+                .font(.title3)
+                .foregroundStyle(isSelected ? Color.adaptiveNavyText(colorScheme) : Color.adaptiveTextSecondary(colorScheme))
+                .frame(width: 28, height: 28)
 
                 Text(title)
                     .font(.body)
@@ -566,9 +619,9 @@ struct MainTabView: View {
                 }
                 .tag(0)
 
-            LearningPathView()
+            DiscipleshipView()
                 .tabItem {
-                    Label("Learn", systemImage: "book.fill")
+                    Label("Discipleship", systemImage: "shield.lefthalf.filled")
                 }
                 .tag(1)
 
@@ -592,6 +645,7 @@ struct MainTabView: View {
         }
         .tint(Color.reforgedGold)
         .background(Color.adaptiveBackground(colorScheme))
+        .buttonStyle(NoBlobButtonStyle())
     }
 }
 

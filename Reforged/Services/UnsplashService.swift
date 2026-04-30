@@ -87,7 +87,7 @@ final class UnsplashService {
                 UIColor(red: 0.1, green: 0.15, blue: 0.25, alpha: 1.0).cgColor,
                 UIColor(red: 0.05, green: 0.08, blue: 0.15, alpha: 1.0).cgColor
             ]
-            let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: [0.0, 1.0])!
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: [0.0, 1.0]) else { return }
             ctx.cgContext.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 0, y: size.height), options: [])
         }
     }

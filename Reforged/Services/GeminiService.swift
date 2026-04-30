@@ -11,7 +11,7 @@ enum GeminiError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey:   return "Gemini API key is not set. Add it in Settings → AI Features."
+        case .missingAPIKey:   return "AI features are temporarily unavailable. Please try again later."
         case .aiDisabled:      return "AI features are disabled in Settings."
         case .invalidResponse: return "Invalid response from Gemini API."
         case .httpError(let code): return "Gemini API HTTP error: \(code)"
@@ -36,6 +36,11 @@ struct SmartSearchResult {
     let verses: [SmartSearchVerse]
     let strongsNumbers: [String]
     let relatedTerms: [String]
+}
+
+struct DailyInsightReflection {
+    let reflection: String
+    let prayerPrompt: String
 }
 
 // MARK: - Gemini Response Models (private)
@@ -66,10 +71,28 @@ final class GeminiService {
     // MARK: - Core Request
 
     private func generate(prompt: String, maxTokens: Int = 400) async throws -> String {
-        let apiKey = await SettingsManager.shared.geminiAPIKey
-        print("[Gemini] generate() called, key empty=\(apiKey.isEmpty), length=\(apiKey.count)")
-        guard !apiKey.isEmpty else { throw GeminiError.missingAPIKey }
+        let apiKey = await SettingsManager.shared.effectiveAPIKey
 
+        if !apiKey.isEmpty {
+            return try await generateDirect(prompt: prompt, maxTokens: maxTokens, apiKey: apiKey)
+        }
+
+        let hasManagedService = await SettingsManager.shared.hasManagedGeminiService
+        if hasManagedService {
+            let functionURL = await SettingsManager.shared.managedGeminiFunctionURL
+            let anonKey = await SettingsManager.shared.supabaseAnonKey
+            return try await generateViaManagedService(
+                prompt: prompt,
+                maxTokens: maxTokens,
+                functionURL: functionURL,
+                anonKey: anonKey
+            )
+        }
+
+        throw GeminiError.missingAPIKey
+    }
+
+    private func generateDirect(prompt: String, maxTokens: Int, apiKey: String) async throws -> String {
         guard let url = URL(string: "\(baseURL)?key=\(apiKey)") else {
             throw GeminiError.invalidResponse
         }
@@ -118,6 +141,66 @@ final class GeminiService {
             let body = String(data: data, encoding: .utf8) ?? "<binary>"
             print("[Gemini] ❌ Decode error: \(error). Raw: \(body.prefix(300))")
             throw GeminiError.decodingError(error.localizedDescription)
+        }
+    }
+
+    private func generateViaManagedService(
+        prompt: String,
+        maxTokens: Int,
+        functionURL: URL?,
+        anonKey: String
+    ) async throws -> String {
+        guard let functionURL else { throw GeminiError.invalidResponse }
+
+        // Use the signed-in user's JWT when available — unlocks the 4× higher
+        // rate limit on the edge function and links requests to the user's account.
+        // Fall back to the anon key for unauthenticated sessions.
+        let bearerToken: String
+        if let userJWT = await SupabaseAuthService.shared.validAccessToken() {
+            bearerToken = userJWT
+        } else {
+            bearerToken = anonKey
+        }
+
+        let body: [String: Any] = [
+            "operation": "generate",
+            "prompt": prompt,
+            "maxTokens": maxTokens
+        ]
+
+        var request = URLRequest(url: functionURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(anonKey,              forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("ios",                forHTTPHeaderField: "x-client-platform")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw GeminiError.invalidResponse
+        }
+
+        print("[GeminiProxy] HTTP \(http.statusCode) — auth: \(bearerToken == anonKey ? "anon" : "user")")
+
+        guard http.statusCode == 200 else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "<binary>"
+            print("[GeminiProxy] ❌ Error body: \(errorBody)")
+            throw GeminiError.httpError(http.statusCode)
+        }
+
+        struct ProxyResponse: Decodable {
+            let text: String
+            let cached: Bool?
+        }
+
+        do {
+            let decoded = try JSONDecoder().decode(ProxyResponse.self, from: data)
+            print("[GeminiProxy] ✅ Response received (\(decoded.text.count) chars, cached: \(decoded.cached ?? false))")
+            return decoded.text
+        } catch {
+            throw GeminiError.decodingError("Failed to decode Supabase Gemini proxy response")
         }
     }
 
@@ -222,6 +305,88 @@ final class GeminiService {
         )
     }
 
+    // MARK: - Feature 4: Daily Reading Notification
+
+    /// Generates a short, personalized push notification for a daily Bible reading reminder.
+    /// Returns a (title, body) pair ready to pass to UNMutableNotificationContent.
+    func generateDailyReadingNotification(
+        planName: String?,
+        todaysReading: String?
+    ) async throws -> (title: String, body: String) {
+        try await checkEnabled()
+
+        let planContext: String
+        if let plan = planName, let reading = todaysReading {
+            planContext = "The user is following the \"\(plan)\" reading plan. Today's reading is \(reading)."
+        } else if let reading = todaysReading {
+            planContext = "Today's Bible reading is \(reading)."
+        } else {
+            planContext = "The user has no active reading plan."
+        }
+
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let prompt = """
+        You are writing a short, encouraging iOS push notification to remind a Christian to read their Bible today.
+        \(planContext)
+        Day of year: \(dayOfYear) (use this to vary the message — each day should feel fresh).
+
+        Return ONLY a JSON object with exactly two keys:
+        title — 3 to 6 words, punchy and warm (string)
+        body — one sentence of 8 to 15 words that motivates opening the Bible (string)
+
+        Rules:
+        - Sound human and warm, not robotic or generic
+        - Ground it in Scripture or the specific reading if one is given
+        - No hashtags, no emojis, no markdown
+        - Do not start body with "It's time" or "Don't forget"
+        """
+
+        let raw = try await generate(prompt: prompt, maxTokens: 120)
+        return try parseNotificationContent(from: raw)
+    }
+
+    private func parseNotificationContent(from raw: String) throws -> (title: String, body: String) {
+        struct Payload: Decodable {
+            let title: String
+            let body: String
+        }
+        var cleaned = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let s = cleaned.firstIndex(of: "{") { cleaned = String(cleaned[s...]) }
+        if let e = cleaned.lastIndex(of: "}") { cleaned = String(cleaned[...e]) }
+        guard let data = cleaned.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(Payload.self, from: data) else {
+            throw GeminiError.decodingError("Could not parse notification content JSON")
+        }
+        return (decoded.title, decoded.body)
+    }
+
+    // MARK: - Feature 5: Daily Insight Reflection
+
+    func generateDailyInsightReflection(topic: String, reference: String, verseText: String) async throws -> DailyInsightReflection {
+        try await checkEnabled()
+
+        let prompt = """
+        You are writing a brief daily Scripture insight for a Christian believer.
+        Return ONLY a valid JSON object with these exact keys:
+        reflection — a warm, biblically grounded reflection in 2 concise sentences
+        prayer_prompt — one sentence prayer prompt under 120 characters
+
+        Topic: \(topic)
+        Scripture: \(reference)
+        Verse text: "\(verseText)"
+
+        Keep the tone devotional, practical, and faithful to the verse itself.
+        Do not use markdown. Do not include any keys other than reflection and prayer_prompt.
+        """
+
+        let raw = try await generate(prompt: prompt, maxTokens: 220)
+        return try parseDailyInsightReflection(from: raw)
+    }
+
     // MARK: - Verse Reference Resolution
 
     /// Parse "John 3:16" or "1 Kings 17:1" → (book, chapter, verse)
@@ -265,6 +430,34 @@ final class GeminiService {
             results.append(SmartSearchVerse(reference: item.ref, text: verse.text, testament: testament))
         }
         return results
+    }
+
+    private func parseDailyInsightReflection(from raw: String) throws -> DailyInsightReflection {
+        struct Payload: Decodable {
+            let reflection: String
+            let prayer_prompt: String
+        }
+
+        let jsonString: String
+        if let start = raw.firstIndex(of: "{"), let end = raw.lastIndex(of: "}") {
+            jsonString = String(raw[start...end])
+        } else {
+            jsonString = raw
+        }
+
+        guard let data = jsonString.data(using: .utf8) else {
+            throw GeminiError.decodingError("Daily insight reflection was not valid UTF-8")
+        }
+
+        do {
+            let decoded = try JSONDecoder().decode(Payload.self, from: data)
+            return DailyInsightReflection(
+                reflection: decoded.reflection.trimmingCharacters(in: .whitespacesAndNewlines),
+                prayerPrompt: decoded.prayer_prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        } catch {
+            throw GeminiError.decodingError("Could not parse daily insight reflection JSON")
+        }
     }
 
     // MARK: - Parsing Helpers

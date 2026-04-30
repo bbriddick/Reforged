@@ -5,10 +5,12 @@ struct MemoryView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.isSidebarNavigation) var isSidebarNavigation
+    @AppStorage("hasSeenMemoryWalkthrough") private var hasSeenWalkthrough = false
     @State private var showAddVerse = false
     @State private var verseToDelete: MemoryVerse?
     @State private var showDeleteConfirmation = false
     @State private var showHowItWorks = false
+    @State private var showWalkthrough = false
     @State private var showMatchingGame = false
     @State private var showCompleteTheVerse = false
 
@@ -65,6 +67,11 @@ struct MemoryView: View {
         .sheet(isPresented: $showHowItWorks) {
             SpacedRepetitionInfoSheet()
         }
+        .sheet(isPresented: $showWalkthrough) {
+            MemoryWalkthroughSheet(onAddVerse: {
+                showAddVerse = true
+            })
+        }
         .sheet(isPresented: $showMatchingGame) {
             MatchingGameView()
                 .environmentObject(appState)
@@ -75,6 +82,12 @@ struct MemoryView: View {
         }
         .onAppear {
             averageMastery = computeAverageMastery(appState.memoryVerses)
+            if !hasSeenWalkthrough {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    showWalkthrough = true
+                    hasSeenWalkthrough = true
+                }
+            }
         }
         .onChange(of: appState.memoryVerses) { verses in
             averageMastery = computeAverageMastery(verses)
@@ -562,7 +575,7 @@ struct VerseCard: View {
                     .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.reforgedNavy.opacity(0.1))
+                    .background(Color.adaptiveChipBackground(colorScheme))
                     .clipShape(Capsule())
                 }
             }
@@ -586,7 +599,7 @@ struct SuggestedVersesSection: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var settingsManager = SettingsManager.shared
-    @State private var selectedCategory: String = SuggestedVersesData.categories[0]
+    @State private var selectedCategory: String = SuggestedVersesData.defaultCategory
 
     private var existingReferences: Set<String> {
         Set(appState.memoryVerses.map { $0.reference })
@@ -874,12 +887,12 @@ struct EmptyVersesView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color.reforgedNavy.opacity(0.1))
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.10) : Color.reforgedNavy.opacity(0.10))
                     .frame(width: 80, height: 80)
 
                 Image(systemName: "text.book.closed.fill")
                     .font(.system(size: 32))
-                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .foregroundStyle(Color.adaptivePrimaryIcon(colorScheme))
             }
 
             VStack(spacing: 8) {
@@ -932,7 +945,7 @@ struct AddVerseSheet: View {
     @State private var showVersePicker = false
 
     // Verse picker state
-    @State private var selectedBook: BibleBook = BibleData.books.first { $0.name == "John" } ?? BibleData.books[0]
+    @State private var selectedBook: BibleBook = BibleData.defaultBook
     @State private var selectedChapter: Int = 3
     @State private var selectedVerseStart: Int = 0
     @State private var selectedVerseEnd: Int = 0
@@ -1267,12 +1280,12 @@ struct PracticeModeCard: View {
             // Icon
             ZStack {
                 Circle()
-                    .fill(Color.reforgedNavy.opacity(0.1))
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.10) : Color.reforgedNavy.opacity(0.10))
                     .frame(width: 50, height: 50)
 
                 Image(systemName: mode.icon)
                     .font(.title3)
-                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .foregroundStyle(Color.adaptivePrimaryIcon(colorScheme))
             }
 
             // Text
@@ -1977,10 +1990,10 @@ struct PickerVerseCard: View {
                     Text("START")
                         .font(.caption2)
                         .fontWeight(.bold)
-                        .foregroundStyle(Color.reforgedNavy)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(Color.reforgedNavy.opacity(0.1))
+                        .background(Color.adaptiveChipBackground(colorScheme))
                         .clipShape(Capsule())
                 } else if isEnd && !isSingleSelection {
                     Text("END")
@@ -2114,6 +2127,247 @@ struct SpacedRepetitionInfoSheet: View {
                         .foregroundStyle(Color.reforgedGold)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Memory Walkthrough Sheet
+
+struct MemoryWalkthroughSheet: View {
+    var onAddVerse: (() -> Void)? = nil
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    @State private var currentPage = 0
+
+    struct WalkthroughPage {
+        let icon: String
+        let iconColor: Color
+        let iconBgColor: Color
+        let title: String
+        let body: String
+        let extras: [Extra]
+
+        struct Extra {
+            let icon: String
+            let color: Color
+            let label: String
+        }
+
+        init(icon: String, iconColor: Color, iconBgColor: Color,
+             title: String, body: String, extras: [Extra] = []) {
+            self.icon = icon
+            self.iconColor = iconColor
+            self.iconBgColor = iconBgColor
+            self.title = title
+            self.body = body
+            self.extras = extras
+        }
+    }
+
+    // Computed so it can reference colorScheme for dark-mode adaptive icon colours
+    private var pages: [WalkthroughPage] {
+        let navyIcon = Color.adaptivePrimaryIcon(colorScheme)
+        let navyIconBg = navyIcon.opacity(0.12)
+        return [
+            WalkthroughPage(
+                icon: "brain.head.profile",
+                iconColor: .reforgedCoral,
+                iconBgColor: Color.reforgedCoral.opacity(0.12),
+                title: "Scripture Memory",
+                body: "Hide God's Word in your heart using spaced repetition — the same science-backed technique used by memory champions and language learners worldwide.",
+                extras: []
+            ),
+            WalkthroughPage(
+                icon: "plus.circle.fill",
+                iconColor: navyIcon,
+                iconBgColor: navyIconBg,
+                title: "Add Your Verses",
+                body: "Tap the Add button to search for any Bible verse and add it to your memory list. Start with 1–3 verses you already feel comfortable with.",
+                extras: [
+                    .init(icon: "magnifyingglass", color: navyIcon, label: "Search by reference or keyword"),
+                    .init(icon: "book.fill", color: .reforgedGold, label: "Verses from your Bible reading auto-suggest"),
+                ]
+            ),
+            WalkthroughPage(
+                icon: "arrow.triangle.2.circlepath",
+                iconColor: .reforgedCoral,
+                iconBgColor: Color.reforgedCoral.opacity(0.12),
+                title: "Review When Due",
+                body: "The app tracks each verse individually. When one is due, it appears in Verses Due. Tap it to start a session — after each verse, rate how well you knew it.",
+                extras: [
+                    .init(icon: "arrow.counterclockwise.circle.fill", color: .reforgedCoral, label: "Again — resets to day 1"),
+                    .init(icon: "minus.circle.fill", color: .orange, label: "Hard — review again soon"),
+                    .init(icon: "checkmark.circle.fill", color: Color(red: 0.2, green: 0.7, blue: 0.4), label: "Good — interval grows"),
+                    .init(icon: "star.circle.fill", color: .blue, label: "Easy — you're mastering it"),
+                ]
+            ),
+            WalkthroughPage(
+                icon: "gamecontroller.fill",
+                iconColor: .reforgedGold,
+                iconBgColor: Color.reforgedGold.opacity(0.12),
+                title: "Practice With Games",
+                body: "Beyond reviews, two games help the verses stick. Both earn XP toward your level.",
+                extras: [
+                    .init(icon: "square.grid.2x2.fill", color: navyIcon, label: "Matching Game — pair references to text"),
+                    .init(icon: "pencil.and.outline", color: .reforgedGold, label: "Complete the Verse — fill in missing words"),
+                ]
+            ),
+            WalkthroughPage(
+                icon: "checkmark.seal.fill",
+                iconColor: Color(red: 0.2, green: 0.7, blue: 0.4),
+                iconBgColor: Color(red: 0.2, green: 0.7, blue: 0.4).opacity(0.12),
+                title: "One Verse at a Time",
+                body: "Start small. Add one verse, review it for a few days, then add another. Consistent short sessions beat marathon study every time. You've got this.",
+                extras: []
+            ),
+        ]
+    }
+
+    var isLastPage: Bool { currentPage == pages.count - 1 }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Dismiss handle
+            Capsule()
+                .fill(Color.adaptiveBorder(colorScheme))
+                .frame(width: 36, height: 4)
+                .padding(.top, 12)
+                .padding(.bottom, 4)
+
+            // Page content
+            TabView(selection: $currentPage) {
+                ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
+                    WalkthroughPageView(page: page, colorScheme: colorScheme)
+                        .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeInOut(duration: 0.25), value: currentPage)
+
+            // Dot indicator
+            HStack(spacing: 8) {
+                ForEach(0..<pages.count, id: \.self) { i in
+                    Capsule()
+                        .fill(i == currentPage
+                              ? Color.reforgedGold
+                              : Color.adaptiveBorder(colorScheme))
+                        .frame(width: i == currentPage ? 20 : 8, height: 8)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
+                }
+            }
+            .padding(.vertical, 12)
+
+            // Action buttons
+            VStack(spacing: 12) {
+                if isLastPage {
+                    Button {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            onAddVerse?()
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Add My First Verse")
+                        }
+                        .reforgedPrimaryButton()
+                    }
+
+                    Button("Maybe Later") {
+                        dismiss()
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                } else {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            currentPage += 1
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Next")
+                            Image(systemName: "arrow.right")
+                        }
+                        .reforgedPrimaryButton()
+                    }
+
+                    Button("Skip") {
+                        dismiss()
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 36)
+        }
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+    }
+}
+
+struct WalkthroughPageView: View {
+    let page: MemoryWalkthroughSheet.WalkthroughPage
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(page.iconBgColor)
+                    .frame(width: 100, height: 100)
+                Image(systemName: page.icon)
+                    .font(.system(size: 44))
+                    .foregroundStyle(page.iconColor)
+            }
+            .padding(.bottom, 28)
+
+            // Title + body
+            VStack(spacing: 12) {
+                Text(page.title)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .multilineTextAlignment(.center)
+
+                Text(page.body)
+                .font(.body)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .padding(.horizontal, 8)
+            }
+            .padding(.horizontal, 24)
+
+            // Extras list
+            if !page.extras.isEmpty {
+                VStack(spacing: 10) {
+                    ForEach(Array(page.extras.enumerated()), id: \.offset) { _, extra in
+                        HStack(spacing: 12) {
+                            Image(systemName: extra.icon)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(extra.color)
+                                .frame(width: 24)
+                            Text(extra.label)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                            Spacer()
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(Color.adaptiveCardBackground(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+            }
+
+            Spacer()
         }
     }
 }

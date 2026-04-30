@@ -134,19 +134,20 @@ struct TakeNoteView: View {
     @ObservedObject var readingState: BibleReadingState
     let onDismiss: () -> Void
 
-    @State private var noteText: String = ""
+    @State private var noteAttributedText = NSAttributedString()
     @State private var crossReferences: [String] = []
     @State private var showCrossRefPicker = false
-    @State private var crossRefBook = BibleData.books[0]
+    @State private var crossRefBook = BibleData.defaultBook
     @State private var crossRefChapter: Int = 1
     @State private var crossRefVerseStart: Int = 0
     @State private var crossRefVerseEnd: Int = 0
     @State private var showNoteShareSheet = false
-    @FocusState private var isNoteFocused: Bool
     @Environment(\.colorScheme) var colorScheme
     @ObservedObject private var settings = SettingsManager.shared
     @State private var studyPrompts: [String] = []
     @State private var isLoadingPrompts = false
+
+    private var noteText: String { noteAttributedText.string }
 
     // Convenience: first verse for single-verse operations
     private var primaryVerse: ParsedVerse? { verses.first }
@@ -248,17 +249,11 @@ struct TakeNoteView: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                        TextEditor(text: $noteText)
-                            .frame(minHeight: 120)
-                            .padding(12)
-                            .scrollContentBackground(.hidden)
-                            .background(Color.adaptiveCardBackground(colorScheme))
-                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                            )
-                            .focused($isNoteFocused)
+                        RichTextEditor(
+                            attributedText: $noteAttributedText,
+                            placeholder: "Add your note…",
+                            minHeight: 120
+                        )
 
                         // Cross-references section
                         VStack(alignment: .leading, spacing: 8) {
@@ -351,9 +346,11 @@ struct TakeNoteView: View {
                                     VStack(alignment: .leading, spacing: 8) {
                                         ForEach(studyPrompts, id: \.self) { prompt in
                                             Button {
-                                                let prefix = noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : "\n\n"
-                                                noteText += prefix + prompt
-                                                isNoteFocused = true
+                                                let current = noteAttributedText.string.trimmingCharacters(in: .whitespacesAndNewlines)
+                                                let prefix = current.isEmpty ? "" : "\n\n"
+                                                let mutable = NSMutableAttributedString(attributedString: noteAttributedText)
+                                                mutable.append(NSAttributedString.from(prefix + prompt))
+                                                noteAttributedText = mutable
                                             } label: {
                                                 Text(prompt)
                                                     .font(.caption)
@@ -392,7 +389,7 @@ struct TakeNoteView: View {
                                 Button {
                                     HapticManager.shared.lightImpact()
                                     readingState.removeNote(reference: noteReference)
-                                    noteText = ""
+                                    noteAttributedText = NSAttributedString()
                                     crossReferences = []
                                 } label: {
                                     Label("Delete", systemImage: "trash")
@@ -461,7 +458,8 @@ struct TakeNoteView: View {
                 }
             }
             .onAppear {
-                noteText = existingNote?.content ?? ""
+                let existing = existingNote?.content ?? ""
+                noteAttributedText = existing.isEmpty ? NSAttributedString() : NSAttributedString.from(existing)
                 crossReferences = existingNote?.crossReferences ?? []
             }
             .sheet(isPresented: $showCrossRefPicker) {

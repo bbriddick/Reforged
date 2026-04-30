@@ -1,0 +1,23 @@
+# ── Secrets ──────────────────────────────────────────────
+# Contains API keys. NEVER commit this file.
+Secrets.xcconfig
+
+# ── Xcode ────────────────────────────────────────────────
+.DS_Store
+*.xcuserstate
+*.xcworkspace/xcuserdata
+xcuserdata/
+DerivedData/
+.deriveddata/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# ── Swift Package Manager ─────────────────────────────────
+.build/
+Packages/
+*.resolved
+
+# ── CocoaPods ─────────────────────────────────────────────
+Pods/

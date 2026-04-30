@@ -227,17 +227,31 @@ struct VerseShareSheet: View {
                                     .font(.caption2)
                                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                                Link(attribution.name, destination: URL(string: attribution.profileURL)!)
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
+                                if let profileURL = URL(string: attribution.profileURL) {
+                                    Link(attribution.name, destination: profileURL)
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                } else {
+                                    Text(attribution.name)
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                                }
 
                                 Text("on")
                                     .font(.caption2)
                                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                                Link("Unsplash", destination: URL(string: "https://unsplash.com/?utm_source=reforged&utm_medium=referral")!)
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
+                                if let unsplashURL = URL(string: "https://unsplash.com/?utm_source=reforged&utm_medium=referral") {
+                                    Link("Unsplash", destination: unsplashURL)
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                } else {
+                                    Text("Unsplash")
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                                }
                             }
                         }
 

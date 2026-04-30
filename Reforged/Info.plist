@@ -21,6 +21,16 @@
 		<string>Roboto-Italic.ttf</string>
 		<string>SILEOT.ttf</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Reforged uses your camera so you can set a profile photo.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Reforged saves your verse images to your photo library so you can share them.</string>
+	<key>SupabaseAnonKey</key>
+	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0a2xoZ2hnbnBtbWp0em5waGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczODgyMTcsImV4cCI6MjA4Mjk2NDIxN30._zL6VW5SJzJnXKG8cPIsPS75697dfvUMk0pSjrN7UZo</string>
+	<key>SupabaseGeminiFunctionName</key>
+	<string>gemini-proxy</string>
+	<key>SupabaseURL</key>
+	<string>https://ztklhghgnpmmjtznphfs.supabase.co</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

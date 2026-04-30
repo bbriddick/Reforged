@@ -39,6 +39,64 @@ class AppState: ObservableObject {
     private let widgetInsightDefaultsKey = "reforged_widget_daily_insight"
     private let bibleSearchHistoryKey = "bible_search_history_v2"
 
+    private struct DailyInsightTheme {
+        let category: String
+        let titles: [String]
+        let promptLead: String
+        let prayerLead: String
+    }
+
+    private static let dailyInsightThemes: [DailyInsightTheme] = [
+        DailyInsightTheme(
+            category: "Faith",
+            titles: ["Walk by Faith", "Steady Faith for Today", "Trust What God Has Said"],
+            promptLead: "Let this verse anchor your confidence in what God has promised, even when you cannot yet see the outcome.",
+            prayerLead: "Ask God to strengthen your faith and help you trust His word today."
+        ),
+        DailyInsightTheme(
+            category: "Salvation",
+            titles: ["Rest in the Gospel", "Remember Grace", "Christ Is Enough"],
+            promptLead: "This passage calls you to rest again in the finished work of Christ and the grace God freely gives.",
+            prayerLead: "Thank God for salvation in Christ and ask Him to keep the gospel precious to you."
+        ),
+        DailyInsightTheme(
+            category: "Strength",
+            titles: ["Strength for the Day", "Courage in Christ", "God Will Sustain You"],
+            promptLead: "This verse reminds you that God does not leave His people to face weakness alone; He supplies strength for obedience.",
+            prayerLead: "Ask the Lord for strength, courage, and endurance in what is before you today."
+        ),
+        DailyInsightTheme(
+            category: "Peace",
+            titles: ["Christ Gives Peace", "Peace Over Anxiety", "A Settled Heart"],
+            promptLead: "Receive this Scripture as an invitation to bring anxious thoughts to God and let His peace steady your heart.",
+            prayerLead: "Ask God to quiet your anxious thoughts and guard your heart with His peace."
+        ),
+        DailyInsightTheme(
+            category: "Love",
+            titles: ["Abide in Love", "Loved by God", "Love That Overflows"],
+            promptLead: "This passage turns your eyes to the love of God and calls that love to shape the way you treat others.",
+            prayerLead: "Ask God to root you in His love and help you reflect it to others today."
+        ),
+        DailyInsightTheme(
+            category: "Hope",
+            titles: ["Hope for Today", "Hold Fast to Hope", "God Has Not Forgotten You"],
+            promptLead: "Let this verse lift your eyes beyond present difficulty and remind you that God is still working with purpose.",
+            prayerLead: "Ask the Lord to renew your hope and keep your eyes fixed on His promises."
+        ),
+        DailyInsightTheme(
+            category: "Wisdom",
+            titles: ["Wisdom for the Next Step", "Guidance from God's Word", "Walk in Wisdom"],
+            promptLead: "This Scripture invites you to seek God's wisdom instead of relying on your own understanding.",
+            prayerLead: "Ask God for wisdom, clarity, and obedience in the choices ahead of you."
+        ),
+        DailyInsightTheme(
+            category: "Trust",
+            titles: ["Trust Him Here Too", "Safe in God's Care", "Rest Under His Hand"],
+            promptLead: "This verse encourages you to place today's uncertainty into God's hands and rest in His faithful care.",
+            prayerLead: "Ask God to help you trust Him fully in the places where you feel uncertain."
+        )
+    ]
+
     private init() {
         // One-time migration: clean up old Supabase session data
         if !UserDefaults.standard.bool(forKey: "migration_v2_cloudkit_complete") {
@@ -279,30 +337,51 @@ class AppState: ObservableObject {
     }
 
     func syncToCloud() async {
-        guard appleSignIn.isSignedIn, user.onboardingCompleted, hasSyncedFromCloud else { return }
-        guard cloudKit.isCloudAvailable else { return }
+        // Apple Sign-In → CloudKit
+        if appleSignIn.isSignedIn, user.onboardingCompleted, hasSyncedFromCloud,
+           cloudKit.isCloudAvailable {
+            do {
+                try await cloudKit.saveProfile(user)
+                try await cloudKit.saveMemoryVerses(memoryVerses)
+                try await cloudKit.saveTrackProgress(tracks)
+                let highlights = Array(BibleReadingState.shared.highlights.values)
+                try await cloudKit.saveHighlights(highlights)
+                let notes = Array(BibleReadingState.shared.notes.values)
+                try await cloudKit.saveNotes(notes)
+                lastSyncDate = Date()
+                print("✅ CloudKit sync completed")
+            } catch {
+                print("❌ Error syncing to CloudKit: \(error)")
+            }
+        }
 
-        do {
-            // Sync profile
-            try await cloudKit.saveProfile(user)
-
-            // Sync memory verses
-            try await cloudKit.saveMemoryVerses(memoryVerses)
-
-            // Sync track progress
-            try await cloudKit.saveTrackProgress(tracks)
-
-            // Sync highlights and notes
-            let highlights = Array(BibleReadingState.shared.highlights.values)
-            try await cloudKit.saveHighlights(highlights)
-
-            let notes = Array(BibleReadingState.shared.notes.values)
-            try await cloudKit.saveNotes(notes)
-
+        // Supabase email/password sign-in
+        if SupabaseAuthService.shared.isSignedIn, user.onboardingCompleted {
+            await SupabaseAuthService.shared.upsertProfile(user)
             lastSyncDate = Date()
-            print("✅ Sync to cloud completed")
-        } catch {
-            print("❌ Error syncing to cloud: \(error)")
+        }
+    }
+
+    // MARK: - Supabase Sign-In
+
+    func signedInWithSupabase(userId: String, email: String) {
+        user.id      = userId
+        user.email   = email
+        user.loggedIn = true
+        Task {
+            if let remote = await SupabaseAuthService.shared.fetchProfile() {
+                if !remote.firstName.isEmpty   { user.firstName   = remote.firstName }
+                if !remote.displayName.isEmpty { user.displayName = remote.displayName }
+                if !remote.avatar.isEmpty      { user.avatar      = remote.avatar }
+                if !remote.goals.isEmpty       { user.goals       = remote.goals }
+                user.xp            = max(user.xp,            remote.xp)
+                user.streak        = max(user.streak,        remote.streak)
+                user.longestStreak = max(user.longestStreak, remote.longestStreak)
+                user.completedLessons = Array(
+                    Set(user.completedLessons).union(Set(remote.completedLessons))
+                )
+            }
+            // New user: profile will be upserted when onboarding completes
         }
     }
 
@@ -333,7 +412,10 @@ class AppState: ObservableObject {
                     user.completedLessons = Array(merged)
                 }
                 user.streakFreezes = max(user.streakFreezes, cloudProfile.streakFreezes)
-                if !cloudProfile.freezeUsedDates.isEmpty { user.freezeUsedDates = cloudProfile.freezeUsedDates }
+                if !cloudProfile.freezeUsedDates.isEmpty {
+                    user.freezeUsedDates = cloudProfile.freezeUsedDates
+                    ReadingStreakManager.shared.seedFrozenDates(cloudProfile.freezeUsedDates)
+                }
                 if !cloudProfile.activeDates.isEmpty {
                     let merged = Set(user.activeDates).union(Set(cloudProfile.activeDates))
                     user.activeDates = Array(merged)
@@ -447,7 +529,7 @@ class AppState: ObservableObject {
 
     // MARK: - Daily Insight
 
-    /// Load today's daily insight - checks if cached insight is from today, otherwise loads fresh
+    /// Load today's daily insight - checks if cached insight is from today, otherwise generates a fresh one
     private func loadTodaysDailyInsight() {
         let todayString = getTodayDateString()
 
@@ -463,11 +545,13 @@ class AppState: ObservableObject {
             }
         }
 
-        // Load fresh insight for today from bundled data
-        if let bundledInsight = BundledDataService.shared.getTodaysInsight() {
-            self.dailyInsight = BundledDataService.shared.convertToDailyInsight(bundledInsight)
-            syncWidgetInsight()
-            saveToLocalStorage()
+        let generatedInsight = generateDailyInsight(for: Date())
+        self.dailyInsight = generatedInsight
+        syncWidgetInsight()
+        saveToLocalStorage()
+
+        Task {
+            await enrichDailyInsightIfPossible(baseInsight: generatedInsight)
         }
     }
 
@@ -498,6 +582,67 @@ class AppState: ObservableObject {
             sharedDefaults?.removeObject(forKey: widgetInsightDefaultsKey)
         }
         reloadWidgets()
+    }
+
+    private func generateDailyInsight(for date: Date) -> DailyInsight {
+        let calendar = Calendar.current
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        let dateString = getTodayDateString()
+
+        let theme = Self.dailyInsightThemes[(dayOfYear - 1) % Self.dailyInsightThemes.count]
+        let verses = SuggestedVersesData.verses(for: theme.category)
+        let verseIndex = verses.isEmpty ? 0 : ((dayOfYear - 1) / Self.dailyInsightThemes.count) % verses.count
+        let verse = verses.indices.contains(verseIndex) ? verses[verseIndex] : SuggestedVersesData.allVerses[0]
+        let title = theme.titles[(dayOfYear - 1) % theme.titles.count]
+
+        return DailyInsight(
+            id: "dynamic-\(dateString)-\(theme.category.lowercased())-\(verse.reference)",
+            date: dateString,
+            title: title,
+            verse: verse.reference,
+            verseText: verse.text,
+            reflection: "\(theme.promptLead) \(referenceApplication(for: verse.reference))",
+            prayerPrompt: theme.prayerLead
+        )
+    }
+
+    private func enrichDailyInsightIfPossible(baseInsight: DailyInsight) async {
+        guard SettingsManager.shared.aiEnabled else { return }
+        guard !SettingsManager.shared.effectiveAPIKey.isEmpty else { return }
+
+        let topic = baseInsight.title
+
+        do {
+            let enriched = try await GeminiService.shared.generateDailyInsightReflection(
+                topic: topic,
+                reference: baseInsight.verse,
+                verseText: baseInsight.verseText
+            )
+
+            guard dailyInsight?.id == baseInsight.id else { return }
+
+            dailyInsight = DailyInsight(
+                id: baseInsight.id,
+                date: baseInsight.date,
+                title: baseInsight.title,
+                verse: baseInsight.verse,
+                verseText: baseInsight.verseText,
+                reflection: enriched.reflection.isEmpty ? baseInsight.reflection : enriched.reflection,
+                prayerPrompt: enriched.prayerPrompt.isEmpty ? baseInsight.prayerPrompt : enriched.prayerPrompt
+            )
+            syncWidgetInsight()
+            saveToLocalStorage()
+        } catch {
+            print("Daily insight AI enrichment skipped: \(error)")
+        }
+    }
+
+    private func referenceApplication(for reference: String) -> String {
+        if let verseNumber = Int(reference.components(separatedBy: ":").last?.components(separatedBy: "-").first ?? ""),
+           verseNumber == 1 {
+            return "Start the day at the top of this chapter and let the rest of the passage deepen the same truth."
+        }
+        return "Carry its truth with you today, then read the surrounding passage to see it in fuller context."
     }
 
     private func reloadWidgets() {
@@ -603,7 +748,7 @@ class AppState: ObservableObject {
         }
 
         let calendar = Calendar.current
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) else { return }
         let yesterdayStr = String(ISO8601DateFormatter().string(from: yesterday).prefix(10))
 
         if lastActive == yesterdayStr {
@@ -614,6 +759,7 @@ class AppState: ObservableObject {
                 user.streakFreezes -= 1
                 user.freezeUsedDates.append(yesterdayStr)
                 user.streak += 1
+                ReadingStreakManager.shared.noteFreezeUsed(on: yesterdayStr)
             } else {
                 user.streak = 1
             }

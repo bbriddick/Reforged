@@ -2,9 +2,6 @@ import SwiftUI
 
 struct AboutSection: View {
     @Environment(\.colorScheme) var colorScheme
-    @State private var showWhatsNew = false
-    @State private var showPrivacyPolicy = false
-    @State private var showTermsOfUse = false
 
     var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -150,6 +147,50 @@ struct AboutSection: View {
 
             SettingsDivider()
 
+            // Partner Ministry
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "cross.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.purple)
+
+                    Text("Partner Ministry")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Southland Christian Ministries")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    Text("Walk Talks podcast episodes are provided in partnership with Southland Christian Camp in Ringgold, LA (southlandcamp.org). Walk Talks is an extension of Southland's ministry, designed to strengthen believers of all ages in their daily walk with God.")
+                        .font(.caption2)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineSpacing(3)
+
+                    Button {
+                        UIApplication.shared.open(URL(string: "https://www.southlandcamp.org")!)
+                    } label: {
+                        Text("southlandcamp.org →")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.purple)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 2)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.purple.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.vertical, 10)
+
+            SettingsDivider()
+
             // AI Features
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
@@ -228,83 +269,6 @@ struct AboutSection: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.vertical, 10)
 
-            SettingsDivider()
-
-            // Links Section
-            SettingsNavigationRow(
-                title: "What's New",
-                subtitle: "See the latest features and improvements"
-            ) {
-                showWhatsNew = true
-            }
-
-            SettingsDivider()
-
-            SettingsNavigationRow(
-                title: "Privacy Policy",
-                subtitle: "How we handle your data"
-            ) {
-                showPrivacyPolicy = true
-            }
-
-            SettingsDivider()
-
-            SettingsNavigationRow(
-                title: "Terms of Use",
-                subtitle: "Terms and conditions for using Reforged"
-            ) {
-                showTermsOfUse = true
-            }
-
-            SettingsDivider()
-
-            // Contact/Support
-            SettingsNavigationRow(
-                title: "Contact Support",
-                subtitle: "Get help or send feedback"
-            ) {
-                openSupportEmail()
-            }
-
-            SettingsDivider()
-
-            // Buy Me a Coffee
-            Button {
-                if let url = URL(string: "https://buymeacoffee.com/reforgedapp") {
-                    UIApplication.shared.open(url)
-                }
-            } label: {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.reforgedGold.opacity(0.15))
-                            .frame(width: 36, height: 36)
-                        Text("☕")
-                            .font(.system(size: 18))
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Buy Me a Coffee")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                        Text("Support the developer")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                }
-                .padding(.vertical, 10)
-            }
-            .buttonStyle(.plain)
-
-            SettingsDivider()
-
             // Made with love
             VStack(spacing: 8) {
                 Text("Made with ❤️ for the glory of God")
@@ -325,8 +289,51 @@ struct AboutSection: View {
             .padding()
             .frame(maxWidth: .infinity)
         }
+    }
+}
+
+// MARK: - Help & Support View
+
+struct HelpAndSupportView: View {
+    @Environment(\.colorScheme) var colorScheme
+    @State private var showWhatsNew = false
+    @State private var showPrivacyPolicy = false
+    @State private var showTermsOfUse = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            listRow(icon: "sparkles", iconColor: Color.reforgedGold, title: "What's New", subtitle: "See the latest features and improvements") {
+                showWhatsNew = true
+            }
+            Divider().padding(.leading, 62)
+            listRow(icon: "lock.shield.fill", iconColor: Color.reforgedNavy, title: "Privacy Policy", subtitle: "How we handle your data") {
+                showPrivacyPolicy = true
+            }
+            Divider().padding(.leading, 62)
+            listRow(icon: "doc.text.fill", iconColor: Color.reforgedNavy, title: "Terms of Use", subtitle: "Terms and conditions for using Reforged") {
+                showTermsOfUse = true
+            }
+            Divider().padding(.leading, 62)
+            listRow(icon: "envelope.fill", iconColor: Color.reforgedNavy, title: "Contact Support", subtitle: "Get help or send feedback") {
+                openSupportEmail()
+            }
+            Divider().padding(.leading, 62)
+            externalRow(emoji: "☕", iconColor: Color.reforgedGold, title: "Support Reforged", subtitle: "Buy the developer a coffee") {
+                UIApplication.shared.open(URL(string: "https://buymeacoffee.com/reforgedapp")!)
+            }
+            Divider().padding(.leading, 62)
+            NavigationLink(destination: ScrollView { AboutSection().padding() }
+                .navigationTitle("About")
+                .navigationBarTitleDisplayMode(.inline)
+                .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            ) {
+                navRowLabel(icon: "info.circle.fill", iconColor: Color.gray, title: "About", subtitle: "Attributions, version info, and more")
+            }
+            .buttonStyle(.plain)
+        }
         .sheet(isPresented: $showWhatsNew) {
-            WhatsNewView()
+            WhatsNewView(isPresented: $showWhatsNew)
+                .environmentObject(SettingsManager.shared)
         }
         .sheet(isPresented: $showPrivacyPolicy) {
             PolicyView(title: "Privacy Policy", content: privacyPolicyContent)
@@ -336,20 +343,80 @@ struct AboutSection: View {
         }
     }
 
-    func openSupportEmail() {
-        let email = "support@reforgedapp.com"
+    @ViewBuilder
+    private func listRow(icon: String, iconColor: Color, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            navRowLabel(icon: icon, iconColor: iconColor, title: title, subtitle: subtitle, chevron: "chevron.right")
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func externalRow(emoji: String, iconColor: Color, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(iconColor.opacity(0.12))
+                        .frame(width: 32, height: 32)
+                    Text(emoji).font(.system(size: 16))
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func navRowLabel(icon: String, iconColor: Color, title: String, subtitle: String, chevron: String = "chevron.right") -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(iconColor.opacity(0.12))
+                    .frame(width: 32, height: 32)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(iconColor)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline).fontWeight(.medium)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            Spacer()
+            Image(systemName: chevron)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+    }
+
+    private func openSupportEmail() {
+        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+        let email = "support@reforgedapp.org"
         let subject = "Reforged Support Request"
         let body = "App Version: \(appVersion)\n\nDescribe your issue or feedback:\n\n"
-
-        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-
-        if let url = URL(string: "mailto:\(email)?subject=\(encodedSubject)&body=\(encodedBody)") {
+        let enc = { (s: String) in s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "" }
+        if let url = URL(string: "mailto:\(email)?subject=\(enc(subject))&body=\(enc(body))") {
             UIApplication.shared.open(url)
         }
     }
 
-    var privacyPolicyContent: String {
+    private var privacyPolicyContent: String {
         """
         Privacy Policy for Reforged
 
@@ -390,11 +457,11 @@ struct AboutSection: View {
 
         6. Contact Us
 
-        If you have questions about this Privacy Policy, please contact us at support@reforgedapp.com.
+        If you have questions about this Privacy Policy, please contact us at support@reforgedapp.org.
         """
     }
 
-    var termsOfUseContent: String {
+    private var termsOfUseContent: String {
         """
         Terms of Use for Reforged
 
@@ -437,88 +504,8 @@ struct AboutSection: View {
 
         9. Contact Us
 
-        If you have questions about these Terms, please contact us at support@reforgedapp.com.
+        If you have questions about these Terms, please contact us at support@reforgedapp.org.
         """
-    }
-}
-
-// MARK: - What's New View
-
-struct WhatsNewView: View {
-    @Environment(\.colorScheme) var colorScheme
-    @Environment(\.dismiss) var dismiss
-
-    let updates: [(version: String, date: String, features: [String])] = [
-        (
-            version: "1.0.0",
-            date: "February 2025",
-            features: [
-                "Initial release of Reforged",
-                "ESV Bible reader with paragraph formatting",
-                "Scripture memory system with spaced repetition",
-                "Verse highlighting and note-taking",
-                "Audio Bible playback",
-                "Cross-device sync with cloud backup",
-                "Customizable display settings",
-                "Daily reading reminders"
-            ]
-        )
-    ]
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    ForEach(updates, id: \.version) { update in
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Version \(update.version)")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                                Spacer()
-
-                                Text(update.date)
-                                    .font(.caption)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            }
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(update.features, id: \.self) { feature in
-                                    HStack(alignment: .top, spacing: 10) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.caption)
-                                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-
-                                        Text(feature)
-                                            .font(.subheadline)
-                                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                                    }
-                                }
-                            }
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                }
-                .padding()
-            }
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-            .navigationTitle("What's New")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                }
-            }
-        }
     }
 }
 

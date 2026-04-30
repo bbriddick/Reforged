@@ -21,6 +21,7 @@ struct SuggestedVerse: Identifiable {
 struct SuggestedVersesData {
 
     static let categories = ["Faith", "Salvation", "Strength", "Peace", "Love", "Hope", "Wisdom", "Trust"]
+    static let defaultCategory = categories.first ?? "Faith"
 
     static let allVerses: [SuggestedVerse] = [
         // Faith

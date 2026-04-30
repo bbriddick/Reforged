@@ -151,7 +151,10 @@ class AppleSignInService: NSObject, ObservableObject {
             return
         }
 
-        let url = URL(string: "https://appleid.apple.com/auth/token")!
+        guard let url = URL(string: "https://appleid.apple.com/auth/token") else {
+            print("⚠️ Invalid Apple token exchange URL")
+            return
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -198,7 +201,10 @@ class AppleSignInService: NSObject, ObservableObject {
             return
         }
 
-        let url = URL(string: "https://appleid.apple.com/auth/revoke")!
+        guard let url = URL(string: "https://appleid.apple.com/auth/revoke") else {
+            print("⚠️ Invalid Apple token revocation URL")
+            return
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")

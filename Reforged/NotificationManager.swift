@@ -138,6 +138,86 @@ class NotificationManager: NSObject, ObservableObject {
         }
     }
 
+    // MARK: - Personalized Daily Reading Notifications (Gemini)
+
+    private let personalizedLastDateKey = "notification_personalized_last_date"
+
+    /// Generates personalized reading reminder content via Gemini, then re-schedules
+    /// the reading reminders with that content. Runs at most once per day.
+    @MainActor func schedulePersonalizedReadingReminders() {
+        let settings = SettingsManager.shared
+        guard settings.notificationsEnabled, settings.readingPlanReminders else { return }
+        guard settings.aiEnabled else {
+            // AI off — fall back to static reminders already scheduled
+            return
+        }
+
+        // Throttle: only generate once per calendar day
+        let lastDate = UserDefaults.standard.object(forKey: personalizedLastDateKey) as? Date
+        if let last = lastDate, Calendar.current.isDateInToday(last) { return }
+
+        Task {
+            // Gather reading plan context
+            let planContext = await Self.activePlanContext()
+
+            do {
+                let (title, body) = try await GeminiService.shared.generateDailyReadingNotification(
+                    planName: planContext.planName,
+                    todaysReading: planContext.todaysReading
+                )
+
+                let center = UNUserNotificationCenter.current()
+                // Remove static reading reminders so we can replace them with personalised ones
+                let readingIDs = (1...7).map { "reading-reminder-\($0)" }
+                center.removePendingNotificationRequests(withIdentifiers: readingIDs)
+
+                let baseComponents = Calendar.current.dateComponents([.hour, .minute], from: settings.dailyReminderTime)
+                let readingDays = settings.readingReminderDays.isEmpty ? Set(1...7) : settings.readingReminderDays
+
+                let content = UNMutableNotificationContent()
+                content.title = title
+                content.body = body
+                content.sound = .default
+                content.userInfo = ["action": "open-bible"]
+
+                for weekday in readingDays.sorted() {
+                    var components = baseComponents
+                    components.weekday = weekday
+                    let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                    let request = UNNotificationRequest(
+                        identifier: "reading-reminder-\(weekday)",
+                        content: content,
+                        trigger: trigger
+                    )
+                    try? await center.add(request)
+                }
+
+                UserDefaults.standard.set(Date(), forKey: personalizedLastDateKey)
+            } catch {
+                // Gemini unavailable — static reminders from scheduleDailyReminder() remain
+                print("[NotificationManager] Gemini notification generation failed: \(error)")
+            }
+        }
+    }
+
+    /// Returns the name and today's reading reference for the user's most-progressed active plan.
+    private static func activePlanContext() async -> (planName: String?, todaysReading: String?) {
+        await MainActor.run {
+            let service = ReadingPlanService.shared
+            // Find the plan the user has made the most progress in
+            let active = BibleReadingPlans.all.filter { service.hasStarted($0.id) }
+            guard let plan = active.max(by: { service.currentDay(for: $0.id) < service.currentDay(for: $1.id) }) else {
+                return (nil, nil)
+            }
+            let dayIndex = service.currentDay(for: plan.id) - 1
+            guard dayIndex >= 0, dayIndex < plan.entries.count else {
+                return (plan.name, nil)
+            }
+            let entry = plan.entries[dayIndex]
+            return (plan.name, entry.isReflectionDay ? "a reflection day" : entry.scriptureReference)
+        }
+    }
+
     /// Update notification content based on what the user has already done today
     @MainActor func rescheduleWithSmartContent() {
         let settings = SettingsManager.shared
@@ -182,6 +262,36 @@ class NotificationManager: NSObject, ObservableObject {
     }
 
     /// Schedule a local notification (for testing)
+    @MainActor func schedulePodcastNotification(episodeCount: Int, title: String) {
+        let settings = SettingsManager.shared
+        guard settings.podcastNewEpisodeNotifications, settings.notificationsEnabled else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = episodeCount == 1 ? "New Walk Talks Episode" : "\(episodeCount) New Walk Talks Episodes"
+        content.body = episodeCount == 1 ? title : "Open the Discipleship tab to listen."
+        content.sound = .default
+
+        let components = Calendar.current.dateComponents([.hour, .minute], from: settings.podcastNotificationTime)
+        let now = Date()
+        let trigger: UNNotificationTrigger
+        if let fire = Calendar.current.nextDate(after: now, matching: components, matchingPolicy: .nextTime), fire > now {
+            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        } else {
+            trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+        }
+
+        let request = UNNotificationRequest(
+            identifier: "podcast-new-episode-\(Int(Date().timeIntervalSince1970))",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Podcast notification error: \(error.localizedDescription)")
+            }
+        }
+    }
+
     func scheduleLocalNotification(title: String, body: String, delay: TimeInterval = 5) {
         let content = UNMutableNotificationContent()
         content.title = title

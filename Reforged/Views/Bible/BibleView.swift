@@ -26,7 +26,7 @@ struct BibleView: View {
     @Environment(\.isSidebarNavigation) var isSidebarNavigation
 
     // Navigation state
-    @State private var selectedBook: BibleBook = BibleData.books.first { $0.name == "John" } ?? BibleData.books[0]
+    @State private var selectedBook: BibleBook = BibleData.defaultBook
     @State private var selectedChapter: Int = 3
     @State private var showUnifiedNavigation = false
     @State private var showSearchPanel = false
@@ -84,6 +84,7 @@ struct BibleView: View {
     /// Verse number to scroll to on the next loadChapter() call. nil = scroll to top.
     @State private var pendingScrollVerse: Int? = nil
     @State private var pendingNavigationVerse: Int? = nil
+    private let chapterTopScrollID = "chapter-top"
 
     // Verse interaction state
     @State private var selectedVerseForAction: ParsedVerse?
@@ -102,6 +103,10 @@ struct BibleView: View {
     @StateObject private var streakManager = ReadingStreakManager.shared
     @State private var showMarkAsReadPrompt = false
     @State private var hasScrolledToBottom = false
+
+    // Translation compatibility alerts (TR = NT only, WLC = OT only)
+    @State private var showTRTestamentAlert = false
+    @State private var showWLCTestamentAlert = false
 
     var isChapterRead: Bool {
         appState.user.chaptersRead.contains("\(selectedBook.name) \(selectedChapter)")
@@ -179,7 +184,7 @@ struct BibleView: View {
         // Start audio if not already loaded
         if !audioPlayer.isPlaying && audioPlayer.currentTime == 0 && audioPlayer.currentBook.isEmpty {
             audioPlayer.updateFromSettings()
-            audioPlayer.play(book: selectedBook.name, chapter: selectedChapter)
+            audioPlayer.play(book: selectedBook.name, chapter: selectedChapter, translation: currentTranslation)
             showAudioPlayer = true
         }
         showNowPlaying = true
@@ -192,29 +197,35 @@ struct BibleView: View {
     }
 
     private func onTranslationSelect(_ newTranslation: BibleTranslation) {
+        // TR only covers the NT — prompt before switching if user is in an OT passage.
+        if newTranslation == .tr && selectedBook.testament == .old {
+            showTRTestamentAlert = true
+            return
+        }
+        // WLC only covers the OT — prompt before switching if user is in an NT passage.
+        if newTranslation == .wlc && selectedBook.testament == .new {
+            showWLCTestamentAlert = true
+            return
+        }
+        applyTranslationSwitch(newTranslation)
+    }
+
+    /// Commits a translation change, optionally redirecting to a different book/chapter first.
+    private func applyTranslationSwitch(_ newTranslation: BibleTranslation,
+                                        redirectTo book: BibleBook? = nil,
+                                        chapter: Int = 1) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
             settingsManager.defaultTranslation = newTranslation
             currentTranslation = newTranslation
 
-            // Clear the chapter cache — cached entries are per-translation,
-            // but clearing everything on switch prevents any stale data showing.
+            // Clear the chapter cache so no stale data bleeds through.
             chapterCache.removeAll()
             prefetchTasks.values.forEach { $0.cancel() }
             prefetchTasks.removeAll()
 
-            // Redirect to a compatible book when switching to an original-language version.
-            // TR (Greek NT) only covers the New Testament — jump to Matthew 1 from any OT book.
-            // WLC (Hebrew OT) only covers the Old Testament — jump to Genesis 1 from any NT book.
-            if newTranslation == .tr && selectedBook.testament == .old {
-                if let matthew = BibleData.books.first(where: { $0.name == "Matthew" }) {
-                    selectedBook = matthew
-                    selectedChapter = 1
-                }
-            } else if newTranslation == .wlc && selectedBook.testament == .new {
-                if let genesis = BibleData.books.first(where: { $0.name == "Genesis" }) {
-                    selectedBook = genesis
-                    selectedChapter = 1
-                }
+            if let redirectBook = book {
+                selectedBook = redirectBook
+                selectedChapter = chapter
             }
 
             loadChapter()
@@ -659,7 +670,9 @@ struct BibleView: View {
                     addToRecentPassages()
                 },
                 onSelectVerse: { verseNum in
-                    let targetVerseID = "\(selectedBook.name) \(selectedChapter):\(verseNum)"
+                    let targetVerseID = verseNum <= 1
+                        ? chapterTopScrollID
+                        : "\(selectedBook.name) \(selectedChapter):\(verseNum)"
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         scrollToVerseID = targetVerseID
                     }
@@ -674,6 +687,28 @@ struct BibleView: View {
             NowPlayingView(audioPlayer: audioPlayer)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.hidden)
+        }
+        // TR is the Greek New Testament — alert when user is in an OT passage
+        .alert("New Testament Only", isPresented: $showTRTestamentAlert) {
+            Button("Go to Matthew 1") {
+                if let matthew = BibleData.books.first(where: { $0.name == "Matthew" }) {
+                    applyTranslationSwitch(.tr, redirectTo: matthew, chapter: 1)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The Textus Receptus (TR) is the Greek New Testament and only covers Matthew through Revelation. Would you like to go to Matthew 1?")
+        }
+        // WLC is the Hebrew Old Testament — alert when user is in an NT passage
+        .alert("Old Testament Only", isPresented: $showWLCTestamentAlert) {
+            Button("Go to Genesis 1") {
+                if let genesis = BibleData.books.first(where: { $0.name == "Genesis" }) {
+                    applyTranslationSwitch(.wlc, redirectTo: genesis, chapter: 1)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The Westminster Leningrad Codex (WLC) is the Hebrew Old Testament and only covers Genesis through Malachi. Would you like to go to Genesis 1?")
         }
         .toolbar {
             if isSidebarNavigation {
@@ -750,11 +785,13 @@ struct BibleView: View {
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: onAudioTap) {
-                        Label("Audio", systemImage: audioPlayer.isPlaying ? "speaker.wave.2.fill" : "headphones")
+                if currentTranslation.supportsAudio {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: onAudioTap) {
+                            Label("Audio", systemImage: audioPlayer.isPlaying ? "speaker.wave.2.fill" : "headphones")
+                        }
+                        .tint(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? Color.reforgedGold : nil)
                     }
-                    .tint(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? Color.reforgedGold : nil)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -841,10 +878,19 @@ struct BibleView: View {
             refreshChapterDerivedState()
         }
         .onChange(of: olService.trReady) { isReady in
-            if isReady && currentTranslation == .tr { loadChapter() }
+            if isReady && currentTranslation == .tr {
+                // Cancel any in-flight prefetch tasks so they don't block the retry
+                prefetchTasks.values.forEach { $0.cancel() }
+                prefetchTasks.removeAll()
+                loadChapter()
+            }
         }
         .onChange(of: olService.wlcReady) { isReady in
-            if isReady && currentTranslation == .wlc { loadChapter() }
+            if isReady && currentTranslation == .wlc {
+                prefetchTasks.values.forEach { $0.cancel() }
+                prefetchTasks.removeAll()
+                loadChapter()
+            }
         }
         // Sync FormattingPanel changes back to SettingsManager so they persist across restarts
         .onChange(of: readingSettings.fontSize) { newValue in
@@ -928,6 +974,7 @@ struct BibleView: View {
                 chapter: selectedChapter,
                 canonical: canonicalReference
             )
+            .id(chapterTopScrollID)
             if readingSettings.verseByVerse {
                 verseByVerseContent
             } else {
@@ -1210,8 +1257,16 @@ struct BibleView: View {
         segmentsByReference.reserveCapacity(verses.count)
 
         for verse in verses {
-            if let segments = WordsOfChristData.shared.segments(for: verse.reference) {
+            guard let segments = WordsOfChristData.shared.segments(for: verse.reference) else { continue }
+            if currentTranslation == .kjv {
+                // KJV: segment text matches the WOC JSON exactly — use as-is
                 segmentsByReference[verse.reference] = segments
+            } else {
+                // Non-KJV: WOC data uses KJV English text which would show instead of the
+                // translated verse. Fall back to whole-verse red when any segment is Christ's words.
+                if segments.contains(where: { $0.isRed }) {
+                    segmentsByReference[verse.reference] = [WOCSegment(text: verse.text, isRed: true)]
+                }
             }
         }
 
@@ -1269,30 +1324,32 @@ struct BibleView: View {
         pendingScrollVerse = nil  // consume
         pendingNavigationVerse = nil
 
-        let restoreVerse = coldRestore || ((pendingVerse ?? 0) > 1) || explicitNavigationVerse != nil
+        let shouldScrollToSpecificVerse = coldRestore
+            || ((pendingVerse ?? 0) > 1)
+            || ((explicitNavigationVerse ?? 0) > 1)
         let savedVerse   = explicitNavigationVerse ?? (coldRestore ? readingSettings.lastVerse : (pendingVerse ?? 1))
         if coldRestore { isRestoringPosition = false }
-        let topVerseID = "\(book) \(chapter):1"
-        if !restoreVerse {
+        let chapterTopTargetID = chapterTopScrollID
+        if !shouldScrollToSpecificVerse {
             firstVisibleVerseNumber = 1
-            immediateScrollToVerseID = topVerseID
+            immediateScrollToVerseID = chapterTopTargetID
         }
 
         // ── Cache hit: apply instantly so the swipe animation plays with content ──
         let cacheKey = ChapterCacheKey(book: book, chapter: chapter, translation: translation)
         if let cached = chapterCache[cacheKey] {
-            if restoreVerse { chapterTransitionOpacity = 0 }
+            if shouldScrollToSpecificVerse { chapterTransitionOpacity = 0 }
             verses = cached.verses
             canonicalReference = cached.canonical
             refreshChapterDerivedState()
             isLoading = false
-            if restoreVerse {
+            if shouldScrollToSpecificVerse {
                 let verseID = "\(book) \(chapter):\(savedVerse)"
                 // Defer scroll assignment to the next run-loop cycle so SwiftUI
                 // has finished processing the verse state update above.
                 Task { @MainActor in immediateScrollToVerseID = verseID }
             } else {
-                Task { @MainActor in immediateScrollToVerseID = topVerseID }
+                Task { @MainActor in immediateScrollToVerseID = chapterTopTargetID }
             }
             // Kick off neighbour pre-fetch so next swipe is also instant
             prefetchNeighborChapters(book: book, chapter: chapter, translation: translation)
@@ -1308,18 +1365,23 @@ struct BibleView: View {
                 guard !Task.isCancelled else { return }
 
                 await MainActor.run {
-                    if restoreVerse { chapterTransitionOpacity = 0 }
+                    if shouldScrollToSpecificVerse { chapterTransitionOpacity = 0 }
                     verses = entry.verses
                     canonicalReference = entry.canonical
                     refreshChapterDerivedState()
                     isLoading = false
-                    // Store in cache for future instant navigation
-                    chapterCache[cacheKey] = entry
-                    if restoreVerse {
+                    // Don't cache an empty OL result — it means the JSON wasn't ready yet.
+                    // The trReady/wlcReady onChange observer will call loadChapter() again
+                    // once the data is loaded, and that call needs a cache miss to re-fetch.
+                    let isStaleOLResult = translation.isOriginalLanguage && entry.verses.isEmpty
+                    if !isStaleOLResult {
+                        chapterCache[cacheKey] = entry
+                    }
+                    if shouldScrollToSpecificVerse {
                         let verseID = "\(book) \(chapter):\(savedVerse)"
                         Task { @MainActor in immediateScrollToVerseID = verseID }
                     } else {
-                        Task { @MainActor in immediateScrollToVerseID = topVerseID }
+                        Task { @MainActor in immediateScrollToVerseID = chapterTopTargetID }
                     }
                 }
 
@@ -1433,7 +1495,13 @@ struct BibleView: View {
                     return
                 }
                 guard !Task.isCancelled else { return }
-                chapterCache[key] = entry
+                // Mirror the isStaleOLResult guard from loadChapter(): never cache an empty
+                // OL chapter — the JSON data may not be loaded yet, and an empty cache entry
+                // causes the next navigation to show a blank chapter with no retry path.
+                let isStaleOL = translation.isOriginalLanguage && entry.verses.isEmpty
+                if !isStaleOL {
+                    chapterCache[key] = entry
+                }
                 prefetchTasks[key] = nil
             }
         }
@@ -1442,6 +1510,9 @@ struct BibleView: View {
     func markChapterAsRead() {
         // Record in streak manager
         streakManager.recordChapterRead(book: selectedBook.name, chapter: selectedChapter)
+
+        // Auto-complete any reading plan day whose chapters are now all read
+        ReadingPlanService.shared.notifyChapterRead(bookName: selectedBook.name, chapter: selectedChapter)
 
         // Also record in app state for XP
         _ = appState.markChapterRead(book: selectedBook.name, chapter: selectedChapter)
@@ -1970,7 +2041,7 @@ struct BibleTopBar: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Book + Chapter navigation button — always fixed to its natural size
+            // Book + Chapter navigation button — truncates if space is tight
             Button(action: onNavigationTap) {
                 HStack(spacing: 6) {
                     Image(systemName: "text.book.closed.fill")
@@ -1994,7 +2065,7 @@ struct BibleTopBar: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .shadow(color: Color.black.opacity(0.06), radius: 4, y: 2)
             }
-            .fixedSize()                          // ← never shrinks or clips
+            .buttonStyle(NoBlobButtonStyle())
 
             // Translation menu — full label when space allows, compact pill otherwise
             translationMenu
@@ -2012,6 +2083,8 @@ struct BibleTopBar: View {
                     .clipShape(Circle())
                     .shadow(color: Color.black.opacity(0.06), radius: 4, y: 2)
             }
+            .buttonStyle(NoBlobButtonStyle())
+            .layoutPriority(1)
 
             // Audio button
             Button(action: onAudioTap) {
@@ -2027,6 +2100,8 @@ struct BibleTopBar: View {
                         .foregroundStyle(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? .white : iconColor)
                 }
             }
+            .buttonStyle(NoBlobButtonStyle())
+            .layoutPriority(1)
 
             // Formatting button
             Button(action: onFormatTap) {
@@ -2039,9 +2114,12 @@ struct BibleTopBar: View {
                     .clipShape(Circle())
                     .shadow(color: Color.black.opacity(0.06), radius: 4, y: 2)
             }
+            .buttonStyle(NoBlobButtonStyle())
+            .layoutPriority(1)
         }
         .padding(.horizontal, horizontalSizeClass == .regular ? 20 : 16)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
         .background(Color.adaptiveBackground(colorScheme))
     }
 

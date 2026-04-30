@@ -129,7 +129,7 @@ struct SettingsSectionView: View {
         case .ai:
             AISettingsSection()
         case .about:
-            AboutSection()
+            HelpAndSupportView()
         }
     }
 }

@@ -79,6 +79,7 @@ struct HomeView: View {
                         // Left column
                         VStack(spacing: ReforgedTheme.spacingL) {
                             DailyInsightCard()
+                            TodayReadingCard()
                             ContinueLearningSection()
                         }
                         .frame(maxWidth: .infinity)
@@ -95,6 +96,8 @@ struct HomeView: View {
                 } else {
                     // iPhone: Single column
                     DailyInsightCard()
+
+                    TodayReadingCard()
 
                     ContinueLearningSection()
 
@@ -164,25 +167,138 @@ struct BibleProgressCard: View {
     }
 }
 
+// MARK: - Today's Reading Card
+
+struct TodayReadingCard: View {
+    @StateObject private var service = ReadingPlanService.shared
+    @EnvironmentObject var appState: AppState
+    @Environment(\.colorScheme) var colorScheme
+
+    /// First plan that has been started but not yet finished.
+    private var activePlan: BibleReadingPlan? {
+        BibleReadingPlans.all.first { service.hasStarted($0.id) && !service.isComplete($0.id) }
+    }
+
+    private var currentEntry: BiblePlanEntry? {
+        guard let plan = activePlan else { return nil }
+        let day = service.currentDay(for: plan.id)
+        return plan.entries.first { $0.day == day }
+    }
+
+    var body: some View {
+        if let plan = activePlan, let entry = currentEntry {
+            cardContent(plan: plan, entry: entry)
+        }
+    }
+
+    @ViewBuilder
+    private func cardContent(plan: BibleReadingPlan, entry: BiblePlanEntry) -> some View {
+        let isComplete = service.isDayComplete(entry.day, planId: plan.id)
+
+        HStack(spacing: 14) {
+            // Plan icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(plan.accentColor.opacity(0.15))
+                    .frame(width: 48, height: 48)
+                Image(systemName: plan.iconName)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(plan.accentColor)
+            }
+
+            // Title + subtitle
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Today's Reading")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(plan.accentColor)
+                Text(entry.scriptureReference)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(isComplete
+                                     ? Color.adaptiveTextSecondary(colorScheme)
+                                     : Color.adaptiveText(colorScheme))
+                    .lineLimit(1)
+                Text("Day \(entry.day) · \(plan.name)")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            // Right action
+            if isComplete {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(plan.accentColor)
+            } else if entry.isReflectionDay {
+                Button {
+                    service.toggleDay(entry.day, planId: plan.id)
+                } label: {
+                    Image(systemName: "circle")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.5))
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    openReading(entry: entry)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "book.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Open")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(plan.accentColor)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(plan.accentColor.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(14)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: ReforgedTheme.cardShadow, radius: ReforgedTheme.cardShadowRadius, y: ReforgedTheme.cardShadowY)
+    }
+
+    private func openReading(entry: BiblePlanEntry) {
+        guard let navRef = entry.navRef else { return }
+        appState.queueBibleVerseNavigation(navRef)
+        NotificationCenter.default.post(name: .switchTab, object: nil, userInfo: ["tab": 2])
+    }
+}
+
 // MARK: - Buy Me a Coffee Button
 
 struct BuyMeACoffeeButton: View {
     private let coffeeYellow = Color(red: 1.0, green: 0.867, blue: 0.0)
+    private let supportURL = URL(string: "https://www.buymeacoffee.com/reforgedapp")
 
     var body: some View {
-        Link(destination: URL(string: "https://www.buymeacoffee.com/reforgedapp")!) {
-            HStack(spacing: 10) {
-                Text("☕")
-                    .font(.title3)
-                Text("Support Reforged")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+        Group {
+            if let supportURL {
+                Link(destination: supportURL) {
+                    HStack(spacing: 10) {
+                        Text("☕")
+                            .font(.title3)
+                        Text("Support Reforged")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundStyle(Color(red: 0.1, green: 0.06, blue: 0))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(coffeeYellow)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            } else {
+                EmptyView()
             }
-            .foregroundStyle(Color(red: 0.1, green: 0.06, blue: 0))
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(coffeeYellow)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .padding(.top, 4)
         .padding(.bottom, 8)
@@ -964,6 +1080,11 @@ struct DailyInsightCard: View {
                     .background(Color.adaptiveBackground(colorScheme))
                     .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
 
+                    Text(insight.reflection)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineSpacing(3)
+
                     // Action buttons row
                     HStack(spacing: 10) {
                         // Read more — primary capsule button
@@ -977,7 +1098,10 @@ struct DailyInsightCard: View {
                                 NotificationCenter.default.post(
                                     name: .navigateToBibleVerse,
                                     object: nil,
-                                    userInfo: [AppNotificationUserInfoKey.reference: insight.verse]
+                                    userInfo: [
+                                        AppNotificationUserInfoKey.reference: insight.verse,
+                                        AppNotificationUserInfoKey.translation: settingsManager.defaultTranslation.rawValue
+                                    ]
                                 )
                             }
                         } label: {
@@ -1313,12 +1437,9 @@ struct QuickActionsSection: View {
 
 struct ShareGospelCard: View {
     @Environment(\.colorScheme) var colorScheme
-    @State private var showDetail = false
 
     var body: some View {
-        Button {
-            showDetail = true
-        } label: {
+        NavigationLink(destination: ShareGospelDetailView()) {
             VStack(alignment: .leading, spacing: 14) {
                 // Header
                 HStack(spacing: 12) {
@@ -1371,9 +1492,6 @@ struct ShareGospelCard: View {
             .gamifiedStatCard(accent: .reforgedGold)
         }
         .buttonStyle(.plain)
-        .sheet(isPresented: $showDetail) {
-            ShareGospelDetailView()
-        }
     }
 }
 
@@ -1388,7 +1506,6 @@ struct GospelSection {
 
 struct ShareGospelDetailView: View {
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.dismiss) var dismiss
 
     private let sections: [GospelSection] = [
         GospelSection(
@@ -1418,80 +1535,70 @@ struct ShareGospelDetailView: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: ReforgedTheme.spacingL) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: ReforgedTheme.spacingL) {
 
-                    // Intro banner
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Salvation is not about being good enough. It is about trusting what Jesus already did.")
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.9))
-                            .italic()
-                    }
-                    .padding(ReforgedTheme.spacingM)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .heroCard()
+                // Intro banner
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Salvation is not about being good enough. It is about trusting what Jesus already did.")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .italic()
+                }
+                .padding(ReforgedTheme.spacingM)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .heroCard()
 
-                    // Four P sections
-                    ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
-                        GospelSectionCard(index: index + 1, section: section, onNavigate: navigateToVerse)
-                    }
+                // Four P sections
+                ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
+                    GospelSectionCard(index: index + 1, section: section, onNavigate: navigateToVerse)
+                }
 
-                    // Closing prompt
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "message.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color.reforgedGold)
-                            Text("How to Close the Conversation")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                        }
-
-                        Text("\"Would you like to call on the Lord right now? I can walk you through a prayer, but what matters is not the words — it's the genuine belief in your heart.\"")
-                            .font(.body)
-                            .italic()
+                // Closing prompt
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "message.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.reforgedGold)
+                        Text("How to Close the Conversation")
+                            .font(.headline)
+                            .fontWeight(.bold)
                             .foregroundStyle(Color.adaptiveText(colorScheme))
-                            .padding(12)
-                            .background(Color.reforgedGold.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
-                    .padding(ReforgedTheme.spacingM)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusLarge))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusLarge)
-                            .stroke(Color.reforgedGold.opacity(0.2), lineWidth: 1)
-                    )
+
+                    Text("\"Would you like to call on the Lord right now? I can walk you through a prayer, but what matters is not the words — it's the genuine belief in your heart.\"")
+                        .font(.body)
+                        .italic()
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .padding(12)
+                        .background(Color.reforgedGold.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                .padding()
+                .padding(ReforgedTheme.spacingM)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusLarge))
+                .overlay(
+                    RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusLarge)
+                        .stroke(Color.reforgedGold.opacity(0.2), lineWidth: 1)
+                )
             }
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-            .navigationTitle("Share the Gospel")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                }
-            }
+            .padding()
         }
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .navigationTitle("Share the Gospel")
+        .navigationBarTitleDisplayMode(.large)
     }
 
     private func navigateToVerse(_ reference: String) {
-        dismiss()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            NotificationCenter.default.post(
-                name: .switchTab,
-                object: nil,
-                userInfo: [AppNotificationUserInfoKey.tab: 2]
-            )
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+        // Switch to the Bible tab, leaving this view on the stack so the user
+        // can return to ShareGospelDetailView by tapping the Discipleship tab.
+        NotificationCenter.default.post(
+            name: .switchTab,
+            object: nil,
+            userInfo: [AppNotificationUserInfoKey.tab: 2]
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             NotificationCenter.default.post(
                 name: .navigateToBibleVerse,
                 object: nil,

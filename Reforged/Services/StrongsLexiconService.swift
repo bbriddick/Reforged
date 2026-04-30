@@ -398,7 +398,7 @@ class StrongsLexiconService {
         // Check if we already have most verses cached
         let uncachedCount = (1...totalVerses).filter { verse in
             let key = "\(bookName)_\(chapter)_\(verse)"
-            return verseInterlinearCache[key] == nil || verseInterlinearCache[key]!.isStale
+            return verseInterlinearCache[key]?.isStale ?? true
         }.count
 
         // Only fetch if >50% of verses are uncached

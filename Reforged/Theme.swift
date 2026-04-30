@@ -466,6 +466,16 @@ struct HeroCardStyle: ViewModifier {
     }
 }
 
+/// Applied broadly to remove the system gray blob behind custom-background buttons
+/// while still providing a press-state opacity effect.
+struct NoBlobButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.75 : 1.0)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
 struct ReforgedPrimaryButtonStyle: ViewModifier {
     func body(content: Content) -> some View {
         content

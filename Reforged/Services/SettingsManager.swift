@@ -171,6 +171,18 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    @Published var podcastNewEpisodeNotifications: Bool {
+        didSet { save(podcastNewEpisodeNotifications, forKey: Keys.podcastNewEpisodeNotifications) }
+    }
+
+    @Published var podcastNotificationTime: Date {
+        didSet {
+            let components = Calendar.current.dateComponents([.hour, .minute], from: podcastNotificationTime)
+            save(components.hour ?? 9, forKey: Keys.podcastNotificationHour)
+            save(components.minute ?? 0, forKey: Keys.podcastNotificationMinute)
+        }
+    }
+
     // MARK: - AI Settings
 
     @Published var aiEnabled: Bool {
@@ -179,6 +191,40 @@ class SettingsManager: ObservableObject {
 
     @Published var geminiAPIKey: String {
         didSet { save(geminiAPIKey, forKey: Keys.geminiAPIKey) }
+    }
+
+    /// The key actually sent to the Gemini API.
+    /// Gemini keys should never be embedded in a shipped client app, so this
+    /// always comes from the user's local settings.
+    var effectiveAPIKey: String {
+        geminiAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Public Supabase project URL used to reach the managed Gemini proxy.
+    var supabaseProjectURL: URL? {
+        guard let raw = bundledConfigValue(for: "SupabaseURL") else { return nil }
+        return URL(string: raw)
+    }
+
+    /// Public anon key used to invoke Supabase Edge Functions from the app.
+    var supabaseAnonKey: String {
+        bundledConfigValue(for: "SupabaseAnonKey") ?? ""
+    }
+
+    var supabaseGeminiFunctionName: String {
+        bundledConfigValue(for: "SupabaseGeminiFunctionName") ?? "gemini-proxy"
+    }
+
+    var managedGeminiFunctionURL: URL? {
+        guard let projectURL = supabaseProjectURL else { return nil }
+        return projectURL
+            .appendingPathComponent("functions")
+            .appendingPathComponent("v1")
+            .appendingPathComponent(supabaseGeminiFunctionName)
+    }
+
+    var hasManagedGeminiService: Bool {
+        managedGeminiFunctionURL != nil && !supabaseAnonKey.isEmpty
     }
 
     // MARK: - Sync Preferences
@@ -233,6 +279,9 @@ class SettingsManager: ObservableObject {
         static let memoryReminderDays = "settings.memoryReminderDays"
         static let lessonReminders = "settings.lessonReminders"
         static let notificationsEnabled = "settings.notificationsEnabled"
+        static let podcastNewEpisodeNotifications = "settings.podcastNewEpisodeNotifications"
+        static let podcastNotificationHour = "settings.podcastNotificationHour"
+        static let podcastNotificationMinute = "settings.podcastNotificationMinute"
         static let syncEnabled = "settings.syncEnabled"
         static let dayStartHour = "settings.dayStartHour"
         static let aiEnabled = "settings.aiEnabled"
@@ -299,10 +348,20 @@ class SettingsManager: ObservableObject {
         self.memoryReminderDays = savedMemoryDays.map { Set($0) } ?? Set(1...7)
         self.lessonReminders = UserDefaults.standard.object(forKey: Keys.lessonReminders) as? Bool ?? true
         self.notificationsEnabled = UserDefaults.standard.object(forKey: Keys.notificationsEnabled) as? Bool ?? true
+        self.podcastNewEpisodeNotifications = UserDefaults.standard.object(forKey: Keys.podcastNewEpisodeNotifications) as? Bool ?? false
+        let podcastHour = UserDefaults.standard.object(forKey: Keys.podcastNotificationHour) as? Int ?? 9
+        let podcastMinute = UserDefaults.standard.object(forKey: Keys.podcastNotificationMinute) as? Int ?? 0
+        var podcastComponents = DateComponents()
+        podcastComponents.hour = podcastHour
+        podcastComponents.minute = podcastMinute
+        self.podcastNotificationTime = Calendar.current.date(from: podcastComponents) ?? {
+            var c = DateComponents(); c.hour = 9; c.minute = 0
+            return Calendar.current.date(from: c) ?? Date()
+        }()
 
         // Load AI Settings
         self.aiEnabled = UserDefaults.standard.object(forKey: Keys.aiEnabled) as? Bool ?? true
-        self.geminiAPIKey = UserDefaults.standard.string(forKey: Keys.geminiAPIKey) ?? "AIzaSyB8cR2dNpsEHUVq6jN9hm2GsjGHf-A3YWI"
+        self.geminiAPIKey = UserDefaults.standard.string(forKey: Keys.geminiAPIKey) ?? ""
 
         // Load Sync Settings
         self.syncEnabled = UserDefaults.standard.object(forKey: Keys.syncEnabled) as? Bool ?? true
@@ -314,6 +373,13 @@ class SettingsManager: ObservableObject {
         syncToBibleReadingSettings()
         // Apply the loaded theme so ThemeManager reflects persisted value on startup
         updateTheme()
+    }
+
+    private func bundledConfigValue(for key: String) -> String? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains("$(") else { return nil }
+        return trimmed
     }
 
     // MARK: - Helper Methods
@@ -422,6 +488,7 @@ class SettingsManager: ObservableObject {
         memoryReminderDays = Set(1...7)
         lessonReminders = true
         notificationsEnabled = true
+        podcastNewEpisodeNotifications = false
     }
 
     func resetAllSettings() {

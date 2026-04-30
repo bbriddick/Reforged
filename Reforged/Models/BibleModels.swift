@@ -322,6 +322,14 @@ struct BibleBook: Identifiable {
 // MARK: - Bible Data
 
 struct BibleData {
+    static let fallbackBook = BibleBook(
+        id: "jhn",
+        name: "John",
+        abbreviation: "John",
+        chapters: 21,
+        testament: .new
+    )
+
     static let books: [BibleBook] = [
         // Old Testament
         BibleBook(id: "gen", name: "Genesis", abbreviation: "Gen", chapters: 50, testament: .old),
@@ -392,6 +400,10 @@ struct BibleData {
         BibleBook(id: "jud", name: "Jude", abbreviation: "Jude", chapters: 1, testament: .new),
         BibleBook(id: "rev", name: "Revelation", abbreviation: "Rev", chapters: 22, testament: .new)
     ]
+
+    static var defaultBook: BibleBook {
+        books.first(where: { $0.name == "John" }) ?? books.first ?? fallbackBook
+    }
 
     static var oldTestament: [BibleBook] {
         books.filter { $0.testament == .old }

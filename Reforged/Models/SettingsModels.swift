@@ -191,6 +191,10 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         !isOriginalLanguage
     }
 
+    var supportsAudio: Bool {
+        self == .esv || self == .kjv
+    }
+
     var fullName: String {
         switch self {
         case .esv: return "English Standard Version"
@@ -285,7 +289,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case notifications = "Notifications"
     case account = "Account & Data"
     case ai = "AI Features"
-    case about = "About"
+    case about = "Help & Support"
 
     var id: String { rawValue }
 
@@ -298,7 +302,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .notifications: return "bell.fill"
         case .account: return "person.circle.fill"
         case .ai: return "sparkles"
-        case .about: return "info.circle.fill"
+        case .about: return "questionmark.circle.fill"
         }
     }
 
@@ -311,7 +315,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .notifications: return .reforgedCoral
         case .account: return .reforgedNavy
         case .ai: return .reforgedGold
-        case .about: return .gray
+        case .about: return .blue
         }
     }
 }
