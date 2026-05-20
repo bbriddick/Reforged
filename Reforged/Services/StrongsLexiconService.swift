@@ -69,7 +69,7 @@ class StrongsLexiconService {
                 strongsNumber: detail.number,
                 transliteration: detail.transliteration,
                 pronunciation: detail.phonetics,
-                strongsDefinition: detail.strong_definition.trimmingCharacters(in: .whitespacesAndNewlines),
+                strongsDefinition: stripHTML(detail.strong_definition.trimmingCharacters(in: .whitespacesAndNewlines)),
                 detailedDefinition: isHebrew
                     ? stripHTML(detail.bdb_definition)
                     : stripHTML(detail.thayers_definition),
@@ -303,7 +303,7 @@ class StrongsLexiconService {
                 strongsNumber: detail.number,
                 transliteration: detail.transliteration,
                 pronunciation: detail.phonetics,
-                strongsDefinition: detail.strong_definition.trimmingCharacters(in: .whitespacesAndNewlines),
+                strongsDefinition: stripHTML(detail.strong_definition.trimmingCharacters(in: .whitespacesAndNewlines)),
                 detailedDefinition: isHebrew
                     ? stripHTML(detail.bdb_definition)
                     : stripHTML(detail.thayers_definition),

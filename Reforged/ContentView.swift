@@ -14,85 +14,75 @@ struct ContentView: View {
     @Environment(\.requestReview) private var requestReview
 
     var body: some View {
-        ZStack {
-            Group {
-                if !appState.user.onboardingCompleted {
-                    OnboardingFlowView()
-                        .preferredColorScheme(themeManager.colorScheme)
-                        // No .id() here — theme changes must NOT reset onboarding state
-                } else {
-                    AdaptiveNavigationView(selectedTab: $selectedTab)
-                        .preferredColorScheme(themeManager.colorScheme)
-                        .id(themeManager.currentMode) // Safe to reset main nav on theme change
-                }
-            }
-            .environmentObject(appState)
-            .environmentObject(themeManager)
-            .environmentObject(settingsManager)
-            .onChange(of: scenePhase) { newPhase in
-                if newPhase == .active {
-                    // Re-apply Focus Shield blocking rules every time app foregrounds
-                    FocusBlockingService.shared.applyBlockingIfEnabled()
-                    // Refresh daily insight when app becomes active
-                    appState.refreshDailyInsightIfNeeded()
-                    // Update notification content based on today's progress
-                    NotificationManager.shared.rescheduleWithSmartContent()
-                    // Regenerate personalized reading reminders (once per day via Gemini)
-                    NotificationManager.shared.schedulePersonalizedReadingReminders()
-                    // Check if freeze encouragement should show
-                    checkFreezeEncouragement()
-                    // Track app opens and show donation prompt at milestone
-                    checkDonationPrompt()
-                    // Show What's New on first launch after an update
-                    checkWhatsNew()
-                    // Pull latest data from CloudKit every time the app foregrounds,
-                    // throttled to at most once every 2 minutes to avoid excessive API calls.
-                    let twoMinutesAgo = Date().addingTimeInterval(-120)
-                    if appState.lastSyncDate.map({ $0 < twoMinutesAgo }) ?? true {
-                        Task { await appState.performFullSync() }
-                    }
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .switchTab)) { notification in
-                if let tab = notification.userInfo?[AppNotificationUserInfoKey.tab] as? Int {
-                    selectedTab = tab
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .navigateToBibleVerse)) { notification in
-                if let reference = notification.userInfo?[AppNotificationUserInfoKey.reference] as? String {
-                    let rawTranslation = notification.userInfo?[AppNotificationUserInfoKey.translation] as? String
-                    let translation = rawTranslation.flatMap(BibleTranslation.init(rawValue:))
-                    appState.queueBibleVerseNavigation(reference, translation: translation)
-                }
-                selectedTab = 2
-            }
-
-            // Full-screen freeze encouragement overlay
-            if showFreezeEncouragement {
-                FreezeEncouragementView(isPresented: $showFreezeEncouragement)
-                    .environmentObject(appState)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
-
-            // Donation prompt overlay
-            if showDonationPrompt {
-                DonationPromptView(
-                    isPresented: $showDonationPrompt,
-                    message: donationPromptMessage
-                )
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
-
-            // What's New overlay (shown once per app version update)
-            if showWhatsNew {
-                WhatsNewView(isPresented: $showWhatsNew)
-                    .environmentObject(settingsManager)
-                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
+        Group {
+            if !appState.user.onboardingCompleted {
+                OnboardingFlowView()
+                    .preferredColorScheme(themeManager.colorScheme)
+                    // No .id() here — theme changes must NOT reset onboarding state
+            } else {
+                AdaptiveNavigationView(selectedTab: $selectedTab)
+                    .preferredColorScheme(themeManager.colorScheme)
+                    .id(themeManager.currentMode) // Safe to reset main nav on theme change
             }
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showFreezeEncouragement)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showDonationPrompt)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showWhatsNew)
+        .environmentObject(appState)
+        .environmentObject(themeManager)
+        .environmentObject(settingsManager)
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active {
+                // Re-apply Focus Shield blocking rules every time app foregrounds
+                FocusBlockingService.shared.applyBlockingIfEnabled()
+                // Refresh daily insight when app becomes active
+                appState.refreshDailyInsightIfNeeded()
+                // Update notification content based on today's progress
+                NotificationManager.shared.rescheduleWithSmartContent()
+                // Regenerate personalized reading reminders (once per day via Gemini)
+                NotificationManager.shared.schedulePersonalizedReadingReminders()
+                // Refresh weekly check-in notifications from Supabase
+                Task { await WeeklyCheckinService.fetchAndSchedule() }
+                // Check if freeze encouragement should show
+                checkFreezeEncouragement()
+                // Track app opens and show donation prompt at milestone
+                checkDonationPrompt()
+                // Show What's New on first launch after an update
+                checkWhatsNew()
+                // Pull latest data from CloudKit every time the app foregrounds,
+                // throttled to at most once every 2 minutes to avoid excessive API calls.
+                let twoMinutesAgo = Date().addingTimeInterval(-120)
+                if appState.lastSyncDate.map({ $0 < twoMinutesAgo }) ?? true {
+                    Task { await appState.performFullSync() }
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchTab)) { notification in
+            if let tab = notification.userInfo?[AppNotificationUserInfoKey.tab] as? Int {
+                selectedTab = tab
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToBibleVerse)) { notification in
+            if let reference = notification.userInfo?[AppNotificationUserInfoKey.reference] as? String {
+                let rawTranslation = notification.userInfo?[AppNotificationUserInfoKey.translation] as? String
+                let translation = rawTranslation.flatMap(BibleTranslation.init(rawValue:))
+                appState.queueBibleVerseNavigation(reference, translation: translation)
+            }
+            selectedTab = 2
+        }
+        .sheet(isPresented: $showFreezeEncouragement) {
+            FreezeEncouragementView(isPresented: $showFreezeEncouragement)
+                .environmentObject(appState)
+                .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showDonationPrompt) {
+            DonationPromptView(
+                isPresented: $showDonationPrompt,
+                message: donationPromptMessage
+            )
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showWhatsNew) {
+            WhatsNewView(isPresented: $showWhatsNew)
+                .environmentObject(settingsManager)
+        }
     }
 
     private func checkFreezeEncouragement() {
@@ -174,15 +164,7 @@ struct FreezeEncouragementView: View {
     @State private var purchaseSuccess = false
 
     var body: some View {
-        ZStack {
-            // Dimmed background
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    dismissView()
-                }
-
-            // Card
+        ScrollView {
             VStack(spacing: 24) {
                 // Warning icon
                 ZStack {
@@ -334,13 +316,10 @@ struct DonationPromptView: View {
     @Binding var isPresented: Bool
     let message: String
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.openURL) var openURL
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
-                .onTapGesture { dismissView() }
-
+        ScrollView {
             VStack(spacing: 24) {
                 // Coffee icon
                 ZStack {
@@ -376,7 +355,7 @@ struct DonationPromptView: View {
                 VStack(spacing: 10) {
                     Button {
                         if let url = URL(string: "https://buymeacoffee.com/reforgedapp") {
-                            UIApplication.shared.open(url)
+                            openURL(url)
                         }
                         dismissView()
                     } label: {
@@ -480,8 +459,8 @@ struct SidebarNavigationView: View {
             }
             .listStyle(.sidebar)
             .navigationTitle("")
-            #if os(macOS)
-            .frame(minWidth: 200)
+            #if targetEnvironment(macCatalyst)
+            .frame(minWidth: 220)
             #endif
         } detail: {
             // Detail view based on selection

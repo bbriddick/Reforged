@@ -7,130 +7,145 @@ struct SettingsView: View {
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.isSidebarNavigation) var isSidebarNavigation
 
-    @State private var expandedSections: Set<SettingsSection> = [.display]
-
     var body: some View {
         Group {
             if isSidebarNavigation {
-                settingsContent
+                settingsRoot
             } else {
                 NavigationStack {
-                    settingsContent
-                        .navigationTitle("Settings")
-                        .navigationBarTitleDisplayMode(.large)
+                    settingsRoot
                 }
             }
         }
     }
 
-    var settingsContent: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ForEach(SettingsSection.allCases) { section in
-                    SettingsSectionView(
-                        section: section,
-                        isExpanded: expandedSections.contains(section),
-                        toggle: { toggleSection(section) }
-                    )
-                }
-            }
-            .padding(.vertical)
-            .frame(maxWidth: horizontalSizeClass == .regular ? 700 : .infinity)
-            .frame(maxWidth: .infinity)
-        }
-        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-    }
-
-    private func toggleSection(_ section: SettingsSection) {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            if expandedSections.contains(section) {
-                expandedSections.remove(section)
-            } else {
-                expandedSections.insert(section)
-            }
-        }
-    }
-}
-
-// MARK: - Settings Section View
-
-struct SettingsSectionView: View {
-    let section: SettingsSection
-    let isExpanded: Bool
-    let toggle: () -> Void
-
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Section Header
-            Button(action: toggle) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(section.color.opacity(0.15))
-                            .frame(width: 36, height: 36)
-
-                        Image(systemName: section.icon)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(section.color)
+    var settingsRoot: some View {
+        List {
+            // Profile / Account header — taps into Account settings
+            Section {
+                NavigationLink {
+                    SettingsDetailPage(title: SettingsSection.account.rawValue) {
+                        AccountSettingsSection()
                     }
+                } label: {
+                    accountRow
+                }
+            }
 
-                    Text(section.rawValue)
+            Section("Reading") {
+                sectionNavRow(.display)
+                sectionNavRow(.bibleReading)
+                sectionNavRow(.audio)
+            }
+
+            Section("Learning") {
+                sectionNavRow(.memory)
+            }
+
+            Section("Personalization") {
+                sectionNavRow(.notifications)
+                sectionNavRow(.ai)
+            }
+
+            Section {
+                sectionNavRow(.about)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Settings")
+    }
+
+    private var accountRow: some View {
+        HStack(spacing: 14) {
+            if AppleSignInService.shared.isSignedIn {
+                ProfileAvatarView(size: 46)
+            } else {
+                ZStack {
+                    Circle()
+                        .fill(Color.reforgedNavy.opacity(0.12))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: "person.circle")
+                        .font(.title2)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                if AppleSignInService.shared.isSignedIn {
+                    Text(appState.user.displayName.isEmpty
+                         ? appState.user.firstName
+                         : appState.user.displayName)
                         .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    Text(AppleSignInService.shared.userEmail ?? "Apple ID")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.secondary)
+                } else {
+                    Text("Sign in to Reforged")
+                        .font(.headline)
+                    Text("Sync progress across devices")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.secondary)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(Color.adaptiveCardBackground(colorScheme))
             }
-            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 6)
+    }
 
-            // Section Content
-            if isExpanded {
-                VStack(spacing: 0) {
-                    sectionContent
+    private func sectionNavRow(_ section: SettingsSection) -> some View {
+        NavigationLink {
+            SettingsDetailPage(title: section.rawValue) {
+                sectionContent(section)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(section.color.opacity(0.15))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: section.icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(section.color)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.adaptiveBackground(colorScheme))
+                Text(section.rawValue)
             }
-
-            // Divider
-            Divider()
-                .background(Color.adaptiveBorder(colorScheme))
+            .padding(.vertical, 2)
         }
     }
 
     @ViewBuilder
-    var sectionContent: some View {
+    private func sectionContent(_ section: SettingsSection) -> some View {
         switch section {
-        case .display:
-            DisplaySettingsSection()
-        case .bibleReading:
-            BibleReadingSettingsSection()
-        case .audio:
-            AudioSettingsSection()
-        case .memory:
-            MemorySettingsSection()
-        case .notifications:
-            NotificationSettingsSection()
-        case .account:
-            AccountSettingsSection()
-        case .ai:
-            AISettingsSection()
-        case .about:
-            HelpAndSupportView()
+        case .display:      DisplaySettingsSection()
+        case .bibleReading: BibleReadingSettingsSection()
+        case .audio:        AudioSettingsSection()
+        case .memory:       MemorySettingsSection()
+        case .notifications: NotificationSettingsSection()
+        case .account:      AccountSettingsSection()
+        case .ai:           AISettingsSection()
+        case .about:        HelpAndSupportView()
         }
+    }
+}
+
+// MARK: - Settings Detail Page
+
+struct SettingsDetailPage<Content: View>: View {
+    let title: String
+    let content: Content
+    @Environment(\.colorScheme) var colorScheme
+
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        ScrollView {
+            content.padding()
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
     }
 }
 

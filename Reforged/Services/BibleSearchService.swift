@@ -12,7 +12,6 @@ final class BibleSearchService {
         guard !normalizedQuery.isEmpty else { return [] }
 
         var combinedResults: [BibleSearchResult] = []
-
         for translation in translations where translation.isTextSearchable {
             do {
                 let results = try await search(query: normalizedQuery,
@@ -23,8 +22,41 @@ final class BibleSearchService {
                 print("BibleSearchService: search failed for \(translation.rawValue): \(error)")
             }
         }
-
         return sortResults(combinedResults)
+    }
+
+    /// Runs exact-text search and Antioch semantic search in parallel.
+    /// Exact matches come first; semantic-only results follow, tagged isSemantic = true.
+    func unifiedSearch(query: String,
+                       translations: [BibleTranslation],
+                       pageSize: Int = 50) async -> [BibleSearchResult] {
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return [] }
+
+        let primaryTranslation = translations.first(where: { $0.isTextSearchable }) ?? .esv
+
+        async let antiochTask = AntiochSearchService.shared.search(query: normalized)
+        async let textTask: [BibleSearchResult] = {
+            var results: [BibleSearchResult] = []
+            for t in translations where t.isTextSearchable {
+                do { results.append(contentsOf: try await search(query: normalized, translation: t, pageSize: pageSize)) }
+                catch { print("BibleSearchService: \(t.rawValue) failed: \(error)") }
+            }
+            return results
+        }()
+
+        let (antiochPairs, textResults) = await (try? antiochTask, textTask)
+
+        let textRefs = Set(textResults.map(\.reference))
+        let semanticResults = (antiochPairs ?? [])
+            .filter { !textRefs.contains($0.reference) }
+            .prefix(pageSize)
+            .map { BibleSearchResult(reference: $0.reference,
+                                     content: $0.preview,
+                                     translation: primaryTranslation,
+                                     isSemantic: true) }
+
+        return sortResults(textResults) + semanticResults
     }
 
     func search(query: String,
@@ -41,7 +73,7 @@ final class BibleSearchService {
         case .csb, .nkjv, .nasb, .rvr1960:
             return try await ApiBibleService.shared.searchPassages(query: query, translation: translation, pageSize: pageSize)
                 .map { BibleSearchResult(reference: $0.reference, content: $0.text, translation: translation) }
-        case .tr, .wlc:
+        case .tr, .sblgnt, .wlc:
             return []
         }
     }

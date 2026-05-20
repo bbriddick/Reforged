@@ -148,7 +148,7 @@ struct AISettingsSection: View {
                     featureRow(
                         icon: "sparkles",
                         title: "Smart Search",
-                        description: "Switch to Smart mode in the search panel and ask natural-language questions like 'verses about forgiveness' or 'the Greek word for love'."
+                        description: "Search understands natural-language questions like \"What does the Bible say about forgiveness?\" — AI automatically enhances relevant searches alongside verse results."
                     )
                 }
                 .padding(.vertical, 12)

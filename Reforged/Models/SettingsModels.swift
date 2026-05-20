@@ -179,13 +179,14 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
     case nasb = "NASB"
     case rvr1960 = "RVR1960"
     case tr = "TR"
+    case sblgnt = "SBLGNT"
     case wlc = "WLC"
 
     var id: String { rawValue }
 
-    /// True for Textus Receptus and Westminster Leningrad Codex — hidden unless the setting is enabled.
+    /// True for original-language texts — hidden unless the setting is enabled.
     var isOriginalLanguage: Bool {
-        self == .tr || self == .wlc
+        self == .tr || self == .wlc || self == .sblgnt
     }
 
     var isTextSearchable: Bool {
@@ -206,6 +207,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .nasb: return "New American Standard Bible"
         case .rvr1960: return "Reina-Valera 1960"
         case .tr: return "Textus Receptus (Greek NT)"
+        case .sblgnt: return "SBL Greek New Testament"
         case .wlc: return "Westminster Leningrad Codex (Hebrew OT)"
         }
     }
@@ -218,7 +220,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
     var languageCode: String {
         switch self {
         case .rvr1960: return "es"
-        case .tr: return "grc"
+        case .tr, .sblgnt: return "grc"
         case .wlc: return "he"
         default: return "en"
         }
@@ -234,6 +236,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .nasb: return "© 1995 The Lockman Foundation"
         case .rvr1960: return "© 1960 Sociedades Bíblicas en América Latina; © Renovado 1988 Sociedades Bíblicas Unidas"
         case .tr: return "Public Domain"
+        case .sblgnt: return "© 2010 Society of Biblical Literature and Logos Bible Software"
         case .wlc: return "Public Domain"
         }
     }
@@ -256,6 +259,8 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
             return "Scripture quotations marked NET are taken from the NET Bible® copyright ©1996–2017 by Biblical Studies Press, L.L.C. All rights reserved. Quoted by permission. Please visit netbible.com for more information."
         case .tr:
             return "The Textus Receptus (1550 Stephanus edition) is in the public domain."
+        case .sblgnt:
+            return "The SBL Greek New Testament. Copyright © 2010 by the Society of Biblical Literature and Logos Bible Software. Licensed under a Creative Commons Attribution 4.0 International License. License details: sblgnt.com/license/"
         case .wlc:
             return "The Westminster Leningrad Codex is provided by the J. Alan Groves Center for Advanced Biblical Research."
         }
@@ -272,6 +277,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .nasb:   return "NAS"
         case .rvr1960: return "RVR"
         case .tr:     return "TR"
+        case .sblgnt: return "SBL"
         case .wlc:    return "WLC"
         }
     }
@@ -280,7 +286,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
     var usesApiBible: Bool {
         switch self {
         case .csb, .nkjv, .nasb, .rvr1960: return true
-        case .esv, .kjv, .net, .tr, .wlc: return false
+        case .esv, .kjv, .net, .tr, .sblgnt, .wlc: return false
         }
     }
 }

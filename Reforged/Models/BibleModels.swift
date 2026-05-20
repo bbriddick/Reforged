@@ -23,15 +23,18 @@ struct BibleSearchResult: Identifiable, Equatable {
     let content: String
     let translation: BibleTranslation
     let metadata: String?
+    let isSemantic: Bool
 
     init(reference: String,
          content: String,
          translation: BibleTranslation = .esv,
-         metadata: String? = nil) {
+         metadata: String? = nil,
+         isSemantic: Bool = false) {
         self.reference = reference
         self.content = content
         self.translation = translation
         self.metadata = metadata
+        self.isSemantic = isSemantic
     }
 
     var id: String { "\(translation.rawValue):\(reference)" }

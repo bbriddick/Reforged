@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AboutSection: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.openURL) var openURL
 
     var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -172,7 +173,7 @@ struct AboutSection: View {
                         .lineSpacing(3)
 
                     Button {
-                        UIApplication.shared.open(URL(string: "https://www.southlandcamp.org")!)
+                        if let url = URL(string: "https://www.southlandcamp.org") { openURL(url) }
                     } label: {
                         Text("southlandcamp.org →")
                             .font(.caption2)
@@ -296,6 +297,7 @@ struct AboutSection: View {
 
 struct HelpAndSupportView: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.openURL) var openURL
     @State private var showWhatsNew = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfUse = false
@@ -319,7 +321,7 @@ struct HelpAndSupportView: View {
             }
             Divider().padding(.leading, 62)
             externalRow(emoji: "☕", iconColor: Color.reforgedGold, title: "Support Reforged", subtitle: "Buy the developer a coffee") {
-                UIApplication.shared.open(URL(string: "https://buymeacoffee.com/reforgedapp")!)
+                if let url = URL(string: "https://buymeacoffee.com/reforgedapp") { openURL(url) }
             }
             Divider().padding(.leading, 62)
             NavigationLink(destination: ScrollView { AboutSection().padding() }
@@ -412,7 +414,7 @@ struct HelpAndSupportView: View {
         let body = "App Version: \(appVersion)\n\nDescribe your issue or feedback:\n\n"
         let enc = { (s: String) in s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "" }
         if let url = URL(string: "mailto:\(email)?subject=\(enc(subject))&body=\(enc(body))") {
-            UIApplication.shared.open(url)
+            openURL(url)
         }
     }
 

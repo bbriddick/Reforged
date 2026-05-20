@@ -93,6 +93,7 @@
 		E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00001279B9E0000000001 /* ProfileImageService.swift */; };
 		E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00003279B9E0000000001 /* ProfileAvatarView.swift */; };
 		E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000002279B9E0000000001 /* BibleSearchService.swift */; };
+		AN000001279B9E0000000001 /* AntiochSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AN000002279B9E0000000001 /* AntiochSearchService.swift */; };
 		EE277622B31DCD276294A429 /* MemorySettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */; };
 		EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000002279B9E0000000001 /* BibleAudioPlayer.swift */; };
 		EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000004279B9E0000000001 /* UnifiedNavigationView.swift */; };
@@ -116,6 +117,7 @@
 		RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000008279B9E0000000001 /* CompleteTheVerseView.swift */; };
 		RG000009279B9E0000000001 /* trparsed.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000A279B9E0000000001 /* trparsed.json */; };
 		RG00000B279B9E0000000001 /* wlc.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000C279B9E0000000001 /* wlc.json */; };
+		RG00000D279B9E0000000099 /* sblgnt.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000099 /* sblgnt.json */; };
 		RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000001 /* OriginalLanguageService.swift */; };
 		RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */; };
 		RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */; };
@@ -123,6 +125,7 @@
 		RS000002279B9E0000000001 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */; };
 		RTE00002279B9E0000000001 /* RichTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTE00001279B9E0000000001 /* RichTextEditorView.swift */; };
 		SB000001279B9E0000000001 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SB000002279B9E0000000001 /* SupabaseAuthService.swift */; };
+		WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WC000002279B9E0000000001 /* WeeklyCheckinService.swift */; };
 		SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */; };
 		TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TTS0000B279B9E0000000001 /* TTSVoiceService.swift */; };
 		WNV0000B279B9E0000000001 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WNV0000A279B9E0000000001 /* WhatsNewView.swift */; };
@@ -247,6 +250,7 @@
 		E1A00001279B9E0000000001 /* ProfileImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageService.swift; sourceTree = "<group>"; };
 		E1A00003279B9E0000000001 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
 		E2000002279B9E0000000001 /* BibleSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleSearchService.swift; sourceTree = "<group>"; };
+		AN000002279B9E0000000001 /* AntiochSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntiochSearchService.swift; sourceTree = "<group>"; };
 		EX000002279B9E0000000001 /* BibleAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAudioPlayer.swift; sourceTree = "<group>"; };
 		EX000004279B9E0000000001 /* UnifiedNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedNavigationView.swift; sourceTree = "<group>"; };
 		EX000006279B9E0000000001 /* SearchPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPanelView.swift; sourceTree = "<group>"; };
@@ -270,6 +274,7 @@
 		RG000008279B9E0000000001 /* CompleteTheVerseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTheVerseView.swift; sourceTree = "<group>"; };
 		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trparsed.json; sourceTree = "<group>"; };
 		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wlc.json; sourceTree = "<group>"; };
+		RG00000E279B9E0000000099 /* sblgnt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sblgnt.json; sourceTree = "<group>"; };
 		RG00000E279B9E0000000001 /* OriginalLanguageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLanguageService.swift; sourceTree = "<group>"; };
 		RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/SILEOT.ttf; sourceTree = "<group>"; };
 		RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto-Italic.ttf"; sourceTree = "<group>"; };
@@ -279,6 +284,7 @@
 		RS000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		RTE00001279B9E0000000001 /* RichTextEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextEditorView.swift; sourceTree = "<group>"; };
 		SB000002279B9E0000000001 /* SupabaseAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthService.swift; sourceTree = "<group>"; };
+		WC000002279B9E0000000001 /* WeeklyCheckinService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyCheckinService.swift; sourceTree = "<group>"; };
 		SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		TTS0000B279B9E0000000001 /* TTSVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSVoiceService.swift; sourceTree = "<group>"; };
 		WNV0000A279B9E0000000001 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
@@ -440,6 +446,7 @@
 				BDD10000000000000000000A /* NetworkRetry.swift */,
 				A100004B279B9E0000000001 /* BundledDataService.swift */,
 				E2000002279B9E0000000001 /* BibleSearchService.swift */,
+				AN000002279B9E0000000001 /* AntiochSearchService.swift */,
 				GEM0000B279B9E0000000001 /* GeminiService.swift */,
 				TTS0000B279B9E0000000001 /* TTSVoiceService.swift */,
 				A1000073279B9E0000000001 /* SettingsManager.swift */,
@@ -449,6 +456,7 @@
 				A1000091279B9E0000000001 /* iCloudSyncService.swift */,
 				A1000093279B9E0000000001 /* AppleSignInService.swift */,
 				SB000002279B9E0000000001 /* SupabaseAuthService.swift */,
+				WC000002279B9E0000000001 /* WeeklyCheckinService.swift */,
 				A1000095279B9E0000000001 /* CloudKitSyncService.swift */,
 				FS000001279B9E0000000001 /* FocusBlockingService.swift */,
 				BRP00005279B9E0000000001 /* ReadingPlanService.swift */,
@@ -562,6 +570,7 @@
 				RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */,
 				RG00000A279B9E0000000001 /* trparsed.json */,
 				RG00000C279B9E0000000001 /* wlc.json */,
+				RG00000E279B9E0000000099 /* sblgnt.json */,
 				WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */,
 			);
 			path = Resources;
@@ -743,6 +752,7 @@
 				RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */,
 				RG000009279B9E0000000001 /* trparsed.json in Resources */,
 				RG00000B279B9E0000000001 /* wlc.json in Resources */,
+				RG00000D279B9E0000000099 /* sblgnt.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -809,6 +819,7 @@
 				A1000048279B9E0000000001 /* Theme.swift in Sources */,
 				A100004A279B9E0000000001 /* BundledDataService.swift in Sources */,
 				E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */,
+				AN000001279B9E0000000001 /* AntiochSearchService.swift in Sources */,
 				GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */,
 				TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */,
 				AIS0000A279B9E0000000001 /* AISettingsSection.swift in Sources */,
@@ -817,6 +828,7 @@
 				A1000090279B9E0000000001 /* iCloudSyncService.swift in Sources */,
 				A1000092279B9E0000000001 /* AppleSignInService.swift in Sources */,
 				SB000001279B9E0000000001 /* SupabaseAuthService.swift in Sources */,
+				WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */,
 				A1000094279B9E0000000001 /* CloudKitSyncService.swift in Sources */,
 				FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */,
 				DS000002279B9E0000000001 /* DiscipleshipView.swift in Sources */,

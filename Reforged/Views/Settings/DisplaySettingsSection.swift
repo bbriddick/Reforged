@@ -12,6 +12,20 @@ struct DisplaySettingsSection: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Live Preview — top so changes are immediately visible
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Preview")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                ScripturePreviewCard()
+                    .frame(maxWidth: horizontalSizeClass == .regular ? 500 : nil)
+            }
+            .padding(.vertical, 10)
+
+            SettingsDivider()
+
             // Font Size
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -183,20 +197,6 @@ struct DisplaySettingsSection: View {
                 subtitle: "Display the words of Christ in red.",
                 isOn: $settings.showRedLetterText
             )
-
-            SettingsDivider()
-
-            // Preview
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Preview")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                ScripturePreviewCard()
-                    .frame(maxWidth: horizontalSizeClass == .regular ? 500 : nil)
-            }
-            .padding(.vertical, 10)
 
             SettingsDivider()
 

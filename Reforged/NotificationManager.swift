@@ -324,4 +324,39 @@ class NotificationManager: NSObject, ObservableObject {
             UIApplication.shared.applicationIconBadgeNumber = 0
         }
     }
+
+    // MARK: - Weekly Check-ins
+
+    private static let weekdayMap: [String: Int] = [
+        "sunday": 1, "monday": 2, "tuesday": 3, "wednesday": 4,
+        "thursday": 5, "friday": 6, "saturday": 7
+    ]
+
+    func scheduleWeeklyCheckins(_ checkins: [WeeklyCheckin]) async {
+        let center = UNUserNotificationCenter.current()
+        // Remove previously scheduled check-in notifications before rescheduling
+        let pending = await center.pendingNotificationRequests()
+        let checkinIDs = pending.map(\.identifier).filter { $0.hasPrefix("checkin-") }
+        center.removePendingNotificationRequests(withIdentifiers: checkinIDs)
+
+        for c in checkins {
+            guard let weekday = Self.weekdayMap[c.dayOfWeek.lowercased()] else { continue }
+            let parts = c.time.split(separator: ":").compactMap { Int($0) }
+            guard parts.count >= 2 else { continue }
+
+            var date = DateComponents()
+            date.weekday = weekday
+            date.hour = parts[0]
+            date.minute = parts[1]
+
+            let content = UNMutableNotificationContent()
+            content.title = c.title
+            content.body = c.message
+            content.sound = .default
+
+            let trigger = UNCalendarNotificationTrigger(dateMatching: date, repeats: true)
+            let req = UNNotificationRequest(identifier: "checkin-\(c.id)", content: content, trigger: trigger)
+            try? await center.add(req)
+        }
+    }
 }

@@ -44,12 +44,19 @@ struct SearchPanelView: View {
     @State private var cachedCategoryCounts: [BookCategory: Int] = [:]
     @State private var cachedVersionCounts: [BibleTranslation: Int] = [:]
 
-    // Smart Search (AI)
-    private enum SearchMode { case text, smart }
-    @State private var searchMode: SearchMode = .text
+    // AI Overview
     @State private var smartSearchResult: SmartSearchResult? = nil
     @State private var smartSearchLoading = false
     @State private var smartVerseFilter: String = "All"   // "All", "OT", "NT"
+
+    private func isConceptualQuery(_ query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        if q.contains("?") { return true }
+        let starters = ["what ", "who ", "how ", "why ", "when ", "where ",
+                        "does ", "is ", "are ", "can ", "should ", "will "]
+        if starters.contains(where: { q.hasPrefix($0) }) { return true }
+        return q.split(separator: " ").count >= 4
+    }
 
     // Sorted once at struct level to avoid O(n log n) per lookup
     private static let sortedBooks = BibleData.books.sorted { $0.name.count > $1.name.count }
@@ -130,13 +137,9 @@ struct SearchPanelView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundStyle(Color.adaptiveText(colorScheme))
-
                         Spacer()
-
                         Button {
-                            withAnimation(.spring(response: 0.35)) {
-                                isPresented = false
-                            }
+                            withAnimation(.spring(response: 0.35)) { isPresented = false }
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.title2)
@@ -145,30 +148,18 @@ struct SearchPanelView: View {
                     }
                     .padding()
 
-                    // Search mode picker — AI Smart Search toggle
-                    if settings.aiEnabled {
-                        Picker("Search Mode", selection: $searchMode) {
-                            Text("Text").tag(SearchMode.text)
-                            Label("Smart", systemImage: "sparkles").tag(SearchMode.smart)
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal)
-                        .padding(.bottom, 4)
-                        .onChange(of: searchMode) { _ in
-                            smartSearchResult = nil
-                            searchResults = []
-                        }
-                    }
-
                     // Search bar
+                    let showsAI = settings.aiEnabled && isConceptualQuery(searchQuery)
                     HStack(spacing: 10) {
-                        Image(systemName: searchMode == .smart ? "sparkles" : "magnifyingglass")
-                            .foregroundStyle(searchMode == .smart ? Color.reforgedGold : Color.adaptiveTextSecondary(colorScheme))
+                        Image(systemName: showsAI ? "sparkles" : "magnifyingglass")
+                            .foregroundStyle(showsAI ? Color.reforgedGold : Color.adaptiveTextSecondary(colorScheme))
+                            .animation(.easeInOut(duration: 0.2), value: showsAI)
 
-                        TextField(searchMode == .smart ? "Ask anything biblical..." : "Search verses...", text: $searchQuery)
+                        TextField("Search verses, topics, questions…", text: $searchQuery)
                             .font(.subheadline)
                             .focused($isSearchFocused)
                             .onSubmit {
+                                isSearchFocused = false
                                 performSearch()
                             }
 
@@ -176,6 +167,7 @@ struct SearchPanelView: View {
                             Button {
                                 searchQuery = ""
                                 searchResults = []
+                                smartSearchResult = nil
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
@@ -191,121 +183,123 @@ struct SearchPanelView: View {
                     // Search button
                     if !searchQuery.isEmpty {
                         Button {
+                            isSearchFocused = false
                             performSearch()
                         } label: {
                             HStack(spacing: 6) {
-                                if searchMode == .smart {
+                                if showsAI {
                                     Image(systemName: "sparkles")
                                 }
-                                Text(searchMode == .smart
-                                     ? "Smart Search"
-                                     : (selectedVersion == nil ? "Search All Versions" : "Search \(selectedVersion?.rawValue ?? translation.rawValue)"))
+                                Text(selectedVersion == nil
+                                     ? "Search"
+                                     : "Search \(selectedVersion!.rawValue)")
                                     .font(.headline)
+                                    .foregroundStyle(.white)
                             }
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(searchMode == .smart ? Color.reforgedGold : Color.reforgedNavy)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .frame(maxWidth: .infinity)
                         }
+                        .background(showsAI ? Color.reforgedGold : Color.reforgedNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .animation(.easeInOut(duration: 0.2), value: showsAI)
                         .padding()
                     }
 
-                    // Category summary + filter chips
-                    if !searchResults.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                FilterChip(title: "All Versions", isSelected: selectedVersion == nil) {
-                                    selectedVersion = nil
-                                    selectedCategory = nil
-                                }
-                                ForEach(BibleTranslation.searchableTextVersions) { version in
-                                    let count = cachedVersionCounts[version] ?? 0
-                                    if count > 0 {
-                                        FilterChip(title: "\(version.rawValue) (\(count))", isSelected: selectedVersion == version) {
-                                            selectedVersion = version
-                                            selectedCategory = nil
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding(.top, 4)
-
-                        // Result count summary
-                        Text(selectedVersion == nil
-                             ? "\(searchResults.count) verses across \(cachedVersionCounts.filter { $0.value > 0 }.count) versions. Tap chart to filter."
-                             : "\(cachedFilteredResults.count) verses in \(selectedVersion?.rawValue ?? translation.rawValue). Tap chart to filter.")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            .padding(.horizontal)
-                            .padding(.top, 4)
-
-                        // Category breakdown chart
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(cachedCategoryCounts.sorted(by: { $0.value > $1.value }), id: \.key) { category, count in
-                                if count > 0 {
-                                    Button {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            selectedCategory = selectedCategory == category ? nil : category
-                                        }
-                                    } label: {
-                                        HStack(spacing: 8) {
-                                            Text(category.rawValue)
-                                                .font(.caption2)
-                                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                                                .frame(width: 100, alignment: .trailing)
-
-                                            GeometryReader { geo in
-                                                let maxCount = cachedCategoryCounts.values.max() ?? 1
-                                                let barWidth = max(4, geo.size.width * CGFloat(count) / CGFloat(maxCount))
-                                                RoundedRectangle(cornerRadius: 3)
-                                                    .fill(selectedCategory == category ? Color.reforgedGold : Color.reforgedNavy)
-                                                    .frame(width: barWidth)
-                                            }
-                                            .frame(height: 14)
-
-                                            Text("\(count)")
-                                                .font(.caption2)
-                                                .fontWeight(.semibold)
-                                                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .background(Color.adaptiveBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal)
-
-                        // Book category filter chips
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                FilterChip(title: "All", isSelected: selectedCategory == nil) {
-                                    selectedCategory = nil
-                                }
-                                ForEach(BookCategory.allCases) { cat in
-                                    let count = cachedCategoryCounts[cat] ?? 0
-                                    if count > 0 {
-                                        FilterChip(title: cat.rawValue, isSelected: selectedCategory == cat) {
-                                            selectedCategory = cat
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding(.vertical, 4)
-                    }
-
-                    // Content
+                    // Content — filter chips + results all scroll together
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
-                            if smartSearchLoading {
+
+                        // Version filter chips + chart (scroll with results)
+                        if !searchResults.isEmpty {
+                            VStack(alignment: .leading, spacing: 0) {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 6) {
+                                        FilterChip(title: "All Versions", isSelected: selectedVersion == nil) {
+                                            selectedVersion = nil
+                                            selectedCategory = nil
+                                        }
+                                        ForEach(BibleTranslation.searchableTextVersions) { version in
+                                            let count = cachedVersionCounts[version] ?? 0
+                                            if count > 0 {
+                                                FilterChip(title: "\(version.rawValue) (\(count))", isSelected: selectedVersion == version) {
+                                                    selectedVersion = version
+                                                    selectedCategory = nil
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                                .padding(.top, 4)
+
+                                Text(selectedVersion == nil
+                                     ? "\(searchResults.count) verses across \(cachedVersionCounts.filter { $0.value > 0 }.count) versions. Tap chart to filter."
+                                     : "\(cachedFilteredResults.count) verses in \(selectedVersion?.rawValue ?? translation.rawValue). Tap chart to filter.")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                    .padding(.horizontal)
+                                    .padding(.top, 4)
+
+                                VStack(alignment: .leading, spacing: 6) {
+                                    ForEach(cachedCategoryCounts.sorted(by: { $0.value > $1.value }), id: \.key) { category, count in
+                                        if count > 0 {
+                                            Button {
+                                                withAnimation(.spring(response: 0.3)) {
+                                                    selectedCategory = selectedCategory == category ? nil : category
+                                                }
+                                            } label: {
+                                                HStack(spacing: 8) {
+                                                    Text(category.rawValue)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                                                        .frame(width: 100, alignment: .trailing)
+
+                                                    GeometryReader { geo in
+                                                        let maxCount = cachedCategoryCounts.values.max() ?? 1
+                                                        let barWidth = max(4, geo.size.width * CGFloat(count) / CGFloat(maxCount))
+                                                        RoundedRectangle(cornerRadius: 3)
+                                                            .fill(selectedCategory == category ? Color.reforgedGold : Color.reforgedNavy)
+                                                            .frame(width: barWidth)
+                                                    }
+                                                    .frame(height: 14)
+
+                                                    Text("\(count)")
+                                                        .font(.caption2)
+                                                        .fontWeight(.semibold)
+                                                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                                                }
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+                                .background(Color.adaptiveBackground(colorScheme))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .padding(.horizontal)
+
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 6) {
+                                        FilterChip(title: "All", isSelected: selectedCategory == nil) {
+                                            selectedCategory = nil
+                                        }
+                                        ForEach(BookCategory.allCases) { cat in
+                                            let count = cachedCategoryCounts[cat] ?? 0
+                                            if count > 0 {
+                                                FilterChip(title: cat.rawValue, isSelected: selectedCategory == cat) {
+                                                    selectedCategory = cat
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+
+                        if smartSearchLoading {
                                 HStack {
                                     Spacer()
                                     VStack(spacing: 8) {
@@ -354,6 +348,16 @@ struct SearchPanelView: View {
                                                     .padding(.vertical, 3)
                                                     .background(Color.adaptiveChipBackground(colorScheme))
                                                     .clipShape(Capsule())
+                                                if result.isSemantic {
+                                                    Label("Related", systemImage: "wand.and.stars")
+                                                        .font(.caption2)
+                                                        .fontWeight(.semibold)
+                                                        .foregroundStyle(Color.reforgedGold)
+                                                        .padding(.horizontal, 7)
+                                                        .padding(.vertical, 3)
+                                                        .background(Color.reforgedGold.opacity(0.1))
+                                                        .clipShape(Capsule())
+                                                }
                                                 Spacer()
                                                 Image(systemName: "chevron.right")
                                                     .font(.caption)
@@ -631,7 +635,6 @@ struct SearchPanelView: View {
                             ForEach(result.relatedTerms, id: \.self) { term in
                                 Button {
                                     searchQuery = term
-                                    searchMode = .text
                                     performSearch()
                                 } label: {
                                     Text(term)
@@ -662,41 +665,38 @@ struct SearchPanelView: View {
     func performSearch() {
         guard !searchQuery.isEmpty else { return }
         selectedCategory = nil
-
-        if searchMode == .smart {
-            performSmartSearch()
-            return
-        }
-
         isSearching = true
+        smartSearchResult = nil
+        smartSearchLoading = false
+        smartVerseFilter = "All"
+
+        let query = searchQuery
         let versions = selectedVersion.map { [$0] } ?? BibleTranslation.searchableTextVersions
 
+        // Auto-run AI overview for conceptual / question queries
+        if settings.aiEnabled && isConceptualQuery(query) {
+            smartSearchLoading = true
+            Task {
+                do {
+                    let result = try await GeminiService.shared.smartBibleSearch(query: query)
+                    await MainActor.run { smartSearchResult = result; smartSearchLoading = false }
+                } catch {
+                    print("[Search] AI overview failed: \(error)")
+                    await MainActor.run { smartSearchLoading = false }
+                }
+            }
+        }
+
+        // Exact + semantic verse search in parallel
         Task {
-            let results = await BibleSearchService.shared.search(query: searchQuery, translations: versions, pageSizePerTranslation: 100)
+            let results = await BibleSearchService.shared.unifiedSearch(query: query, translations: versions)
             await MainActor.run {
                 searchResults = results
                 isSearching = false
                 let scope: BibleSearchHistoryScope = selectedVersion == nil ? .allTextVersions : .textVersion
-                AppState.shared.addBibleSearchHistoryEntry(query: searchQuery, scope: scope, translation: selectedVersion)
+                AppState.shared.addBibleSearchHistoryEntry(query: query, scope: scope, translation: selectedVersion)
                 searchHistory = AppState.shared.loadBibleSearchHistory()
             }
-        }
-    }
-
-    private func performSmartSearch() {
-        smartSearchLoading = true
-        smartSearchResult = nil
-        smartVerseFilter = "All"
-        searchResults = []
-
-        Task {
-            do {
-                let aiResult = try await GeminiService.shared.smartBibleSearch(query: searchQuery)
-                await MainActor.run { smartSearchResult = aiResult }
-            } catch {
-                print("[SmartSearch] ❌ Error: \(error)")
-            }
-            await MainActor.run { smartSearchLoading = false }
         }
     }
 }
