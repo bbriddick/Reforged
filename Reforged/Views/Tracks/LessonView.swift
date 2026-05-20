@@ -231,7 +231,7 @@ struct ScriptureContentView: View {
                     reference: content.reference,
                     translation: translation
                 )
-            case .tr, .wlc:
+            case .tr, .sblgnt, .wlc:
                 fetchedText = nil; return  // not applicable for lesson verses
             }
             fetchedText = result.text

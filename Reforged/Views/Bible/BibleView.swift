@@ -1432,7 +1432,7 @@ struct BibleView: View {
             let result = try await ApiBibleService.shared.fetchChapterParsed(book: book, chapter: chapter, translation: translation)
             fetchedVerses = result.verses
             fetchedCanonical = result.canonical
-        case .tr:
+        case .tr, .sblgnt:
             let bookNum = OriginalLanguageService.bookNumber(for: book) ?? 0
             OriginalLanguageService.shared.preloadTR()
             let trVerses = OriginalLanguageService.shared.trChapter(bookNumber: bookNum, chapter: chapter)

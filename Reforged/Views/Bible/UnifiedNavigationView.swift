@@ -601,8 +601,8 @@ struct UnifiedNavigationView: View {
                 case .csb, .nkjv, .nasb, .rvr1960:
                     let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)
                     fetchedVerses = result.verses
-                case .tr:
-                    // TR covers the NT only. Preload and read verse numbers from the index.
+                case .tr, .sblgnt:
+                    // TR and SBLGNT cover the NT only. Use TR verse structure for navigation.
                     if selectedBook.testament == .new {
                         OriginalLanguageService.shared.preloadTR()
                         let bookNum = OriginalLanguageService.bookNumber(for: selectedBook.name) ?? 0

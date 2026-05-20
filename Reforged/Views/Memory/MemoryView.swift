@@ -836,7 +836,7 @@ struct SuggestedVerseCard: View {
                         let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
                         fetchedText = result.text
                         fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
-                    case .tr, .wlc:
+                    case .tr, .sblgnt, .wlc:
                         break  // not applicable for memory verses
                     }
                     let memoryVerse = MemoryVerse(
@@ -893,7 +893,7 @@ struct SuggestedVerseCard: View {
             case .csb, .nkjv, .nasb, .rvr1960:
                 let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
                 fetched = result.text
-            case .tr, .wlc:
+            case .tr, .sblgnt, .wlc:
                 break  // not applicable for memory verses
             }
             liveText = fetched
@@ -1180,7 +1180,7 @@ struct AddVerseSheet: View {
                     let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: reference, translation: selectedTranslation)
                     fetchedText = result.text
                     fetchedCanonical = result.canonical
-                case .tr, .wlc:
+                case .tr, .sblgnt, .wlc:
                     break  // not applicable for memory verse picker
                 }
 
@@ -1634,7 +1634,7 @@ struct VersePickerSheet: View {
                 case .csb, .nkjv, .nasb, .rvr1960:
                     let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)
                     fetchedVerses = result.verses
-                case .tr, .wlc:
+                case .tr, .sblgnt, .wlc:
                     break  // not applicable for memory verse picker
                 }
 
