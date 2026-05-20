@@ -1,7 +1,9 @@
 import SwiftUI
+import AVFoundation
 
 struct AudioSettingsSection: View {
     @StateObject private var settings = SettingsManager.shared
+    @ObservedObject private var ttsService = TTSVoiceService.shared
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -67,6 +69,31 @@ struct AudioSettingsSection: View {
                         }
                     }
                 }
+            }
+            .padding(.vertical, 10)
+
+            SettingsDivider()
+
+            // TTS Voice
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Text-to-Speech Voice")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    Spacer()
+
+                    if let id = ttsService.selectedVoiceIdentifier,
+                       let voice = AVSpeechSynthesisVoice(identifier: id) {
+                        Text(voice.name)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    }
+                }
+
+                TTSVoicePickerView(selectedIdentifier: $ttsService.selectedVoiceIdentifier)
             }
             .padding(.vertical, 10)
 

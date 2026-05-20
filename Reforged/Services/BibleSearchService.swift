@@ -36,6 +36,8 @@ final class BibleSearchService {
                 .map { BibleSearchResult(reference: $0.reference, content: $0.content, translation: .esv) }
         case .kjv:
             return await KJVService.shared.searchPassages(query: query, pageSize: pageSize)
+        case .net:
+            return await NETService.shared.searchPassages(query: query, pageSize: pageSize)
         case .csb, .nkjv, .nasb, .rvr1960:
             return try await ApiBibleService.shared.searchPassages(query: query, translation: translation, pageSize: pageSize)
                 .map { BibleSearchResult(reference: $0.reference, content: $0.text, translation: translation) }

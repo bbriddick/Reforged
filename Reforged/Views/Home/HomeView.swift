@@ -1187,6 +1187,8 @@ struct DailyInsightCard: View {
                 return try await ESVService.shared.fetchVerseForMemory(reference: reference).text
             case .kjv:
                 return try await KJVService.shared.fetchVerseForMemory(reference: reference).text
+            case .net:
+                return try await NETService.shared.fetchVerseForMemory(reference: reference).text
             case .csb, .nkjv, .nasb, .rvr1960:
                 return try await ApiBibleService.shared.fetchVerseForMemory(reference: reference, translation: settingsManager.defaultTranslation).text
             case .tr, .wlc:

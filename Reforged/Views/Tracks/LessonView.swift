@@ -224,6 +224,8 @@ struct ScriptureContentView: View {
                 result = try await ESVService.shared.fetchVerseForMemory(reference: content.reference)
             case .kjv:
                 result = try await KJVService.shared.fetchVerseForMemory(reference: content.reference)
+            case .net:
+                result = try await NETService.shared.fetchVerseForMemory(reference: content.reference)
             case .csb, .nkjv, .nasb, .rvr1960:
                 result = try await ApiBibleService.shared.fetchVerseForMemory(
                     reference: content.reference,

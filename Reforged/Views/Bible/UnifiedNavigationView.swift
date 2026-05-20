@@ -595,6 +595,9 @@ struct UnifiedNavigationView: View {
                 case .kjv:
                     let result = try await KJVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
                     fetchedVerses = result.verses
+                case .net:
+                    let result = try await NETService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
+                    fetchedVerses = result.verses
                 case .csb, .nkjv, .nasb, .rvr1960:
                     let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)
                     fetchedVerses = result.verses

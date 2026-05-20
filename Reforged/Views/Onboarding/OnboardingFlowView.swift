@@ -80,8 +80,36 @@ struct OnboardingFlowView: View {
                 FinalStepView(onComplete: { tab in completeOnboarding(navigatingTo: tab) })
             }
         }
+        .overlay(alignment: .topLeading) {
+            if currentStep != .welcome && currentStep != .final {
+                Button(action: { previousStep() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .frame(width: 32, height: 32)
+                        .background(Color.adaptiveChipBackground(colorScheme))
+                        .clipShape(Circle())
+                }
+                .padding(.top, 16)
+                .padding(.leading, 20)
+                .transition(.opacity)
+            }
+        }
         .animation(.easeInOut(duration: 0.3), value: currentStep)
         .buttonStyle(NoBlobButtonStyle())
+    }
+
+    func previousStep() {
+        withAnimation {
+            var prevRaw = currentStep.rawValue - 1
+            while let candidate = OnboardingStep(rawValue: prevRaw),
+                  anySignIn && OnboardingStep.skippableWithAppleSignIn.contains(candidate) {
+                prevRaw -= 1
+            }
+            if let prevIndex = OnboardingStep(rawValue: prevRaw) {
+                currentStep = prevIndex
+            }
+        }
     }
 
     func nextStep() {

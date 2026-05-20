@@ -525,7 +525,12 @@ class SettingsManager: ObservableObject {
 
 extension ThemeManager {
     func setTheme(_ mode: ThemeMode) {
-        currentMode = mode
+        // Defer to next run loop cycle so mutations to SettingsManager's @Published
+        // themeMode don't synchronously trigger a second @Published change on a
+        // different ObservableObject during the same view-update pass.
+        DispatchQueue.main.async {
+            self.currentMode = mode
+        }
     }
 }
 

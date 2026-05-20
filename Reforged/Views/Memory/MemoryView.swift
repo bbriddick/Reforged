@@ -257,6 +257,9 @@ struct MemoryView: View {
             .frame(maxWidth: horizontalSizeClass == .regular ? 1200 : .infinity)
             .frame(maxWidth: .infinity)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            MemoryAudioBar()
+        }
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
     }
 }
@@ -418,8 +421,13 @@ struct VerseCard: View {
     let onDelete: () -> Void
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
+    @ObservedObject private var audioPlayer = MemoryAudioPlayer.shared
     @State private var showActions = false
     @State private var activeSheet: VerseCardSheet? = nil
+
+    private var isThisVersePlaying: Bool {
+        audioPlayer.currentVerse?.id == verse.id
+    }
 
     var daysUntilReview: Int {
         let days = Calendar.current.dateComponents([.day], from: Date(), to: verse.nextReviewDate).day ?? 0
@@ -563,6 +571,19 @@ struct VerseCard: View {
                     .clipShape(Capsule())
 
                 Spacer()
+
+                Button {
+                    if isThisVersePlaying {
+                        if audioPlayer.isPlaying { audioPlayer.pause() } else { audioPlayer.resume() }
+                    } else {
+                        audioPlayer.play(verse: verse)
+                    }
+                } label: {
+                    Image(systemName: isThisVersePlaying && audioPlayer.isPlaying ? "pause.circle.fill" : "speaker.wave.2.fill")
+                        .font(.title3)
+                        .foregroundStyle(isThisVersePlaying ? Color.reforgedNavy : Color.adaptiveNavyText(colorScheme))
+                }
+                .padding(.trailing, 4)
 
                 Button(action: { activeSheet = .practiceOptions }) {
                     HStack(spacing: 4) {
@@ -807,6 +828,10 @@ struct SuggestedVerseCard: View {
                         let result = try await KJVService.shared.fetchVerseForMemory(reference: verse.reference)
                         fetchedText = result.text
                         fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
+                    case .net:
+                        let result = try await NETService.shared.fetchVerseForMemory(reference: verse.reference)
+                        fetchedText = result.text
+                        fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
                     case .csb, .nkjv, .nasb, .rvr1960:
                         let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
                         fetchedText = result.text
@@ -861,6 +886,9 @@ struct SuggestedVerseCard: View {
                 fetched = verse.text
             case .kjv:
                 let result = try await KJVService.shared.fetchVerseForMemory(reference: verse.reference)
+                fetched = result.text
+            case .net:
+                let result = try await NETService.shared.fetchVerseForMemory(reference: verse.reference)
                 fetched = result.text
             case .csb, .nkjv, .nasb, .rvr1960:
                 let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
@@ -1144,6 +1172,10 @@ struct AddVerseSheet: View {
                     let result = try await KJVService.shared.fetchVerseForMemory(reference: reference)
                     fetchedText = result.text
                     fetchedCanonical = result.canonical
+                case .net:
+                    let result = try await NETService.shared.fetchVerseForMemory(reference: reference)
+                    fetchedText = result.text
+                    fetchedCanonical = result.canonical
                 case .csb, .nkjv, .nasb, .rvr1960:
                     let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: reference, translation: selectedTranslation)
                     fetchedText = result.text
@@ -1251,6 +1283,15 @@ struct PracticeOptionsSheet: View {
                     // Deep Drill card
                     NavigationLink(destination: DeepDrillView(verse: verse)) {
                         DeepDrillCard()
+                    }
+                    .buttonStyle(.plain)
+
+                    // Listen on Loop card
+                    Button {
+                        MemoryAudioPlayer.shared.play(verse: verse)
+                        dismiss()
+                    } label: {
+                        ListenOnLoopCard()
                     }
                     .buttonStyle(.plain)
                 }
@@ -1384,6 +1425,49 @@ struct DeepDrillCard: View {
                     ),
                     lineWidth: 1
                 )
+        )
+    }
+}
+
+// MARK: - Listen on Loop Card
+
+struct ListenOnLoopCard: View {
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.reforgedNavy.opacity(colorScheme == .dark ? 0.4 : 1.0))
+                    .frame(width: 50, height: 50)
+
+                Image(systemName: "repeat")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Listen on Loop")
+                    .font(.headline)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                Text("Hear this passage on repeat")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+
+            Spacer()
+
+            Image(systemName: "play.fill")
+                .font(.caption)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        }
+        .padding()
+        .background(Color.reforgedNavy.opacity(colorScheme == .dark ? 0.15 : 0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.reforgedNavy.opacity(0.25), lineWidth: 1)
         )
     }
 }
@@ -1543,6 +1627,9 @@ struct VersePickerSheet: View {
                     fetchedVerses = result.verses
                 case .kjv:
                     let result = try await KJVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
+                    fetchedVerses = result.verses
+                case .net:
+                    let result = try await NETService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
                     fetchedVerses = result.verses
                 case .csb, .nkjv, .nasb, .rvr1960:
                     let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)

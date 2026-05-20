@@ -15,6 +15,12 @@ struct NowPlayingView: View {
     var displayBook: String { audioPlayer.currentBook.isEmpty ? "" : audioPlayer.currentBook }
     var displayChapter: Int { audioPlayer.currentChapter }
 
+    var audioSubtitle: String {
+        audioPlayer.isTTSMode
+            ? "\(audioPlayer.currentTranslation.rawValue.uppercased()) · Text-to-Speech"
+            : (audioPlayer.currentTranslation == .kjv ? "KJV Audio Bible" : "ESV Audio Bible")
+    }
+
     var body: some View {
         GeometryReader { geo in
             let isWide = horizontalSizeClass == .regular
@@ -46,7 +52,7 @@ struct NowPlayingView: View {
     @ViewBuilder
     private func portraitBody(geo: GeometryProxy, isWide: Bool) -> some View {
         let maxContent: CGFloat = isWide ? min(geo.size.width * 0.65, 520) : geo.size.width
-        let artSize: CGFloat = isWide ? min(maxContent - 80, 380) : geo.size.width - 72
+        let artSize: CGFloat = isWide ? min(max(0, maxContent - 80), 380) : max(0, geo.size.width - 72)
         let hPad: CGFloat = isWide ? 40 : 32
 
         ScrollView(.vertical, showsIndicators: false) {
@@ -73,7 +79,7 @@ struct NowPlayingView: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(Color.white.opacity(0.6))
                             .tracking(1.5)
-                        Text("ESV Audio Bible")
+                        Text(audioSubtitle)
                             .font(.caption)
                             .foregroundStyle(Color.white.opacity(0.4))
                     }
@@ -100,7 +106,7 @@ struct NowPlayingView: View {
                             .fontWeight(.bold)
                             .foregroundStyle(.white)
                             .lineLimit(1)
-                        Text("ESV Audio Bible")
+                        Text(audioSubtitle)
                             .font(.subheadline)
                             .foregroundStyle(Color.white.opacity(0.6))
                     }
@@ -177,7 +183,7 @@ struct NowPlayingView: View {
                             .fontWeight(.bold)
                             .foregroundStyle(.white)
                             .lineLimit(1)
-                        Text("ESV Audio Bible")
+                        Text(audioSubtitle)
                             .font(.caption)
                             .foregroundStyle(Color.white.opacity(0.6))
                     }
@@ -208,6 +214,24 @@ struct NowPlayingView: View {
 
     @ViewBuilder
     private func scrubberView(hPad: CGFloat) -> some View {
+        Group {
+            if audioPlayer.isTTSMode {
+                HStack {
+                    Image(systemName: "waveform")
+                        .foregroundStyle(Color.white.opacity(0.5))
+                    Text("Text-to-Speech · \(audioPlayer.currentTranslation.rawValue.uppercased())")
+                        .font(.caption)
+                        .foregroundStyle(Color.white.opacity(0.5))
+                }
+                .padding(.horizontal, hPad)
+                .padding(.vertical, 8)
+            } else {
+                ttsHiddenScrubber(hPad: hPad)
+            }
+        }
+    }
+
+    private func ttsHiddenScrubber(hPad: CGFloat) -> some View {
         VStack(spacing: 6) {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -250,7 +274,7 @@ struct NowPlayingView: View {
         .onChange(of: audioPlayer.currentTime) { newTime in
             if !isScrubbing { scrubPosition = newTime }
         }
-    }
+    }  // end ttsHiddenScrubber
 
     @ViewBuilder
     private func controlsRow(isWide: Bool) -> some View {

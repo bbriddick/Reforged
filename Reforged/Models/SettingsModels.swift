@@ -173,6 +173,7 @@ enum SkipInterval: String, CaseIterable, Codable {
 enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
     case kjv = "KJV"
     case esv = "ESV"
+    case net = "NET"
     case nkjv = "NKJV"
     case csb = "CSB"
     case nasb = "NASB"
@@ -199,6 +200,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .esv: return "English Standard Version"
         case .kjv: return "King James Version"
+        case .net: return "New English Translation"
         case .csb: return "Christian Standard Bible"
         case .nkjv: return "New King James Version"
         case .nasb: return "New American Standard Bible"
@@ -226,6 +228,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .esv: return "© 2001 Crossway"
         case .kjv: return "Public Domain"
+        case .net: return "© 1996–2017 Biblical Studies Press"
         case .csb: return "© 2017 Holman Bible Publishers"
         case .nkjv: return "© 1982 Thomas Nelson"
         case .nasb: return "© 1995 The Lockman Foundation"
@@ -249,6 +252,8 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
             return "Scripture quotations marked NASB are taken from the (NASB®) New American Standard Bible®, Copyright © 1960, 1971, 1977, 1995 by The Lockman Foundation. Used by permission. All rights reserved. The NASB text may not be quoted in any publication made available to the public by a Creative Commons license. The NASB may not be translated into any other language. Website: www.lockman.org"
         case .rvr1960:
             return "Las citas bíblicas marcadas RVR1960 son tomadas de la Reina-Valera 1960®, © Sociedades Bíblicas en América Latina, 1960; © Renovado, Sociedades Bíblicas Unidas, 1988. Utilizado con permiso. Reina-Valera 1960® es una marca registrada de las Sociedades Bíblicas Unidas y puede ser usada solamente bajo licencia. Website: www.sociedades-biblicas.net"
+        case .net:
+            return "Scripture quotations marked NET are taken from the NET Bible® copyright ©1996–2017 by Biblical Studies Press, L.L.C. All rights reserved. Quoted by permission. Please visit netbible.com for more information."
         case .tr:
             return "The Textus Receptus (1550 Stephanus edition) is in the public domain."
         case .wlc:
@@ -261,6 +266,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .esv:    return "ESV"
         case .kjv:    return "KJV"
+        case .net:    return "NET"
         case .csb:    return "CSB"
         case .nkjv:   return "NKJ"
         case .nasb:   return "NAS"
@@ -274,7 +280,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
     var usesApiBible: Bool {
         switch self {
         case .csb, .nkjv, .nasb, .rvr1960: return true
-        case .esv, .kjv, .tr, .wlc: return false
+        case .esv, .kjv, .net, .tr, .wlc: return false
         }
     }
 }

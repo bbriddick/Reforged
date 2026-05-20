@@ -4,7 +4,7 @@ import MediaPlayer
 
 // MARK: - Bible Audio Bar (Collapsible)
 
-class BibleAudioPlayer: ObservableObject {
+class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var isPlaying = false
     @Published var isLoading = false
     @Published var currentTime: TimeInterval = 0
@@ -14,6 +14,7 @@ class BibleAudioPlayer: ObservableObject {
     @Published var currentBook: String = ""
     @Published var currentChapter: Int = 0
     @Published var currentTranslation: BibleTranslation = .esv
+    @Published var isTTSMode = false
 
     // Sleep timer
     @Published var sleepTimerRemaining: TimeInterval = 0   // 0 = off
@@ -22,6 +23,7 @@ class BibleAudioPlayer: ObservableObject {
 
     private var player: AVPlayer?
     private var timeObserver: Any?
+    private let synthesizer = AVSpeechSynthesizer()
 
     /// Called when a chapter finishes playing (for marking as read + auto-advance).
     /// Parameters: (book, chapter) of the completed chapter.
@@ -34,7 +36,9 @@ class BibleAudioPlayer: ObservableObject {
     private let audioTimeKey = "audio_last_time"
     private let audioTranslationKey = "audio_last_translation"
 
-    init() {
+    override init() {
+        super.init()
+        synthesizer.delegate = self
         setupRemoteCommandCenter()
     }
 
@@ -72,12 +76,27 @@ class BibleAudioPlayer: ObservableObject {
                     self.isLoading = false
                 }
             }
-        } else {
+        } else if translation == .esv {
             guard let url = ESVService.shared.getAudioURL(book: book, chapter: chapter) else {
                 isLoading = false
                 return
             }
             startPlayback(url: url, authHeader: "Token \(ESVConfig.apiKey)")
+        } else {
+            // NASB, CSB, NKJV — fetch chapter text and speak via TTS
+            isTTSMode = true
+            Task { @MainActor in
+                do {
+                    let (verses, _) = try await ApiBibleService.shared
+                        .fetchChapterParsed(book: book, chapter: chapter, translation: translation)
+                    let text = verses.map { $0.text }.joined(separator: " ")
+                    self.startTTSPlayback(text: text)
+                } catch {
+                    print("TTS fetch error: \(error)")
+                    self.isLoading = false
+                    self.isTTSMode = false
+                }
+            }
         }
     }
 
@@ -128,11 +147,34 @@ class BibleAudioPlayer: ObservableObject {
         updateNowPlayingInfo()
     }
 
+    private func startTTSPlayback(text: String) {
+        isLoading = false
+        isPlaying = true
+        let utterance = TTSVoiceService.shared.makeUtterance(text: text, rate: playbackRate)
+        synthesizer.speak(utterance)
+        updateNowPlayingInfo()
+    }
+
+    // MARK: - AVSpeechSynthesizerDelegate
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        guard isTTSMode else { return }
+        DispatchQueue.main.async { self.handleChapterPlaybackEnded() }
+    }
+
     func togglePlayPause() {
-        if isPlaying {
-            player?.pause()
+        if isTTSMode {
+            if isPlaying {
+                synthesizer.pauseSpeaking(at: .word)
+            } else {
+                synthesizer.continueSpeaking()
+            }
         } else {
-            player?.play()
+            if isPlaying {
+                player?.pause()
+            } else {
+                player?.play()
+            }
         }
         isPlaying.toggle()
         saveAudioState()
@@ -140,6 +182,10 @@ class BibleAudioPlayer: ObservableObject {
     }
 
     func stop() {
+        if isTTSMode {
+            synthesizer.stopSpeaking(at: .immediate)
+            isTTSMode = false
+        }
         player?.pause()
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
@@ -241,7 +287,7 @@ class BibleAudioPlayer: ObservableObject {
     /// Resumes playback from saved state (call on app foreground / view appear).
     func resumeFromSavedState() {
         guard let saved = savedAudioState() else { return }
-        guard !isPlaying && player == nil else { return }
+        guard !isPlaying && player == nil && !isTTSMode else { return }
 
         let savedTranslationRaw = UserDefaults.standard.string(forKey: audioTranslationKey) ?? ""
         let translation = BibleTranslation(rawValue: savedTranslationRaw) ?? .esv
@@ -274,9 +320,12 @@ class BibleAudioPlayer: ObservableObject {
 
     func setPlaybackRate(_ rate: Float) {
         playbackRate = rate
-        player?.rate = isPlaying ? rate : 0
+        if isTTSMode {
+            // TTS rate change takes effect on next utterance; no restart needed
+        } else {
+            player?.rate = isPlaying ? rate : 0
+        }
         updateNowPlayingInfo()
-        // Persist so updateFromSettings() restores the correct speed on next .onAppear
         if let matched = PlaybackSpeed.allCases.first(where: { $0.rate == rate }) {
             Task { @MainActor in SettingsManager.shared.playbackSpeed = matched }
         }
@@ -315,7 +364,11 @@ class BibleAudioPlayer: ObservableObject {
         var nowPlayingInfo = [String: Any]()
 
         nowPlayingInfo[MPMediaItemPropertyTitle] = "\(currentBook) \(currentChapter)"
-        nowPlayingInfo[MPMediaItemPropertyArtist] = currentTranslation == .kjv ? "KJV Audio Bible" : "ESV Audio Bible"
+        if isTTSMode {
+            nowPlayingInfo[MPMediaItemPropertyArtist] = "\(currentTranslation.rawValue.uppercased()) · Text-to-Speech"
+        } else {
+            nowPlayingInfo[MPMediaItemPropertyArtist] = currentTranslation == .kjv ? "KJV Audio Bible" : "ESV Audio Bible"
+        }
         nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "Reforged"
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
@@ -337,7 +390,8 @@ class BibleAudioPlayer: ObservableObject {
         commandCenter.playCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
             if !self.isPlaying {
-                self.player?.play()
+                if self.isTTSMode { self.synthesizer.continueSpeaking() }
+                else { self.player?.play() }
                 self.isPlaying = true
                 self.updateNowPlayingInfo()
             }
@@ -347,7 +401,8 @@ class BibleAudioPlayer: ObservableObject {
         commandCenter.pauseCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
             if self.isPlaying {
-                self.player?.pause()
+                if self.isTTSMode { self.synthesizer.pauseSpeaking(at: .word) }
+                else { self.player?.pause() }
                 self.isPlaying = false
                 self.updateNowPlayingInfo()
             }
@@ -484,19 +539,21 @@ struct BibleAudioBar: View {
                 .padding(.top, 4)
             }
 
-            // Progress bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.reforgedNavy.opacity(0.15))
+            // Progress bar (hidden in TTS mode)
+            if !audioPlayer.isTTSMode {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.reforgedNavy.opacity(0.15))
 
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.reforgedGold)
-                        .frame(width: audioPlayer.duration > 0 ? geo.size.width * (audioPlayer.currentTime / audioPlayer.duration) : 0)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.reforgedGold)
+                            .frame(width: audioPlayer.duration > 0 ? geo.size.width * (audioPlayer.currentTime / audioPlayer.duration) : 0)
+                    }
                 }
+                .frame(height: 3)
+                .padding(.horizontal)
             }
-            .frame(height: 3)
-            .padding(.horizontal)
 
             HStack(spacing: 16) {
                 // Close button
@@ -510,16 +567,18 @@ struct BibleAudioBar: View {
                         .clipShape(Circle())
                 }
 
-                // Skip backward
-                Button { audioPlayer.skipBackward() } label: {
-                    Image(systemName: "gobackward.15")
-                        .font(.callout)
-                        .foregroundStyle(iconColor)
+                if !audioPlayer.isTTSMode {
+                    // Skip backward
+                    Button { audioPlayer.skipBackward() } label: {
+                        Image(systemName: "gobackward.15")
+                            .font(.callout)
+                            .foregroundStyle(iconColor)
+                    }
                 }
 
                 // Play/Pause button
                 Button {
-                    if audioPlayer.isPlaying || audioPlayer.currentTime > 0 {
+                    if audioPlayer.isPlaying || audioPlayer.currentTime > 0 || audioPlayer.isTTSMode {
                         audioPlayer.togglePlayPause()
                     } else {
                         audioPlayer.play(book: book, chapter: chapter)
@@ -542,19 +601,26 @@ struct BibleAudioBar: View {
                     }
                 }
 
-                // Skip forward
-                Button { audioPlayer.skipForward() } label: {
-                    Image(systemName: "goforward.15")
-                        .font(.callout)
-                        .foregroundStyle(iconColor)
-                }
+                if !audioPlayer.isTTSMode {
+                    // Skip forward
+                    Button { audioPlayer.skipForward() } label: {
+                        Image(systemName: "goforward.15")
+                            .font(.callout)
+                            .foregroundStyle(iconColor)
+                    }
 
-                // Time
-                Text(timeString)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    .frame(width: 70)
+                    // Time
+                    Text(timeString)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .frame(width: 70)
+                } else {
+                    Text("Text-to-Speech")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
 
                 Spacer()
 

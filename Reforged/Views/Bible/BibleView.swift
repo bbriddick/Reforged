@@ -1424,6 +1424,10 @@ struct BibleView: View {
             let result = try await KJVService.shared.fetchChapterParsed(book: book, chapter: chapter)
             fetchedVerses = result.verses
             fetchedCanonical = result.canonical
+        case .net:
+            let result = try await NETService.shared.fetchChapterParsed(book: book, chapter: chapter)
+            fetchedVerses = result.verses
+            fetchedCanonical = result.canonical
         case .csb, .nkjv, .nasb, .rvr1960:
             let result = try await ApiBibleService.shared.fetchChapterParsed(book: book, chapter: chapter, translation: translation)
             fetchedVerses = result.verses
@@ -2066,6 +2070,7 @@ struct BibleTopBar: View {
                 .shadow(color: Color.black.opacity(0.06), radius: 4, y: 2)
             }
             .buttonStyle(NoBlobButtonStyle())
+            .fixedSize()                          // ← never shrinks or clips
 
             // Translation menu — full label when space allows, compact pill otherwise
             translationMenu

@@ -645,7 +645,6 @@ struct MainTabView: View {
         }
         .tint(Color.reforgedGold)
         .background(Color.adaptiveBackground(colorScheme))
-        .buttonStyle(NoBlobButtonStyle())
     }
 }
 

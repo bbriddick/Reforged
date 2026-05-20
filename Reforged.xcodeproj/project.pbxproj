@@ -11,14 +11,15 @@
 		3B40F38F2FBBD3A08D42F18F /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD4BCA6620AB550441B62CA /* SettingsModels.swift */; };
 		5C0D488D9F2B8A357C36FB36 /* AccountSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C79FE2CBEAC63ABD279754 /* AccountSettingsSection.swift */; };
 		5D3891187F2724D10FD5A9F2 /* AboutSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5190404405A017340CF7CDD3 /* AboutSection.swift */; };
+		6B09D1742FBC9C9900163A25 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		6B09D1772FBC9C9B00163A25 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC000001279B9E0000000001 /* FamilyControls.framework */; };
 		6B0ADE8C2F3259CE00DBAC28 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6B0ADE8B2F3259CE00DBAC28 /* Launch Screen.storyboard */; };
-		6B0CE4A22F9DAEB800291A1A /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC000001279B9E0000000001 /* FamilyControls.framework */; };
-		6B0CE4A52F9DAEB900291A1A /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
 		6B3C67BE2F3302EB008165D9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B3C67BD2F3302EB008165D9 /* WidgetKit.framework */; };
 		6B3C67C02F3302EB008165D9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B3C67BF2F3302EB008165D9 /* SwiftUI.framework */; };
-		6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6B3C67E02F3303EB008165D9 /* ReforgedWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3C67E12F3303EB008165D9 /* ReforgedWidget.swift */; };
 		6B3C67E22F3303EB008165D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B3C67E32F3303EB008165D9 /* Assets.xcassets */; };
+		6BFFE30E2FBBAAC200340E22 /* YouVersionPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = 6BFFE30D2FBBAAC200340E22 /* YouVersionPlatform */; };
 		9A7E0011279B9E0000000001 /* VerseOfTheDayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */; };
 		9F25489E7841AF60EE0BEF00 /* DisplaySettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */; };
 		A1000001279B9E0000000001 /* ReforgedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002279B9E0000000001 /* ReforgedApp.swift */; };
@@ -48,7 +49,7 @@
 		A1000060279B9E0000000001 /* BibleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000061279B9E0000000001 /* BibleModels.swift */; };
 		A1000062279B9E0000000001 /* ChapterNavigationWheel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */; };
 		A1000080279B9E0000000001 /* KJVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000081279B9E0000000001 /* KJVService.swift */; };
-		KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJV0000A279B9E0000000001 /* KJVAudioService.swift */; };
+		NET0000A279B9E0000000001 /* NETService.swift in Sources */ = {isa = PBXBuildFile; fileRef = NET0000B279B9E0000000001 /* NETService.swift */; };
 		A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000083279B9E0000000001 /* JournalStorageManager.swift */; };
 		A1000084279B9E0000000001 /* ReadingStreakManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000085279B9E0000000001 /* ReadingStreakManager.swift */; };
 		A1000086279B9E0000000001 /* KnowledgeBase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000087279B9E0000000001 /* KnowledgeBase.swift */; };
@@ -59,6 +60,7 @@
 		A10000C0279B9E0000000001 /* VerseShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000C1279B9E0000000001 /* VerseShareCardView.swift */; };
 		A10000D0279B9E0000000001 /* UnsplashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000D1279B9E0000000001 /* UnsplashService.swift */; };
 		A10000E2279B9E0000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A10000E1279B9E0000000001 /* PrivacyInfo.xcprivacy */; };
+		A10000E3279B9E0000000001 /* MemoryAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */; };
 		A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1AABB01279B9E0000000001 /* ApiBibleService.swift */; };
 		AIS0000A279B9E0000000001 /* AISettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AIS0000B279B9E0000000001 /* AISettingsSection.swift */; };
 		B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00001279B9E0000000001 /* StrongsModels.swift */; };
@@ -101,6 +103,7 @@
 		FB000002279B9E0000000001 /* FocusBlockingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001279B9E0000000001 /* FocusBlockingView.swift */; };
 		FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FS000001279B9E0000000001 /* FocusBlockingService.swift */; };
 		GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = GEM0000B279B9E0000000001 /* GeminiService.swift */; };
+		KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJV0000A279B9E0000000001 /* KJVAudioService.swift */; };
 		MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
 		PC000002279B9E0000000001 /* PodcastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000001279B9E0000000001 /* PodcastModels.swift */; };
 		PC000004279B9E0000000001 /* PodcastService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000003279B9E0000000001 /* PodcastService.swift */; };
@@ -121,6 +124,7 @@
 		RTE00002279B9E0000000001 /* RichTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTE00001279B9E0000000001 /* RichTextEditorView.swift */; };
 		SB000001279B9E0000000001 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SB000002279B9E0000000001 /* SupabaseAuthService.swift */; };
 		SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */; };
+		TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TTS0000B279B9E0000000001 /* TTSVoiceService.swift */; };
 		WNV0000B279B9E0000000001 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WNV0000A279B9E0000000001 /* WhatsNewView.swift */; };
 		WOC00002279B9E0000000001 /* WordsOfChristData.swift in Sources */ = {isa = PBXBuildFile; fileRef = WOC00001279B9E0000000001 /* WordsOfChristData.swift */; };
 		WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */ = {isa = PBXBuildFile; fileRef = WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */; };
@@ -201,7 +205,7 @@
 		A1000071279B9E0000000001 /* SettingsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
 		A1000073279B9E0000000001 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A1000081279B9E0000000001 /* KJVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVService.swift; sourceTree = "<group>"; };
-		KJV0000A279B9E0000000001 /* KJVAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioService.swift; sourceTree = "<group>"; };
+		NET0000B279B9E0000000001 /* NETService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NETService.swift; sourceTree = "<group>"; };
 		A1000083279B9E0000000001 /* JournalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalStorageManager.swift; sourceTree = "<group>"; };
 		A1000085279B9E0000000001 /* ReadingStreakManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStreakManager.swift; sourceTree = "<group>"; };
 		A1000087279B9E0000000001 /* KnowledgeBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeBase.swift; sourceTree = "<group>"; };
@@ -212,6 +216,7 @@
 		A10000C1279B9E0000000001 /* VerseShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseShareCardView.swift; sourceTree = "<group>"; };
 		A10000D1279B9E0000000001 /* UnsplashService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnsplashService.swift; sourceTree = "<group>"; };
 		A10000E1279B9E0000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryAudioPlayer.swift; sourceTree = "<group>"; };
 		A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BibleReadingSettingsSection.swift; path = Reforged/Views/Settings/BibleReadingSettingsSection.swift; sourceTree = "<group>"; };
 		A1AABB01279B9E0000000001 /* ApiBibleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiBibleService.swift; sourceTree = "<group>"; };
 		AIS0000B279B9E0000000001 /* AISettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AISettingsSection.swift; path = Reforged/Views/Settings/AISettingsSection.swift; sourceTree = "<group>"; };
@@ -252,6 +257,7 @@
 		FDAFE317A9066691D3A47C88 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Reforged/Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
 		FS000001279B9E0000000001 /* FocusBlockingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusBlockingService.swift; sourceTree = "<group>"; };
 		GEM0000B279B9E0000000001 /* GeminiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiService.swift; sourceTree = "<group>"; };
+		KJV0000A279B9E0000000001 /* KJVAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioService.swift; sourceTree = "<group>"; };
 		MAN00001279B9E0000000001 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		PC000001279B9E0000000001 /* PodcastModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastModels.swift; sourceTree = "<group>"; };
 		PC000003279B9E0000000001 /* PodcastService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastService.swift; sourceTree = "<group>"; };
@@ -274,6 +280,7 @@
 		RTE00001279B9E0000000001 /* RichTextEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextEditorView.swift; sourceTree = "<group>"; };
 		SB000002279B9E0000000001 /* SupabaseAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthService.swift; sourceTree = "<group>"; };
 		SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		TTS0000B279B9E0000000001 /* TTSVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSVoiceService.swift; sourceTree = "<group>"; };
 		WNV0000A279B9E0000000001 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
 		WOC00001279B9E0000000001 /* WordsOfChristData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordsOfChristData.swift; sourceTree = "<group>"; };
 		WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_words_of_christ_red_markup.json; sourceTree = "<group>"; };
@@ -293,8 +300,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6B0CE4A22F9DAEB800291A1A /* FamilyControls.framework in Frameworks */,
-				6B0CE4A52F9DAEB900291A1A /* ManagedSettings.framework in Frameworks */,
+				6B09D1742FBC9C9900163A25 /* ManagedSettings.framework in Frameworks */,
+				6B09D1772FBC9C9B00163A25 /* FamilyControls.framework in Frameworks */,
+				6BFFE30E2FBBAAC200340E22 /* YouVersionPlatform in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -425,6 +433,7 @@
 				A1000031279B9E0000000001 /* AppState.swift */,
 				A1000047279B9E0000000001 /* ESVService.swift */,
 				A1000081279B9E0000000001 /* KJVService.swift */,
+				NET0000B279B9E0000000001 /* NETService.swift */,
 				KJV0000A279B9E0000000001 /* KJVAudioService.swift */,
 				A1AABB01279B9E0000000001 /* ApiBibleService.swift */,
 				BDD100000000000000000002 /* BibleDownloadManager.swift */,
@@ -432,6 +441,7 @@
 				A100004B279B9E0000000001 /* BundledDataService.swift */,
 				E2000002279B9E0000000001 /* BibleSearchService.swift */,
 				GEM0000B279B9E0000000001 /* GeminiService.swift */,
+				TTS0000B279B9E0000000001 /* TTSVoiceService.swift */,
 				A1000073279B9E0000000001 /* SettingsManager.swift */,
 				A1000083279B9E0000000001 /* JournalStorageManager.swift */,
 				A1000085279B9E0000000001 /* ReadingStreakManager.swift */,
@@ -494,6 +504,7 @@
 				A1000039279B9E0000000001 /* MemoryView.swift */,
 				A100003B279B9E0000000001 /* MemoryReviewView.swift */,
 				A100003D279B9E0000000001 /* MemoryPracticeView.swift */,
+				A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */,
 				RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */,
 				RF0000A4279B9E0000000001 /* DeepDrillView.swift */,
 				RG000006279B9E0000000001 /* MatchingGameView.swift */,
@@ -691,6 +702,9 @@
 				Base,
 			);
 			mainGroup = A100000C279B9E0000000001;
+			packageReferences = (
+				6BFFE30C2FBBAAC200340E22 /* XCRemoteSwiftPackageReference "platform-sdk-swift" */,
+			);
 			productRefGroup = A100000E279B9E0000000001 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -764,6 +778,7 @@
 				A1000038279B9E0000000001 /* MemoryView.swift in Sources */,
 				A100003A279B9E0000000001 /* MemoryReviewView.swift in Sources */,
 				A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */,
+				A10000E3279B9E0000000001 /* MemoryAudioPlayer.swift in Sources */,
 				RF0000A1279B9E0000000001 /* ReflectionNoteSheet.swift in Sources */,
 				RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */,
 				RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */,
@@ -785,6 +800,7 @@
 				A1000046279B9E0000000001 /* ESVService.swift in Sources */,
 				A10000D0279B9E0000000001 /* UnsplashService.swift in Sources */,
 				A1000080279B9E0000000001 /* KJVService.swift in Sources */,
+				NET0000A279B9E0000000001 /* NETService.swift in Sources */,
 				KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */,
 				A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */,
 				A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */,
@@ -794,6 +810,7 @@
 				A100004A279B9E0000000001 /* BundledDataService.swift in Sources */,
 				E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */,
 				GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */,
+				TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */,
 				AIS0000A279B9E0000000001 /* AISettingsSection.swift in Sources */,
 				A1000060279B9E0000000001 /* BibleModels.swift in Sources */,
 				A1000062279B9E0000000001 /* ChapterNavigationWheel.swift in Sources */,
@@ -856,6 +873,7 @@
 /* Begin PBXTargetDependency section */
 		6B3C67CE2F3302EC008165D9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = 6B3C67BA2F3302EB008165D9 /* ReforgedWidgetExtension */;
 			targetProxy = 6B3C67CD2F3302EC008165D9 /* PBXContainerItemProxy */;
 		};
@@ -888,6 +906,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -920,6 +941,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1088,12 +1112,12 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,6";
 			};
 			name = Debug;
 		};
@@ -1132,12 +1156,12 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,6";
 			};
 			name = Release;
 		};
@@ -1233,6 +1257,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6BFFE30C2FBBAAC200340E22 /* XCRemoteSwiftPackageReference "platform-sdk-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/youversion/platform-sdk-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.2.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6BFFE30D2FBBAAC200340E22 /* YouVersionPlatform */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6BFFE30C2FBBAAC200340E22 /* XCRemoteSwiftPackageReference "platform-sdk-swift" */;
+			productName = YouVersionPlatform;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A1000013279B9E0000000001 /* Project object */;
 }

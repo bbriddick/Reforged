@@ -1,17 +1,22 @@
 import Foundation
 
-struct FCBHConfig {
-    static let apiKey = "YOUR_FCBH_API_KEY"
-    static let otFileset = "ENGKJVO2DA"
-    static let ntFileset = "ENGKJVN2DA"
-    static let baseURL = "https://4.dbt.io/api/bibles/filesets"
-}
+// MARK: - KJV Audio Service
+// Uses the free, no-auth bible.helloao.org API.
+// Fetching a chapter also pre-caches the next chapter's MP3 URL so
+// auto-advancing to the next chapter never needs an extra network round-trip.
 
 class KJVAudioService {
     static let shared = KJVAudioService()
     private init() {}
 
-    private let usfmMap: [String: String] = [
+    private let baseURL = "https://bible.helloao.org/api"
+
+    // Pre-populated from each chapter response's `nextChapterAudioLinks`
+    private var audioCache: [String: String] = [:]   // "Book:chapter" → mp3 URL string
+
+    // MARK: - Book ID Map (USFM / helloao.org 3-letter IDs)
+
+    private let bookIdMap: [String: String] = [
         // Old Testament
         "Genesis": "GEN", "Exodus": "EXO", "Leviticus": "LEV", "Numbers": "NUM",
         "Deuteronomy": "DEU", "Joshua": "JOS", "Judges": "JDG", "Ruth": "RUT",
@@ -33,41 +38,84 @@ class KJVAudioService {
         "2 John": "2JN", "3 John": "3JN", "Jude": "JUD", "Revelation": "REV"
     ]
 
-    private let ntBooks: Set<String> = [
-        "Matthew", "Mark", "Luke", "John", "Acts", "Romans",
-        "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians",
-        "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy",
-        "Titus", "Philemon", "Hebrews", "James", "1 Peter", "2 Peter",
-        "1 John", "2 John", "3 John", "Jude", "Revelation"
-    ]
+    // MARK: - Public API
 
+    /// Returns the MP3 URL for the given book + chapter.
+    /// If the previous chapter's response already pre-cached this URL, returns it immediately.
+    /// Otherwise fetches the chapter JSON and caches the next chapter's URL as a side-effect.
     func getAudioURL(book: String, chapter: Int) async throws -> URL {
-        guard let usfm = usfmMap[book] else {
+        let key = cacheKey(book: book, chapter: chapter)
+
+        if let cached = audioCache[key], let url = URL(string: cached) {
+            audioCache.removeValue(forKey: key)
+            return url
+        }
+
+        return try await fetchAndCache(book: book, chapter: chapter)
+    }
+
+    // MARK: - Private
+
+    private func fetchAndCache(book: String, chapter: Int) async throws -> URL {
+        guard let bookId = bookIdMap[book] else {
             throw KJVAudioError.unknownBook(book)
         }
 
-        let fileset = ntBooks.contains(book) ? FCBHConfig.ntFileset : FCBHConfig.otFileset
-        let urlString = "\(FCBHConfig.baseURL)/\(fileset)/\(usfm)/\(chapter)?v=4&key=\(FCBHConfig.apiKey)"
-
-        guard let url = URL(string: urlString) else {
+        let urlString = "\(baseURL)/KJV/\(bookId)/\(chapter).json"
+        guard let requestURL = URL(string: urlString) else {
             throw KJVAudioError.invalidURL
         }
 
-        let (data, response) = try await URLSession.shared.data(from: url)
-
+        let (data, response) = try await URLSession.shared.data(from: requestURL)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             throw KJVAudioError.httpError((response as? HTTPURLResponse)?.statusCode ?? -1)
         }
 
-        let decoded = try JSONDecoder().decode(FCBHResponse.self, from: data)
+        let decoded = try JSONDecoder().decode(HelloAOChapterResponse.self, from: data)
 
-        guard let path = decoded.data.first?.path, let audioURL = URL(string: path) else {
+        // Pre-cache next chapter's URL using the next chapter key derived from BibleData
+        if let nextLinks = decoded.nextChapterAudioLinks,
+           let mp3String = preferredURL(from: nextLinks),
+           let next = nextChapterInfo(book: book, chapter: chapter) {
+            audioCache[cacheKey(book: next.book, chapter: next.chapter)] = mp3String
+        }
+
+        guard let mp3String = preferredURL(from: decoded.thisChapterAudioLinks),
+              let audioURL = URL(string: mp3String) else {
             throw KJVAudioError.noAudioFound
         }
 
         return audioURL
     }
+
+    /// Picks the preferred reader URL. Prefers "gilbert", then "hays", then first available.
+    private func preferredURL(from links: [String: String]?) -> String? {
+        guard let links = links, !links.isEmpty else { return nil }
+        return links["gilbert"] ?? links["hays"] ?? links.values.first
+    }
+
+    private func cacheKey(book: String, chapter: Int) -> String {
+        "\(book):\(chapter)"
+    }
+
+    /// Mirrors BibleAudioPlayer's chapter-advance logic so we can key the pre-cache correctly.
+    private func nextChapterInfo(book: String, chapter: Int) -> (book: String, chapter: Int)? {
+        guard let bookData = BibleData.books.first(where: { $0.name == book }) else { return nil }
+        if chapter < bookData.chapters { return (book, chapter + 1) }
+        guard let idx = BibleData.books.firstIndex(where: { $0.name == book }),
+              idx + 1 < BibleData.books.count else { return nil }
+        return (BibleData.books[idx + 1].name, 1)
+    }
 }
+
+// MARK: - Response Models
+
+private struct HelloAOChapterResponse: Decodable {
+    let thisChapterAudioLinks: [String: String]?
+    let nextChapterAudioLinks: [String: String]?
+}
+
+// MARK: - Errors
 
 enum KJVAudioError: LocalizedError {
     case unknownBook(String)
@@ -78,17 +126,9 @@ enum KJVAudioError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unknownBook(let b): return "Unknown book: \(b)"
-        case .invalidURL: return "Invalid audio URL"
-        case .httpError(let code): return "FCBH API error \(code)"
-        case .noAudioFound: return "No KJV audio found for this chapter"
+        case .invalidURL:        return "Invalid audio URL"
+        case .httpError(let c):  return "KJV audio API error \(c)"
+        case .noAudioFound:      return "No audio available for this chapter"
         }
     }
-}
-
-private struct FCBHResponse: Decodable {
-    let data: [FCBHAudioFile]
-}
-
-private struct FCBHAudioFile: Decodable {
-    let path: String
 }
