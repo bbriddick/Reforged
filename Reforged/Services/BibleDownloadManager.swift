@@ -68,6 +68,7 @@ struct BibleBundleConfig {
         case .nkjv:    filename = "nkjv.json"
         case .nasb:    filename = "nasb.json"
         case .rvr1960: filename = "rvr1960.json"
+        case .net: return nil  // fetched live per chapter, no bulk bundle
         case .tr, .wlc: return nil  // bundled, no download needed
         }
         return URL(string: "\(baseURL)/\(filename)")
@@ -110,6 +111,7 @@ class BibleDownloadManager: ObservableObject {
         switch translation {
         case .esv:                    return ESVService.shared.cachedChapterCount
         case .kjv:                    return KJVService.shared.cachedChapterCount
+        case .net:                    return NETService.shared.cachedChapterCount
         case .csb, .nkjv, .nasb, .rvr1960: return ApiBibleService.shared.cachedChapterCount(for: translation)
         case .tr, .wlc:               return Self.totalChapters  // always "downloaded" (bundled)
         }
@@ -176,6 +178,9 @@ class BibleDownloadManager: ObservableObject {
             }.value
             KJVService.shared.injectBundle(bundle)
 
+        case .net:
+            break  // NET fetches live per chapter, no bulk bundle
+
         case .csb, .nkjv, .nasb, .rvr1960:
             let bundle = try await Task.detached(priority: .userInitiated) {
                 try JSONDecoder().decode([String: ApiBibleCachedChapter].self, from: data)
@@ -217,6 +222,8 @@ class BibleDownloadManager: ObservableObject {
             _ = try await ESVService.shared.fetchChapterParsed(book: book, chapter: chapter)
         case .kjv:
             _ = try await KJVService.shared.fetchChapterParsed(book: book, chapter: chapter)
+        case .net:
+            _ = try await NETService.shared.fetchChapterParsed(book: book, chapter: chapter)
         case .csb, .nkjv, .nasb, .rvr1960:
             _ = try await ApiBibleService.shared.fetchChapterParsed(book: book, chapter: chapter, translation: translation)
         case .tr, .wlc:
@@ -243,6 +250,7 @@ class BibleDownloadManager: ObservableObject {
         switch translation {
         case .esv:                    ESVService.shared.clearCache()
         case .kjv:                    KJVService.shared.clearCache()
+        case .net:                    NETService.shared.clearCache()
         case .csb, .nkjv, .nasb, .rvr1960: ApiBibleService.shared.clearCache(for: translation)
         case .tr, .wlc:               break  // bundled, nothing to clear
         }

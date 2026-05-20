@@ -111,6 +111,8 @@ class NETService {
         }
     }
 
+    var cachedChapterCount: Int { cacheQueue.sync { chapterCache.count } }
+
     // MARK: - API
 
     private func buildURL(passage: String) -> URL? {
