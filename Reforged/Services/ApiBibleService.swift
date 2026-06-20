@@ -6,12 +6,23 @@ struct ApiBibleConfig {
     static let baseURL = "https://rest.api.bible/v1"
     static let apiKey = "UUTCGJADLTugGkW5aXiIt"
 
+    // Per-translation API key overrides. Most bibles share the default key above, but some
+    // publisher-restricted texts (e.g. NLT/Tyndale) are licensed under their own key.
+    static let apiKeyOverrides: [BibleTranslation: String] = [
+        .nlt: "hmz8d18_vB9WwraDGXPMp"
+    ]
+
+    static func apiKey(for translation: BibleTranslation) -> String {
+        apiKeyOverrides[translation] ?? apiKey
+    }
+
     // Bible IDs for each translation
     static let bibleIds: [BibleTranslation: String] = [
         .csb: "a556c5305ee15c3f-01",
         .nkjv: "63097d2a0a2f7db3-01",
         .nasb: "b8ee27bcd1cae43a-01",
-        .rvr1960: "592420522e16049f-01"
+        .rvr1960: "592420522e16049f-01",
+        .nlt: "d6e14a625393b4da-01"
     ]
 }
 
@@ -300,9 +311,9 @@ class ApiBibleService {
 
     // MARK: - API Request Helper
 
-    private func makeRequest(url: URL) async throws -> Data {
+    private func makeRequest(url: URL, apiKey: String? = nil) async throws -> Data {
         var request = URLRequest(url: url)
-        request.setValue(apiKey, forHTTPHeaderField: "api-key")
+        request.setValue(apiKey ?? self.apiKey, forHTTPHeaderField: "api-key")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpMethod = "GET"
 
@@ -346,7 +357,7 @@ class ApiBibleService {
 
         guard let url = URL(string: urlString) else { throw ApiBibleError.invalidURL }
 
-        let data = try await makeRequest(url: url)
+        let data = try await makeRequest(url: url, apiKey: ApiBibleConfig.apiKey(for: translation))
 
         do {
             let decoded = try JSONDecoder().decode(ApiBibleChapterResponse.self, from: data)
@@ -387,7 +398,7 @@ class ApiBibleService {
             throw ApiBibleError.invalidURL
         }
 
-        let data = try await makeRequest(url: url)
+        let data = try await makeRequest(url: url, apiKey: ApiBibleConfig.apiKey(for: translation))
 
         let decoded = try JSONDecoder().decode(ApiBiblePassageResponse.self, from: data)
 
@@ -413,7 +424,7 @@ class ApiBibleService {
             throw ApiBibleError.invalidURL
         }
 
-        let data = try await makeRequest(url: url)
+        let data = try await makeRequest(url: url, apiKey: ApiBibleConfig.apiKey(for: translation))
         let decoded = try JSONDecoder().decode(ApiBibleSearchResponse.self, from: data)
         return decoded.data.verses ?? []
     }

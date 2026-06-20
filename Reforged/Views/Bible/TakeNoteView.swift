@@ -13,80 +13,108 @@ enum SelectionAction {
 
 struct SelectionActionBar: View {
     @ObservedObject var readingState: BibleReadingState
+    let onDismiss: () -> Void
     let onAction: (SelectionAction) -> Void
     @State private var showColorPicker = false
     @Environment(\.colorScheme) var colorScheme
 
+    private var verseCountLabel: String {
+        let n = readingState.selectedVerses.count
+        return n == 1 ? "1 verse selected" : "\(n) verses selected"
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Color picker
-            if showColorPicker {
-                HStack(spacing: 12) {
-                    ForEach(HighlightColor.allCases) { color in
+        VStack(spacing: 6) {
+            // Verse count chip + dismiss
+            HStack(spacing: 6) {
+                Text(verseCountLabel)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.reforgedGold)
+
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .foregroundStyle(Color.reforgedGold)
+                }
+                .contentShape(Rectangle())
+                .padding(4)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(.ultraThinMaterial)
+            .clipShape(Capsule())
+
+            VStack(spacing: 0) {
+                // Color picker (expands above the pill)
+                if showColorPicker {
+                    HStack(spacing: 12) {
+                        ForEach(HighlightColor.allCases) { color in
+                            Button {
+                                onAction(.highlight(color))
+                                withAnimation { showColorPicker = false }
+                            } label: {
+                                Circle()
+                                    .fill(color.color)
+                                    .frame(width: 36, height: 36)
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                    .shadow(color: color.color.opacity(0.4), radius: 4, y: 2)
+                            }
+                        }
+
+                        // Clear highlight
                         Button {
-                            onAction(.highlight(color))
+                            onAction(.removeHighlight)
                             withAnimation { showColorPicker = false }
                         } label: {
-                            Circle()
-                                .fill(color.color)
-                                .frame(width: 36, height: 36)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                .shadow(color: color.color.opacity(0.4), radius: 4, y: 2)
+                            ZStack {
+                                Circle()
+                                    .fill(Color.adaptiveCardBackground(colorScheme))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: "xmark")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            }
+                        }
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 20)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.bottom, 8)
+                    .transition(.scale.combined(with: .opacity))
+                }
+
+                // Action buttons
+                HStack(spacing: 16) {
+                    ActionBarButton(icon: "highlighter", label: "Highlight") {
+                        withAnimation(.spring(response: 0.3)) {
+                            showColorPicker.toggle()
                         }
                     }
 
-                    // Clear highlight
-                    Button {
-                        onAction(.removeHighlight)
-                        withAnimation { showColorPicker = false }
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.adaptiveCardBackground(colorScheme))
-                                .frame(width: 36, height: 36)
-                            Image(systemName: "xmark")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        }
+                    ActionBarButton(icon: "note.text", label: "Note") {
+                        onAction(.addNote)
+                    }
+
+                    ActionBarButton(icon: "brain.head.profile", label: "Memory") {
+                        onAction(.addToMemory)
+                    }
+
+                    ActionBarButton(icon: "doc.on.doc", label: "Copy") {
+                        onAction(.copy)
+                    }
+
+                    ActionBarButton(icon: "square.and.arrow.up", label: "Share") {
+                        onAction(.share)
                     }
                 }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 24)
                 .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .padding(.bottom, 8)
-                .transition(.scale.combined(with: .opacity))
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .shadow(color: Color.black.opacity(0.15), radius: 20, y: -5)
             }
-
-            // Action buttons
-            HStack(spacing: 16) {
-                ActionBarButton(icon: "highlighter", label: "Highlight") {
-                    withAnimation(.spring(response: 0.3)) {
-                        showColorPicker.toggle()
-                    }
-                }
-
-                ActionBarButton(icon: "note.text", label: "Note") {
-                    onAction(.addNote)
-                }
-
-                ActionBarButton(icon: "brain.head.profile", label: "Memory") {
-                    onAction(.addToMemory)
-                }
-
-                ActionBarButton(icon: "doc.on.doc", label: "Copy") {
-                    onAction(.copy)
-                }
-
-                ActionBarButton(icon: "square.and.arrow.up", label: "Share") {
-                    onAction(.share)
-                }
-            }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 24)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .shadow(color: Color.black.opacity(0.15), radius: 20, y: -5)
         }
         .padding(.horizontal)
         .padding(.bottom, 8)
@@ -492,3 +520,4 @@ struct TakeNoteView: View {
         }
     }
 }
+

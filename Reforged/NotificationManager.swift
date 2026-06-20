@@ -327,36 +327,45 @@ class NotificationManager: NSObject, ObservableObject {
 
     // MARK: - Weekly Check-ins
 
-    private static let weekdayMap: [String: Int] = [
-        "sunday": 1, "monday": 2, "tuesday": 3, "wednesday": 4,
-        "thursday": 5, "friday": 6, "saturday": 7
-    ]
-
+    /// Schedule exactly ONE weekly check-in notification at the day and time the user
+    /// has configured. A random check-in is picked from the provided list each time
+    /// this method runs (i.e. each time the app refreshes from Supabase or the user
+    /// changes their notification day/time).
     func scheduleWeeklyCheckins(_ checkins: [WeeklyCheckin]) async {
         let center = UNUserNotificationCenter.current()
-        // Remove previously scheduled check-in notifications before rescheduling
-        let pending = await center.pendingNotificationRequests()
-        let checkinIDs = pending.map(\.identifier).filter { $0.hasPrefix("checkin-") }
-        center.removePendingNotificationRequests(withIdentifiers: checkinIDs)
+        // Remove the single weekly check-in slot before rescheduling.
+        center.removePendingNotificationRequests(withIdentifiers: ["checkin-weekly"])
 
-        for c in checkins {
-            guard let weekday = Self.weekdayMap[c.dayOfWeek.lowercased()] else { continue }
-            let parts = c.time.split(separator: ":").compactMap { Int($0) }
-            guard parts.count >= 2 else { continue }
+        guard !checkins.isEmpty else { return }
 
-            var date = DateComponents()
-            date.weekday = weekday
-            date.hour = parts[0]
-            date.minute = parts[1]
-
-            let content = UNMutableNotificationContent()
-            content.title = c.title
-            content.body = c.message
-            content.sound = .default
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: date, repeats: true)
-            let req = UNNotificationRequest(identifier: "checkin-\(c.id)", content: content, trigger: trigger)
-            try? await center.add(req)
+        // Read user preferences on the main actor.
+        let (enabled, weekday, hour, minute) = await MainActor.run {
+            let s = SettingsManager.shared
+            let comps = Calendar.current.dateComponents([.hour, .minute], from: s.weeklyCheckinTime)
+            return (
+                s.weeklyCheckinEnabled && s.notificationsEnabled,
+                s.weeklyCheckinDay,
+                comps.hour ?? 9,
+                comps.minute ?? 0
+            )
         }
+        guard enabled else { return }
+
+        // Pick a random check-in from the full list.
+        guard let checkin = checkins.randomElement() else { return }
+
+        var dateComponents = DateComponents()
+        dateComponents.weekday = weekday
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        let content = UNMutableNotificationContent()
+        content.title = checkin.title
+        content.body = checkin.message
+        content.sound = .default
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let req = UNNotificationRequest(identifier: "checkin-weekly", content: content, trigger: trigger)
+        try? await center.add(req)
     }
 }

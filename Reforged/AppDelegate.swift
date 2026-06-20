@@ -79,7 +79,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                             switch translation {
                             case .esv:
                                 _ = try await ESVService.shared.fetchChapterParsed(book: book, chapter: chapter)
-                            case .csb, .nkjv, .nasb, .rvr1960:
+                            case .csb, .nkjv, .nasb, .rvr1960, .nlt:
                                 _ = try await ApiBibleService.shared.fetchChapterParsed(
                                     book: book, chapter: chapter, translation: translation)
                             default:

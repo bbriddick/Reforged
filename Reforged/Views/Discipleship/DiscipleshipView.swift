@@ -14,12 +14,15 @@ struct DiscipleshipView: View {
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     headerSection
                     learningPathCard
-                    readingPlansCard
-                    tracksCard
+
+                    sectionLabel("Resources")
+                    resourcesGrid
                     podcastCard
+
+                    sectionLabel("Tools")
                     ShareGospelCard()
                     focusShieldCard
                 }
@@ -33,6 +36,20 @@ struct DiscipleshipView: View {
         }
     }
 
+    // MARK: - Section Label
+
+    private func sectionLabel(_ title: String) -> some View {
+        HStack {
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .tracking(1.0)
+            Spacer()
+        }
+        .padding(.top, 4)
+        .padding(.bottom, -4)
+    }
+
     // MARK: - Header
 
     private var headerSection: some View {
@@ -42,17 +59,27 @@ struct DiscipleshipView: View {
                 Text(name.isEmpty ? "Grow in Faith" : "Growing in Christ, \(name)")
                     .font(.subheadline)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Text(progressSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
             }
 
             Spacer()
 
-            // XP & Streak badges
             HStack(spacing: 8) {
                 statBadge(icon: "flame.fill", value: "\(appState.user.streak)", color: .orange)
                 statBadge(icon: "star.fill", value: "\(appState.user.xp) XP", color: Color.reforgedGold)
             }
         }
         .padding(.top, 4)
+    }
+
+    private var progressSubtitle: String {
+        let total = appState.tracks.reduce(0) { $0 + $1.totalLessons }
+        let completed = appState.tracks.reduce(0) { $0 + $1.completedLessons }
+        guard total > 0 else { return "Begin your journey" }
+        let pct = Int((Double(completed) / Double(total)) * 100)
+        return "\(pct)% of learning path complete"
     }
 
     private func statBadge(icon: String, value: String, color: Color) -> some View {
@@ -76,7 +103,6 @@ struct DiscipleshipView: View {
     private var learningPathCard: some View {
         NavigationLink(destination: LearningPathView()) {
             ZStack(alignment: .bottomLeading) {
-                // Background gradient
                 LinearGradient(
                     colors: [
                         Color(red: 0.10, green: 0.18, blue: 0.38),
@@ -86,7 +112,6 @@ struct DiscipleshipView: View {
                     endPoint: .bottomTrailing
                 )
 
-                // Decorative circles
                 Circle()
                     .fill(Color.white.opacity(0.06))
                     .frame(width: 160, height: 160)
@@ -119,7 +144,6 @@ struct DiscipleshipView: View {
                                 .lineLimit(2)
                         }
 
-                        // Progress bar
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 3)
@@ -157,36 +181,44 @@ struct DiscipleshipView: View {
         .shadow(color: Color.black.opacity(0.22), radius: 12, y: 5)
     }
 
-    // MARK: - Reading Plans Card
+    // MARK: - Resources Grid
 
-    private var readingPlansCard: some View {
-        NavigationLink(destination: ReadingPlansView()) {
-            HStack(spacing: 16) {
+    private var resourcesGrid: some View {
+        HStack(spacing: 12) {
+            readingPlansMiniCard
+            tracksMiniCard
+        }
+    }
+
+    private var readingPlansMiniCard: some View {
+        let accent = Color(red: 0.1, green: 0.65, blue: 0.8)
+        return NavigationLink(destination: ReadingPlansView()) {
+            VStack(alignment: .leading, spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(red: 0.1, green: 0.65, blue: 0.8).opacity(0.15))
-                        .frame(width: 48, height: 48)
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(accent.opacity(0.15))
+                        .frame(width: 40, height: 40)
                     Image(systemName: "calendar.badge.checkmark")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.1, green: 0.65, blue: 0.8))
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(accent)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Reading Plans")
-                        .font(.headline)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
                     Text(readingPlansSubtitle)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
                 Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
             }
-            .padding(16)
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
             .background(Color.adaptiveCardBackground(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
@@ -194,51 +226,49 @@ struct DiscipleshipView: View {
         .buttonStyle(.plain)
     }
 
-    private var readingPlansSubtitle: String {
-        let service = ReadingPlanService.shared
-        let inProgress = BibleReadingPlans.all.filter {
-            service.hasStarted($0.id) && !service.isComplete($0.id)
-        }
-        let finished = BibleReadingPlans.all.filter { service.isComplete($0.id) }
-        if inProgress.isEmpty && finished.isEmpty {
-            return "5 plans · Start your reading journey"
-        }
-        var parts: [String] = []
-        if !inProgress.isEmpty { parts.append("\(inProgress.count) in progress") }
-        if !finished.isEmpty  { parts.append("\(finished.count) completed") }
-        return parts.joined(separator: " · ")
-    }
-
-    // MARK: - Tracks Card
-
-    private var tracksCard: some View {
+    private var tracksMiniCard: some View {
         NavigationLink(destination: TracksView()) {
-            HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 10)
                         .fill(Color.reforgedGold.opacity(0.15))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 40, height: 40)
                     Image(systemName: "books.vertical.fill")
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.reforgedGold)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Explore Tracks")
-                        .font(.headline)
+                    Text("Tracks")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
                     Text(tracksSubtitle)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                if overallProgress > 0 {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.adaptiveTextSecondary(colorScheme).opacity(0.2))
+                                .frame(height: 4)
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.reforgedGold)
+                                .frame(width: geo.size.width * overallProgress, height: 4)
+                        }
+                    }
+                    .frame(height: 4)
+                }
             }
-            .padding(16)
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
             .background(Color.adaptiveCardBackground(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
@@ -363,6 +393,21 @@ struct DiscipleshipView: View {
         let total = appState.tracks.reduce(0) { $0 + $1.totalLessons }
         let completed = appState.tracks.reduce(0) { $0 + $1.completedLessons }
         return "\(completed)/\(total) lessons"
+    }
+
+    private var readingPlansSubtitle: String {
+        let service = ReadingPlanService.shared
+        let inProgress = BibleReadingPlans.all.filter {
+            service.hasStarted($0.id) && !service.isComplete($0.id)
+        }
+        let finished = BibleReadingPlans.all.filter { service.isComplete($0.id) }
+        if inProgress.isEmpty && finished.isEmpty {
+            return "5 plans available"
+        }
+        var parts: [String] = []
+        if !inProgress.isEmpty { parts.append("\(inProgress.count) in progress") }
+        if !finished.isEmpty  { parts.append("\(finished.count) done") }
+        return parts.joined(separator: " · ")
     }
 
     private var tracksSubtitle: String {

@@ -51,13 +51,49 @@ enum WeeklyCheckinService {
         return try JSONDecoder().decode([WeeklyCheckin].self, from: data)
     }
 
-    /// Fetch and schedule all check-ins as weekly repeating notifications.
+    // MARK: - Local Cache
+
+    private static let cacheKey = "weeklyCheckins.cache"
+
+    /// Returns the most recently cached check-in list, or an empty array if none.
+    static func cachedCheckins() -> [WeeklyCheckin] {
+        guard let data = UserDefaults.standard.data(forKey: cacheKey),
+              let checkins = try? JSONDecoder().decode([WeeklyCheckin].self, from: data) else {
+            return []
+        }
+        return checkins
+    }
+
+    private static func cache(_ checkins: [WeeklyCheckin]) {
+        if let data = try? JSONEncoder().encode(checkins) {
+            UserDefaults.standard.set(data, forKey: cacheKey)
+        }
+    }
+
+    // MARK: - Scheduling
+
+    /// Fetch fresh check-ins from Supabase, cache them, then schedule exactly one
+    /// weekly notification at the user's chosen day and time.
     static func fetchAndSchedule() async {
         do {
             let checkins = try await fetchAll()
+            cache(checkins)
             await NotificationManager.shared.scheduleWeeklyCheckins(checkins)
         } catch {
+            // Network unavailable — reschedule from whatever is cached.
+            let cached = cachedCheckins()
+            if !cached.isEmpty {
+                await NotificationManager.shared.scheduleWeeklyCheckins(cached)
+            }
             print("[WeeklyCheckinService] Failed to fetch check-ins: \(error)")
         }
+    }
+
+    /// Re-schedule the weekly check-in from the local cache without hitting the network.
+    /// Called when the user changes the day/time/enabled settings.
+    static func rescheduleFromCache() async {
+        let checkins = cachedCheckins()
+        guard !checkins.isEmpty else { return }
+        await NotificationManager.shared.scheduleWeeklyCheckins(checkins)
     }
 }

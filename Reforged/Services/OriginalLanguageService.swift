@@ -5,9 +5,11 @@ import Combine
 
 /// Provides original-language word lookup from:
 /// - Textus Receptus (trparsed.json) for Greek New Testament
+/// - SBL Greek New Testament (sblgnt.json) for Greek New Testament
 /// - Westminster Leningrad Codex (wlc.json) for Hebrew Old Testament
 ///
 /// The TR file format: verse text is a flat string of `word GNNNN morph` triples.
+/// The SBLGNT file format: verse text is plain Greek.
 /// The WLC file format: verse text is pure Hebrew with vowel points and cantillation.
 class OriginalLanguageService: ObservableObject {
     static let shared = OriginalLanguageService()
@@ -15,6 +17,7 @@ class OriginalLanguageService: ObservableObject {
 
     /// Published so SwiftUI views re-render when data finishes loading.
     @Published private(set) var trReady = false
+    @Published private(set) var sblReady = false
     @Published private(set) var wlcReady = false
 
     // MARK: - Parsed token type
@@ -34,11 +37,14 @@ class OriginalLanguageService: ObservableObject {
 
     // Key: "bookNumber-chapter-verse", value: array of tokens
     private var trIndex: [String: [TRToken]]?
+    private var sblIndex: [String: String]?
     private var wlcIndex: [String: [String]]?
     private var trChapterIndex: [String: [(verse: Int, tokens: [TRToken])]]?
+    private var sblChapterIndex: [String: [(verse: Int, text: String)]]?
     private var wlcChapterIndex: [String: [(verse: Int, words: [String])]]?
 
     private var trLoaded = false
+    private var sblLoaded = false
     private var wlcLoaded = false
     private let loadQueue = DispatchQueue(label: "com.reforged.originallanguage", qos: .utility)
 
@@ -46,6 +52,9 @@ class OriginalLanguageService: ObservableObject {
 
     /// Initiates loading of the Textus Receptus (Greek NT) data if not yet loaded.
     func preloadTR() { ensureTRLoaded() }
+
+    /// Initiates loading of the SBL Greek New Testament data if not yet loaded.
+    func preloadSBLGNT() { ensureSBLLoaded() }
 
     /// Initiates loading of the Westminster Leningrad Codex (Hebrew OT) data if not yet loaded.
     func preloadWLC() { ensureWLCLoaded() }
@@ -64,6 +73,12 @@ class OriginalLanguageService: ObservableObject {
         return trIndex?["\(bookNumber)-\(chapter)-\(verse)"] ?? []
     }
 
+    /// Returns the SBLGNT verse text for a NT verse.
+    func sblVerse(bookNumber: Int, chapter: Int, verse: Int) -> String? {
+        ensureSBLLoaded()
+        return sblIndex?["\(bookNumber)-\(chapter)-\(verse)"]
+    }
+
     /// Returns the vocalized Hebrew words for an OT verse from the WLC.
     func wlcWords(bookNumber: Int, chapter: Int, verse: Int) -> [String] {
         ensureWLCLoaded()
@@ -74,6 +89,12 @@ class OriginalLanguageService: ObservableObject {
     func trChapter(bookNumber: Int, chapter: Int) -> [(verse: Int, tokens: [TRToken])] {
         ensureTRLoaded()
         return trChapterIndex?["\(bookNumber)-\(chapter)"] ?? []
+    }
+
+    /// Returns all SBLGNT verses for a NT chapter, sorted by verse number.
+    func sblChapter(bookNumber: Int, chapter: Int) -> [(verse: Int, text: String)] {
+        ensureSBLLoaded()
+        return sblChapterIndex?["\(bookNumber)-\(chapter)"] ?? []
     }
 
     /// Returns all WLC word arrays for an OT chapter, sorted by verse number.
@@ -142,6 +163,42 @@ class OriginalLanguageService: ObservableObject {
                 self.trIndex = index
                 self.trChapterIndex = chapterIndex
                 self.trReady = true
+            }
+        }
+    }
+
+    private func ensureSBLLoaded() {
+        guard !sblLoaded else { return }
+        sblLoaded = true
+        guard let url = Bundle.main.url(forResource: "sblgnt", withExtension: "json") else { return }
+        loadQueue.async { [weak self] in
+            guard let self else { return }
+            guard let data = try? Data(contentsOf: url) else { return }
+            struct SBLFile: Decodable {
+                struct Verse: Decodable {
+                    let book: Int
+                    let chapter: Int
+                    let verse: Int
+                    let text: String
+                }
+                let verses: [Verse]
+            }
+            guard let file = try? JSONDecoder().decode(SBLFile.self, from: data) else { return }
+            var index: [String: String] = [:]
+            var chapterIndex: [String: [(verse: Int, text: String)]] = [:]
+            for v in file.verses {
+                let text = v.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { continue }
+                index["\(v.book)-\(v.chapter)-\(v.verse)"] = text
+                chapterIndex["\(v.book)-\(v.chapter)", default: []].append((verse: v.verse, text: text))
+            }
+            for key in chapterIndex.keys {
+                chapterIndex[key]?.sort { $0.verse < $1.verse }
+            }
+            DispatchQueue.main.async {
+                self.sblIndex = index
+                self.sblChapterIndex = chapterIndex
+                self.sblReady = true
             }
         }
     }

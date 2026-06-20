@@ -14,7 +14,9 @@ struct FilterChip: View {
                 .foregroundStyle(isSelected ? .white : Color.adaptiveNavyText(colorScheme))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.reforgedNavy : Color.adaptiveChipBackground(colorScheme))
+                .background(isSelected
+                    ? (colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+                    : Color.adaptiveChipBackground(colorScheme))
                 .clipShape(Capsule())
         }
     }
@@ -60,6 +62,17 @@ struct SearchPanelView: View {
 
     // Sorted once at struct level to avoid O(n log n) per lookup
     private static let sortedBooks = BibleData.books.sorted { $0.name.count > $1.name.count }
+
+    static func bookCategoryStatic(for reference: String) -> BookCategory? {
+        for book in sortedBooks {
+            if reference.hasPrefix(book.name + " ") || reference.hasPrefix(book.abbreviation + " ") {
+                return book.category
+            }
+        }
+        if reference.hasPrefix("Psalm ") { return .poetryWisdom }
+        if reference.hasPrefix("Song of Songs ") { return .poetryWisdom }
+        return nil
+    }
 
     /// Determine which BookCategory a verse reference belongs to.
     ///

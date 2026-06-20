@@ -45,7 +45,10 @@ final class BibleSearchService {
             return results
         }()
 
-        let (antiochPairs, textResults) = await (try? antiochTask, textTask)
+        var antiochPairs: [(reference: String, preview: String)]?
+        do { antiochPairs = try await antiochTask }
+        catch { print("[BibleSearchService] Antioch failed: \(error)") }
+        let textResults = await textTask
 
         let textRefs = Set(textResults.map(\.reference))
         let semanticResults = (antiochPairs ?? [])
@@ -70,7 +73,7 @@ final class BibleSearchService {
             return await KJVService.shared.searchPassages(query: query, pageSize: pageSize)
         case .net:
             return await NETService.shared.searchPassages(query: query, pageSize: pageSize)
-        case .csb, .nkjv, .nasb, .rvr1960:
+        case .csb, .nkjv, .nasb, .rvr1960, .nlt:
             return try await ApiBibleService.shared.searchPassages(query: query, translation: translation, pageSize: pageSize)
                 .map { BibleSearchResult(reference: $0.reference, content: $0.text, translation: translation) }
         case .tr, .sblgnt, .wlc:

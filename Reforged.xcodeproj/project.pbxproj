@@ -40,6 +40,7 @@
 		A100003A279B9E0000000001 /* MemoryReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003B279B9E0000000001 /* MemoryReviewView.swift */; };
 		A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003D279B9E0000000001 /* MemoryPracticeView.swift */; };
 		A100003E279B9E0000000001 /* BibleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003F279B9E0000000001 /* BibleView.swift */; };
+		C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */; };
 		A1000040279B9E0000000001 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000041279B9E0000000001 /* ProfileView.swift */; };
 		A1000042279B9E0000000001 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000043279B9E0000000001 /* JournalView.swift */; };
 		A1000044279B9E0000000001 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000045279B9E0000000001 /* OnboardingFlowView.swift */; };
@@ -197,6 +198,7 @@
 		A100003B279B9E0000000001 /* MemoryReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReviewView.swift; sourceTree = "<group>"; };
 		A100003D279B9E0000000001 /* MemoryPracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPracticeView.swift; sourceTree = "<group>"; };
 		A100003F279B9E0000000001 /* BibleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleView.swift; sourceTree = "<group>"; };
+		C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterScrollCoordinator.swift; sourceTree = "<group>"; };
 		A1000041279B9E0000000001 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		A1000043279B9E0000000001 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		A1000045279B9E0000000001 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
@@ -525,6 +527,7 @@
 			isa = PBXGroup;
 			children = (
 				A100003F279B9E0000000001 /* BibleView.swift */,
+				C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */,
 				EX000002279B9E0000000001 /* BibleAudioPlayer.swift */,
 				EX000004279B9E0000000001 /* UnifiedNavigationView.swift */,
 				EX000006279B9E0000000001 /* SearchPanelView.swift */,
@@ -794,6 +797,7 @@
 				RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */,
 				RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */,
 				A100003E279B9E0000000001 /* BibleView.swift in Sources */,
+				C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */,
 				EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */,
 				EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */,
 				EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */,
@@ -900,7 +904,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -935,7 +939,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1094,7 +1098,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1142,7 +1146,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1183,7 +1187,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1209,7 +1213,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;

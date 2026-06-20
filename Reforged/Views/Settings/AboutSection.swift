@@ -1,20 +1,25 @@
 import SwiftUI
 
-struct AboutSection: View {
+// MARK: - Help & Support View (unified Help, About, and Credits)
+
+struct HelpAndSupportView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.openURL) var openURL
+    @State private var showWhatsNew = false
+    @State private var showPrivacyPolicy = false
+    @State private var showTermsOfUse = false
 
     var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        let build   = Bundle.main.infoDictionary?["CFBundleVersion"]            as? String ?? "1"
         return "\(version) (\(build))"
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // App Info Card
+
+            // MARK: App Info Card
             VStack(spacing: 16) {
-                // App Icon and Name
                 VStack(spacing: 12) {
                     Image("AppIconImage")
                         .resizable()
@@ -28,14 +33,12 @@ struct AboutSection: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundStyle(Color.adaptiveText(colorScheme))
-
                         Text("Version \(appVersion)")
                             .font(.caption)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
                 }
 
-                // Mission Statement
                 VStack(spacing: 8) {
                     Text("Our Mission")
                         .font(.caption)
@@ -54,223 +57,134 @@ struct AboutSection: View {
             .frame(maxWidth: .infinity)
             .background(Color.adaptiveCardBackground(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-            )
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
             .padding(.vertical, 10)
 
             SettingsDivider()
 
-            // Scripture Quotations
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "book.closed.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+            // MARK: Help & Support Actions
+            sectionHeader(icon: "questionmark.circle.fill", color: .blue, title: "Help & Support")
 
-                    Text("Scripture Quotations")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
+            VStack(spacing: 0) {
+                actionRow(icon: "sparkles", iconColor: Color.reforgedGold, title: "What's New", subtitle: "Latest features and improvements") {
+                    showWhatsNew = true
                 }
+                Divider().padding(.leading, 58)
+                actionRow(icon: "envelope.fill", iconColor: Color.reforgedNavy, title: "Contact Support", subtitle: "Get help or send feedback") {
+                    openSupportEmail()
+                }
+                Divider().padding(.leading, 58)
+                externalRow(emoji: "☕", iconColor: Color.reforgedGold, title: "Support Reforged", subtitle: "Buy the developer a coffee") {
+                    if let url = URL(string: "https://buymeacoffee.com/reforgedapp") { openURL(url) }
+                }
+            }
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
+            .padding(.vertical, 10)
 
+            SettingsDivider()
+
+            // MARK: Legal
+            sectionHeader(icon: "doc.text.fill", color: Color.reforgedNavy, title: "Legal")
+
+            VStack(spacing: 0) {
+                actionRow(icon: "lock.shield.fill", iconColor: Color.reforgedNavy, title: "Privacy Policy", subtitle: "How we handle your data") {
+                    showPrivacyPolicy = true
+                }
+                Divider().padding(.leading, 58)
+                actionRow(icon: "doc.text.fill", iconColor: Color.reforgedNavy, title: "Terms of Use", subtitle: "Terms and conditions for using Reforged") {
+                    showTermsOfUse = true
+                }
+            }
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
+            .padding(.vertical, 10)
+
+            SettingsDivider()
+
+            // MARK: Scripture Quotations
+            attributionCard(icon: "book.closed.fill", iconColor: Color.adaptiveNavyText(colorScheme), title: "Scripture Quotations") {
                 ForEach(BibleTranslation.allCases) { translation in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(translation.fullName)
-                            .font(.caption2)
-                            .fontWeight(.semibold)
+                            .font(.caption2).fontWeight(.semibold)
                             .foregroundStyle(Color.adaptiveText(colorScheme))
-
                         Text(translation.attribution)
                             .font(.caption2)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                             .lineSpacing(3)
                     }
-
-                    if translation != BibleTranslation.allCases.last {
-                        Divider()
-                    }
+                    if translation != BibleTranslation.allCases.last { Divider() }
                 }
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.reforgedNavy.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.vertical, 10)
 
             SettingsDivider()
 
-            // Word Study Data
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "character.book.closed.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-
-                    Text("Word Study Data")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Strong's Exhaustive Concordance")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    Text("Hebrew and Greek lexicon data is derived from Strong's Exhaustive Concordance by James Strong (1890), which is in the public domain. Digital lexicon data sourced from the Open Scriptures Hebrew/Greek lexicon project (CC BY-SA 4.0).")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineSpacing(3)
-                }
-
+            // MARK: Word Study Data
+            attributionCard(icon: "character.book.closed.fill", iconColor: Color.adaptiveNavyText(colorScheme), title: "Word Study Data") {
+                attributionEntry(
+                    title: "Strong's Exhaustive Concordance",
+                    body: "Hebrew and Greek lexicon data is derived from Strong's Exhaustive Concordance by James Strong (1890), which is in the public domain. Digital lexicon data sourced from the Open Scriptures Hebrew/Greek lexicon project (CC BY-SA 4.0)."
+                )
                 Divider()
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Brown-Driver-Briggs / Thayer's Lexicon")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    Text("Enriched word definitions provided by the Brown-Driver-Briggs Hebrew Lexicon and Thayer's Greek Lexicon via the Bolls.life Bible API. These reference works are in the public domain.")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineSpacing(3)
-                }
+                attributionEntry(
+                    title: "Brown-Driver-Briggs / Thayer's Lexicon",
+                    body: "Enriched word definitions provided by the Brown-Driver-Briggs Hebrew Lexicon and Thayer's Greek Lexicon via the Bolls.life Bible API. These reference works are in the public domain."
+                )
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.reforgedNavy.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.vertical, 10)
 
             SettingsDivider()
 
-            // Partner Ministry
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "cross.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.purple)
-
-                    Text("Partner Ministry")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                }
-
+            // MARK: Partner Ministry
+            attributionCard(icon: "cross.fill", iconColor: .purple, title: "Partner Ministry", bgOpacity: 0.05, bgColor: .purple) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Southland Christian Ministries")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
+                        .font(.caption2).fontWeight(.semibold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
-
                     Text("Walk Talks podcast episodes are provided in partnership with Southland Christian Camp in Ringgold, LA (southlandcamp.org). Walk Talks is an extension of Southland's ministry, designed to strengthen believers of all ages in their daily walk with God.")
                         .font(.caption2)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .lineSpacing(3)
-
                     Button {
                         if let url = URL(string: "https://www.southlandcamp.org") { openURL(url) }
                     } label: {
                         Text("southlandcamp.org →")
-                            .font(.caption2)
-                            .fontWeight(.medium)
+                            .font(.caption2).fontWeight(.medium)
                             .foregroundStyle(Color.purple)
                     }
                     .buttonStyle(.plain)
                     .padding(.top, 2)
                 }
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.purple.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.vertical, 10)
 
             SettingsDivider()
 
-            // AI Features
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .font(.caption)
-                        .foregroundStyle(Color.reforgedGold)
-
-                    Text("AI Features")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Google Gemini")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    Text("Journal prompts, word study summaries, and Smart Search are powered by Google Gemini 2.0 Flash (gemini.google.com). AI-generated content is provided for reflection and study and may be imperfect; always verify insights with Scripture.")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineSpacing(3)
-                }
+            // MARK: AI Features
+            attributionCard(icon: "sparkles", iconColor: Color.reforgedGold, title: "AI Features", bgOpacity: 0.05, bgColor: Color.reforgedGold) {
+                attributionEntry(
+                    title: "Google Gemini",
+                    body: "Journal prompts, word study summaries, and Smart Search are powered by Google Gemini 2.0 Flash (gemini.google.com). AI-generated content is provided for reflection and study and may be imperfect; always verify insights with Scripture."
+                )
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.reforgedGold.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.vertical, 10)
 
             SettingsDivider()
 
-            // Image Assets
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "photo.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-
-                    Text("Image Assets")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Unsplash")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    Text("Background images for verse sharing are provided by Unsplash (unsplash.com). Photos are used under the Unsplash License. Individual photographer credits are displayed on each shared image.")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineSpacing(3)
-                }
-
+            // MARK: Image Assets
+            attributionCard(icon: "photo.fill", iconColor: Color.adaptiveNavyText(colorScheme), title: "Image Assets") {
+                attributionEntry(
+                    title: "Unsplash",
+                    body: "Background images for verse sharing are provided by Unsplash (unsplash.com). Photos are used under the Unsplash License. Individual photographer credits are displayed on each shared image."
+                )
                 Divider()
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Flaticon")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    Text("Sticky-note icon designed by laterunlabs from Flaticon (flaticon.com). Used under the Flaticon Free License.")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineSpacing(3)
-                }
+                attributionEntry(
+                    title: "Flaticon",
+                    body: "Sticky-note icon designed by laterunlabs from Flaticon (flaticon.com). Used under the Flaticon Free License."
+                )
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.reforgedNavy.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.vertical, 10)
 
-            // Made with love
+            // MARK: Footer
             VStack(spacing: 8) {
                 Text("Made with ❤️ for the glory of God")
                     .font(.caption)
@@ -283,55 +197,11 @@ struct AboutSection: View {
                     .multilineTextAlignment(.center)
 
                 Text("— 2 Timothy 3:16")
-                    .font(.caption2)
-                    .fontWeight(.medium)
+                    .font(.caption2).fontWeight(.medium)
                     .foregroundStyle(Color.reforgedGold)
             }
             .padding()
             .frame(maxWidth: .infinity)
-        }
-    }
-}
-
-// MARK: - Help & Support View
-
-struct HelpAndSupportView: View {
-    @Environment(\.colorScheme) var colorScheme
-    @Environment(\.openURL) var openURL
-    @State private var showWhatsNew = false
-    @State private var showPrivacyPolicy = false
-    @State private var showTermsOfUse = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            listRow(icon: "sparkles", iconColor: Color.reforgedGold, title: "What's New", subtitle: "See the latest features and improvements") {
-                showWhatsNew = true
-            }
-            Divider().padding(.leading, 62)
-            listRow(icon: "lock.shield.fill", iconColor: Color.reforgedNavy, title: "Privacy Policy", subtitle: "How we handle your data") {
-                showPrivacyPolicy = true
-            }
-            Divider().padding(.leading, 62)
-            listRow(icon: "doc.text.fill", iconColor: Color.reforgedNavy, title: "Terms of Use", subtitle: "Terms and conditions for using Reforged") {
-                showTermsOfUse = true
-            }
-            Divider().padding(.leading, 62)
-            listRow(icon: "envelope.fill", iconColor: Color.reforgedNavy, title: "Contact Support", subtitle: "Get help or send feedback") {
-                openSupportEmail()
-            }
-            Divider().padding(.leading, 62)
-            externalRow(emoji: "☕", iconColor: Color.reforgedGold, title: "Support Reforged", subtitle: "Buy the developer a coffee") {
-                if let url = URL(string: "https://buymeacoffee.com/reforgedapp") { openURL(url) }
-            }
-            Divider().padding(.leading, 62)
-            NavigationLink(destination: ScrollView { AboutSection().padding() }
-                .navigationTitle("About")
-                .navigationBarTitleDisplayMode(.inline)
-                .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-            ) {
-                navRowLabel(icon: "info.circle.fill", iconColor: Color.gray, title: "About", subtitle: "Attributions, version info, and more")
-            }
-            .buttonStyle(.plain)
         }
         .sheet(isPresented: $showWhatsNew) {
             WhatsNewView(isPresented: $showWhatsNew)
@@ -345,10 +215,49 @@ struct HelpAndSupportView: View {
         }
     }
 
+    // MARK: - Helpers
+
+    private func sectionHeader(icon: String, color: Color, title: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundStyle(color)
+            Text(title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 4)
+        .padding(.bottom, 6)
+    }
+
     @ViewBuilder
-    private func listRow(icon: String, iconColor: Color, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+    private func actionRow(icon: String, iconColor: Color, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            navRowLabel(icon: icon, iconColor: iconColor, title: title, subtitle: subtitle, chevron: "chevron.right")
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(iconColor.opacity(0.12))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(iconColor)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
         }
         .buttonStyle(.plain)
     }
@@ -381,42 +290,57 @@ struct HelpAndSupportView: View {
         .buttonStyle(.plain)
     }
 
-    private func navRowLabel(icon: String, iconColor: Color, title: String, subtitle: String, chevron: String = "chevron.right") -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(iconColor.opacity(0.12))
-                    .frame(width: 32, height: 32)
+    @ViewBuilder
+    private func attributionCard<Content: View>(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        bgOpacity: Double = 0.05,
+        bgColor: Color = Color.reforgedNavy,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(iconColor)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline).fontWeight(.medium)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .foregroundStyle(iconColor)
+                Text(title)
+                    .font(.caption).fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
             }
-            Spacer()
-            Image(systemName: chevron)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            content()
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(bgColor.opacity(bgOpacity))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.vertical, 10)
+    }
+
+    private func attributionEntry(title: String, body: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2).fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+            Text(body)
+                .font(.caption2)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .lineSpacing(3)
+        }
     }
 
     private func openSupportEmail() {
-        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-        let email = "support@reforgedapp.org"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let email   = "support@reforgedapp.org"
         let subject = "Reforged Support Request"
-        let body = "App Version: \(appVersion)\n\nDescribe your issue or feedback:\n\n"
-        let enc = { (s: String) in s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "" }
+        let body    = "App Version: \(version)\n\nDescribe your issue or feedback:\n\n"
+        let enc     = { (s: String) in s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "" }
         if let url = URL(string: "mailto:\(email)?subject=\(enc(subject))&body=\(enc(body))") {
             openURL(url)
         }
     }
+
+    // MARK: - Legal Content
 
     private var privacyPolicyContent: String {
         """
@@ -533,11 +457,9 @@ struct PolicyView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                 }
             }
         }
@@ -545,8 +467,12 @@ struct PolicyView: View {
 }
 
 #Preview {
-    ScrollView {
-        AboutSection()
-            .padding()
+    NavigationStack {
+        ScrollView {
+            HelpAndSupportView()
+                .padding()
+        }
+        .navigationTitle("Help & Support")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

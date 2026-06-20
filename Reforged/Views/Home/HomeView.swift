@@ -309,6 +309,7 @@ struct BuyMeACoffeeButton: View {
 
 struct WelcomeHeader: View {
     @EnvironmentObject var appState: AppState
+    @StateObject private var streakManager = ReadingStreakManager.shared
 
     var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -316,6 +317,17 @@ struct WelcomeHeader: View {
         case 0..<12: return "Good morning"
         case 12..<17: return "Good afternoon"
         default: return "Good evening"
+        }
+    }
+
+    var subtitle: String {
+        if streakManager.hasReadToday {
+            let s = streakManager.currentStreak
+            return s > 1 ? "Great reading today — \(s)-day streak and counting!" : "Great reading today — keep it up!"
+        } else if streakManager.currentStreak > 1 {
+            return "You're on a \(streakManager.currentStreak)-day streak — read a chapter to keep it going!"
+        } else {
+            return "Your daily journey in God's Word awaits"
         }
     }
 
@@ -338,9 +350,10 @@ struct WelcomeHeader: View {
                 ProfileAvatarView(size: 56)
             }
 
-            Text("Your daily journey in God's Word awaits")
+            Text(subtitle)
                 .font(.subheadline)
                 .foregroundStyle(Color.white.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(ReforgedTheme.spacingL)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -428,18 +441,22 @@ struct StreakCard: View {
                     }
                     .frame(height: 6)
 
-                    HStack {
+                    HStack(alignment: .top, spacing: 6) {
                         if streakManager.hasReadToday {
-                            Text("Read today! \(nextMilestone - streak) to \(nextMilestone)-day")
+                            Text("Read today! \(nextMilestone - streak) days to \(nextMilestone)-day milestone")
                                 .font(.system(size: 10))
                                 .foregroundStyle(Color.reforgedCoral)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
                         } else {
                             Text("Read a chapter to keep your streak!")
                                 .font(.system(size: 10))
                                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        Spacer()
+                        Spacer(minLength: 0)
 
                         // Streak freezes indicator
                         Button {
@@ -1189,7 +1206,7 @@ struct DailyInsightCard: View {
                 return try await KJVService.shared.fetchVerseForMemory(reference: reference).text
             case .net:
                 return try await NETService.shared.fetchVerseForMemory(reference: reference).text
-            case .csb, .nkjv, .nasb, .rvr1960:
+            case .csb, .nkjv, .nasb, .rvr1960, .nlt:
                 return try await ApiBibleService.shared.fetchVerseForMemory(reference: reference, translation: settingsManager.defaultTranslation).text
             case .tr, .sblgnt, .wlc:
                 return nil
@@ -1401,36 +1418,59 @@ struct QuickActionsSection: View {
                 .fontWeight(.bold)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
 
-            NavigationLink(destination: JournalView()) {
-                HStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.reforgedGold.opacity(0.15))
-                            .frame(width: 52, height: 52)
-                        Image(systemName: "pencil.line")
-                            .font(.title2)
-                            .foregroundStyle(Color.reforgedGold)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Journal")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                        Text("Write and reflect on God's Word")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            HStack(spacing: 12) {
+                Button {
+                    NotificationCenter.default.post(name: .switchTab, object: nil, userInfo: ["tab": 2])
+                } label: {
+                    quickActionTile(
+                        icon: "book.fill",
+                        iconColor: Color.adaptiveNavyText(colorScheme),
+                        iconBackground: Color.adaptiveNavyText(colorScheme).opacity(0.12),
+                        title: "Read Bible",
+                        subtitle: "Continue reading"
+                    )
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .reforgedCard()
+                .buttonStyle(.plain)
+
+                NavigationLink(destination: JournalView()) {
+                    quickActionTile(
+                        icon: "pencil.line",
+                        iconColor: Color.reforgedGold,
+                        iconBackground: Color.reforgedGold.opacity(0.15),
+                        title: "Journal",
+                        subtitle: "Reflect on God's Word"
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
+    }
+
+    private func quickActionTile(icon: String, iconColor: Color, iconBackground: Color, title: String, subtitle: String) -> some View {
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(iconBackground)
+                    .frame(width: 44, height: 44)
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(iconColor)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .reforgedCard()
     }
 }
 

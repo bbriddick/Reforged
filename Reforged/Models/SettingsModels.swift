@@ -174,6 +174,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
     case kjv = "KJV"
     case esv = "ESV"
     case net = "NET"
+    case nlt = "NLT"
     case nkjv = "NKJV"
     case csb = "CSB"
     case nasb = "NASB"
@@ -202,6 +203,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .esv: return "English Standard Version"
         case .kjv: return "King James Version"
         case .net: return "New English Translation"
+        case .nlt: return "New Living Translation"
         case .csb: return "Christian Standard Bible"
         case .nkjv: return "New King James Version"
         case .nasb: return "New American Standard Bible"
@@ -231,6 +233,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .esv: return "© 2001 Crossway"
         case .kjv: return "Public Domain"
         case .net: return "© 1996–2017 Biblical Studies Press"
+        case .nlt: return "© 1996, 2004, 2015 Tyndale House Foundation"
         case .csb: return "© 2017 Holman Bible Publishers"
         case .nkjv: return "© 1982 Thomas Nelson"
         case .nasb: return "© 1995 The Lockman Foundation"
@@ -257,6 +260,8 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
             return "Las citas bíblicas marcadas RVR1960 son tomadas de la Reina-Valera 1960®, © Sociedades Bíblicas en América Latina, 1960; © Renovado, Sociedades Bíblicas Unidas, 1988. Utilizado con permiso. Reina-Valera 1960® es una marca registrada de las Sociedades Bíblicas Unidas y puede ser usada solamente bajo licencia. Website: www.sociedades-biblicas.net"
         case .net:
             return "Scripture quotations marked NET are taken from the NET Bible® copyright ©1996–2017 by Biblical Studies Press, L.L.C. All rights reserved. Quoted by permission. Please visit netbible.com for more information."
+        case .nlt:
+            return "Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved."
         case .tr:
             return "The Textus Receptus (1550 Stephanus edition) is in the public domain."
         case .sblgnt:
@@ -272,6 +277,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .esv:    return "ESV"
         case .kjv:    return "KJV"
         case .net:    return "NET"
+        case .nlt:    return "NLT"
         case .csb:    return "CSB"
         case .nkjv:   return "NKJ"
         case .nasb:   return "NAS"
@@ -285,7 +291,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
     /// Whether this translation is fetched via the API.Bible service
     var usesApiBible: Bool {
         switch self {
-        case .csb, .nkjv, .nasb, .rvr1960: return true
+        case .csb, .nkjv, .nasb, .rvr1960, .nlt: return true
         case .esv, .kjv, .net, .tr, .sblgnt, .wlc: return false
         }
     }
@@ -307,27 +313,40 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .display: return "textformat.size"
-        case .bibleReading: return "book.fill"
-        case .audio: return "speaker.wave.2.fill"
-        case .memory: return "brain.head.profile"
+        case .display:       return "textformat.size"
+        case .bibleReading:  return "book.fill"
+        case .audio:         return "speaker.wave.2.fill"
+        case .memory:        return "brain.head.profile"
         case .notifications: return "bell.fill"
-        case .account: return "person.circle.fill"
-        case .ai: return "sparkles"
-        case .about: return "questionmark.circle.fill"
+        case .account:       return "person.circle.fill"
+        case .ai:            return "sparkles"
+        case .about:         return "info.circle.fill"
         }
     }
 
     var color: Color {
         switch self {
-        case .display: return .reforgedNavy
-        case .bibleReading: return .reforgedNavy
-        case .audio: return .reforgedNavy
-        case .memory: return .reforgedGold
+        case .display:       return .blue
+        case .bibleReading:  return .reforgedNavy
+        case .audio:         return .purple
+        case .memory:        return .reforgedGold
         case .notifications: return .reforgedCoral
-        case .account: return .reforgedNavy
-        case .ai: return .reforgedGold
-        case .about: return .blue
+        case .account:       return .teal
+        case .ai:            return .indigo
+        case .about:         return .gray
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .display:       return "Font, theme & layout"
+        case .bibleReading:  return "Translation & reading options"
+        case .audio:         return "ESV audio playback"
+        case .memory:        return "Verse flashcards & review"
+        case .notifications: return "Reminders & alerts"
+        case .account:       return "Sync, storage & account"
+        case .ai:            return "Journal prompts & smart search"
+        case .about:         return "Help, legal & credits"
         }
     }
 }

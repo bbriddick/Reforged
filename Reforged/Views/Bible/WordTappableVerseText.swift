@@ -163,20 +163,30 @@ struct WordLongPressParagraphText: View {
                                                     verseText: verse.text,
                                                     wocSegments: wocSegmentsMap[verse.reference])
 
-                // Superscript verse number — tap to select verse
+                // Superscript verse number — tap to select verse. Also carries the verse's scroll
+                // anchor (`.id`) and reports its position (VerseMinYKey) so reading position can be
+                // saved/restored in paragraph mode, not just verse-by-verse mode.
                 Text("\(verse.number) ")
                     .font(.system(size: settings.effectiveVerseNumberSize, weight: .bold, design: .rounded))
                     .foregroundColor(Color.reforgedGold)
                     .baselineOffset(6)
                     .background(
-                        Group {
-                            if isSelected {
-                                // Seamless flat fill — no rounded corners so it tiles with adjacent words
-                                Color.reforgedGold.opacity(0.15)
-                                    .padding(.vertical, -2)
-                            }
+                        GeometryReader { geo in
+                            Color.clear
+                                .preference(key: VerseMinYKey.self,
+                                            value: [verse.id: geo.frame(in: .named("bibleScroll")).minY])
+                                .background(
+                                    Group {
+                                        if isSelected {
+                                            // Seamless flat fill — tiles with adjacent words
+                                            Color.reforgedGold.opacity(0.15)
+                                                .padding(.vertical, -2)
+                                        }
+                                    }
+                                )
                         }
                     )
+                    .id(verse.id)
                     .onTapGesture { onVerseTap(verse) }
 
                 // Individual words for this verse — tap selects verse, long-press looks up word

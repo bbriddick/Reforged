@@ -33,8 +33,8 @@ struct SettingsView: View {
             }
 
             Section("Reading") {
-                sectionNavRow(.display)
-                sectionNavRow(.bibleReading)
+                sectionNavRow(.display,       hint: settings.themeMode.rawValue)
+                sectionNavRow(.bibleReading,  hint: settings.defaultTranslation.rawValue)
                 sectionNavRow(.audio)
             }
 
@@ -43,8 +43,8 @@ struct SettingsView: View {
             }
 
             Section("Personalization") {
-                sectionNavRow(.notifications)
-                sectionNavRow(.ai)
+                sectionNavRow(.notifications, hint: settings.notificationsEnabled ? "On" : "Off")
+                sectionNavRow(.ai,            hint: settings.aiEnabled ? "On" : "Off")
             }
 
             Section {
@@ -52,21 +52,23 @@ struct SettingsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
         .navigationTitle("Settings")
     }
 
     private var accountRow: some View {
         HStack(spacing: 14) {
             if AppleSignInService.shared.isSignedIn {
-                ProfileAvatarView(size: 46)
+                ProfileAvatarView(size: 50)
             } else {
                 ZStack {
                     Circle()
-                        .fill(Color.reforgedNavy.opacity(0.12))
-                        .frame(width: 46, height: 46)
+                        .fill(Color.teal.opacity(0.12))
+                        .frame(width: 50, height: 50)
                     Image(systemName: "person.circle")
                         .font(.title2)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .foregroundStyle(Color.teal)
                 }
             }
 
@@ -79,19 +81,33 @@ struct SettingsView: View {
                     Text(AppleSignInService.shared.userEmail ?? "Apple ID")
                         .font(.subheadline)
                         .foregroundStyle(Color.secondary)
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
+                        Text("Signed in with Apple")
+                            .font(.caption2)
+                            .foregroundStyle(Color.green)
+                    }
                 } else {
                     Text("Sign in to Reforged")
                         .font(.headline)
-                    Text("Sync progress across devices")
+                    Text("Sync progress across your devices")
                         .font(.subheadline)
                         .foregroundStyle(Color.secondary)
+                    Text("Tap to get started →")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.teal)
                 }
             }
+
+            Spacer()
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
     }
 
-    private func sectionNavRow(_ section: SettingsSection) -> some View {
+    private func sectionNavRow(_ section: SettingsSection, hint: String? = nil) -> some View {
         NavigationLink {
             SettingsDetailPage(title: section.rawValue) {
                 sectionContent(section)
@@ -101,14 +117,31 @@ struct SettingsView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(section.color.opacity(0.15))
-                        .frame(width: 32, height: 32)
+                        .frame(width: 34, height: 34)
                     Image(systemName: section.icon)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(section.color)
                 }
-                Text(section.rawValue)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(section.rawValue)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text(section.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+                }
+
+                Spacer()
+
+                if let hint {
+                    Text(hint)
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+                }
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 3)
         }
     }
 

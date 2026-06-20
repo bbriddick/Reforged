@@ -185,6 +185,7 @@ struct PodcastView: View {
     @State private var searchText = ""
     @State private var showAbout = false
     @State private var showExpandedPlayer = false
+    @State private var showNotificationPrompt = false
     @Environment(\.colorScheme) var colorScheme
 
     private var filteredEpisodes: [PodcastEpisode] {
@@ -259,6 +260,15 @@ struct PodcastView: View {
         .task { await service.loadEpisodes() }
         .animation(.easeInOut(duration: 0.3), value: selectedEpisode?.id)
         .animation(.easeInOut(duration: 0.2), value: selectedCategory)
+        .alert("Get Notified About New Episodes?", isPresented: $showNotificationPrompt) {
+            Button("Enable") {
+                SettingsManager.shared.podcastNewEpisodeNotifications = true
+                NotificationManager.shared.requestAuthorization()
+            }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("Would you like a notification when new Walk Talks episodes are available?")
+        }
     }
 
     private var episodeList: some View {
@@ -326,6 +336,17 @@ struct PodcastView: View {
         } else {
             selectedEpisode = episode
             playerVM.load(episode: episode)
+
+            // On the very first episode play, prompt the user to enable
+            // Walk Talks new-episode notifications (if not already asked).
+            let settings = SettingsManager.shared
+            if !settings.hasShownPodcastNotificationPrompt {
+                settings.hasShownPodcastNotificationPrompt = true
+                // Short delay so the player UI settles before the alert appears.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    showNotificationPrompt = true
+                }
+            }
         }
         HapticManager.shared.lightImpact()
     }

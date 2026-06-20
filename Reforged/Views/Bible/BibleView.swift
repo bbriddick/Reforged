@@ -11,6 +11,19 @@ struct MemoryVersesSelection: Identifiable {
     let chapter: Int
 }
 
+/// A one-shot request to scroll the spine to a focused chapter. `chapterID` is the row id ("Book Chapter")
+/// used for the `.scrollPosition` anchor; `target` is the actual scroll destination — a chapter-start
+/// anchor id for chapter navigation, or a "Book Chapter:Verse" id for verse navigation. The UUID makes each
+/// request unique so SwiftUI's `onChange` fires even for a repeat target. `alreadyLoaded` is true for a
+/// re-focus whose body is already present (prev/next) — an immediate, non-animated jump with no overlay —
+/// and false for a fresh load, which positions under the overlay with a corrective second pass.
+private struct FocusScrollRequest: Equatable {
+    let id = UUID()
+    let chapterID: String
+    let target: String
+    let alreadyLoaded: Bool
+}
+
 // MARK: - Bible View (Unified Single View)
 
 struct BibleView: View {
@@ -28,8 +41,12 @@ struct BibleView: View {
     // Navigation state
     @State private var selectedBook: BibleBook = BibleData.defaultBook
     @State private var selectedChapter: Int = 3
-    @State private var showUnifiedNavigation = false
-    @State private var showSearchPanel = false
+    @State private var navRevealProgress: CGFloat = 0   // 0 = hidden, 1 = fully open
+    @State private var navPanelVisible = false
+    @State private var navFocusSearch = false
+    // True only while the reading-content edge-drag gesture is actively revealing the nav.
+    // Guards against the simultaneousGesture firing while the user scrolls inside the open panel.
+    @State private var isRevealingNavFromEdge = false
     @State private var showFormattingPanel = false
     @State private var showAudioPlayer = false
     @State private var showNowPlaying = false
@@ -45,46 +62,45 @@ struct BibleView: View {
     @State private var fontSizeIndicator: String? = nil     // brief HUD label shown after snap
     @State private var fontSizeIndicatorTask: Task<Void, Never>? = nil
 
-    // Content state
-    @State private var verses: [ParsedVerse] = []
-    @State private var passageText: String = ""
-    @State private var canonicalReference = ""
-    @State private var chapterSections: [VerseSection] = []
-    @State private var wordsOfChristSegmentsByReference: [String: [WOCSegment]] = [:]
-    @State private var isLoading = true
-    @State private var errorMessage: String?
-    @State private var loadTask: Task<Void, Never>? = nil   // tracks in-flight chapter fetch
-    @State private var scrollPosition: CGFloat = 0
+    // Content state — STABLE CHAPTER SPINE.
+    //
+    // The reader renders a fixed, whole-Bible `[ChapterRef]` spine (see ChapterScrollCoordinator). The
+    // outer LazyVStack iterates that spine and its rows are NEVER inserted, removed, or re-identified
+    // while scrolling. Each row owns a `ChapterRenderState`; the coordinator hydrates nearby chapter
+    // bodies and dehydrates distant ones as the visible center moves. There is no shifting window.
+    @StateObject private var coordinator = ChapterScrollCoordinator()
 
-    // Chapter cache: pre-fetched neighbor chapters for instant swipe transitions
-    @State private var chapterCache: [ChapterCacheKey: ChapterCacheEntry] = [:]
-    @State private var prefetchTasks: [ChapterCacheKey: Task<Void, Never>] = [:]
+    /// The chapter we last explicitly navigated to (cold-start restore, nav panel, search, prev/next).
+    /// Drives the full-screen loading/error/incompatible overlay and the post-load scroll positioning.
+    @State private var focusChapterID: String?
+    /// The scroll target ("Book Chapter" row id, or "Book Chapter:Verse") to jump to once the focused
+    /// chapter's body finishes hydrating. Cleared after the jump fires.
+    @State private var pendingScrollTarget: String?
+    /// False until the focused chapter has been scrolled into position — keeps the overlay up so the
+    /// reader never sees the spine momentarily resting at Genesis 1 before the jump lands.
+    @State private var focusPositioned = false
+    /// A unique scroll request consumed inside the ScrollViewReader. Carries the target id; the UUID makes
+    /// every request distinct so `onChange` fires even when re-focusing the same chapter.
+    @State private var focusScrollRequest: FocusScrollRequest?
+    /// True while a programmatic prev/next scroll is animating. Suppresses the `visibleChapterID` scroll
+    /// tracker so intermediate chapters passing through the viewport mid-animation can't re-drive
+    /// `updateCurrentChapter`/hydration and fight the scroll — which is what made prev/next land unreliably.
+    @State private var isProgrammaticScroll = false
 
-    // Chapter transition animation state
-    @State private var chapterTransitionOffset: CGFloat = 0
-    @State private var chapterTransitionOpacity: Double = 1.0
-    /// Direction-lock for the horizontal swipe gesture. nil = undecided, true = horizontal, false = vertical.
-    @State private var isHorizontalDrag: Bool? = nil
-    /// True while animateChapterChange is running. Blocks the swipe gesture from interfering.
-    @State private var isChapterTransitioning = false
+    /// Top-most chapter id, written back by `.scrollPosition` (iOS 17+). Load-bearing: it anchors the
+    /// viewport so hydration/dehydration height changes elsewhere in the spine never shift the reader.
+    /// We never set it for navigation (we use `ScrollViewReader` for that) — it is write-back only.
+    @State private var topChapterID: String?
+    /// The most-visible chapter ("Book Chapter"), from the read-only ChapterMinYKey tracker. Drives the
+    /// toolbar / prev-next bounds AND the proximity-hydration center as the reader scrolls.
+    @State private var visibleChapterID: String?
 
     // Search state
-    @State private var searchQuery = ""
-    @State private var searchResults: [BibleSearchResult] = []
-    @State private var searchHistory: [BibleSearchHistoryEntry] = []
     @State private var recentPassages: [(book: String, chapter: Int)] = []
-    @State private var isSearching = false
-    @State private var scrollToVerseID: String? = nil
-    @State private var immediateScrollToVerseID: String? = nil  // no-animation restore scroll
     @State private var firstVisibleVerseNumber: Int = 1
     @State private var hasAppeared = false
     @State private var isRestoringPosition = false
-    /// Per-chapter last-read verse: "Book Chapter" → verse number. Used to restore position on backward navigation.
-    @State private var chapterScrollPositions: [String: Int] = [:]
-    /// Verse number to scroll to on the next loadChapter() call. nil = scroll to top.
-    @State private var pendingScrollVerse: Int? = nil
     @State private var pendingNavigationVerse: Int? = nil
-    private let chapterTopScrollID = "chapter-top"
 
     // Verse interaction state
     @State private var selectedVerseForAction: ParsedVerse?
@@ -101,12 +117,11 @@ struct BibleView: View {
 
     // Reading streak tracking
     @StateObject private var streakManager = ReadingStreakManager.shared
-    @State private var showMarkAsReadPrompt = false
-    @State private var hasScrolledToBottom = false
 
     // Translation compatibility alerts (TR = NT only, WLC = OT only)
     @State private var showTRTestamentAlert = false
     @State private var showWLCTestamentAlert = false
+    @State private var pendingGreekRedirectTranslation: BibleTranslation?
 
     var isChapterRead: Bool {
         appState.user.chaptersRead.contains("\(selectedBook.name) \(selectedChapter)")
@@ -119,6 +134,35 @@ struct BibleView: View {
     // Maximum content width for readability on large screens
     var maxContentWidth: CGFloat {
         horizontalSizeClass == .regular ? 800 : .infinity
+    }
+
+    // MARK: - Continuous-scroll helpers
+
+    /// All verses across every loaded chapter — used by selection actions that may span chapters.
+    private var allLoadedVerses: [ParsedVerse] {
+        coordinator.orderedLoadedChapters.flatMap { $0.verses }
+    }
+
+    /// Stable scroll-target id for a chapter's header (present in both reading modes).
+    private func headerID(_ book: String, _ chapter: Int) -> String {
+        "header-\(book)-\(chapter)"
+    }
+
+    /// Parses a verse reference like "1 Corinthians 13:4" into its book / chapter / verse parts.
+    private func parseReference(_ reference: String) -> (book: String, chapter: Int, verse: Int)? {
+        guard let colon = reference.lastIndex(of: ":") else { return nil }
+        guard let verse = Int(reference[reference.index(after: colon)...]) else { return nil }
+        let beforeColon = reference[..<colon]                       // e.g. "1 Corinthians 13"
+        guard let lastSpace = beforeColon.lastIndex(of: " "),
+              let chapter = Int(beforeColon[beforeColon.index(after: lastSpace)...]) else { return nil }
+        return (String(beforeColon[..<lastSpace]), chapter, verse)
+    }
+
+    /// Parses a LoadedChapter id ("Book Chapter") into its book / chapter parts.
+    private func parseChapterID(_ id: String) -> (book: String, chapter: Int)? {
+        guard let lastSpace = id.lastIndex(of: " "),
+              let chapter = Int(id[id.index(after: lastSpace)...]) else { return nil }
+        return (String(id[..<lastSpace]), chapter)
     }
 
     // Reading mode: bars are visible when reading mode is off, OR when temporarily overridden by a tap
@@ -170,14 +214,82 @@ struct BibleView: View {
 
     // MARK: - Toolbar action closures (shared between BibleTopBar and .toolbar)
 
+    private func openNav(focusSearch: Bool = false) {
+        navFocusSearch = focusSearch
+        // iPad / Mac (split-view detail): present as a native sheet rather than the
+        // iPhone-only 3D edge-reveal, which assumes full-screen geometry.
+        if isSidebarNavigation {
+            showNavigationSidebar = true
+            return
+        }
+        if navPanelVisible {
+            // Panel already in the tree (edge-drag pre-rendered it) — animate straight to open
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
+                navRevealProgress = 1
+            }
+        } else {
+            // Panel not yet rendered — insert it at 0, then animate on the next tick
+            navPanelVisible = true
+            navRevealProgress = 0
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.42, dampingFraction: 1.0)) {
+                    self.navRevealProgress = 1
+                }
+            }
+        }
+    }
+
+    private func closeNav() {
+        if isSidebarNavigation {
+            showNavigationSidebar = false
+            navFocusSearch = false
+            return
+        }
+        withAnimation(.spring(response: 0.38, dampingFraction: 1.0)) {
+            navRevealProgress = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            navPanelVisible = false
+            navFocusSearch = false
+        }
+    }
+
+    /// Builds the navigation view shared by the iPhone reveal panel and the iPad/Mac sheet.
+    private func makeNavigationView(usesSheetPresentation: Bool) -> some View {
+        UnifiedNavigationView(
+            selectedBook: $selectedBook,
+            selectedChapter: $selectedChapter,
+            recentPassages: recentPassages,
+            isPresented: .constant(true),
+            onSelect: {
+                loadChapter()
+                addToRecentPassages()
+                closeNav()
+            },
+            onSelectVerse: { verseNum in
+                // Route verse-level taps (search results, AI key verses, verse picker) through the SAME
+                // explicit focus pipeline as chapter navigation: set the verse as the pending nav target and
+                // re-run loadChapter, which makes `pendingScrollTarget` the exact verse id and lets
+                // `performFocusScroll()` position it. The old `scrollToVerseID` path fought the stable
+                // spine's `topChapterID` anchor and snapped the reader back to the chapter top.
+                closeNav()
+                pendingNavigationVerse = verseNum
+                loadChapter()
+            },
+            translation: currentTranslation,
+            translationOrder: settingsManager.translationOrder,
+            focusSearch: navFocusSearch,
+            onDismiss: closeNav,
+            usesSheetPresentation: usesSheetPresentation
+        )
+    }
+
     private func onNavigationTap() {
-        showUnifiedNavigation = true
+        openNav()
     }
 
     private func onSearchTap() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            showSearchPanel = true
-        }
+        openNav(focusSearch: true)
     }
 
     private func onAudioTap() {
@@ -197,8 +309,9 @@ struct BibleView: View {
     }
 
     private func onTranslationSelect(_ newTranslation: BibleTranslation) {
-        // TR only covers the NT — prompt before switching if user is in an OT passage.
-        if newTranslation == .tr && selectedBook.testament == .old {
+        // Greek NT texts only cover the NT — prompt before switching if user is in an OT passage.
+        if (newTranslation == .tr || newTranslation == .sblgnt) && selectedBook.testament == .old {
+            pendingGreekRedirectTranslation = newTranslation
             showTRTestamentAlert = true
             return
         }
@@ -218,10 +331,9 @@ struct BibleView: View {
             settingsManager.defaultTranslation = newTranslation
             currentTranslation = newTranslation
 
-            // Clear the chapter cache so no stale data bleeds through.
-            chapterCache.removeAll()
-            prefetchTasks.values.forEach { $0.cancel() }
-            prefetchTasks.removeAll()
+            // Drop all cached/derived bodies so nothing stale bleeds through; the coordinator re-hydrates
+            // around the focus chapter on the next loadChapter().
+            coordinator.setTranslation(newTranslation)
 
             if let redirectBook = book {
                 selectedBook = redirectBook
@@ -232,8 +344,89 @@ struct BibleView: View {
         }
     }
 
+    /// Book/chapter navigation button + translation switcher used in the
+    /// navigation toolbar (centered on iPad, leading on Mac Catalyst).
+    @ViewBuilder
+    private var bibleNavigationToolbarControls: some View {
+        HStack(spacing: 8) {
+            // Book + Chapter navigation button
+            Button(action: onNavigationTap) {
+                HStack(spacing: 6) {
+                    Image(systemName: "text.book.closed.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.reforgedGold)
+
+                    Text("\(toolbarDisplayBookName) \(selectedChapter)")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
+
+                    Image(systemName: "chevron.down")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.reforgedGold)
+                }
+            }
+
+            // Translation dropdown menu
+            Menu {
+                ForEach(settingsManager.translationOrder) { t in
+                    Button { onTranslationSelect(t) } label: {
+                        HStack {
+                            Text(t.rawValue)
+                            if t == currentTranslation {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+                if settingsManager.showOriginalLanguagesInSwitcher {
+                    Divider()
+                    Button { onTranslationSelect(.tr) } label: {
+                        HStack {
+                            Text("TR — Greek NT")
+                            if currentTranslation == .tr { Image(systemName: "checkmark") }
+                        }
+                    }
+                    Button { onTranslationSelect(.sblgnt) } label: {
+                        HStack {
+                            Text("SBLGNT — Greek NT")
+                            if currentTranslation == .sblgnt { Image(systemName: "checkmark") }
+                        }
+                    }
+                    Button { onTranslationSelect(.wlc) } label: {
+                        HStack {
+                            Text("WLC — Hebrew OT")
+                            if currentTranslation == .wlc { Image(systemName: "checkmark") }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(currentTranslation.rawValue)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.reforgedNavy)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+    }
+
     var body: some View {
         ZStack {
+            // Fill background so 3D rotation gaps don't show as pure black
+            Color.adaptiveBackground(colorScheme).ignoresSafeArea()
+
+            // Inner ZStack: everything that rotates during the nav reveal
+            ZStack {
             // Main content
             VStack(spacing: 0) {
                 // Top Navigation Bar (iPhone only — iPad uses .toolbar)
@@ -260,9 +453,10 @@ struct BibleView: View {
                 // Chapter content
                 ScrollViewReader { proxy in
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            chapterContentView
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            chapterScrollContent
                         }
+                        .chapterScrollTargets()
                         // contentShape makes the entire column (including empty margins) hittable.
                         // SwiftUI's gesture priority means child verse-text views consume their own
                         // taps first; this handler only fires when empty space is tapped.
@@ -279,38 +473,45 @@ struct BibleView: View {
                         }
                         .frame(maxWidth: maxContentWidth)
                         .frame(maxWidth: .infinity)
-                        .padding(.bottom, 60) // Space for bottom nav buttons
-                        .offset(x: chapterTransitionOffset)
-                        .opacity(chapterTransitionOpacity)
+                        .padding(.bottom, readingState.selectedVerses.isEmpty ? 60 : 140)
                         .background(
                             GeometryReader { geo in
                                 Color.clear
-                                    .preference(key: ScrollOffsetPreferenceKey.self, value: geo.frame(in: .global).maxY)
                                     .preference(key: ScrollTopPreferenceKey.self, value: geo.frame(in: .named("bibleScroll")).minY)
                             }
                         )
                     }
                     .scrollIndicators(.hidden)
                     .coordinateSpace(name: "bibleScroll")
-                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { maxY in
-                        // Check if user has scrolled near the bottom
-                        let screenHeight = UIScreen.main.bounds.height
-                        if maxY < screenHeight + 200 && !hasScrolledToBottom && !isChapterReadForStreak && !isLoading {
-                            hasScrolledToBottom = true
-                            // Show mark as read prompt with slight delay
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                withAnimation(.spring(response: 0.4)) {
-                                    showMarkAsReadPrompt = true
-                                }
-                            }
-                        }
+                    // `topChapterID` is the stable `.scrollPosition` anchor (iOS 17+). It is write-back
+                    // ONLY — SwiftUI keeps it pinned to the top row, which holds the viewport steady when
+                    // chapter bodies hydrate/dehydrate elsewhere in the spine. Navigation positioning uses
+                    // ScrollViewReader instead; hydration is driven off `visibleChapterID` below.
+                    .chapterScrollAnchor($topChapterID)
+                    .onPreferenceChange(ChapterMinYKey.self) { positions in
+                        // Track the most-visible chapter (top-most whose top has crossed near the viewport
+                        // top). This drives BOTH the toolbar and the proximity-hydration center.
+                        let sorted = positions.sorted { $0.value < $1.value }
+                        guard let current = sorted.last(where: { $0.value <= 120 }) ?? sorted.first else { return }
+                        visibleChapterID = current.key
+                    }
+                    .onChange(of: visibleChapterID) { id in
+                        // Until the focused chapter is scrolled into place, the spine is still resting at
+                        // its natural top (Genesis 1) — ignore scroll-tracking so it can't clobber the
+                        // toolbar/reading state or hydrate the wrong region. Also ignore while a prev/next
+                        // animation is in flight, so intermediate chapters can't fight the programmatic scroll.
+                        guard focusPositioned, !isProgrammaticScroll, let id, let parsed = parseChapterID(id) else { return }
+                        // Update the current chapter (toolbar / prev-next bounds) AND hydrate around the new
+                        // center — load nearby chapter bodies, unload distant ones. The spine row collection
+                        // is never touched, so this can never shift the viewport.
+                        updateCurrentChapter(book: parsed.book, chapter: parsed.chapter)
+                        coordinator.updateHydration(around: id)
                     }
                     .onPreferenceChange(ScrollTopPreferenceKey.self) { minY in
-                        // Show bars when scrolled to top; hide when scrolled away (unless pinned by tap)
-                        guard settingsManager.readingMode && !isLoading else { return }
+                        // Reading-mode bars: show when scrolled to top, hide when scrolled away (unless pinned).
+                        guard settingsManager.readingMode && focusPositioned else { return }
                         let atTop = minY > -60
                         if atTop {
-                            // Scroll-to-top always shows bars and releases any tap-pin
                             readingModeHideTask?.cancel()
                             readingModeHideTask = nil
                             barsPinnedByTap = false
@@ -318,114 +519,41 @@ struct BibleView: View {
                                 readingModeOverride = true
                             }
                         } else if !barsPinnedByTap {
-                            // Only auto-hide when the user hasn't manually pinned bars via tap
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
                                 readingModeOverride = false
                             }
                         }
                     }
                     .onPreferenceChange(VerseMinYKey.self) { positions in
-                        // Find the topmost visible verse (smallest minY >= -20 in scroll space)
+                        // Topmost visible verse (verse-by-verse mode) drives the saved verse number.
                         if let top = positions.filter({ $0.value >= -20 }).min(by: { $0.value < $1.value }),
-                           let colonIdx = top.key.lastIndex(of: ":"),
-                           let verseNum = Int(String(top.key[top.key.index(after: colonIdx)...])) {
-                            firstVisibleVerseNumber = verseNum
+                           let parsed = parseReference(top.key) {
+                            firstVisibleVerseNumber = parsed.verse
                         }
                     }
                     .simultaneousGesture(
+                        // Left-edge swipe reveals the navigation panel. Chapter changes are now
+                        // handled by vertical scrolling + the floating prev/next buttons.
                         DragGesture(minimumDistance: 10)
                             .onChanged { value in
-                                // Do not interfere with a programmatic chapter transition
-                                guard !isChapterTransitioning else { return }
-
+                                guard !isSidebarNavigation else { return }
                                 let h = value.translation.width
-                                let v = value.translation.height
-
-                                // Lock drag direction on the first definitive movement
-                                if isHorizontalDrag == nil {
-                                    if abs(h) > abs(v) * 1.5 {
-                                        isHorizontalDrag = true
-                                    } else if abs(v) > 12 {
-                                        isHorizontalDrag = false
-                                    }
-                                }
-
-                                // Track finger position in real time for horizontal swipes
-                                guard isHorizontalDrag == true else { return }
-                                chapterTransitionOffset = h
+                                let isEdgeDrag = value.startLocation.x < 50
+                                guard isEdgeDrag && h > 0 else { return }
+                                // Skip if the panel is already open and this isn't the gesture that opened it.
+                                guard !navPanelVisible || isRevealingNavFromEdge else { return }
+                                if !isRevealingNavFromEdge { isRevealingNavFromEdge = true }
+                                if !navPanelVisible { navPanelVisible = true; navRevealProgress = 0 }
+                                let screenW = UIScreen.main.bounds.width
+                                navRevealProgress = min(max(h / (screenW * 0.82), 0), 1)
                             }
-                            .onEnded { value in
-                                // Do not interfere with a programmatic chapter transition
-                                guard !isChapterTransitioning else {
-                                    isHorizontalDrag = nil
-                                    return
-                                }
-
-                                let wasHorizontal = isHorizontalDrag == true
-                                isHorizontalDrag = nil
-
-                                guard wasHorizontal else {
-                                    // Not a horizontal drag — snap content back if it moved at all
-                                    if chapterTransitionOffset != 0 {
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                            chapterTransitionOffset = 0
-                                        }
-                                    }
-                                    return
-                                }
-
-                                let h = value.translation.width
-                                let predictedH = value.predictedEndTranslation.width
-                                // Commit if dragged past threshold or finger velocity is high enough
-                                let commitForward  = h < -60 || predictedH < -200
-                                let commitBackward = h >  60 || predictedH >  200
-
-                                if commitForward {
-                                    // Swipe left → next chapter / first chapter of next book
-                                    animateChapterChange(direction: .forward, fromDrag: true) {
-                                        // Save current position, then go to top of new chapter
-                                        chapterScrollPositions["\(selectedBook.name) \(selectedChapter)"] = firstVisibleVerseNumber
-                                        pendingScrollVerse = nil
-                                        if selectedChapter < selectedBook.chapters {
-                                            selectedChapter += 1
-                                        } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }),
-                                                  idx + 1 < BibleData.books.count {
-                                            selectedBook = BibleData.books[idx + 1]
-                                            selectedChapter = 1
-                                        }
-                                        loadChapter()
-                                    }
-                                } else if commitBackward {
-                                    // Swipe right → previous chapter / last chapter of previous book
-                                    if value.startLocation.x < 50 {
-                                        withAnimation(.spring(response: 0.35)) {
-                                            showSearchPanel = true
-                                        }
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                            chapterTransitionOffset = 0
-                                        }
-                                    } else {
-                                        animateChapterChange(direction: .backward, fromDrag: true) {
-                                            // Save current position and restore last-read position of previous chapter
-                                            chapterScrollPositions["\(selectedBook.name) \(selectedChapter)"] = firstVisibleVerseNumber
-                                            if selectedChapter > 1 {
-                                                pendingScrollVerse = chapterScrollPositions["\(selectedBook.name) \(selectedChapter - 1)"]
-                                                selectedChapter -= 1
-                                            } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }),
-                                                      idx > 0 {
-                                                let prevBook = BibleData.books[idx - 1]
-                                                pendingScrollVerse = chapterScrollPositions["\(prevBook.name) \(prevBook.chapters)"]
-                                                selectedBook = prevBook
-                                                selectedChapter = selectedBook.chapters
-                                            }
-                                            loadChapter()
-                                        }
-                                    }
+                            .onEnded { _ in
+                                guard isRevealingNavFromEdge else { return }
+                                isRevealingNavFromEdge = false
+                                if navRevealProgress > 0.4 {
+                                    openNav()
                                 } else {
-                                    // Didn't reach threshold — spring back to rest
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                        chapterTransitionOffset = 0
-                                    }
+                                    closeNav()
                                 }
                             }
                     )
@@ -466,26 +594,23 @@ struct BibleView: View {
                                 }
                             }
                     )
-                    .onChange(of: scrollToVerseID) { targetID in
-                        if let targetID = targetID {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    proxy.scrollTo(targetID, anchor: .top)
-                                }
-                                self.scrollToVerseID = nil
-                            }
-                        }
+                    // Once the focused chapter's body finishes hydrating, request the jump to it. This is
+                    // the ONLY place navigation positioning is initiated on a fresh load — verse restore
+                    // never drives chapter buffering; it just rides on top of the stable spine.
+                    .onChange(of: coordinator.lastHydratedID) { hydratedID in
+                        guard let hydratedID, hydratedID == focusChapterID else { return }
+                        requestFocusScroll(alreadyLoaded: false)   // fresh load — positioned under the overlay
                     }
-                    .onChange(of: immediateScrollToVerseID) { targetID in
-                        if let targetID = targetID {
-                            // Jump directly with no animation (used for position restore on open)
-                            proxy.scrollTo(targetID, anchor: .top)
-                            self.immediateScrollToVerseID = nil
-                            withAnimation(.easeIn(duration: 0.15)) {
-                                chapterTransitionOpacity = 1.0
-                            }
-                        }
+                    // Consume scroll requests (fresh-load OR already-loaded re-focus) — the single place
+                    // with `proxy` access. Positions the spine and re-points the `.scrollPosition` anchor.
+                    .onChange(of: focusScrollRequest) { request in
+                        guard let request else { return }
+                        performFocusScroll(proxy, chapterID: request.chapterID, target: request.target, alreadyLoaded: request.alreadyLoaded)
                     }
+                    // Full-screen state for the focused chapter (cold start / navigation / search). Covers
+                    // the spine until the focus chapter is loaded AND scrolled into position, so the reader
+                    // never glimpses the spine resting at its natural top (Genesis 1) before the jump lands.
+                    .overlay { focusOverlay }
                 }
 
                 Spacer(minLength: 0)
@@ -494,7 +619,7 @@ struct BibleView: View {
 
             // Floating chapter navigation buttons
             let miniPlayerVisible = !audioPlayer.currentBook.isEmpty
-            if barsVisible {
+            if barsVisible && readingState.selectedVerses.isEmpty {
                 VStack {
                     Spacer()
                     FloatingChapterNav(
@@ -502,34 +627,8 @@ struct BibleView: View {
                             || (BibleData.books.firstIndex(where: { $0.name == selectedBook.name }) ?? 0) > 0,
                         hasNext: selectedChapter < selectedBook.chapters
                             || (BibleData.books.firstIndex(where: { $0.name == selectedBook.name }) ?? BibleData.books.count - 1) < BibleData.books.count - 1,
-                        onPrevious: {
-                            animateChapterChange(direction: .backward, fromDrag: true) {
-                                chapterScrollPositions["\(selectedBook.name) \(selectedChapter)"] = firstVisibleVerseNumber
-                                if selectedChapter > 1 {
-                                    pendingScrollVerse = chapterScrollPositions["\(selectedBook.name) \(selectedChapter - 1)"]
-                                    selectedChapter -= 1
-                                } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }), idx > 0 {
-                                    let prevBook = BibleData.books[idx - 1]
-                                    pendingScrollVerse = chapterScrollPositions["\(prevBook.name) \(prevBook.chapters)"]
-                                    selectedBook = prevBook
-                                    selectedChapter = selectedBook.chapters
-                                }
-                                loadChapter()
-                            }
-                        },
-                        onNext: {
-                            animateChapterChange(direction: .forward, fromDrag: true) {
-                                chapterScrollPositions["\(selectedBook.name) \(selectedChapter)"] = firstVisibleVerseNumber
-                                pendingScrollVerse = nil
-                                if selectedChapter < selectedBook.chapters {
-                                    selectedChapter += 1
-                                } else if let idx = BibleData.books.firstIndex(where: { $0.name == selectedBook.name }), idx + 1 < BibleData.books.count {
-                                    selectedBook = BibleData.books[idx + 1]
-                                    selectedChapter = 1
-                                }
-                                loadChapter()
-                            }
-                        }
+                        onPrevious: { navigateToAdjacentChapter(offset: -1) },
+                        onNext: { navigateToAdjacentChapter(offset: 1) }
                     )
                     .padding(.bottom, miniPlayerVisible ? 80 : 16)
                 }
@@ -540,7 +639,9 @@ struct BibleView: View {
             if !readingState.selectedVerses.isEmpty {
                 VStack {
                     Spacer()
-                    SelectionActionBar(readingState: readingState) { action in
+                    SelectionActionBar(readingState: readingState, onDismiss: {
+                        withAnimation { readingState.clearSelection() }
+                    }) { action in
                         handleSelectionAction(action)
                     }
                     .padding(.bottom, miniPlayerVisible ? 144 : 70) // Above nav buttons + mini player
@@ -587,43 +688,68 @@ struct BibleView: View {
                 .allowsHitTesting(false)
             }
 
-            // Search Panel Overlay
-            if showSearchPanel {
-                SearchPanelView(
-                    searchQuery: $searchQuery,
-                    searchResults: $searchResults,
-                    searchHistory: $searchHistory,
-                    recentPassages: recentPassages,
-                    isSearching: $isSearching,
-                    isPresented: $showSearchPanel,
-                    onSelectResult: { result in
-                        navigateToSearchResult(result)
-                        addSearchToHistory(searchQuery, translation: result.translation)
-                    },
-                    onSelectRecent: { book, chapter in
-                        if let foundBook = BibleData.books.first(where: { $0.name == book }) {
-                            selectedBook = foundBook
-                            selectedChapter = chapter
-                            loadChapter()
-                        }
-                        showSearchPanel = false
-                    },
-                    translation: currentTranslation
-                )
-                .transition(.move(edge: .leading).combined(with: .opacity))
+            } // end inner ZStack
+            // Toned-down 3D parallax: a gentle tilt + dim instead of the previous
+            // text-stretching 12° book-flip. iPhone only — iPad/Mac use a sheet.
+            .rotation3DEffect(
+                .degrees(navRevealProgress * 5),
+                axis: (x: 0, y: 1, z: 0),
+                anchor: .trailing,
+                anchorZ: 0,
+                perspective: 0.5
+            )
+            .scaleEffect(1.0 - navRevealProgress * 0.05)
+            .offset(x: navRevealProgress * UIScreen.main.bounds.width * 0.82)
+            .overlay(
+                Color.black
+                    .opacity(navRevealProgress * 0.18)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            )
+            .allowsHitTesting(!navPanelVisible)
+
+            // Nav panel overlay — not inside the rotating ZStack.
+            // Uses UIScreen.main.bounds.width (same as content offset on line above) to avoid
+            // a GeometryReader layout-pass jitter when the panel first appears during a drag.
+            if navPanelVisible {
+                let panelW = UIScreen.main.bounds.width * 0.82
+                HStack(spacing: 0) {
+                    makeNavigationView(usesSheetPresentation: false)
+                    .frame(width: panelW)
+                    .frame(maxHeight: .infinity)
+                    // Minimal: a hairline trailing edge stroke instead of a heavy drop shadow.
+                    .overlay(alignment: .trailing) {
+                        Rectangle()
+                            .fill(Color.adaptiveBorder(colorScheme))
+                            .frame(width: 0.5)
+                            .ignoresSafeArea()
+                    }
+                    .rotation3DEffect(
+                        .degrees((1.0 - navRevealProgress) * -5),
+                        axis: (x: 0, y: 1, z: 0),
+                        anchor: .leading,
+                        anchorZ: 0,
+                        perspective: 0.5
+                    )
+                    .offset(x: -panelW + navRevealProgress * panelW)
+
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture { closeNav() }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea()
+                .transition(.identity)
             }
 
-            // Formatting Panel
-            if showFormattingPanel {
-                FormattingPanelView(
-                    settings: readingSettings,
-                    isPresented: $showFormattingPanel
-                )
-                .transition(.move(edge: .trailing).combined(with: .opacity))
-            }
+        }
+        .sheet(isPresented: $showNavigationSidebar) {
+            makeNavigationView(usesSheetPresentation: true)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedVerseForAction) { verse in
-            let allSelected = verses.filter { readingState.selectedVerses.contains($0.reference) }
+            let allSelected = allLoadedVerses.filter { readingState.selectedVerses.contains($0.reference) }
             let sheetVerses = allSelected.isEmpty ? [verse] : allSelected
             TakeNoteView(
                 verses: sheetVerses,
@@ -659,45 +785,32 @@ struct BibleView: View {
             StrongsDefinitionSheet(result: result)
                 .presentationDetents([.medium, .large])
         }
-        .sheet(isPresented: $showUnifiedNavigation) {
-            UnifiedNavigationView(
-                selectedBook: $selectedBook,
-                selectedChapter: $selectedChapter,
-                recentPassages: recentPassages,
-                isPresented: $showUnifiedNavigation,
-                onSelect: {
-                    loadChapter()
-                    addToRecentPassages()
-                },
-                onSelectVerse: { verseNum in
-                    let targetVerseID = verseNum <= 1
-                        ? chapterTopScrollID
-                        : "\(selectedBook.name) \(selectedChapter):\(verseNum)"
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        scrollToVerseID = targetVerseID
-                    }
-                },
-                translation: currentTranslation,
-                translationOrder: settingsManager.translationOrder
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $showNowPlaying) {
             NowPlayingView(audioPlayer: audioPlayer)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.hidden)
         }
-        // TR is the Greek New Testament — alert when user is in an OT passage
+        .sheet(isPresented: $showFormattingPanel) {
+            FormattingPanelView(settings: readingSettings, isPresented: $showFormattingPanel)
+                .environmentObject(themeManager)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        // Greek NT texts — alert when user is in an OT passage
         .alert("New Testament Only", isPresented: $showTRTestamentAlert) {
             Button("Go to Matthew 1") {
                 if let matthew = BibleData.books.first(where: { $0.name == "Matthew" }) {
-                    applyTranslationSwitch(.tr, redirectTo: matthew, chapter: 1)
+                    applyTranslationSwitch(pendingGreekRedirectTranslation ?? .tr,
+                                           redirectTo: matthew,
+                                           chapter: 1)
+                    pendingGreekRedirectTranslation = nil
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) {
+                pendingGreekRedirectTranslation = nil
+            }
         } message: {
-            Text("The Textus Receptus (TR) is the Greek New Testament and only covers Matthew through Revelation. Would you like to go to Matthew 1?")
+            Text("Greek New Testament texts cover Matthew through Revelation. Would you like to go to Matthew 1?")
         }
         // WLC is the Hebrew Old Testament — alert when user is in an NT passage
         .alert("Old Testament Only", isPresented: $showWLCTestamentAlert) {
@@ -712,72 +825,18 @@ struct BibleView: View {
         }
         .toolbar {
             if isSidebarNavigation {
-                ToolbarItem(placement: .principal) {
-                    HStack(spacing: 8) {
-                        // Book + Chapter navigation button
-                        Button(action: onNavigationTap) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "text.book.closed.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.reforgedGold)
-
-                                Text("\(toolbarDisplayBookName) \(selectedChapter)")
-                                    .font(.subheadline)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                                    .lineLimit(1)
-
-                                Image(systemName: "chevron.down")
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color.reforgedGold)
-                            }
-                        }
-
-                        // Translation dropdown menu
-                        Menu {
-                            ForEach(settingsManager.translationOrder) { t in
-                                Button { onTranslationSelect(t) } label: {
-                                    HStack {
-                                        Text(t.rawValue)
-                                        if t == currentTranslation {
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                            if settingsManager.showOriginalLanguagesInSwitcher {
-                                Divider()
-                                Button { onTranslationSelect(.tr) } label: {
-                                    HStack {
-                                        Text("TR — Greek NT")
-                                        if currentTranslation == .tr { Image(systemName: "checkmark") }
-                                    }
-                                }
-                                Button { onTranslationSelect(.wlc) } label: {
-                                    HStack {
-                                        Text("WLC — Hebrew OT")
-                                        if currentTranslation == .wlc { Image(systemName: "checkmark") }
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text(currentTranslation.rawValue)
-                                    .font(.subheadline)
-                                    .fontWeight(.bold)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption2)
-                                    .fontWeight(.bold)
-                            }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color.reforgedNavy)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-                    }
+                // Mac Catalyst does not render `.principal` toolbar items in the
+                // NSToolbar, so place the book/chapter navigation controls on the
+                // leading edge there. iPad keeps the centered principal placement.
+                #if targetEnvironment(macCatalyst)
+                ToolbarItem(placement: .topBarLeading) {
+                    bibleNavigationToolbarControls
                 }
+                #else
+                ToolbarItem(placement: .principal) {
+                    bibleNavigationToolbarControls
+                }
+                #endif
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: onSearchTap) {
@@ -829,7 +888,6 @@ struct BibleView: View {
             currentTranslation = settingsManager.defaultTranslation
             isRestoringPosition = readingSettings.lastVerse > 1
 
-            loadSearchHistory()
             loadRecentPassages()
             loadChapter()
             consumePendingBibleNavigationIfNeeded()
@@ -875,20 +933,22 @@ struct BibleView: View {
             }
         }
         .onChange(of: settingsManager.showRedLetterText) { _ in
-            refreshChapterDerivedState()
+            // Recompute red-letter segments for every loaded chapter body in place (no refetch).
+            coordinator.reapplyDerivations()
         }
         .onChange(of: olService.trReady) { isReady in
             if isReady && currentTranslation == .tr {
-                // Cancel any in-flight prefetch tasks so they don't block the retry
-                prefetchTasks.values.forEach { $0.cancel() }
-                prefetchTasks.removeAll()
+                // Greek JSON finished parsing — re-focus so the empty placeholder hydrates for real.
+                loadChapter()
+            }
+        }
+        .onChange(of: olService.sblReady) { isReady in
+            if isReady && currentTranslation == .sblgnt {
                 loadChapter()
             }
         }
         .onChange(of: olService.wlcReady) { isReady in
             if isReady && currentTranslation == .wlc {
-                prefetchTasks.values.forEach { $0.cancel() }
-                prefetchTasks.removeAll()
                 loadChapter()
             }
         }
@@ -940,61 +1000,238 @@ struct BibleView: View {
 
     // MARK: - Chapter Content View
 
+    /// Top-level scroll content: the STABLE chapter spine. The LazyVStack iterates `coordinator.refs`
+    /// (every chapter in the Bible, in canonical order) and these rows are NEVER inserted, removed, or
+    /// re-identified. Each row renders its own state — placeholder, loading, content, or error — so the
+    /// reader virtualizes the body inside a fixed row rather than mutating the row collection while
+    /// scrolling. The full-screen loading/error/incompatible states for the focused chapter are handled
+    /// by `focusOverlay` (layered over the whole reader), not here.
     @ViewBuilder
-    private var chapterContentView: some View {
-        // Show loading spinner while the chapter is fetching OR while original-language
-        // data is still being parsed in the background (WLC/TR load lazily on first use).
-        let waitingForOL = (currentTranslation == .wlc && !olService.wlcReady)
-                        || (currentTranslation == .tr  && !olService.trReady)
-        if isLoading || waitingForOL {
-            LoadingView()
-        } else if let error = errorMessage {
-            ErrorView(message: error) {
-                loadChapter()
-            }
-        } else if currentTranslation == .wlc && selectedBook.testament == .new {
-            // WLC (Westminster Leningrad Codex) covers only the Old Testament.
-            VStack(spacing: 16) {
-                Image(systemName: "text.book.closed")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.reforgedGold)
-                Text("Old Testament Only")
-                    .font(.headline)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                Text("The Westminster Leningrad Codex contains the Hebrew Old Testament. Switch to an Old Testament book to read the original Hebrew.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(32)
-            .frame(maxWidth: .infinity)
-        } else {
-            ChapterHeader(
-                book: selectedBook.name,
-                chapter: selectedChapter,
-                canonical: canonicalReference
-            )
-            .id(chapterTopScrollID)
-            if readingSettings.verseByVerse {
-                verseByVerseContent
-            } else {
-                paragraphContent
-            }
-            ESVAttribution(translation: currentTranslation)
-            MarkChapterReadSection(
-                book: selectedBook.name,
-                chapter: selectedChapter,
-                isRead: isChapterReadForStreak,
-                onMarkAsRead: { markChapterAsRead() }
-            )
-            .id("chapter-end")
+    private var chapterScrollContent: some View {
+        ForEach(coordinator.refs) { ref in
+            chapterRow(for: ref)
+                .id(ref.id)   // permanent spine-row identity — stable across every hydrate/dehydrate
         }
     }
 
+    /// Stable scroll target marking the exact top of a chapter — what prev/next navigate to. Kept separate
+    /// from the row's `.id(ref.id)` (whose internal layout swaps between placeholder/loaded) so the landing
+    /// point is always precisely the chapter start, independent of the row's render state.
+    private func chapterAnchorID(_ book: String, _ chapter: Int) -> String { "chapter-start-\(book) \(chapter)" }
+
+    /// One spine row. Renders content when the body is hydrated, otherwise a fixed-height placeholder
+    /// (skeleton header + optional spinner) or an inline error. The row itself always exists.
     @ViewBuilder
-    private var verseByVerseContent: some View {
+    private func chapterRow(for ref: ChapterRef) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Zero-height chapter-start anchor — the precise, content-independent target for prev/next.
+            Color.clear
+                .frame(height: 0)
+                .id(chapterAnchorID(ref.book, ref.chapter))
+
+            Group {
+                switch coordinator.state(for: ref.id) {
+                case .loaded(let chapter):
+                    chapterView(for: chapter)
+                case .loading:
+                    chapterPlaceholder(ref, showSpinner: true)
+                case .error(let message):
+                    chapterRowError(ref, message: message)
+                case .unloaded:
+                    chapterPlaceholder(ref, showSpinner: false)
+                }
+            }
+        }
+        // Read-only visibility tracking — reported by EVERY row (loaded or not) so the most-visible
+        // chapter is known even before its body hydrates. Drives the toolbar AND proximity hydration.
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: ChapterMinYKey.self,
+                    value: [ref.id: geo.frame(in: .named("bibleScroll")).minY]
+                )
+            }
+        )
+    }
+
+    /// Fixed-height skeleton for an unloaded/loading spine row. Keeps the stack's height estimate stable
+    /// and gives the chapter title as a scroll target before the body arrives.
+    @ViewBuilder
+    private func chapterPlaceholder(_ ref: ChapterRef, showSpinner: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ChapterHeader(book: ref.book, chapter: ref.chapter, canonical: "\(ref.book) \(ref.chapter)")
+                .id(headerID(ref.book, ref.chapter))
+            if showSpinner {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 48)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 480, alignment: .top)
+    }
+
+    /// Inline error for a single spine row's failed body fetch, with a retry that re-hydrates just that row.
+    @ViewBuilder
+    private func chapterRowError(_ ref: ChapterRef, message: String) -> some View {
+        VStack(spacing: 12) {
+            ChapterHeader(book: ref.book, chapter: ref.chapter, canonical: "\(ref.book) \(ref.chapter)")
+                .id(headerID(ref.book, ref.chapter))
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 28))
+                .foregroundStyle(Color.reforgedGold)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Retry") { coordinator.retry(ref.id) }
+                .buttonStyle(.bordered)
+        }
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, minHeight: 480, alignment: .top)
+    }
+
+    /// Renders one loaded chapter — header, verse content, and mark-as-read footer.
+    @ViewBuilder
+    private func chapterView(for chapter: LoadedChapter) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ChapterHeader(
+                book: chapter.book,
+                chapter: chapter.chapter,
+                canonical: chapter.canonical
+            )
+            .id(headerID(chapter.book, chapter.chapter))
+
+            if readingSettings.verseByVerse {
+                verseByVerseContent(chapter)
+            } else {
+                paragraphContent(chapter)
+            }
+
+            MarkChapterReadSection(
+                book: chapter.book,
+                chapter: chapter.chapter,
+                isRead: streakManager.wasChapterRead(book: chapter.book, chapter: chapter.chapter, on: Date()),
+                onMarkAsRead: { markChapterAsRead(book: chapter.book, chapter: chapter.chapter) }
+            )
+        }
+    }
+
+    // MARK: - Focus Overlay
+
+    /// The full-screen state for the chapter we last navigated to. While the focus chapter is loading (or
+    /// its original-language data is still parsing), or hasn't been scrolled into position yet, this covers
+    /// the spine. On error it offers a retry; for an incompatible translation/testament it explains. Once
+    /// the focus chapter is loaded and positioned, this collapses to nothing and the spine shows through.
+    @ViewBuilder
+    private var focusOverlay: some View {
+        let waitingForGreek = (currentTranslation == .tr && !olService.trReady)
+                           || (currentTranslation == .sblgnt && !olService.sblReady)
+        let waitingForOL = (currentTranslation == .wlc && !olService.wlcReady) || waitingForGreek
+
+        if let id = focusChapterID, coordinator.isIncompatible(id) {
+            incompatibleTranslationView
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.adaptiveBackground(colorScheme))
+        } else if let id = focusChapterID, case .error(let message) = coordinator.state(for: id) {
+            ErrorView(message: message) { loadChapter() }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.adaptiveBackground(colorScheme))
+        } else if !focusPositioned || waitingForOL {
+            LoadingView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.adaptiveBackground(colorScheme))
+        }
+    }
+
+    /// Explains that the active original-language text only covers one testament (TR/SBLGNT = NT, WLC = OT).
+    @ViewBuilder
+    private var incompatibleTranslationView: some View {
+        let isWLC = currentTranslation == .wlc
+        VStack(spacing: 16) {
+            Image(systemName: "text.book.closed")
+                .font(.system(size: 40))
+                .foregroundStyle(Color.reforgedGold)
+            Text(isWLC ? "Old Testament Only" : "New Testament Only")
+                .font(.headline)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+            Text(isWLC
+                 ? "The Westminster Leningrad Codex contains the Hebrew Old Testament. Switch to an Old Testament book to read the original Hebrew."
+                 : "This Greek text contains the New Testament. Switch to a New Testament book to read the original Greek.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Scrolls the spine to the focused chapter (chapter top, or a restored/explicit verse), then drops the
+    /// overlay. This is the sole bridge between explicit navigation and the stable spine — it positions the
+    /// viewport but never touches chapter buffering, which the coordinator owns.
+    ///
+    /// CRITICAL: it also re-points the `.scrollPosition` anchor (`topChapterID`). That anchor is otherwise
+    /// write-back only and would still hold the PREVIOUS chapter — on the next layout pass `.scrollPosition`
+    /// would yank the reader straight back to it (the "prev/next jumps back" bug). For a chapter-top target
+    /// we set the anchor to the target so the two agree; for a mid-chapter verse we release the anchor (nil)
+    /// so it can't fight the verse scroll, and let write-back repopulate it once the reader settles.
+    private func performFocusScroll(_ proxy: ScrollViewProxy, chapterID: String, target: String, alreadyLoaded: Bool) {
+        pendingScrollTarget = nil
+        let isVerseTarget = target.contains(":")
+
+        func applyScroll() {
+            // `proxy.scrollTo` is the SOLE scroll command — it's imperative and precise, so it can't lose a
+            // race the way driving the two-way-bound `.scrollPosition` could (SwiftUI continuously writes the
+            // current top back into `topChapterID`, which could overwrite a jump command → "next doesn't go
+            // forward"). We still set `topChapterID` so `.scrollPosition` HOLDS the destination instead of
+            // snapping back: to the chapter row for a chapter-top jump, or released (nil) for a verse jump so
+            // it can't fight a mid-chapter scroll. No animation — animating the two together made them fight.
+            topChapterID = isVerseTarget ? nil : chapterID
+            proxy.scrollTo(target, anchor: .top)
+        }
+
+        if alreadyLoaded {
+            // prev/next: content is present, so jump INSTANTLY to the chapter-start anchor. Suppress the
+            // scroll tracker across the jump so chapters passing through can't re-drive current-chapter,
+            // then resume from the chapter we landed on.
+            isProgrammaticScroll = true
+            applyScroll()
+            focusPositioned = true
+            updateCurrentChapter(forChapterID: chapterID)   // sync toolbar immediately to this chapter
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                // Always clear the suppression (this tap's programmatic window is over), but only APPLY the
+                // settle if this is still the current focus. With rapid taps, an older tap's deferred block
+                // can fire after a newer nav — without this guard it would clobber the toolbar with a stale
+                // chapter (the "content N but toolbar N-1" desync).
+                isProgrammaticScroll = false
+                guard focusChapterID == chapterID else { return }
+                applyScroll()
+                visibleChapterID = chapterID
+                updateCurrentChapter(forChapterID: chapterID)
+            }
+        } else {
+            // Fresh load (overlay covering): position instantly, with a second pass after layout settles to
+            // absorb late neighbour hydration, then reveal.
+            applyScroll()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                applyScroll()
+                withAnimation(.easeOut(duration: 0.2)) { focusPositioned = true }
+            }
+        }
+    }
+
+    /// Fires a fresh scroll request for the focused chapter once it is loaded — used by BOTH the
+    /// fresh-load path (`onChange(lastHydratedID)`) and the already-loaded re-focus path (prev/next to a
+    /// chapter still hydrated nearby), where the coordinator's `lastHydratedID` won't change.
+    private func requestFocusScroll(alreadyLoaded: Bool) {
+        guard let id = focusChapterID, coordinator.isLoaded(id), let target = pendingScrollTarget else { return }
+        focusScrollRequest = FocusScrollRequest(chapterID: id, target: target, alreadyLoaded: alreadyLoaded)
+    }
+
+    @ViewBuilder
+    private func verseByVerseContent(_ chapter: LoadedChapter) -> some View {
         LazyVStack(alignment: .leading, spacing: 12) {
-            ForEach(verses) { verse in
+            ForEach(chapter.verses) { verse in
                 VerseRow(
                     verse: verse,
                     highlight: readingState.getHighlight(for: verse.reference),
@@ -1004,7 +1241,7 @@ struct BibleView: View {
                     verseByVerse: true,
                     translation: currentTranslation,
                     highlightedWord: highlightedWord,
-                    wocSegments: wordsOfChristSegmentsByReference[verse.reference],
+                    wocSegments: chapter.woc[verse.reference],
                     onTap: {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             readingState.toggleSelection(verse.reference)
@@ -1033,24 +1270,18 @@ struct BibleView: View {
     }
 
     @ViewBuilder
-    private var paragraphContent: some View {
+    private func paragraphContent(_ chapter: LoadedChapter) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(chapterSections.enumerated()), id: \.offset) { _, section in
+            ForEach(Array(chapter.sections.enumerated()), id: \.offset) { _, section in
                 VStack(alignment: .leading, spacing: 0) {
                     if let heading = section.heading {
                         SectionHeadingView(heading: heading)
                             .padding(.horizontal, horizontalSizeClass == .regular ? 24 : 16)
                     }
-                    paragraphSectionBody(section: section)
+                    paragraphSectionBody(section: section, woc: chapter.woc)
                         .padding(.horizontal, horizontalSizeClass == .regular ? 24 : 16)
                         .padding(.bottom, section.heading != nil ? 8 : 0)
                 }
-                // Suppress the default .opacity fade-in/out that SwiftUI applies when
-                // a new chapter has a different number of sections than the previous one.
-                // Without this, extra headings fade in at their destination while the rest
-                // of the content slides in from the side — the parent's offset animation
-                // is the only movement that should apply to all content including headings.
-                .transition(.identity)
             }
         }
     }
@@ -1061,7 +1292,7 @@ struct BibleView: View {
     /// Original-language translations (TR/WLC) bypass FlowLayout — which is LTR-only
     /// and crashes / mis-renders Hebrew RTL BiDi text — and use plain SwiftUI Text instead.
     @ViewBuilder
-    private func paragraphSectionBody(section: VerseSection) -> some View {
+    private func paragraphSectionBody(section: VerseSection, woc: [String: [WOCSegment]]) -> some View {
         if currentTranslation.isOriginalLanguage {
             let isWLC = currentTranslation == .wlc
             VStack(alignment: isWLC ? .trailing : .leading, spacing: readingSettings.lineSpacing.spacing) {
@@ -1084,7 +1315,7 @@ struct BibleView: View {
                 settings: readingSettings,
                 colorScheme: colorScheme,
                 highlightedWord: highlightedWord,
-                wocSegmentsMap: wordsOfChristSegmentsByReference,
+                wocSegmentsMap: woc,
                 onVerseTap: { verse in
                     withAnimation(.easeInOut(duration: 0.15)) {
                         readingState.toggleSelection(verse.reference)
@@ -1174,136 +1405,71 @@ struct BibleView: View {
         }
     }
 
-    // MARK: - Chapter Cache Types
+    // MARK: - Chapter navigation helpers
 
-    private struct ChapterCacheKey: Hashable {
-        let book: String
-        let chapter: Int
-        let translation: BibleTranslation
-    }
-
-    private struct ChapterCacheEntry {
-        let verses: [ParsedVerse]
-        let canonical: String
-    }
-
-    // MARK: - Chapter Transition Animation
-
-    enum ChapterDirection {
-        case forward
-        case backward
-    }
-
-    func animateChapterChange(direction: ChapterDirection,
-                              fromDrag: Bool = false,
-                              action: @escaping () -> Void) {
-        let screenWidth: CGFloat = UIScreen.main.bounds.width
-        let exitOffset: CGFloat  = direction == .forward ? -screenWidth : screenWidth
-        let enterOffset: CGFloat = direction == .forward ?  screenWidth : -screenWidth
-
-        // Lock out the swipe gesture for the duration of this transition.
-        isChapterTransitioning = true
-        isHorizontalDrag = nil
-
-        // Scale exit duration by the fraction of screen still left to travel.
-        // For drag commits the content is already partway off screen so the exit is very short.
-        let remaining = abs(exitOffset - chapterTransitionOffset)
-        let ratio = min(1.0, remaining / screenWidth)
-        // 0.12 s at full screen — noticeably snappier than 0.18 s and short enough that
-        // the easeIn ramp-up is imperceptible.
-        let exitDuration = max(0.03, 0.12 * ratio)
-
-        // Phase 1: Exit with an aggressive accelerating curve.
-        // timingCurve(0.55, 0, 1, 1) reaches ~50 % travel by the 60 % time mark, so the
-        // content visibly moves from the first frame instead of easing up slowly.
-        withAnimation(Animation.timingCurve(0.55, 0, 1, 1, duration: exitDuration)) {
-            chapterTransitionOffset = exitOffset
-        }
-
-        // Phase 2: Trigger just before the exit visually completes (one frame early) so
-        // there is no blank frame between the exit ending and the enter spring starting.
-        let phase2Delay = max(0.02, exitDuration - 0.016)
-        DispatchQueue.main.asyncAfter(deadline: .now() + phase2Delay) {
-            self.chapterTransitionOffset = enterOffset  // no animation — instant reposition
-            action()                                    // swap chapter content
-
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
-                self.chapterTransitionOffset = 0
+    /// Returns the (book, chapter) that is `offset` chapters away, crossing book boundaries.
+    /// Returns nil when the offset goes out of Bible bounds.
+    private func adjacentChapter(book: String, chapter: Int, offset: Int) -> (book: String, chapter: Int)? {
+        guard let startIdx = BibleData.books.firstIndex(where: { $0.name == book }) else { return nil }
+        var idx = startIdx
+        var ch  = chapter + offset
+        if offset > 0 {
+            while ch > BibleData.books[idx].chapters {
+                ch -= BibleData.books[idx].chapters
+                idx += 1
+                guard idx < BibleData.books.count else { return nil }
             }
-
-            // Release the gesture lock after the enter animation would finish.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                self.isChapterTransitioning = false
+        } else if offset < 0 {
+            while ch < 1 {
+                idx -= 1
+                guard idx >= 0 else { return nil }
+                ch += BibleData.books[idx].chapters
             }
         }
+        return (BibleData.books[idx].name, ch)
     }
 
-    // MARK: - Section Grouping
-
-    private struct VerseSection {
-        let heading: String?
-        let verses: [ParsedVerse]
+    private func clampedChapter(_ chapter: Int, for book: BibleBook) -> Int {
+        min(max(chapter, 1), book.chapters)
     }
 
-    private func refreshChapterDerivedState() {
-        chapterSections = groupVersesBySection(verses)
-
-        guard settingsManager.showRedLetterText else {
-            wordsOfChristSegmentsByReference = [:]
-            return
-        }
-
-        var segmentsByReference: [String: [WOCSegment]] = [:]
-        segmentsByReference.reserveCapacity(verses.count)
-
-        for verse in verses {
-            guard let segments = WordsOfChristData.shared.segments(for: verse.reference) else { continue }
-            if currentTranslation == .kjv {
-                // KJV: segment text matches the WOC JSON exactly — use as-is
-                segmentsByReference[verse.reference] = segments
-            } else {
-                // Non-KJV: WOC data uses KJV English text which would show instead of the
-                // translated verse. Fall back to whole-verse red when any segment is Christ's words.
-                if segments.contains(where: { $0.isRed }) {
-                    segmentsByReference[verse.reference] = [WOCSegment(text: verse.text, isRed: true)]
-                }
-            }
-        }
-
-        wordsOfChristSegmentsByReference = segmentsByReference
+    /// Navigates the floating prev/next buttons one chapter in either direction (across book boundaries)
+    /// by re-focusing the spine on the target chapter. The spine itself never changes — this just moves
+    /// the reading focus, and the coordinator hydrates around the new center.
+    private func navigateToAdjacentChapter(offset: Int) {
+        guard let adj = adjacentChapter(book: selectedBook.name, chapter: selectedChapter, offset: offset),
+              let bookData = BibleData.books.first(where: { $0.name == adj.book }) else { return }
+        selectedBook = bookData
+        selectedChapter = adj.chapter
+        loadChapter()
     }
 
-    private func groupVersesBySection(_ verses: [ParsedVerse]) -> [VerseSection] {
-        var sections: [VerseSection] = []
-        var currentHeading: String? = nil
-        var currentVerses: [ParsedVerse] = []
-
-        for verse in verses {
-            if let h = verse.sectionHeading, !currentVerses.isEmpty {
-                sections.append(VerseSection(heading: currentHeading, verses: currentVerses))
-                currentHeading = h
-                currentVerses = []
-            } else if verse.sectionHeading != nil && currentVerses.isEmpty {
-                currentHeading = verse.sectionHeading
-            }
-            currentVerses.append(verse)
-        }
-
-        if !currentVerses.isEmpty {
-            sections.append(VerseSection(heading: currentHeading, verses: currentVerses))
-        }
-
-        return sections.isEmpty ? [VerseSection(heading: nil, verses: verses)] : sections
+    /// Updates the "current" chapter (toolbar title, prev/next bounds, saved position) as the
+    /// user scrolls a different chapter to the top. Does not reload — content is already loaded.
+    private func updateCurrentChapter(book: String, chapter: Int) {
+        guard selectedBook.name != book || selectedChapter != chapter else { return }
+        guard let bookData = BibleData.books.first(where: { $0.name == book }) else { return }
+        selectedBook = bookData
+        selectedChapter = chapter
+        readingState.currentBook = book
+        readingState.currentChapter = chapter
+        readingSettings.lastBook = book
+        readingSettings.lastChapter = chapter
     }
 
+    /// Convenience: update the current chapter from a "Book Chapter" row id.
+    private func updateCurrentChapter(forChapterID id: String) {
+        guard let parsed = parseChapterID(id) else { return }
+        updateCurrentChapter(book: parsed.book, chapter: parsed.chapter)
+    }
+
+    /// Establishes the reading focus on `selectedBook`/`selectedChapter` and asks the coordinator to
+    /// hydrate around it. The stable spine never changes — this only moves the focus and primes the
+    /// post-load scroll positioning (chapter top, or a restored/explicit verse). Called on first appear,
+    /// nav-panel selection, translation change, prev/next, search, and deep-link.
     func loadChapter() {
-        // Cancel any in-flight fetch so stale results never overwrite fresh ones
-        loadTask?.cancel()
-
         readingState.clearSelection()
-        hasScrolledToBottom = false
-        showMarkAsReadPrompt = false
-        errorMessage = nil
+        selectedChapter = clampedChapter(selectedChapter, for: selectedBook)
 
         // Update reading state and settings
         readingState.currentBook = selectedBook.name
@@ -1311,220 +1477,54 @@ struct BibleView: View {
         readingSettings.lastBook = selectedBook.name
         readingSettings.lastChapter = selectedChapter
 
-        // Capture intent at call-site so checks inside the Task are reliable
         let translation = settingsManager.defaultTranslation
-        let book        = selectedBook.name
-        let chapter     = selectedChapter
         currentTranslation = translation
+        coordinator.adoptTranslation(translation)
 
-        // Capture restore intent: cold-start restore OR backward navigation position restore
-        let coldRestore  = isRestoringPosition && readingSettings.lastVerse > 1
-        let pendingVerse = pendingScrollVerse
+        let book    = selectedBook.name
+        let chapter = selectedChapter
+        let focusID = "\(book) \(chapter)"
+
+        // Capture restore intent: cold-start restore OR explicit search/deep-link navigation.
+        let coldRestore = isRestoringPosition && readingSettings.lastVerse > 1
         let explicitNavigationVerse = pendingNavigationVerse
-        pendingScrollVerse = nil  // consume
         pendingNavigationVerse = nil
 
-        let shouldScrollToSpecificVerse = coldRestore
-            || ((pendingVerse ?? 0) > 1)
-            || ((explicitNavigationVerse ?? 0) > 1)
-        let savedVerse   = explicitNavigationVerse ?? (coldRestore ? readingSettings.lastVerse : (pendingVerse ?? 1))
+        let shouldScrollToSpecificVerse = coldRestore || ((explicitNavigationVerse ?? 0) > 1)
+        let savedVerse = explicitNavigationVerse ?? (coldRestore ? readingSettings.lastVerse : 1)
         if coldRestore { isRestoringPosition = false }
-        let chapterTopTargetID = chapterTopScrollID
-        if !shouldScrollToSpecificVerse {
-            firstVisibleVerseNumber = 1
-            immediateScrollToVerseID = chapterTopTargetID
-        }
+        firstVisibleVerseNumber = shouldScrollToSpecificVerse ? savedVerse : 1
 
-        // ── Cache hit: apply instantly so the swipe animation plays with content ──
-        let cacheKey = ChapterCacheKey(book: book, chapter: chapter, translation: translation)
-        if let cached = chapterCache[cacheKey] {
-            if shouldScrollToSpecificVerse { chapterTransitionOpacity = 0 }
-            verses = cached.verses
-            canonicalReference = cached.canonical
-            refreshChapterDerivedState()
-            isLoading = false
-            if shouldScrollToSpecificVerse {
-                let verseID = "\(book) \(chapter):\(savedVerse)"
-                // Defer scroll assignment to the next run-loop cycle so SwiftUI
-                // has finished processing the verse state update above.
-                Task { @MainActor in immediateScrollToVerseID = verseID }
-            } else {
-                Task { @MainActor in immediateScrollToVerseID = chapterTopTargetID }
-            }
-            // Kick off neighbour pre-fetch so next swipe is also instant
-            prefetchNeighborChapters(book: book, chapter: chapter, translation: translation)
-            return
-        }
+        // The scroll target is the chapter row (chapter top) or a specific verse — verse restore rides on
+        // top of the stable spine and never influences chapter buffering.
+        focusChapterID = focusID
+        pendingScrollTarget = shouldScrollToSpecificVerse
+            ? "\(focusID):\(savedVerse)"
+            : chapterAnchorID(book, chapter)
 
-        // ── Cache miss: fetch normally and store result ──
-        isLoading = true
-
-        loadTask = Task {
-            do {
-                let entry = try await fetchChapterEntry(book: book, chapter: chapter, translation: translation)
-                guard !Task.isCancelled else { return }
-
-                await MainActor.run {
-                    if shouldScrollToSpecificVerse { chapterTransitionOpacity = 0 }
-                    verses = entry.verses
-                    canonicalReference = entry.canonical
-                    refreshChapterDerivedState()
-                    isLoading = false
-                    // Don't cache an empty OL result — it means the JSON wasn't ready yet.
-                    // The trReady/wlcReady onChange observer will call loadChapter() again
-                    // once the data is loaded, and that call needs a cache miss to re-fetch.
-                    let isStaleOLResult = translation.isOriginalLanguage && entry.verses.isEmpty
-                    if !isStaleOLResult {
-                        chapterCache[cacheKey] = entry
-                    }
-                    if shouldScrollToSpecificVerse {
-                        let verseID = "\(book) \(chapter):\(savedVerse)"
-                        Task { @MainActor in immediateScrollToVerseID = verseID }
-                    } else {
-                        Task { @MainActor in immediateScrollToVerseID = chapterTopTargetID }
-                    }
-                }
-
-                // Pre-fetch Strongs interlinear (English translations only)
-                if !translation.isOriginalLanguage {
-                    await StrongsLexiconService.shared.prefetchChapter(
-                        bookName: book,
-                        chapter: chapter,
-                        totalVerses: entry.verses.count
-                    )
-                }
-
-                // Pre-fetch neighbouring chapters in the background
-                await MainActor.run {
-                    prefetchNeighborChapters(book: book, chapter: chapter, translation: translation)
-                }
-            } catch {
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
-            }
+        // Hydrate around the focus immediately (both paths) so the loaded band always stays ahead of the
+        // reader — this is what keeps rapid prev/next taps from outrunning the band into a loading state.
+        // The instant (non-animated) jump plus the `.scrollPosition` anchor absorb any neighbour height
+        // change, so hydrating now can't jolt the scroll.
+        let alreadyLoaded = coordinator.isLoaded(focusID)
+        focusPositioned = alreadyLoaded
+        coordinator.updateHydration(around: focusID)
+        if alreadyLoaded {
+            // Content is here — request the instant scroll synchronously (no runloop hop) so prev/next feels
+            // immediate. `lastHydratedID` won't fire for an already-loaded chapter, so this is its trigger.
+            requestFocusScroll(alreadyLoaded: true)
         }
     }
 
-    // MARK: - Chapter Cache Helpers
-
-    /// Fetches one chapter and returns a cacheable entry. Shared by loadChapter and prefetch.
-    private func fetchChapterEntry(book: String, chapter: Int, translation: BibleTranslation) async throws -> ChapterCacheEntry {
-        var fetchedVerses: [ParsedVerse] = []
-        var fetchedCanonical: String = ""
-
-        switch translation {
-        case .esv:
-            let result = try await ESVService.shared.fetchChapterParsed(book: book, chapter: chapter)
-            fetchedVerses = result.verses
-            fetchedCanonical = result.canonical
-        case .kjv:
-            let result = try await KJVService.shared.fetchChapterParsed(book: book, chapter: chapter)
-            fetchedVerses = result.verses
-            fetchedCanonical = result.canonical
-        case .net:
-            let result = try await NETService.shared.fetchChapterParsed(book: book, chapter: chapter)
-            fetchedVerses = result.verses
-            fetchedCanonical = result.canonical
-        case .csb, .nkjv, .nasb, .rvr1960:
-            let result = try await ApiBibleService.shared.fetchChapterParsed(book: book, chapter: chapter, translation: translation)
-            fetchedVerses = result.verses
-            fetchedCanonical = result.canonical
-        case .tr, .sblgnt:
-            let bookNum = OriginalLanguageService.bookNumber(for: book) ?? 0
-            OriginalLanguageService.shared.preloadTR()
-            let trVerses = OriginalLanguageService.shared.trChapter(bookNumber: bookNum, chapter: chapter)
-            fetchedVerses = trVerses.map { v in
-                let text = v.tokens.map { $0.word }.joined(separator: " ")
-                let ref = "\(book) \(chapter):\(v.verse)"
-                return ParsedVerse(id: ref, number: v.verse, text: text, reference: ref)
-            }
-            fetchedCanonical = "\(book) \(chapter)"
-        case .wlc:
-            let bookNum = OriginalLanguageService.bookNumber(for: book) ?? 0
-            OriginalLanguageService.shared.preloadWLC()
-            let wlcVerses = OriginalLanguageService.shared.wlcChapter(bookNumber: bookNum, chapter: chapter)
-            fetchedVerses = wlcVerses.map { v in
-                let text = v.words.joined(separator: " ")
-                let ref = "\(book) \(chapter):\(v.verse)"
-                return ParsedVerse(id: ref, number: v.verse, text: text, reference: ref)
-            }
-            fetchedCanonical = "\(book) \(chapter)"
-        }
-
-        return ChapterCacheEntry(verses: fetchedVerses, canonical: fetchedCanonical)
-    }
-
-    /// Silently pre-fetches 1 chapter behind and 3 chapters ahead into the
-    /// in-memory cache, crossing book boundaries when needed so that swipe
-    /// animations at chapter/book edges are always instant.
-    private func prefetchNeighborChapters(book: String, chapter: Int, translation: BibleTranslation) {
-        /// Returns the (book, chapter) that is `offset` chapters away from the
-        /// current position, crossing book boundaries automatically.
-        /// Returns nil when the offset goes out of Bible bounds.
-        func chapterAt(offset: Int) -> (String, Int)? {
-            guard let startIdx = BibleData.books.firstIndex(where: { $0.name == book }) else { return nil }
-            var idx = startIdx
-            var ch  = chapter + offset
-            if offset > 0 {
-                while ch > BibleData.books[idx].chapters {
-                    ch -= BibleData.books[idx].chapters
-                    idx += 1
-                    guard idx < BibleData.books.count else { return nil }
-                }
-            } else if offset < 0 {
-                while ch < 1 {
-                    idx -= 1
-                    guard idx >= 0 else { return nil }
-                    ch += BibleData.books[idx].chapters
-                }
-            }
-            return (BibleData.books[idx].name, ch)
-        }
-
-        // 1 chapter behind, then 3 chapters ahead (cross-book aware)
-        let neighbors = [-1, 1, 2, 3].compactMap { chapterAt(offset: $0) }
-
-        for (neighborBook, neighborChapter) in neighbors {
-            let key = ChapterCacheKey(book: neighborBook, chapter: neighborChapter, translation: translation)
-            guard chapterCache[key] == nil, prefetchTasks[key] == nil else { continue }
-
-            prefetchTasks[key] = Task {
-                guard let entry = try? await fetchChapterEntry(
-                    book: neighborBook, chapter: neighborChapter, translation: translation
-                ) else {
-                    prefetchTasks[key] = nil
-                    return
-                }
-                guard !Task.isCancelled else { return }
-                // Mirror the isStaleOLResult guard from loadChapter(): never cache an empty
-                // OL chapter — the JSON data may not be loaded yet, and an empty cache entry
-                // causes the next navigation to show a blank chapter with no retry path.
-                let isStaleOL = translation.isOriginalLanguage && entry.verses.isEmpty
-                if !isStaleOL {
-                    chapterCache[key] = entry
-                }
-                prefetchTasks[key] = nil
-            }
-        }
-    }
-
-    func markChapterAsRead() {
+    func markChapterAsRead(book: String, chapter: Int) {
         // Record in streak manager
-        streakManager.recordChapterRead(book: selectedBook.name, chapter: selectedChapter)
+        streakManager.recordChapterRead(book: book, chapter: chapter)
 
         // Auto-complete any reading plan day whose chapters are now all read
-        ReadingPlanService.shared.notifyChapterRead(bookName: selectedBook.name, chapter: selectedChapter)
+        ReadingPlanService.shared.notifyChapterRead(bookName: book, chapter: chapter)
 
         // Also record in app state for XP
-        _ = appState.markChapterRead(book: selectedBook.name, chapter: selectedChapter)
-
-        // Hide the prompt
-        withAnimation(.spring(response: 0.3)) {
-            showMarkAsReadPrompt = false
-        }
+        _ = appState.markChapterRead(book: book, chapter: chapter)
 
         // Haptic feedback
         let generator = UINotificationFeedbackGenerator()
@@ -1572,7 +1572,6 @@ struct BibleView: View {
                 addToRecentPassages()
             }
         }
-        showSearchPanel = false
     }
 
     func navigateToVerseReference(_ reference: String, translation: BibleTranslation? = nil) {
@@ -1589,13 +1588,15 @@ struct BibleView: View {
     func handleSelectionAction(_ action: SelectionAction) {
         switch action {
         case .highlight(let color):
+            // Parse book/chapter/verse from each reference so highlights remain correct even
+            // when the selection spans more than one loaded chapter.
             for reference in readingState.selectedVerses {
-                if let verse = verses.first(where: { $0.reference == reference }) {
+                if let parsed = parseReference(reference) {
                     readingState.highlight(
                         reference: reference,
-                        book: selectedBook.name,
-                        chapter: selectedChapter,
-                        verse: verse.number,
+                        book: parsed.book,
+                        chapter: parsed.chapter,
+                        verse: parsed.verse,
                         color: color
                     )
                 }
@@ -1613,12 +1614,12 @@ struct BibleView: View {
             // Use the first selected verse as the sheet trigger; the sheet reads
             // all selectedVerses from readingState to build the range.
             if let firstRef = readingState.selectedVerses.first,
-               let verse = verses.first(where: { $0.reference == firstRef }) {
+               let verse = allLoadedVerses.first(where: { $0.reference == firstRef }) {
                 selectedVerseForAction = verse
             }
 
         case .addToMemory:
-            let selectedVerses = verses.filter { readingState.selectedVerses.contains($0.reference) }
+            let selectedVerses = allLoadedVerses.filter { readingState.selectedVerses.contains($0.reference) }
             if !selectedVerses.isEmpty {
                 memoryVersesSelection = MemoryVersesSelection(
                     verses: selectedVerses,
@@ -1628,7 +1629,7 @@ struct BibleView: View {
             }
 
         case .copy:
-            let selected = verses
+            let selected = allLoadedVerses
                 .filter { readingState.selectedVerses.contains($0.reference) }
                 .sorted { $0.number < $1.number }
 
@@ -1650,7 +1651,7 @@ struct BibleView: View {
             withAnimation { readingState.clearSelection() }
 
         case .share:
-            let selected = verses.filter { readingState.selectedVerses.contains($0.reference) }
+            let selected = allLoadedVerses.filter { readingState.selectedVerses.contains($0.reference) }
             if !selected.isEmpty {
                 verseShareSelection = VerseShareSelection(
                     verses: selected,
@@ -1675,17 +1676,6 @@ struct BibleView: View {
         saveRecentPassages()
     }
 
-    func addSearchToHistory(_ query: String, translation: BibleTranslation? = nil) {
-        guard !query.isEmpty else { return }
-        let scope: BibleSearchHistoryScope = translation == nil ? .allTextVersions : .textVersion
-        appState.addBibleSearchHistoryEntry(query: query, scope: scope, translation: translation)
-        loadSearchHistory()
-    }
-
-    func loadSearchHistory() {
-        searchHistory = appState.loadBibleSearchHistory()
-    }
-
     func loadRecentPassages() {
         let books = UserDefaults.standard.stringArray(forKey: "bible_recent_books") ?? []
         let chapters = UserDefaults.standard.array(forKey: "bible_recent_chapters") as? [Int] ?? []
@@ -1705,6 +1695,31 @@ struct BibleView: View {
     }
 }
 
+// MARK: - Scroll position helpers (iOS 17+ keeps content stable when chapters load above)
+
+extension View {
+    /// Marks the scroll content's subviews as scroll targets (iOS 17+); no-op on iOS 16.
+    @ViewBuilder
+    func chapterScrollTargets() -> some View {
+        if #available(iOS 17.0, *) {
+            self.scrollTargetLayout()
+        } else {
+            self
+        }
+    }
+
+    /// Anchors the top chapter id so inserting chapters above never shifts the viewport (iOS 17+);
+    /// no-op on iOS 16, where `prependPreviousChapter` re-pins manually instead.
+    @ViewBuilder
+    func chapterScrollAnchor(_ id: Binding<String?>) -> some View {
+        if #available(iOS 17.0, *) {
+            self.scrollPosition(id: id, anchor: .top)
+        } else {
+            self
+        }
+    }
+}
+
 // MARK: - Scroll Offset Preference Key
 
 struct ScrollOffsetPreferenceKey: PreferenceKey {
@@ -1720,9 +1735,21 @@ private struct ScrollTopPreferenceKey: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
+/// Reports each loaded chapter's top position (keyed by "Book Chapter") so the reader can tell which
+/// chapter is currently most visible. Read-only tracking — it never triggers window mutation.
+private struct ChapterMinYKey: PreferenceKey {
+    static var defaultValue: [String: CGFloat] = [:]
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
 // MARK: - Verse Visibility Preference Key
 
-private struct VerseMinYKey: PreferenceKey {
+/// Reports each visible verse's top position (keyed by verse id "Book Chapter:Verse") so the reader
+/// can tell which verse is at the top of the viewport — emitted in both paragraph and verse-by-verse
+/// modes, which is what lets reading position be saved and restored.
+struct VerseMinYKey: PreferenceKey {
     static var defaultValue: [String: CGFloat] = [:]
     static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
         value.merge(nextValue()) { $1 }
@@ -1740,89 +1767,48 @@ struct MarkChapterReadSection: View {
     @State private var showSuccessAnimation = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            Divider()
-                .padding(.horizontal, 32)
-
+        Group {
             if isRead {
-                // Already read state
-                HStack(spacing: 10) {
+                // Completed — soft filled pill, clearly "done" but quiet.
+                HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(Color.reforgedCoral)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Chapter Completed")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                        Text("You've read \(book) \(chapter) today")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "flame.fill")
-                        .font(.title2)
-                        .foregroundStyle(Color.reforgedCoral)
+                        .font(.footnote)
+                    Text("Read")
+                        .font(.footnote.weight(.medium))
                 }
-                .padding()
-                .background(Color.reforgedCoral.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
+                .foregroundStyle(Color.reforgedCoral)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.reforgedCoral.opacity(0.12), in: Capsule())
             } else {
-                // Prompt to mark as read
-                VStack(spacing: 12) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "book.fill")
-                            .font(.title3)
-                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Finished reading?")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                            Text("Mark this chapter as read to keep your streak!")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        }
-
-                        Spacer()
+                // A real button, but understated — outlined pill, muted, no fill.
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showSuccessAnimation = true
                     }
-
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            showSuccessAnimation = true
-                        }
-                        onMarkAsRead()
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.body)
-
-                            Text("Mark as Read")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(Color.reforgedCoral)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    onMarkAsRead()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark")
+                            .font(.footnote)
+                        Text("Mark as read")
+                            .font(.footnote.weight(.medium))
                     }
-                    .scaleEffect(showSuccessAnimation ? 0.95 : 1.0)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .overlay(
+                        Capsule().stroke(Color.adaptiveTextSecondary(colorScheme).opacity(0.35), lineWidth: 1)
+                    )
+                    .contentShape(Capsule())
                 }
-                .padding()
-                .background(Color.reforgedNavy.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
+                .buttonStyle(.plain)
+                .scaleEffect(showSuccessAnimation ? 0.95 : 1.0)
             }
         }
-        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 12)
+        .padding(.bottom, 28)
     }
 }
 
@@ -2164,6 +2150,14 @@ struct BibleTopBar: View {
                     }
                 }
                 Button {
+                    onTranslationSelect(.sblgnt)
+                } label: {
+                    HStack {
+                        Text("SBLGNT — Greek NT")
+                        if translation == .sblgnt { Image(systemName: "checkmark") }
+                    }
+                }
+                Button {
                     onTranslationSelect(.wlc)
                 } label: {
                     HStack {
@@ -2219,17 +2213,17 @@ struct FloatingChapterNav: View {
             // Previous chapter button (left side)
             Button(action: onPrevious) {
                 Image(systemName: "chevron.left")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(hasPrevious ? .white : Color.gray.opacity(0.5))
-                    .frame(width: 44, height: 44)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(hasPrevious ? .white : Color.gray.opacity(0.4))
+                    .frame(width: 40, height: 40)
                     .background(
                         hasPrevious
-                            ? Color.reforgedNavy
-                            : Color.adaptiveCardBackground(colorScheme)
+                            ? Color.reforgedNavy.opacity(0.85)
+                            : Color.adaptiveCardBackground(colorScheme).opacity(0.7)
                     )
                     .clipShape(Circle())
-                    .shadow(color: Color.black.opacity(0.15), radius: 8, y: 4)
+                    .shadow(color: Color.black.opacity(0.12), radius: 6, y: 3)
             }
             .disabled(!hasPrevious)
 
@@ -2238,17 +2232,17 @@ struct FloatingChapterNav: View {
             // Next chapter button (right side)
             Button(action: onNext) {
                 Image(systemName: "chevron.right")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(hasNext ? .white : Color.gray.opacity(0.5))
-                    .frame(width: 44, height: 44)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(hasNext ? .white : Color.gray.opacity(0.4))
+                    .frame(width: 40, height: 40)
                     .background(
                         hasNext
-                            ? Color.reforgedNavy
-                            : Color.adaptiveCardBackground(colorScheme)
+                            ? Color.reforgedNavy.opacity(0.85)
+                            : Color.adaptiveCardBackground(colorScheme).opacity(0.7)
                     )
                     .clipShape(Circle())
-                    .shadow(color: Color.black.opacity(0.15), radius: 8, y: 4)
+                    .shadow(color: Color.black.opacity(0.12), radius: 6, y: 3)
             }
             .disabled(!hasNext)
         }
@@ -2265,61 +2259,15 @@ struct FormattingPanelView: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        ZStack {
-            FormattingPanelBackground(isPresented: $isPresented)
-            FormattingPanelContent(
-                settings: settings,
-                isPresented: $isPresented,
-                themeManager: themeManager
-            )
-        }
-    }
-}
-
-// MARK: - Formatting Panel Background
-
-private struct FormattingPanelBackground: View {
-    @Binding var isPresented: Bool
-
-    var body: some View {
-        Color.clear
-            .contentShape(Rectangle())
-            .ignoresSafeArea()
-            .onTapGesture {
-                withAnimation(.spring(response: 0.35)) {
-                    isPresented = false
-                }
+        FormattingPanelScrollContent(settings: settings, themeManager: themeManager)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                FormattingPanelHeader(isPresented: $isPresented)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .overlay(alignment: .bottom) {
+                        Divider()
+                    }
             }
-    }
-}
-
-// MARK: - Formatting Panel Content
-
-private struct FormattingPanelContent: View {
-    @ObservedObject var settings: BibleReadingSettings
-    @Binding var isPresented: Bool
-    @ObservedObject var themeManager: ThemeManager
-    @Environment(\.colorScheme) var colorScheme
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
-
-    var body: some View {
-        GeometryReader { geometry in
-            let availableWidth = geometry.size.width
-            let panelWidth: CGFloat = horizontalSizeClass == .regular
-                ? min(380, availableWidth * 0.55)
-                : availableWidth * 0.85
-            HStack(spacing: 0) {
-                Spacer()
-                VStack(spacing: 0) {
-                    FormattingPanelHeader(isPresented: $isPresented)
-                    FormattingPanelScrollContent(settings: settings, themeManager: themeManager)
-                }
-                .frame(width: panelWidth)
-                .frame(maxHeight: .infinity)
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .shadow(color: Color.black.opacity(0.15), radius: 12, x: -4, y: 0)
-            }
-        }
+            .background(Color.adaptiveCardBackground(colorScheme))
     }
 }
 
@@ -2348,7 +2296,8 @@ private struct FormattingPanelHeader: View {
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
             }
         }
-        .padding()
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
     }
 }
 
@@ -2358,20 +2307,55 @@ private struct FormattingPanelScrollContent: View {
     @ObservedObject var settings: BibleReadingSettings
     @ObservedObject var themeManager: ThemeManager
     @StateObject private var settingsManager = SettingsManager.shared
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                FormattingThemeSection(themeManager: themeManager)
-                FormattingFontSizeSection(settings: settings)
-                FormattingFontTypeSection(settings: settings)
-                FormattingLineSpacingSection(settings: settings)
-                FormattingVerseLayoutSection(settings: settings)
-                FormattingReadingModeSection(isOn: $settingsManager.readingMode)
-                FormattingRedLetterSection(isOn: $settingsManager.showRedLetterText)
+            VStack(spacing: 12) {
+                // Theme
+                FormattingCard {
+                    FormattingThemeSection(themeManager: themeManager)
+                }
+
+                // Font size + type together
+                FormattingCard {
+                    FormattingFontSizeSection(settings: settings)
+                    Divider()
+                    FormattingFontTypeSection(settings: settings)
+                }
+
+                // Line spacing
+                FormattingCard {
+                    FormattingLineSpacingSection(settings: settings)
+                }
+
+                // Toggles grouped in one card
+                FormattingCard {
+                    FormattingVerseLayoutSection(settings: settings)
+                    Divider()
+                    FormattingReadingModeSection(isOn: $settingsManager.readingMode)
+                    Divider()
+                    FormattingRedLetterSection(isOn: $settingsManager.showRedLetterText)
+                }
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .padding(.bottom, 24)
         }
+    }
+}
+
+private struct FormattingCard<Content: View>: View {
+    @Environment(\.colorScheme) var colorScheme
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            content
+        }
+        .padding(16)
+        .background(Color.adaptiveBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
@@ -2412,12 +2396,19 @@ private struct FormattingThemeSection: View {
                     .font(.title3)
                 Text(mode.rawValue)
                     .font(.caption)
+                    .fontWeight(.medium)
             }
             .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(isSelected ? Color.reforgedNavy : Color.adaptiveCardBackground(colorScheme))
+            .padding(.vertical, 14)
+            .background(isSelected
+                ? (colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+                : Color.adaptiveCardBackground(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.clear : Color.adaptiveTextSecondary(colorScheme).opacity(0.2), lineWidth: 1)
+            )
         }
     }
 }
@@ -2494,34 +2485,29 @@ private struct FormattingFontTypeSection: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-            ForEach(BibleReadingSettings.FontType.allCases, id: \.self) { fontType in
-                FormattingFontTypeRow(fontType: fontType, isSelected: settings.fontType == fontType) {
-                    settings.fontType = fontType
+            HStack(spacing: 10) {
+                ForEach(BibleReadingSettings.FontType.allCases, id: \.self) { fontType in
+                    Button {
+                        settings.fontType = fontType
+                        HapticManager.shared.lightImpact()
+                    } label: {
+                        Text(fontType.displayName)
+                            .font(.system(size: 15, design: fontType.design))
+                            .fontWeight(.medium)
+                            .foregroundStyle(settings.fontType == fontType ? .white : Color.adaptiveText(colorScheme))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(settings.fontType == fontType
+                                ? (colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+                                : Color.adaptiveCardBackground(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(settings.fontType == fontType ? Color.clear : Color.adaptiveTextSecondary(colorScheme).opacity(0.2), lineWidth: 1)
+                            )
+                    }
                 }
             }
-        }
-    }
-}
-
-private struct FormattingFontTypeRow: View {
-    let fontType: BibleReadingSettings.FontType
-    let isSelected: Bool
-    let action: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(fontType.displayName)
-                    .font(.system(size: 15, design: fontType.design))
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(Color.reforgedGold)
-                }
-            }
-            .foregroundStyle(Color.adaptiveText(colorScheme))
-            .padding(.vertical, 10)
         }
     }
 }
@@ -2539,7 +2525,7 @@ private struct FormattingLineSpacingSection: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(BibleReadingSettings.LineSpacingOption.allCases, id: \.self) { spacing in
                     FormattingLineSpacingButton(spacing: spacing, isSelected: settings.lineSpacing == spacing) {
                         settings.lineSpacing = spacing
@@ -2559,13 +2545,19 @@ private struct FormattingLineSpacingButton: View {
     var body: some View {
         Button(action: action) {
             Text(spacing.displayName)
-                .font(.caption)
+                .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.reforgedNavy : Color.adaptiveBackground(colorScheme))
-                .clipShape(Capsule())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isSelected
+                    ? (colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+                    : Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isSelected ? Color.clear : Color.adaptiveTextSecondary(colorScheme).opacity(0.2), lineWidth: 1)
+                )
         }
     }
 }
@@ -2722,10 +2714,11 @@ struct VerseRow: View {
 
     private static let wocColor = Color(red: 0.75, green: 0.1, blue: 0.1)
 
-    /// Font to use for the verse body text. Overridden for Greek (TR) and Hebrew (WLC).
+    /// Font to use for the verse body text. Overridden for Greek NT texts and Hebrew (WLC).
     private var verseFont: Font {
         switch translation {
-        case .tr:  return Font.custom("Roboto", size: settings.effectiveFontSize * 1.1)
+        case .tr, .sblgnt:
+            return Font.custom("Roboto", size: settings.effectiveFontSize * 1.1)
         case .wlc: return Font.custom("Ezra SIL", size: settings.effectiveFontSize * 1.2)
         default:   return settings.fontType.font(size: settings.effectiveFontSize)
         }
@@ -3042,25 +3035,6 @@ struct ErrorView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 300)
         .padding()
-    }
-}
-
-struct ESVAttribution: View {
-    var translation: BibleTranslation = .esv
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Divider()
-                .padding(.horizontal)
-
-            Text(translation.attribution)
-                .font(.caption2)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, ReforgedTheme.spacingL)
-        }
-        .padding(.vertical, ReforgedTheme.spacingL)
     }
 }
 

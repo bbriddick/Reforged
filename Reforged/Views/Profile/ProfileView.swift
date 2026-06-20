@@ -80,7 +80,7 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity)
             } else {
                 // iPhone: Single column
-                VStack(spacing: 24) {
+                VStack(spacing: 16) {
                     ProfileHeader(user: appState.user, levelInfo: levelInfo)
                     StatsGrid(user: appState.user)
                     BadgesSection(badges: appState.user.badges)
@@ -103,41 +103,72 @@ struct ProfileHeader: View {
 
     var profileBorderColor: Color {
         switch user.activeProfileBorder {
-        case "border-gold": return Color.reforgedGold
-        case "border-flame": return Color.reforgedCoral
-        case "border-crown": return Color.purple
+        case "border-gold":    return Color.reforgedGold
+        case "border-flame":   return Color.reforgedCoral
+        case "border-crown":   return Color.purple
         case "border-diamond": return Color.cyan
-        default: return Color.reforgedGold
+        default:               return Color.reforgedGold
         }
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            ProfileAvatarView(size: 100)
-                .shadow(color: profileBorderColor.opacity(0.3), radius: user.activeProfileBorder.isEmpty ? 0 : 8)
+        VStack(spacing: 14) {
+            ProfileAvatarView(size: 90)
+                .shadow(color: profileBorderColor.opacity(0.35), radius: user.activeProfileBorder.isEmpty ? 0 : 10)
 
-            VStack(spacing: 4) {
+            VStack(spacing: 8) {
                 Text(user.displayName.isEmpty ? "Friend" : user.displayName)
                     .font(.title2)
                     .fontWeight(.bold)
-                
-                Text("Level \(levelInfo.level) • \(levelInfo.title)")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            }
-            
-            // XP Progress
-            VStack(spacing: 8) {
-                ProgressView(value: levelInfo.progress)
-                    .tint(Color.reforgedGold)
 
-                Text("\(levelInfo.xpInLevel) / \(levelInfo.xpForNextLevel) XP to next level")
-                    .font(.caption)
-                    .foregroundStyle(Color.reforgedTextSecondary)
+                // Level badge pill
+                HStack(spacing: 5) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 9, weight: .bold))
+                    Text("Level \(levelInfo.level)  •  \(levelInfo.title)")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                }
+                .foregroundStyle(Color.reforgedGold)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Color.reforgedGold.opacity(0.12))
+                .clipShape(Capsule())
             }
-            .padding(.horizontal, 40)
+
+            // XP Progress
+            VStack(spacing: 6) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.adaptiveTextSecondary(colorScheme).opacity(0.15))
+                        Capsule()
+                            .fill(LinearGradient(
+                                colors: [Color.reforgedGold.opacity(0.75), Color.reforgedGold],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ))
+                            .frame(width: max(levelInfo.progress > 0 ? 16 : 0,
+                                             geo.size.width * CGFloat(levelInfo.progress)))
+                    }
+                }
+                .frame(height: 8)
+
+                HStack {
+                    Text("\(levelInfo.xpInLevel) XP earned")
+                        .foregroundStyle(Color.reforgedGold)
+                    Spacer()
+                    Text("\(levelInfo.xpForNextLevel) XP to next level")
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                .font(.caption)
+                .fontWeight(.medium)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 2)
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.vertical, 20)
         .frame(maxWidth: .infinity)
         .reforgedCard(hasBorder: false)
         .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -160,7 +191,7 @@ struct StatsGrid: View {
     }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
+        LazyVGrid(columns: columns, spacing: 10) {
             ProfileStatCard(icon: "flame.fill", iconColor: .reforgedCoral, value: "\(user.streak)", label: "Day Streak")
             ProfileStatCard(icon: "trophy.fill", iconColor: .reforgedGold, value: "\(user.longestStreak)", label: "Best Streak")
             ProfileStatCard(icon: "star.fill", iconColor: Color.adaptivePrimaryIcon(colorScheme), value: "\(user.xp)", label: "Total XP")
@@ -177,23 +208,36 @@ struct ProfileStatCard: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(iconColor)
-            
+        VStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(iconColor.opacity(0.12))
+                    .frame(width: 42, height: 42)
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(iconColor)
+            }
+
             Text(value)
                 .font(.title2)
                 .fontWeight(.bold)
-            
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+
             Text(label)
                 .font(.caption)
+                .fontWeight(.medium)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding()
+        .padding(.vertical, 16)
+        .padding(.horizontal, 8)
         .reforgedCard(hasBorder: false)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(iconColor.opacity(0.12), lineWidth: 1)
+        )
     }
 }
 
@@ -426,86 +470,76 @@ struct ProfileSettingsSection: View {
                 .foregroundStyle(Color.adaptiveText(colorScheme))
 
             VStack(spacing: 0) {
-                NavigationLink(destination: SettingsView()) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.title3)
-                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                            .frame(width: 30)
+                profileNavRow(
+                    icon: "gearshape.fill",
+                    iconColor: Color.adaptiveNavyText(colorScheme),
+                    bgColor: Color.reforgedNavy.opacity(0.1),
+                    title: "App Settings",
+                    destination: AnyView(SettingsView())
+                )
 
-                        Text("App Settings")
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                Divider().padding(.leading, 58)
 
-                        Spacer()
+                profileNavRow(
+                    icon: "questionmark.circle.fill",
+                    iconColor: .blue,
+                    bgColor: Color.blue.opacity(0.1),
+                    title: "Help & Support",
+                    destination: AnyView(
+                        ScrollView {
+                            HelpAndSupportView().padding()
+                        }
+                        .navigationTitle("Help & Support")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+                    )
+                )
 
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                    .padding()
-                }
+                Divider().padding(.leading, 58)
 
-                Divider().padding(.leading, 50)
-
-                NavigationLink(destination: HelpAndSupportView()
-                    .navigationTitle("Help & Support")
-                    .navigationBarTitleDisplayMode(.inline)
-                ) {
-                    HStack(spacing: 12) {
+                Button(action: { showLogoutAlert = true }) {
+                    HStack(spacing: 14) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.blue.opacity(0.12))
-                                .frame(width: 30, height: 30)
-                            Image(systemName: "questionmark.circle.fill")
+                                .fill(Color.red.opacity(0.1))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "rectangle.portrait.and.arrow.right.fill")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color.blue)
+                                .foregroundStyle(Color.red)
                         }
-                        Text("Help & Support")
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("Sign Out")
+                            .foregroundStyle(Color.red)
                         Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
                     .padding()
-                }
-
-                Divider().padding(.leading, 50)
-
-                NavigationLink(destination: ScrollView {
-                    AboutSection().padding()
-                }
-                .navigationTitle("About")
-                .navigationBarTitleDisplayMode(.inline)
-                .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-                ) {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.12))
-                                .frame(width: 30, height: 30)
-                            Image(systemName: "info.circle.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color.gray)
-                        }
-                        Text("About")
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                    .padding()
-                }
-
-                Divider().padding(.leading, 50)
-
-                SettingsRow(icon: "rectangle.portrait.and.arrow.right.fill", title: "Sign Out", color: .red) {
-                    showLogoutAlert = true
                 }
             }
             .reforgedCard(hasBorder: false)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+    }
+
+    @ViewBuilder
+    private func profileNavRow(icon: String, iconColor: Color, bgColor: Color, title: String, destination: AnyView) -> some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(bgColor)
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(iconColor)
+                }
+                Text(title)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding()
         }
     }
 
@@ -520,35 +554,6 @@ struct ProfileSettingsSection: View {
 
         if let url = URL(string: "mailto:\(email)?subject=\(encodedSubject)&body=\(encodedBody)") {
             UIApplication.shared.open(url)
-        }
-    }
-}
-
-struct SettingsRow: View {
-    let icon: String
-    let title: String
-    let color: Color
-    let action: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundStyle(color)
-                    .frame(width: 30)
-
-                Text(title)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            }
-            .padding()
         }
     }
 }

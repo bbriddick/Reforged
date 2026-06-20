@@ -114,6 +114,40 @@ struct NotificationSettingsSection: View {
 
                 SettingsDivider()
 
+                // Weekly Check-in
+                SettingsToggleRow(
+                    title: "Weekly Check-in",
+                    subtitle: "A weekly reflection or reminder drawn from Scripture",
+                    isOn: $settings.weeklyCheckinEnabled
+                )
+
+                if settings.weeklyCheckinEnabled {
+                    SingleDayPicker(
+                        label: "Check-in Day",
+                        selectedDay: $settings.weeklyCheckinDay
+                    )
+                    .padding(.bottom, 6)
+
+                    SettingsDivider()
+
+                    HStack {
+                        Text("Check-in Time")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Spacer()
+                        DatePicker(
+                            "",
+                            selection: $settings.weeklyCheckinTime,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .labelsHidden()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                }
+
+                SettingsDivider()
+
                 // Walk Talks Podcast
                 SettingsToggleRow(
                     title: "Walk Talks Episodes",
@@ -223,6 +257,50 @@ struct DaySchedulePicker: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+        }
+        .padding(.horizontal, 2)
+    }
+}
+
+// MARK: - Single Day Picker
+
+/// A row of S M T W T F S buttons where exactly one day can be selected at a time.
+/// Used for the weekly check-in notification scheduler.
+struct SingleDayPicker: View {
+    let label: String
+    @Binding var selectedDay: Int
+    @Environment(\.colorScheme) var colorScheme
+
+    private let dayLetters = ["S", "M", "T", "W", "T", "F", "S"]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            HStack(spacing: 6) {
+                ForEach(1...7, id: \.self) { weekday in
+                    let isSelected = selectedDay == weekday
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            selectedDay = weekday
+                        }
+                    } label: {
+                        Text(dayLetters[weekday - 1])
+                            .font(.system(size: 13, weight: .semibold))
+                            .frame(width: 36, height: 36)
+                            .foregroundStyle(isSelected ? .white : Color.adaptiveTextSecondary(colorScheme))
+                            .background(
+                                Circle()
+                                    .fill(isSelected ? Color.reforgedNavy : Color.adaptiveTextSecondary(colorScheme).opacity(0.12))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
             }
         }
         .padding(.horizontal, 2)

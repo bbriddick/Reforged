@@ -136,121 +136,11 @@ struct MemoryView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Stats Row - Responsive grid
-                LazyVGrid(columns: statsColumns, spacing: 12) {
-                    MemoryStatCard(
-                        value: "\(totalVerses)",
-                        label: "Verses",
-                        icon: "text.book.closed.fill",
-                        color: Color.adaptivePrimaryIcon(colorScheme)
-                    )
-
-                    MemoryStatCard(
-                        value: "\(averageMastery)%",
-                        label: "Mastery",
-                        icon: "chart.line.uptrend.xyaxis",
-                        color: .reforgedGold
-                    )
-
-                    MemoryStatCard(
-                        value: "\(versesForReview.count)",
-                        label: "Reviews",
-                        icon: "arrow.triangle.2.circlepath",
-                        color: .reforgedCoral
-                    )
-
-                    // Extra stat on iPad
-                    if horizontalSizeClass == .regular {
-                        MemoryStatCard(
-                            value: "\(appState.user.streak)",
-                            label: "Streak",
-                            icon: "flame.fill",
-                            color: Color(red: 1.0, green: 0.5, blue: 0.0)
-                        )
-                    }
+                if appState.memoryVerses.isEmpty {
+                    emptyStateContent
+                } else {
+                    populatedContent
                 }
-
-                // Review Card (prominent CTA)
-                if !versesForReview.isEmpty {
-                    ReviewCard(count: versesForReview.count)
-                }
-
-                // Practice Games
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Practice")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    HStack(spacing: 12) {
-                        PracticeGameCard(
-                            title: "Matching Game",
-                            subtitle: "Match references to verses",
-                            icon: "square.grid.2x2.fill",
-                            xpRange: "150–200 XP",
-                            color: Color.adaptivePrimaryIcon(colorScheme)
-                        ) {
-                            showMatchingGame = true
-                        }
-
-                        PracticeGameCard(
-                            title: "Complete the Verse",
-                            subtitle: "Fill in the missing words",
-                            icon: "pencil.and.outline",
-                            xpRange: "75–315 XP",
-                            color: Color.reforgedGold
-                        ) {
-                            showCompleteTheVerse = true
-                        }
-                    }
-                }
-
-                // Verses List
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Text("My Verses")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                        Spacer()
-
-                        Button(action: { showAddVerse = true }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "plus")
-                                    .font(.caption.bold())
-                                Text("Add")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                            }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color.reforgedNavy)
-                            .clipShape(Capsule())
-                        }
-                    }
-
-                    if appState.memoryVerses.isEmpty {
-                        EmptyVersesView(onAdd: { showAddVerse = true })
-                    } else {
-                        // Responsive grid for verse cards
-                        LazyVGrid(columns: verseColumns, spacing: 16) {
-                            ForEach(appState.memoryVerses) { verse in
-                                VerseCard(
-                                    verse: verse,
-                                    onDelete: {
-                                        verseToDelete = verse
-                                        showDeleteConfirmation = true
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Suggested Verses Section
-                SuggestedVersesSection()
             }
             .responsivePadding(.horizontal)
             .padding(.vertical)
@@ -261,6 +151,191 @@ struct MemoryView: View {
             MemoryAudioBar()
         }
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+    }
+
+    // MARK: - Empty State Layout (no verses yet)
+    // Prioritises onboarding: compact add CTA → suggested verses → locked games
+
+    @ViewBuilder
+    private var emptyStateContent: some View {
+
+        // Single-row "Add your first verse" card
+        Button(action: { showAddVerse = true }) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.reforgedNavy)
+                        .frame(width: 52, height: 52)
+                        .shadow(color: Color.reforgedNavy.opacity(0.28), radius: 8, y: 4)
+                    Image(systemName: "plus")
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Add your first verse")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("Pick one you know, or choose from suggestions below")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(16)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 10, y: 4)
+        }
+        .buttonStyle(.plain)
+
+        // Suggested verses — featured prominently for new users
+        SuggestedVersesSection()
+
+        // Practice games — shown greyed out so users know they exist
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Practice")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Spacer()
+                Label("Unlocks after adding a verse", systemImage: "lock.fill")
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+
+            HStack(spacing: 12) {
+                PracticeGameCard(
+                    title: "Matching Game",
+                    subtitle: "Match references to verses",
+                    icon: "square.grid.2x2.fill",
+                    xpRange: "150–200 XP",
+                    color: Color.adaptivePrimaryIcon(colorScheme)
+                ) {}
+                .disabled(true)
+                .opacity(0.38)
+
+                PracticeGameCard(
+                    title: "Complete the Verse",
+                    subtitle: "Fill in the missing words",
+                    icon: "pencil.and.outline",
+                    xpRange: "75–315 XP",
+                    color: Color.reforgedGold
+                ) {}
+                .disabled(true)
+                .opacity(0.38)
+            }
+        }
+    }
+
+    // MARK: - Populated State Layout (has verses)
+
+    @ViewBuilder
+    private var populatedContent: some View {
+
+        // Stats row — Reviews only turns coral when there are actual reviews due
+        LazyVGrid(columns: statsColumns, spacing: 12) {
+            MemoryStatCard(
+                value: "\(totalVerses)",
+                label: "Verses",
+                icon: "text.book.closed.fill",
+                color: Color.adaptivePrimaryIcon(colorScheme)
+            )
+            MemoryStatCard(
+                value: "\(averageMastery)%",
+                label: "Mastery",
+                icon: "chart.line.uptrend.xyaxis",
+                color: .reforgedGold
+            )
+            MemoryStatCard(
+                value: "\(versesForReview.count)",
+                label: "Reviews",
+                icon: "arrow.triangle.2.circlepath",
+                color: versesForReview.isEmpty
+                    ? Color.adaptiveTextSecondary(colorScheme)
+                    : .reforgedCoral
+            )
+            if horizontalSizeClass == .regular {
+                MemoryStatCard(
+                    value: "\(appState.user.streak)",
+                    label: "Streak",
+                    icon: "flame.fill",
+                    color: Color(red: 1.0, green: 0.5, blue: 0.0)
+                )
+            }
+        }
+
+        // Review card — prominent CTA when verses are due
+        if !versesForReview.isEmpty {
+            ReviewCard(count: versesForReview.count)
+        }
+
+        // Practice Games
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Practice")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+
+            HStack(spacing: 12) {
+                PracticeGameCard(
+                    title: "Matching Game",
+                    subtitle: "Match references to verses",
+                    icon: "square.grid.2x2.fill",
+                    xpRange: "150–200 XP",
+                    color: Color.adaptivePrimaryIcon(colorScheme)
+                ) {
+                    showMatchingGame = true
+                }
+                PracticeGameCard(
+                    title: "Complete the Verse",
+                    subtitle: "Fill in the missing words",
+                    icon: "pencil.and.outline",
+                    xpRange: "75–315 XP",
+                    color: Color.reforgedGold
+                ) {
+                    showCompleteTheVerse = true
+                }
+            }
+        }
+
+        // My Verses list
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("My Verses")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                Button(action: { showAddVerse = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus").font(.caption.bold())
+                        Text("Add").font(.subheadline).fontWeight(.semibold)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.reforgedNavy)
+                    .clipShape(Capsule())
+                }
+            }
+
+            LazyVGrid(columns: verseColumns, spacing: 16) {
+                ForEach(appState.memoryVerses) { verse in
+                    VerseCard(verse: verse, onDelete: {
+                        verseToDelete = verse
+                        showDeleteConfirmation = true
+                    })
+                }
+            }
+        }
+
+        // Suggested verses (discover more to add)
+        SuggestedVersesSection()
     }
 }
 
@@ -832,7 +907,7 @@ struct SuggestedVerseCard: View {
                         let result = try await NETService.shared.fetchVerseForMemory(reference: verse.reference)
                         fetchedText = result.text
                         fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
-                    case .csb, .nkjv, .nasb, .rvr1960:
+                    case .csb, .nkjv, .nasb, .rvr1960, .nlt:
                         let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
                         fetchedText = result.text
                         fetchedRef = result.canonical.isEmpty ? verse.reference : result.canonical
@@ -890,7 +965,7 @@ struct SuggestedVerseCard: View {
             case .net:
                 let result = try await NETService.shared.fetchVerseForMemory(reference: verse.reference)
                 fetched = result.text
-            case .csb, .nkjv, .nasb, .rvr1960:
+            case .csb, .nkjv, .nasb, .rvr1960, .nlt:
                 let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: verse.reference, translation: translation)
                 fetched = result.text
             case .tr, .sblgnt, .wlc:
@@ -1176,7 +1251,7 @@ struct AddVerseSheet: View {
                     let result = try await NETService.shared.fetchVerseForMemory(reference: reference)
                     fetchedText = result.text
                     fetchedCanonical = result.canonical
-                case .csb, .nkjv, .nasb, .rvr1960:
+                case .csb, .nkjv, .nasb, .rvr1960, .nlt:
                     let result = try await ApiBibleService.shared.fetchVerseForMemory(reference: reference, translation: selectedTranslation)
                     fetchedText = result.text
                     fetchedCanonical = result.canonical
@@ -1631,7 +1706,7 @@ struct VersePickerSheet: View {
                 case .net:
                     let result = try await NETService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
                     fetchedVerses = result.verses
-                case .csb, .nkjv, .nasb, .rvr1960:
+                case .csb, .nkjv, .nasb, .rvr1960, .nlt:
                     let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)
                     fetchedVerses = result.verses
                 case .tr, .sblgnt, .wlc:

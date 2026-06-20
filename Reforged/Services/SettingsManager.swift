@@ -183,6 +183,37 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    /// Whether the weekly check-in notification is enabled.
+    @Published var weeklyCheckinEnabled: Bool {
+        didSet {
+            save(weeklyCheckinEnabled, forKey: Keys.weeklyCheckinEnabled)
+            Task { await WeeklyCheckinService.rescheduleFromCache() }
+        }
+    }
+
+    /// Day of the week on which the weekly check-in fires (1 = Sunday … 7 = Saturday).
+    @Published var weeklyCheckinDay: Int {
+        didSet {
+            save(weeklyCheckinDay, forKey: Keys.weeklyCheckinDay)
+            Task { await WeeklyCheckinService.rescheduleFromCache() }
+        }
+    }
+
+    /// Time of day at which the weekly check-in fires.
+    @Published var weeklyCheckinTime: Date {
+        didSet {
+            let components = Calendar.current.dateComponents([.hour, .minute], from: weeklyCheckinTime)
+            save(components.hour ?? 9, forKey: Keys.weeklyCheckinHour)
+            save(components.minute ?? 0, forKey: Keys.weeklyCheckinMinute)
+            Task { await WeeklyCheckinService.rescheduleFromCache() }
+        }
+    }
+
+    /// Whether we have already shown the "enable Walk Talks notifications?" prompt.
+    @Published var hasShownPodcastNotificationPrompt: Bool {
+        didSet { save(hasShownPodcastNotificationPrompt, forKey: Keys.hasShownPodcastNotificationPrompt) }
+    }
+
     // MARK: - AI Settings
 
     @Published var aiEnabled: Bool {
@@ -282,6 +313,11 @@ class SettingsManager: ObservableObject {
         static let podcastNewEpisodeNotifications = "settings.podcastNewEpisodeNotifications"
         static let podcastNotificationHour = "settings.podcastNotificationHour"
         static let podcastNotificationMinute = "settings.podcastNotificationMinute"
+        static let weeklyCheckinEnabled = "settings.weeklyCheckinEnabled"
+        static let weeklyCheckinDay = "settings.weeklyCheckinDay"
+        static let weeklyCheckinHour = "settings.weeklyCheckinHour"
+        static let weeklyCheckinMinute = "settings.weeklyCheckinMinute"
+        static let hasShownPodcastNotificationPrompt = "settings.hasShownPodcastNotificationPrompt"
         static let syncEnabled = "settings.syncEnabled"
         static let dayStartHour = "settings.dayStartHour"
         static let aiEnabled = "settings.aiEnabled"
@@ -358,6 +394,18 @@ class SettingsManager: ObservableObject {
             var c = DateComponents(); c.hour = 9; c.minute = 0
             return Calendar.current.date(from: c) ?? Date()
         }()
+        self.weeklyCheckinEnabled = UserDefaults.standard.object(forKey: Keys.weeklyCheckinEnabled) as? Bool ?? true
+        self.weeklyCheckinDay = UserDefaults.standard.object(forKey: Keys.weeklyCheckinDay) as? Int ?? 4 // Wednesday
+        let checkinHour = UserDefaults.standard.object(forKey: Keys.weeklyCheckinHour) as? Int ?? 9
+        let checkinMinute = UserDefaults.standard.object(forKey: Keys.weeklyCheckinMinute) as? Int ?? 0
+        var checkinComponents = DateComponents()
+        checkinComponents.hour = checkinHour
+        checkinComponents.minute = checkinMinute
+        self.weeklyCheckinTime = Calendar.current.date(from: checkinComponents) ?? {
+            var c = DateComponents(); c.hour = 9; c.minute = 0
+            return Calendar.current.date(from: c) ?? Date()
+        }()
+        self.hasShownPodcastNotificationPrompt = UserDefaults.standard.object(forKey: Keys.hasShownPodcastNotificationPrompt) as? Bool ?? false
 
         // Load AI Settings
         self.aiEnabled = UserDefaults.standard.object(forKey: Keys.aiEnabled) as? Bool ?? true
@@ -489,6 +537,10 @@ class SettingsManager: ObservableObject {
         lessonReminders = true
         notificationsEnabled = true
         podcastNewEpisodeNotifications = false
+        weeklyCheckinEnabled = true
+        weeklyCheckinDay = 4 // Wednesday
+        var c = DateComponents(); c.hour = 9; c.minute = 0
+        weeklyCheckinTime = Calendar.current.date(from: c) ?? Date()
     }
 
     func resetAllSettings() {
