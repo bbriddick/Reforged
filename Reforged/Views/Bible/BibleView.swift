@@ -44,9 +44,15 @@ struct BibleView: View {
     @State private var navRevealProgress: CGFloat = 0   // 0 = hidden, 1 = fully open
     @State private var navPanelVisible = false
     @State private var navFocusSearch = false
-    // True only while the reading-content edge-drag gesture is actively revealing the nav.
-    // Guards against the simultaneousGesture firing while the user scrolls inside the open panel.
-    @State private var isRevealingNavFromEdge = false
+    // Phases of the left-edge nav-reveal drag. `deciding` = the gesture began at the edge but
+    // hasn't yet proven itself primarily horizontal (the ScrollView still owns the pan);
+    // `revealingNav` = it has claimed the drag, so the ScrollView is locked out for its duration
+    // (see `.scrollDisabled` below). This directional lock is what stops navRevealProgress from
+    // wiggling as the horizontal edge drag and the vertical scroll fight over the same touch.
+    private enum EdgeDragPhase { case idle, deciding, revealingNav }
+    @State private var edgeDragPhase: EdgeDragPhase = .idle
+    /// True only while the edge drag is actively revealing the nav — drives `.scrollDisabled`.
+    private var isRevealingNavFromEdge: Bool { edgeDragPhase == .revealingNav }
     @State private var showFormattingPanel = false
     @State private var showAudioPlayer = false
     @State private var showNowPlaying = false
@@ -272,9 +278,16 @@ struct BibleView: View {
                 // re-run loadChapter, which makes `pendingScrollTarget` the exact verse id and lets
                 // `performFocusScroll()` position it. The old `scrollToVerseID` path fought the stable
                 // spine's `topChapterID` anchor and snapped the reader back to the chapter top.
+                //
+                // This is the SOLE handler for verse navigation — callers must NOT also invoke `onSelect()`
+                // (which targets the chapter top), or its chapter-top loadChapter would race this verse one.
+                // So it fully establishes the passage itself: focus + scroll target via loadChapter (which
+                // sets `focusChapterID`/`pendingScrollTarget` and lets hydration complete before the scroll),
+                // then records it in recents just like the chapter-top `onSelect` path does.
                 closeNav()
                 pendingNavigationVerse = verseNum
                 loadChapter()
+                addToRecentPassages()
             },
             translation: currentTranslation,
             translationOrder: settingsManager.translationOrder,
@@ -482,6 +495,9 @@ struct BibleView: View {
                         )
                     }
                     .scrollIndicators(.hidden)
+                    // Once the edge drag claims the gesture, stop the ScrollView from panning so the
+                    // two gestures can't fight — this is what keeps navRevealProgress locked & smooth.
+                    .scrollDisabled(isRevealingNavFromEdge)
                     .coordinateSpace(name: "bibleScroll")
                     // `topChapterID` is the stable `.scrollPosition` anchor (iOS 17+). It is write-back
                     // ONLY — SwiftUI keeps it pinned to the top row, which holds the viewport steady when
@@ -532,24 +548,49 @@ struct BibleView: View {
                         }
                     }
                     .simultaneousGesture(
-                        // Left-edge swipe reveals the navigation panel. Chapter changes are now
-                        // handled by vertical scrolling + the floating prev/next buttons.
-                        DragGesture(minimumDistance: 10)
+                        // Left-edge swipe reveals the navigation panel. A small state machine
+                        // (idle → deciding → revealingNav) only claims the drag when it clearly
+                        // starts at the left edge AND is primarily horizontal; until then the
+                        // vertical ScrollView keeps the pan. Chapter changes are handled by
+                        // vertical scrolling + the floating prev/next buttons.
+                        DragGesture(minimumDistance: 6)
                             .onChanged { value in
                                 guard !isSidebarNavigation else { return }
                                 let h = value.translation.width
-                                let isEdgeDrag = value.startLocation.x < 50
-                                guard isEdgeDrag && h > 0 else { return }
-                                // Skip if the panel is already open and this isn't the gesture that opened it.
-                                guard !navPanelVisible || isRevealingNavFromEdge else { return }
-                                if !isRevealingNavFromEdge { isRevealingNavFromEdge = true }
-                                if !navPanelVisible { navPanelVisible = true; navRevealProgress = 0 }
-                                let screenW = UIScreen.main.bounds.width
-                                navRevealProgress = min(max(h / (screenW * 0.82), 0), 1)
+                                let v = abs(value.translation.height)
+
+                                switch edgeDragPhase {
+                                case .idle:
+                                    // Begin deciding only for gestures that start hard against the
+                                    // left edge, and only when the panel isn't already open.
+                                    guard value.startLocation.x < 24, !navPanelVisible else { return }
+                                    edgeDragPhase = .deciding
+                                    fallthrough
+                                case .deciding:
+                                    // Abandon the moment the gesture reveals itself as a scroll
+                                    // (downward/upward movement out-pacing horizontal) — hand it
+                                    // back to the ScrollView for the rest of the touch.
+                                    if v > 10 && v >= h {
+                                        edgeDragPhase = .idle
+                                        return
+                                    }
+                                    // Claim the drag once it's clearly horizontal: rightward, past a
+                                    // threshold, and out-pacing vertical movement by 1.5×.
+                                    guard h > 12, h > v * 1.5 else { return }
+                                    edgeDragPhase = .revealingNav
+                                    navPanelVisible = true
+                                    navRevealProgress = 0
+                                    fallthrough
+                                case .revealingNav:
+                                    // Scroll is now disabled, so width tracks the finger directly —
+                                    // clamped to [0,1] for a smooth, monotonic reveal.
+                                    let screenW = UIScreen.main.bounds.width
+                                    navRevealProgress = min(max(h / (screenW * 0.82), 0), 1)
+                                }
                             }
                             .onEnded { _ in
-                                guard isRevealingNavFromEdge else { return }
-                                isRevealingNavFromEdge = false
+                                defer { edgeDragPhase = .idle }
+                                guard edgeDragPhase == .revealingNav else { return }
                                 if navRevealProgress > 0.4 {
                                     openNav()
                                 } else {
@@ -927,10 +968,15 @@ struct BibleView: View {
             UIApplication.shared.isIdleTimerDisabled = enabled
         }
         .onChange(of: settingsManager.defaultTranslation) { newTranslation in
-            // Reload chapter when translation changes
-            if currentTranslation != newTranslation {
-                loadChapter()
-            }
+            // A translation change from OUTSIDE the in-reader switcher (Settings, search-result navigation,
+            // etc.) lands here. Mirror `applyTranslationSwitch`: do a TRUE coordinator reset for the new
+            // translation BEFORE loadChapter, so no stale hydrated body from the old translation can satisfy
+            // `isLoaded(focusID)` and short-circuit the new focus cycle (the "switch doesn't load" bug). The
+            // in-reader switch already reset + synced `currentTranslation`, so its re-entry here is a no-op.
+            guard currentTranslation != newTranslation else { return }
+            currentTranslation = newTranslation
+            coordinator.setTranslation(newTranslation)   // drop stale state for the new translation
+            loadChapter()                                 // re-focus the same passage; fallback guarantees the scroll
         }
         .onChange(of: settingsManager.showRedLetterText) { _ in
             // Recompute red-letter segments for every loaded chapter body in place (no refetch).
@@ -1179,23 +1225,39 @@ struct BibleView: View {
         pendingScrollTarget = nil
         let isVerseTarget = target.contains(":")
 
-        func applyScroll() {
-            // `proxy.scrollTo` is the SOLE scroll command — it's imperative and precise, so it can't lose a
-            // race the way driving the two-way-bound `.scrollPosition` could (SwiftUI continuously writes the
-            // current top back into `topChapterID`, which could overwrite a jump command → "next doesn't go
-            // forward"). We still set `topChapterID` so `.scrollPosition` HOLDS the destination instead of
-            // snapping back: to the chapter row for a chapter-top jump, or released (nil) for a verse jump so
-            // it can't fight a mid-chapter scroll. No animation — animating the two together made them fight.
-            topChapterID = isVerseTarget ? nil : chapterID
+        // The chapter-start anchor — a zero-height target at the exact top of the chapter row. For a
+        // chapter-top jump this IS `target`; for a verse jump it's the landing spot for stage 1 below.
+        let chapterAnchor: String = {
+            guard let p = parseChapterID(chapterID) else { return target }
+            return chapterAnchorID(p.book, p.chapter)
+        }()
+
+        // STAGE 1 — reach the CHAPTER. `.scrollPosition` (`topChapterID`) is the ONLY mechanism that
+        // reliably traverses a far distance across the lazy spine: it computes the offset from the spine's
+        // height estimates, so it lands even on a row that has never been realized. `proxy.scrollTo` to such
+        // a far, never-built row silently no-ops — which is why a cold/far VERSE restore used to park on
+        // Genesis 1 with the focus chapter hydrated off-screen (the "doesn't populate" bug). So we always
+        // anchor the chapter row via scrollPosition first and let it do the long haul.
+        func reachChapter() {
+            topChapterID = chapterID
+            proxy.scrollTo(chapterAnchor, anchor: .top)
+        }
+        // STAGE 2 — fine-position to the verse INSIDE the now-realized chapter. Release the anchor (nil) so
+        // `.scrollPosition` can't fight the mid-chapter scroll, then `proxy.scrollTo` the verse. This is now
+        // a SHORT jump within content stage 1 already brought on-screen, so scrollTo resolves it precisely.
+        func fineToVerse() {
+            topChapterID = nil
             proxy.scrollTo(target, anchor: .top)
         }
+        // Re-assert the chapter-top landing (absorbs late neighbour hydration without snapping back).
+        func secondPass() { isVerseTarget ? fineToVerse() : reachChapter() }
 
         if alreadyLoaded {
             // prev/next: content is present, so jump INSTANTLY to the chapter-start anchor. Suppress the
             // scroll tracker across the jump so chapters passing through can't re-drive current-chapter,
             // then resume from the chapter we landed on.
             isProgrammaticScroll = true
-            applyScroll()
+            reachChapter()
             focusPositioned = true
             updateCurrentChapter(forChapterID: chapterID)   // sync toolbar immediately to this chapter
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
@@ -1205,16 +1267,16 @@ struct BibleView: View {
                 // chapter (the "content N but toolbar N-1" desync).
                 isProgrammaticScroll = false
                 guard focusChapterID == chapterID else { return }
-                applyScroll()
+                secondPass()
                 visibleChapterID = chapterID
                 updateCurrentChapter(forChapterID: chapterID)
             }
         } else {
-            // Fresh load (overlay covering): position instantly, with a second pass after layout settles to
-            // absorb late neighbour hydration, then reveal.
-            applyScroll()
+            // Fresh load (overlay covering): reach the chapter instantly, then on the second pass fine-tune
+            // to the verse (or re-assert the chapter top) once layout has built the body, then reveal.
+            reachChapter()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                applyScroll()
+                secondPass()
                 withAnimation(.easeOut(duration: 0.2)) { focusPositioned = true }
             }
         }
@@ -1513,6 +1575,32 @@ struct BibleView: View {
             // Content is here — request the instant scroll synchronously (no runloop hop) so prev/next feels
             // immediate. `lastHydratedID` won't fire for an already-loaded chapter, so this is its trigger.
             requestFocusScroll(alreadyLoaded: true)
+        } else {
+            // Fresh load: the primary trigger is `.onChange(of: coordinator.lastHydratedID)`. But that
+            // callback can be MISSED on first open and translation switches — the observer may not be live
+            // when the hydration publish lands, or a cached body can hydrate before it's observed — which
+            // leaves the reader parked on an unrelated chapter until a manual scroll / Prev-Next (the bug).
+            // Drive a guaranteed fallback that polls until the focus body is loaded, then issues the scroll.
+            // It's idempotent with the callback: `requestFocusScroll` no-ops once `performFocusScroll` has
+            // consumed `pendingScrollTarget`, so whichever path fires first wins and the other does nothing.
+            scheduleFocusScrollRetry(for: focusID, attempt: 0)
+        }
+    }
+
+    /// Guaranteed fresh-load focus-scroll driver. Retries `requestFocusScroll()` on short runloop delays
+    /// until the focused chapter's body is loaded (then issues the scroll once and stops), or until a small
+    /// attempt ceiling. This makes first-open and translation-switch always land on the saved passage
+    /// without depending on the `lastHydratedID` visibility callback. It bails immediately if the focus has
+    /// moved on or the chapter is already positioned, so it can never fight a newer navigation.
+    private func scheduleFocusScrollRetry(for focusID: String, attempt: Int) {
+        guard focusChapterID == focusID, !focusPositioned else { return }
+        if coordinator.isLoaded(focusID) {
+            requestFocusScroll(alreadyLoaded: false)   // body ready — position it (overlay still covering)
+            return
+        }
+        guard attempt < 30 else { return }   // ~3s ceiling; incompatible/failed chapter — let the view surface it
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [self] in
+            scheduleFocusScrollRetry(for: focusID, attempt: attempt + 1)
         }
     }
 

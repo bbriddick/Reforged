@@ -394,8 +394,10 @@ struct UnifiedNavigationView: View {
                     selectedBook = ref.book
                     selectedChapter = ref.chapter
                     if let verse = ref.verse, let selectVerse = onSelectVerse {
+                        // Verse target: route ONLY through the verse handler so it establishes the focused
+                        // chapter and lets hydration complete before scrolling. Calling onSelect() first
+                        // would fire a competing chapter-top loadChapter().
                         dismiss()
-                        onSelect()
                         selectVerse(verse)
                     } else {
                         dismiss()
@@ -760,9 +762,14 @@ struct UnifiedNavigationView: View {
         let cvParts = chapterVerse.components(separatedBy: ":")
         selectedChapter = Int(cvParts.first ?? "") ?? 1
         dismiss()
-        onSelect()
-        if cvParts.count > 1, let verseNum = Int(cvParts[1].components(separatedBy: "-").first ?? "") {
-            onSelectVerse?(verseNum)
+        // Verse target → verse handler alone (it focuses the chapter and scrolls after hydration); a bare
+        // chapter (or no verse handler) → chapter-top onSelect(). Never both, to avoid racing loadChapters.
+        if cvParts.count > 1,
+           let verseNum = Int(cvParts[1].components(separatedBy: "-").first ?? ""),
+           let selectVerse = onSelectVerse {
+            selectVerse(verseNum)
+        } else {
+            onSelect()
         }
     }
 
@@ -991,8 +998,13 @@ struct UnifiedNavigationView: View {
                         ForEach(chapterVerses) { verse in
                             Button {
                                 dismiss()
-                                onSelect()
-                                onSelectVerse?(verse.number)
+                                // Verse handler alone — it focuses the chapter and scrolls after hydration.
+                                // onSelect() would fire a competing chapter-top loadChapter().
+                                if let selectVerse = onSelectVerse {
+                                    selectVerse(verse.number)
+                                } else {
+                                    onSelect()
+                                }
                             } label: {
                                 Text("\(verse.number)")
                                     .font(.headline)
