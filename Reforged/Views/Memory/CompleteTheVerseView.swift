@@ -11,15 +11,23 @@ struct CompleteTheVerseView: View {
 
     private let totalQuestions = 8
 
+    /// When set, quiz questions are drawn only from these verses (collection mode). Distractor
+    /// answer options are still padded from the suggested-verse library. nil = global behavior.
+    private let collectionVerses: [MemoryVerse]?
+
+    init(collectionVerses: [MemoryVerse]? = nil) {
+        self.collectionVerses = collectionVerses
+    }
+
     // MARK: - State
     @State private var questions: [QuizQuestion] = []
     @State private var currentIndex = 0
-    @State private var selectedOption: String? = nil
     @State private var lockedAnswer: String? = nil     // nil until user picks
     @State private var correctCount = 0
     @State private var isComplete = false
     @State private var xpEarned = 0
     @State private var optionShake: String? = nil
+    @State private var showConfetti = false
 
     // MARK: - XP
 
@@ -311,6 +319,7 @@ struct CompleteTheVerseView: View {
             .padding(.horizontal, 32)
 
             Button("Try Again") {
+                showConfetti = false
                 buildQuiz()
                 isComplete = false
             }
@@ -318,6 +327,13 @@ struct CompleteTheVerseView: View {
             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
             Spacer()
+        }
+        .confetti(isActive: $showConfetti, intensity: perfect ? .extreme : .medium)
+        .onAppear {
+            HapticManager.shared.achievementUnlocked()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                showConfetti = true
+            }
         }
     }
 
@@ -328,7 +344,6 @@ struct CompleteTheVerseView: View {
             withAnimation(.easeInOut(duration: 0.2)) {
                 currentIndex += 1
                 lockedAnswer = nil
-                selectedOption = nil
             }
         } else {
             finalizeQuiz()
@@ -350,18 +365,19 @@ struct CompleteTheVerseView: View {
         currentIndex = 0
         correctCount = 0
         lockedAnswer = nil
-        selectedOption = nil
         isComplete = false
 
-        let pool = buildVersePool()
-        guard pool.count >= 4 else { questions = []; return }
+        let questionPool = buildVersePool()
+        guard !questionPool.isEmpty else { questions = []; return }
+        // Distractor options may be sourced more widely than the question set.
+        let distractorPool = padWithSuggested(questionPool)
 
         var builtQuestions: [QuizQuestion] = []
-        let shuffled = pool.shuffled()
+        let shuffled = questionPool.shuffled()
 
         for verse in shuffled {
             if builtQuestions.count == totalQuestions { break }
-            guard let q = makeQuestion(from: verse, allVerses: pool) else { continue }
+            guard let q = makeQuestion(from: verse, allVerses: distractorPool) else { continue }
             builtQuestions.append(q)
         }
 
@@ -369,10 +385,24 @@ struct CompleteTheVerseView: View {
     }
 
     private func buildVersePool() -> [VerseItem] {
+        // Collection mode: questions come only from the supplied verses.
+        if let collectionVerses {
+            return collectionVerses
+                .filter { !$0.text.isEmpty }
+                .map { VerseItem(id: $0.reference, reference: $0.reference, text: $0.text) }
+        }
         var pool: [VerseItem] = []
         for mv in appState.memoryVerses where !mv.text.isEmpty {
             pool.append(VerseItem(id: mv.reference, reference: mv.reference, text: mv.text))
         }
+        return padWithSuggested(pool)
+    }
+
+    /// Pads a pool up to at least `totalQuestions` items using the suggested-verse library,
+    /// skipping any references already present. Used for both the global question pool and
+    /// the distractor pool in collection mode.
+    private func padWithSuggested(_ base: [VerseItem]) -> [VerseItem] {
+        var pool = base
         if pool.count < totalQuestions {
             let suggested = SuggestedVersesData.allVerses
                 .filter { sv in !pool.contains { $0.reference == sv.reference } }

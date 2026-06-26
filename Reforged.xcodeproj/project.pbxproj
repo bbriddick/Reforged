@@ -40,7 +40,6 @@
 		A100003A279B9E0000000001 /* MemoryReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003B279B9E0000000001 /* MemoryReviewView.swift */; };
 		A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003D279B9E0000000001 /* MemoryPracticeView.swift */; };
 		A100003E279B9E0000000001 /* BibleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003F279B9E0000000001 /* BibleView.swift */; };
-		C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */; };
 		A1000040279B9E0000000001 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000041279B9E0000000001 /* ProfileView.swift */; };
 		A1000042279B9E0000000001 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000043279B9E0000000001 /* JournalView.swift */; };
 		A1000044279B9E0000000001 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000045279B9E0000000001 /* OnboardingFlowView.swift */; };
@@ -50,7 +49,6 @@
 		A1000060279B9E0000000001 /* BibleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000061279B9E0000000001 /* BibleModels.swift */; };
 		A1000062279B9E0000000001 /* ChapterNavigationWheel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */; };
 		A1000080279B9E0000000001 /* KJVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000081279B9E0000000001 /* KJVService.swift */; };
-		NET0000A279B9E0000000001 /* NETService.swift in Sources */ = {isa = PBXBuildFile; fileRef = NET0000B279B9E0000000001 /* NETService.swift */; };
 		A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000083279B9E0000000001 /* JournalStorageManager.swift */; };
 		A1000084279B9E0000000001 /* ReadingStreakManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000085279B9E0000000001 /* ReadingStreakManager.swift */; };
 		A1000086279B9E0000000001 /* KnowledgeBase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000087279B9E0000000001 /* KnowledgeBase.swift */; };
@@ -64,6 +62,7 @@
 		A10000E3279B9E0000000001 /* MemoryAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */; };
 		A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1AABB01279B9E0000000001 /* ApiBibleService.swift */; };
 		AIS0000A279B9E0000000001 /* AISettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AIS0000B279B9E0000000001 /* AISettingsSection.swift */; };
+		AN000001279B9E0000000001 /* AntiochSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AN000002279B9E0000000001 /* AntiochSearchService.swift */; };
 		B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00001279B9E0000000001 /* StrongsModels.swift */; };
 		B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00003279B9E0000000001 /* StrongsLexiconService.swift */; };
 		B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00005279B9E0000000001 /* WordTappableVerseText.swift */; };
@@ -80,6 +79,7 @@
 		BRP00004279B9E0000000001 /* BibleReadingPlanData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */; };
 		BRP00006279B9E0000000001 /* ReadingPlanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00005279B9E0000000001 /* ReadingPlanService.swift */; };
 		BRP00008279B9E0000000001 /* ReadingPlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00007279B9E0000000001 /* ReadingPlansView.swift */; };
+		C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */; };
 		C1A00096279B9E0000000001 /* SuggestedVerses.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A00097279B9E0000000001 /* SuggestedVerses.swift */; };
 		CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */; };
 		D1A00005279B9E0000000001 /* LearningTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00001279B9E0000000001 /* LearningTracks.swift */; };
@@ -94,7 +94,6 @@
 		E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00001279B9E0000000001 /* ProfileImageService.swift */; };
 		E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00003279B9E0000000001 /* ProfileAvatarView.swift */; };
 		E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000002279B9E0000000001 /* BibleSearchService.swift */; };
-		AN000001279B9E0000000001 /* AntiochSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AN000002279B9E0000000001 /* AntiochSearchService.swift */; };
 		EE277622B31DCD276294A429 /* MemorySettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */; };
 		EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000002279B9E0000000001 /* BibleAudioPlayer.swift */; };
 		EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000004279B9E0000000001 /* UnifiedNavigationView.swift */; };
@@ -104,9 +103,14 @@
 		F51AB00E9FE5CB264ECF20DF /* AudioSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */; };
 		FB000002279B9E0000000001 /* FocusBlockingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001279B9E0000000001 /* FocusBlockingView.swift */; };
 		FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FS000001279B9E0000000001 /* FocusBlockingService.swift */; };
+		SC000002279B9E0000000001 /* ShieldContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = SC000001279B9E0000000001 /* ShieldContentProvider.swift */; };
+		AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AL000001279B9E0000000001 /* AccountabilityLockService.swift */; };
+		SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SO000001279B9E0000000001 /* ShieldOnboardingView.swift */; };
+		SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = RS000003279B9E0000000001 /* ReforgedShield.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = GEM0000B279B9E0000000001 /* GeminiService.swift */; };
 		KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJV0000A279B9E0000000001 /* KJVAudioService.swift */; };
 		MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		NET0000A279B9E0000000001 /* NETService.swift in Sources */ = {isa = PBXBuildFile; fileRef = NET0000B279B9E0000000001 /* NETService.swift */; };
 		PC000002279B9E0000000001 /* PodcastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000001279B9E0000000001 /* PodcastModels.swift */; };
 		PC000004279B9E0000000001 /* PodcastService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000003279B9E0000000001 /* PodcastService.swift */; };
 		PC000006279B9E0000000001 /* PodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000005279B9E0000000001 /* PodcastView.swift */; };
@@ -115,20 +119,23 @@
 		RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */; };
 		RG000003279B9E0000000001 /* Fonts/Roboto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000004279B9E0000000001 /* Fonts/Roboto.ttf */; };
 		RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000006279B9E0000000001 /* MatchingGameView.swift */; };
+		CC000001279B9E0000000001 /* VerseCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000002279B9E0000000001 /* VerseCollection.swift */; };
+		CC000003279B9E0000000001 /* CollectionBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000004279B9E0000000001 /* CollectionBuilderView.swift */; };
+		CC000005279B9E0000000001 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000006279B9E0000000001 /* CollectionDetailView.swift */; };
 		RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000008279B9E0000000001 /* CompleteTheVerseView.swift */; };
 		RG000009279B9E0000000001 /* trparsed.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000A279B9E0000000001 /* trparsed.json */; };
 		RG00000B279B9E0000000001 /* wlc.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000C279B9E0000000001 /* wlc.json */; };
-		RG00000D279B9E0000000099 /* sblgnt.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000099 /* sblgnt.json */; };
 		RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000001 /* OriginalLanguageService.swift */; };
+		RG00000D279B9E0000000099 /* sblgnt.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000099 /* sblgnt.json */; };
 		RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */; };
 		RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */; };
 		RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */; };
 		RS000002279B9E0000000001 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */; };
 		RTE00002279B9E0000000001 /* RichTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTE00001279B9E0000000001 /* RichTextEditorView.swift */; };
 		SB000001279B9E0000000001 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SB000002279B9E0000000001 /* SupabaseAuthService.swift */; };
-		WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WC000002279B9E0000000001 /* WeeklyCheckinService.swift */; };
 		SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */; };
 		TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TTS0000B279B9E0000000001 /* TTSVoiceService.swift */; };
+		WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WC000002279B9E0000000001 /* WeeklyCheckinService.swift */; };
 		WNV0000B279B9E0000000001 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WNV0000A279B9E0000000001 /* WhatsNewView.swift */; };
 		WOC00002279B9E0000000001 /* WordsOfChristData.swift in Sources */ = {isa = PBXBuildFile; fileRef = WOC00001279B9E0000000001 /* WordsOfChristData.swift */; };
 		WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */ = {isa = PBXBuildFile; fileRef = WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */; };
@@ -142,6 +149,13 @@
 			remoteGlobalIDString = 6B3C67BA2F3302EB008165D9;
 			remoteInfo = ReforgedWidgetExtension;
 		};
+		SC000004279B9E0000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = RS000007279B9E0000000001;
+			remoteInfo = ReforgedShield;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -152,6 +166,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */,
+				SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -176,6 +191,7 @@
 		6B3C67E42F3303EB008165D9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6B3C67E52F3303EB008165D9 /* ReforgedWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedWidget.entitlements; sourceTree = "<group>"; };
 		6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MemorySettingsSection.swift; path = Reforged/Views/Settings/MemorySettingsSection.swift; sourceTree = "<group>"; };
+		6BC809812FE721A2004233EC /* ReforgedDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedDebug.entitlements; sourceTree = "<group>"; };
 		9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseOfTheDayWidget.swift; sourceTree = "<group>"; };
 		A1000002279B9E0000000001 /* ReforgedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReforgedApp.swift; sourceTree = "<group>"; };
 		A1000004279B9E0000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -198,7 +214,6 @@
 		A100003B279B9E0000000001 /* MemoryReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReviewView.swift; sourceTree = "<group>"; };
 		A100003D279B9E0000000001 /* MemoryPracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPracticeView.swift; sourceTree = "<group>"; };
 		A100003F279B9E0000000001 /* BibleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleView.swift; sourceTree = "<group>"; };
-		C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterScrollCoordinator.swift; sourceTree = "<group>"; };
 		A1000041279B9E0000000001 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		A1000043279B9E0000000001 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		A1000045279B9E0000000001 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
@@ -210,7 +225,6 @@
 		A1000071279B9E0000000001 /* SettingsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
 		A1000073279B9E0000000001 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A1000081279B9E0000000001 /* KJVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVService.swift; sourceTree = "<group>"; };
-		NET0000B279B9E0000000001 /* NETService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NETService.swift; sourceTree = "<group>"; };
 		A1000083279B9E0000000001 /* JournalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalStorageManager.swift; sourceTree = "<group>"; };
 		A1000085279B9E0000000001 /* ReadingStreakManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStreakManager.swift; sourceTree = "<group>"; };
 		A1000087279B9E0000000001 /* KnowledgeBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeBase.swift; sourceTree = "<group>"; };
@@ -225,6 +239,7 @@
 		A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BibleReadingSettingsSection.swift; path = Reforged/Views/Settings/BibleReadingSettingsSection.swift; sourceTree = "<group>"; };
 		A1AABB01279B9E0000000001 /* ApiBibleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiBibleService.swift; sourceTree = "<group>"; };
 		AIS0000B279B9E0000000001 /* AISettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AISettingsSection.swift; path = Reforged/Views/Settings/AISettingsSection.swift; sourceTree = "<group>"; };
+		AN000002279B9E0000000001 /* AntiochSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntiochSearchService.swift; sourceTree = "<group>"; };
 		B1A00001279B9E0000000001 /* StrongsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsModels.swift; sourceTree = "<group>"; };
 		B1A00003279B9E0000000001 /* StrongsLexiconService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsLexiconService.swift; sourceTree = "<group>"; };
 		B1A00005279B9E0000000001 /* WordTappableVerseText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTappableVerseText.swift; sourceTree = "<group>"; };
@@ -241,6 +256,7 @@
 		BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReadingPlanData.swift; sourceTree = "<group>"; };
 		BRP00005279B9E0000000001 /* ReadingPlanService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlanService.swift; sourceTree = "<group>"; };
 		BRP00007279B9E0000000001 /* ReadingPlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlansView.swift; sourceTree = "<group>"; };
+		C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterScrollCoordinator.swift; sourceTree = "<group>"; };
 		C1A00097279B9E0000000001 /* SuggestedVerses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedVerses.swift; sourceTree = "<group>"; };
 		C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AudioSettingsSection.swift; path = Reforged/Views/Settings/AudioSettingsSection.swift; sourceTree = "<group>"; };
 		D1A00001279B9E0000000001 /* LearningTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningTracks.swift; sourceTree = "<group>"; };
@@ -252,7 +268,6 @@
 		E1A00001279B9E0000000001 /* ProfileImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageService.swift; sourceTree = "<group>"; };
 		E1A00003279B9E0000000001 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
 		E2000002279B9E0000000001 /* BibleSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleSearchService.swift; sourceTree = "<group>"; };
-		AN000002279B9E0000000001 /* AntiochSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntiochSearchService.swift; sourceTree = "<group>"; };
 		EX000002279B9E0000000001 /* BibleAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAudioPlayer.swift; sourceTree = "<group>"; };
 		EX000004279B9E0000000001 /* UnifiedNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedNavigationView.swift; sourceTree = "<group>"; };
 		EX000006279B9E0000000001 /* SearchPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPanelView.swift; sourceTree = "<group>"; };
@@ -262,9 +277,13 @@
 		FC000001279B9E0000000001 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		FDAFE317A9066691D3A47C88 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Reforged/Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
 		FS000001279B9E0000000001 /* FocusBlockingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusBlockingService.swift; sourceTree = "<group>"; };
+		SC000001279B9E0000000001 /* ShieldContentProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldContentProvider.swift; sourceTree = "<group>"; };
+		AL000001279B9E0000000001 /* AccountabilityLockService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityLockService.swift; sourceTree = "<group>"; };
+		SO000001279B9E0000000001 /* ShieldOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldOnboardingView.swift; sourceTree = "<group>"; };
 		GEM0000B279B9E0000000001 /* GeminiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiService.swift; sourceTree = "<group>"; };
 		KJV0000A279B9E0000000001 /* KJVAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioService.swift; sourceTree = "<group>"; };
 		MAN00001279B9E0000000001 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		NET0000B279B9E0000000001 /* NETService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NETService.swift; sourceTree = "<group>"; };
 		PC000001279B9E0000000001 /* PodcastModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastModels.swift; sourceTree = "<group>"; };
 		PC000003279B9E0000000001 /* PodcastService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastService.swift; sourceTree = "<group>"; };
 		PC000005279B9E0000000001 /* PodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastView.swift; sourceTree = "<group>"; };
@@ -273,11 +292,14 @@
 		RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/LibreBaskerville.ttf; sourceTree = "<group>"; };
 		RG000004279B9E0000000001 /* Fonts/Roboto.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/Roboto.ttf; sourceTree = "<group>"; };
 		RG000006279B9E0000000001 /* MatchingGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingGameView.swift; sourceTree = "<group>"; };
+		CC000002279B9E0000000001 /* VerseCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseCollection.swift; sourceTree = "<group>"; };
+		CC000004279B9E0000000001 /* CollectionBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionBuilderView.swift; sourceTree = "<group>"; };
+		CC000006279B9E0000000001 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
 		RG000008279B9E0000000001 /* CompleteTheVerseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTheVerseView.swift; sourceTree = "<group>"; };
 		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trparsed.json; sourceTree = "<group>"; };
 		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wlc.json; sourceTree = "<group>"; };
-		RG00000E279B9E0000000099 /* sblgnt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sblgnt.json; sourceTree = "<group>"; };
 		RG00000E279B9E0000000001 /* OriginalLanguageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLanguageService.swift; sourceTree = "<group>"; };
+		RG00000E279B9E0000000099 /* sblgnt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sblgnt.json; sourceTree = "<group>"; };
 		RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/SILEOT.ttf; sourceTree = "<group>"; };
 		RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto-Italic.ttf"; sourceTree = "<group>"; };
 		RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/LibreBaskerville-Italic.ttf"; sourceTree = "<group>"; };
@@ -286,9 +308,9 @@
 		RS000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		RTE00001279B9E0000000001 /* RichTextEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextEditorView.swift; sourceTree = "<group>"; };
 		SB000002279B9E0000000001 /* SupabaseAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthService.swift; sourceTree = "<group>"; };
-		WC000002279B9E0000000001 /* WeeklyCheckinService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyCheckinService.swift; sourceTree = "<group>"; };
 		SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		TTS0000B279B9E0000000001 /* TTSVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSVoiceService.swift; sourceTree = "<group>"; };
+		WC000002279B9E0000000001 /* WeeklyCheckinService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyCheckinService.swift; sourceTree = "<group>"; };
 		WNV0000A279B9E0000000001 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
 		WOC00001279B9E0000000001 /* WordsOfChristData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordsOfChristData.swift; sourceTree = "<group>"; };
 		WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_words_of_christ_red_markup.json; sourceTree = "<group>"; };
@@ -376,6 +398,7 @@
 		A100000D279B9E0000000001 /* Reforged */ = {
 			isa = PBXGroup;
 			children = (
+				6BC809812FE721A2004233EC /* ReforgedDebug.entitlements */,
 				A1000002279B9E0000000001 /* ReforgedApp.swift */,
 				A100001A279B9E0000000001 /* AppDelegate.swift */,
 				A1000004279B9E0000000001 /* ContentView.swift */,
@@ -409,6 +432,7 @@
 			children = (
 				A1000021279B9E0000000001 /* Models.swift */,
 				A1000023279B9E0000000001 /* MemoryVerse.swift */,
+				CC000002279B9E0000000001 /* VerseCollection.swift */,
 				A1000025279B9E0000000001 /* UserProfile.swift */,
 				A1000027279B9E0000000001 /* JournalEntry.swift */,
 				A1000061279B9E0000000001 /* BibleModels.swift */,
@@ -461,6 +485,8 @@
 				WC000002279B9E0000000001 /* WeeklyCheckinService.swift */,
 				A1000095279B9E0000000001 /* CloudKitSyncService.swift */,
 				FS000001279B9E0000000001 /* FocusBlockingService.swift */,
+				AL000001279B9E0000000001 /* AccountabilityLockService.swift */,
+				SC000001279B9E0000000001 /* ShieldContentProvider.swift */,
 				BRP00005279B9E0000000001 /* ReadingPlanService.swift */,
 				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
 				RG00000E279B9E0000000001 /* OriginalLanguageService.swift */,
@@ -519,6 +545,8 @@
 				RF0000A4279B9E0000000001 /* DeepDrillView.swift */,
 				RG000006279B9E0000000001 /* MatchingGameView.swift */,
 				RG000008279B9E0000000001 /* CompleteTheVerseView.swift */,
+				CC000004279B9E0000000001 /* CollectionBuilderView.swift */,
+				CC000006279B9E0000000001 /* CollectionDetailView.swift */,
 			);
 			path = Memory;
 			sourceTree = "<group>";
@@ -610,6 +638,7 @@
 			children = (
 				DS000001279B9E0000000001 /* DiscipleshipView.swift */,
 				FB000001279B9E0000000001 /* FocusBlockingView.swift */,
+				SO000001279B9E0000000001 /* ShieldOnboardingView.swift */,
 				PC000005279B9E0000000001 /* PodcastView.swift */,
 			);
 			path = Discipleship;
@@ -660,6 +689,7 @@
 			);
 			dependencies = (
 				6B3C67CE2F3302EC008165D9 /* PBXTargetDependency */,
+				SC000005279B9E0000000001 /* PBXTargetDependency */,
 			);
 			name = Reforged;
 			productName = Reforged;
@@ -796,6 +826,9 @@
 				RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */,
 				RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */,
 				RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */,
+				CC000001279B9E0000000001 /* VerseCollection.swift in Sources */,
+				CC000003279B9E0000000001 /* CollectionBuilderView.swift in Sources */,
+				CC000005279B9E0000000001 /* CollectionDetailView.swift in Sources */,
 				A100003E279B9E0000000001 /* BibleView.swift in Sources */,
 				C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */,
 				EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */,
@@ -835,6 +868,9 @@
 				WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */,
 				A1000094279B9E0000000001 /* CloudKitSyncService.swift in Sources */,
 				FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */,
+				SC000002279B9E0000000001 /* ShieldContentProvider.swift in Sources */,
+				AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */,
+				SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */,
 				DS000002279B9E0000000001 /* DiscipleshipView.swift in Sources */,
 				FB000002279B9E0000000001 /* FocusBlockingView.swift in Sources */,
 				PC000002279B9E0000000001 /* PodcastModels.swift in Sources */,
@@ -893,6 +929,12 @@
 			target = 6B3C67BA2F3302EB008165D9 /* ReforgedWidgetExtension */;
 			targetProxy = 6B3C67CD2F3302EC008165D9 /* PBXContainerItemProxy */;
 		};
+		SC000005279B9E0000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = RS000007279B9E0000000001 /* ReforgedShield */;
+			targetProxy = SC000004279B9E0000000001 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -904,7 +946,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -939,7 +981,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1095,10 +1137,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Reforged/ReforgedDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1146,7 +1188,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1187,7 +1229,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1213,7 +1255,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;

@@ -13,6 +13,7 @@ struct MemoryView: View {
     @State private var showWalkthrough = false
     @State private var showMatchingGame = false
     @State private var showCompleteTheVerse = false
+    @State private var showCollectionBuilder = false
 
     var versesForReview: [MemoryVerse] {
         appState.getVersesForReview()
@@ -78,6 +79,10 @@ struct MemoryView: View {
         }
         .sheet(isPresented: $showCompleteTheVerse) {
             CompleteTheVerseView()
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showCollectionBuilder) {
+            CollectionBuilderView()
                 .environmentObject(appState)
         }
         .onAppear {
@@ -299,6 +304,50 @@ struct MemoryView: View {
                     color: Color.reforgedGold
                 ) {
                     showCompleteTheVerse = true
+                }
+            }
+        }
+
+        // Collections
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Collections")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                Button(action: { showCollectionBuilder = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus").font(.caption.bold())
+                        Text("New").font(.subheadline).fontWeight(.semibold)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.reforgedNavy)
+                    .clipShape(Capsule())
+                }
+            }
+
+            if appState.verseCollections.isEmpty {
+                Text("Import a chapter or build your own set, then practice it with any game in order or shuffled.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(ReforgedTheme.spacingM)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+            } else {
+                LazyVGrid(columns: verseColumns, spacing: 12) {
+                    ForEach(appState.verseCollections) { collection in
+                        NavigationLink {
+                            CollectionDetailView(collectionId: collection.id)
+                                .environmentObject(appState)
+                        } label: {
+                            CollectionCard(collection: collection)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }

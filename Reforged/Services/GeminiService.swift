@@ -387,6 +387,70 @@ final class GeminiService {
         return try parseDailyInsightReflection(from: raw)
     }
 
+    // MARK: - Feature 6: Focus Shield Encouragements
+
+    /// Generates encouraging suggestion + verse pairings for the Focus & Purity
+    /// Shield overlay (shown when a blocked app/site is opened). Verse texts are
+    /// resolved against the KJV bundle so quotes are accurate.
+    func generateShieldEncouragements(count: Int = 6) async throws -> [ShieldEncouragement] {
+        try await checkEnabled()
+
+        let prompt = """
+        A Christian using a Bible app has just tried to open an app or website they chose to block \
+        for the sake of focus and purity. Write \(count) brief, warm, gospel-centered encouragements \
+        to help them turn away and toward God in that moment.
+
+        Return ONLY a JSON array of \(count) objects, no markdown or extra text. Each object has \
+        exactly these keys:
+        suggestion — an encouraging redirect under 60 characters, gently pointing them back to \
+        Scripture, prayer, or reflection (e.g. "Turn this moment into prayer")
+        reference — a single Bible verse reference such as "Psalm 119:11" or "1 Corinthians 10:13" \
+        that fits the encouragement
+
+        Vary the verses. Avoid condemnation; be hopeful and grace-filled.
+        """
+
+        let raw = try await generate(prompt: prompt, maxTokens: 700)
+
+        // Parse the array of {suggestion, reference} robustly.
+        var cleaned = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let start = cleaned.firstIndex(of: "[") { cleaned = String(cleaned[start...]) }
+        if let end = cleaned.lastIndex(of: "]") { cleaned = String(cleaned[...end]) }
+
+        guard let data = cleaned.data(using: .utf8),
+              let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            throw GeminiError.decodingError("Could not parse shield encouragements JSON")
+        }
+
+        let pairs: [(suggestion: String, reference: String)] = arr.compactMap { obj in
+            guard let suggestion = (obj["suggestion"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  let reference = (obj["reference"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !suggestion.isEmpty, !reference.isEmpty else { return nil }
+            return (suggestion, reference)
+        }
+        guard !pairs.isEmpty else {
+            throw GeminiError.decodingError("No usable shield encouragements returned")
+        }
+
+        // Resolve verse references to real KJV text from the bundle.
+        let resolved = await resolveVerseReferences(pairs.map { $0.reference })
+        var textByRef: [String: String] = [:]
+        for verse in resolved { textByRef[verse.reference] = verse.text }
+
+        return pairs.compactMap { pair in
+            guard let text = textByRef[pair.reference], !text.isEmpty else { return nil }
+            return ShieldEncouragement(
+                suggestion: pair.suggestion,
+                verseText: text,
+                verseReference: pair.reference
+            )
+        }
+    }
+
     // MARK: - Verse Reference Resolution
 
     /// Parse "John 3:16" or "1 Kings 17:1" → (book, chapter, verse)

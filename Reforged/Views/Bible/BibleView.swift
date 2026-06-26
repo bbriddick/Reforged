@@ -561,9 +561,11 @@ struct BibleView: View {
 
                                 switch edgeDragPhase {
                                 case .idle:
-                                    // Begin deciding only for gestures that start hard against the
-                                    // left edge, and only when the panel isn't already open.
-                                    guard value.startLocation.x < 24, !navPanelVisible else { return }
+                                    // Begin deciding for any rightward gesture (anywhere on screen),
+                                    // as long as the panel isn't already open. The horizontal/vertical
+                                    // discrimination below still hands vertical scrolls back to the
+                                    // ScrollView, so reading isn't disrupted.
+                                    guard !navPanelVisible else { return }
                                     edgeDragPhase = .deciding
                                     fallthrough
                                 case .deciding:

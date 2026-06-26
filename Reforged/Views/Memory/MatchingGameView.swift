@@ -12,6 +12,9 @@ struct MatchingGameView: View {
 
     // MARK: - Configuration
     private let pairCount: Int
+    /// When set, the game draws its pairs only from these verses (collection mode) instead of
+    /// the user's full memory-verse pool. Defaults to nil = unchanged global behavior.
+    private let collectionVerses: [MemoryVerse]?
 
     // MARK: - Game State
     @State private var referenceCards: [MatchCard] = []
@@ -24,9 +27,11 @@ struct MatchingGameView: View {
     @State private var xpEarned = 0
     @State private var errorShakeRef: String? = nil
     @State private var errorShakeVerse: String? = nil
+    @State private var showConfetti = false
 
-    init(pairCount: Int = 5) {
+    init(pairCount: Int = 5, collectionVerses: [MemoryVerse]? = nil) {
         self.pairCount = min(max(pairCount, 4), 6)
+        self.collectionVerses = collectionVerses
     }
 
     // MARK: - XP
@@ -219,10 +224,6 @@ struct MatchingGameView: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 64))
                 .foregroundStyle(Color.reforgedGold)
-                .scaleEffect(1.0)
-                .onAppear {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.1)) {}
-                }
 
             VStack(spacing: 8) {
                 Text("All Matched!")
@@ -270,6 +271,7 @@ struct MatchingGameView: View {
             .padding(.horizontal, 32)
 
             Button("Play Again") {
+                showConfetti = false
                 setupGame()
                 isGameComplete = false
             }
@@ -277,6 +279,13 @@ struct MatchingGameView: View {
             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
             Spacer()
+        }
+        .confetti(isActive: $showConfetti, intensity: .high)
+        .onAppear {
+            HapticManager.shared.achievementUnlocked()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                showConfetti = true
+            }
         }
     }
 
@@ -351,7 +360,9 @@ struct MatchingGameView: View {
         selectedVerse = nil
 
         let pool = buildVersePool()
-        let selected = Array(pool.shuffled().prefix(pairCount))
+        // In collection mode the pool isn't padded, so never request more pairs than exist.
+        let effectivePairs = collectionVerses != nil ? min(pairCount, pool.count) : pairCount
+        let selected = Array(pool.shuffled().prefix(effectivePairs))
 
         let refCards = selected.map { MatchCard(pairID: $0.id, text: $0.reference, isReference: true) }
         let snippets = selected.map { v -> MatchCard in
@@ -364,6 +375,13 @@ struct MatchingGameView: View {
     }
 
     private func buildVersePool() -> [VerseItem] {
+        // Collection mode: draw only from the supplied verses, no padding.
+        if let collectionVerses {
+            return collectionVerses
+                .filter { !$0.text.isEmpty }
+                .map { VerseItem(id: $0.reference, reference: $0.reference, text: $0.text) }
+        }
+
         var pool: [VerseItem] = []
 
         // User's memory verses first

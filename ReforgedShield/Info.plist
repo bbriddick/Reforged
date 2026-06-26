@@ -11,15 +11,15 @@
 	<key>CFBundleDisplayName</key>
 	<string>Reforged Shield</string>
 	<key>CFBundleVersion</key>
-	<string>12</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.7</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundlePackageType</key>
 	<string>XPC!</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionPointIdentifier</key>
-		<string>com.apple.managed-settings.shield.configuration</string>
+		<string>com.apple.ManagedSettingsUI.shield-configuration-service</string>
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).ShieldConfigurationExtension</string>
 	</dict>

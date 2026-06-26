@@ -12,6 +12,7 @@ class AppState: ObservableObject {
 
     @Published var user: UserProfile = .empty
     @Published var memoryVerses: [MemoryVerse] = []
+    @Published var verseCollections: [VerseCollection] = []
     @Published var tracks: [Track] = []
     @Published var dailyInsight: DailyInsight?
     @Published var pendingBibleVerseReference: String?
@@ -125,6 +126,11 @@ class AppState: ObservableObject {
             self.memoryVerses = verses
         }
 
+        if let data = UserDefaults.standard.data(forKey: "reforged_verse_collections"),
+           let collections = try? dec.decode([VerseCollection].self, from: data) {
+            self.verseCollections = collections
+        }
+
         // Always load fresh track content from LearningTracks, then restore completion progress
         self.tracks = LearningTracks.allTracks
         // Restore lesson completion state from user's saved progress
@@ -165,6 +171,9 @@ class AppState: ObservableObject {
         }
         if let data = try? enc.encode(memoryVerses) {
             UserDefaults.standard.set(data, forKey: "reforged_verses")
+        }
+        if let data = try? enc.encode(verseCollections) {
+            UserDefaults.standard.set(data, forKey: "reforged_verse_collections")
         }
         if let data = try? enc.encode(tracks) {
             UserDefaults.standard.set(data, forKey: "reforged_tracks")
@@ -248,10 +257,10 @@ class AppState: ObservableObject {
 
     private func setupAutoSync() {
         // Debounced auto-save to cloud
-        $user.combineLatest($memoryVerses, $tracks)
+        $user.combineLatest($memoryVerses, $tracks, $verseCollections)
             .dropFirst()
             .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
-            .sink { [weak self] _, _, _ in
+            .sink { [weak self] _, _, _, _ in
                 self?.saveToLocalStorage()
                 self?.debouncedSyncToCloud()
             }
@@ -847,6 +856,21 @@ class AppState: ObservableObject {
     func markVerseAsMastered(_ verseId: String) {
         guard let index = memoryVerses.firstIndex(where: { $0.id == verseId }) else { return }
         memoryVerses[index].markAsMastered()
+    }
+
+    // MARK: - Verse Collections
+
+    func addCollection(_ collection: VerseCollection) {
+        verseCollections.append(collection)
+    }
+
+    func updateCollection(_ collection: VerseCollection) {
+        guard let index = verseCollections.firstIndex(where: { $0.id == collection.id }) else { return }
+        verseCollections[index] = collection
+    }
+
+    func removeCollection(_ collectionId: String) {
+        verseCollections.removeAll { $0.id == collectionId }
     }
 
     // MARK: - Bible Reading
