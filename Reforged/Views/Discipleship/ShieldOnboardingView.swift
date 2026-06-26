@@ -82,9 +82,119 @@ struct PINEntryView: View {
     @State private var error: String? = nil
     @State private var shake = false
 
+    // setup: partner contact captured before the PIN step
+    @State private var partnerContact: String = ""
+    @State private var contactConfirmed = false
+
     private var pinLength: Int { AccountabilityLockService.pinLength }
 
     var body: some View {
+        if mode == .setup && !contactConfirmed {
+            contactStep
+        } else {
+            pinStep
+        }
+    }
+
+    // MARK: - Contact Step (setup only)
+
+    private var contactStep: some View {
+        VStack(spacing: 24) {
+            Spacer(minLength: 8)
+
+            ZStack {
+                Circle()
+                    .fill(Color.reforgedGold.opacity(0.14))
+                    .frame(width: 72, height: 72)
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(Color.reforgedGold)
+            }
+
+            VStack(spacing: 8) {
+                Text("Who's your accountability partner?")
+                    .font(.title3).fontWeight(.bold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .multilineTextAlignment(.center)
+                Text("Enter their email or phone number. They'll be notified any time you try to lower your protection.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 16)
+            }
+
+            TextField("Email or phone number", text: $partnerContact)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .padding(14)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
+                .padding(.horizontal, 8)
+
+            if let error {
+                Text(error)
+                    .font(.caption).fontWeight(.semibold)
+                    .foregroundStyle(Color.reforgedCoral)
+                    .transition(.opacity)
+            }
+
+            Spacer()
+
+            Button {
+                continueFromContact()
+            } label: {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.reforgedNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+
+            Button("Cancel") {
+                onComplete(false)
+                dismiss()
+            }
+            .font(.subheadline)
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .padding(.bottom, 12)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .presentationDragIndicator(.visible)
+    }
+
+    private func continueFromContact() {
+        let trimmed = partnerContact.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isValidContact(trimmed) else {
+            HapticManager.shared.errorFeedback()
+            withAnimation { error = "Enter a valid email or phone number." }
+            return
+        }
+        partnerContact = trimmed
+        withAnimation { error = nil }
+        HapticManager.shared.buttonTap()
+        contactConfirmed = true
+    }
+
+    /// Loose validation: an email (has "@" and a dot after it) or a phone (7+ digits).
+    private static func isValidContact(_ contact: String) -> Bool {
+        if contact.contains("@") {
+            let parts = contact.split(separator: "@")
+            return parts.count == 2 && parts[1].contains(".")
+        }
+        return contact.filter { $0.isNumber }.count >= 7
+    }
+
+    // MARK: - PIN Step
+
+    private var pinStep: some View {
         VStack(spacing: 28) {
             Spacer(minLength: 8)
 
@@ -222,7 +332,7 @@ struct PINEntryView: View {
         case .setup:
             if let first = firstPass {
                 if entry == first {
-                    if lockService.setPIN(entry) {
+                    if lockService.setPIN(entry, partnerContact: partnerContact) {
                         HapticManager.shared.success()
                         onComplete(true)
                         dismiss()

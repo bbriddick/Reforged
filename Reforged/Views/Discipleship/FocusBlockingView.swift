@@ -122,6 +122,8 @@ struct FocusBlockingView: View {
     private func guardedReduce(_ action: @escaping () -> Void) {
         if lockService.isLockEnabled {
             HapticManager.shared.warning()
+            // Notify the accountability partner of the attempt (before the PIN prompt).
+            Task { await lockService.notifyPartnerOfDisableAttempt() }
             pendingUnlockAction = action
             showPINVerify = true
         } else {
@@ -414,6 +416,12 @@ struct FocusBlockingView: View {
                         .font(.caption)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if lockService.isLockEnabled, let partner = lockService.partnerContactMasked {
+                        Label("Alerts \(partner) if you try to lower it", systemImage: "bell.fill")
+                            .font(.caption2).fontWeight(.medium)
+                            .foregroundStyle(Color.reforgedGold)
+                    }
                 }
 
                 Spacer()
@@ -422,6 +430,8 @@ struct FocusBlockingView: View {
             Button {
                 HapticManager.shared.buttonTap()
                 if lockService.isLockEnabled {
+                    // Removing the lock is the biggest reduction — alert the partner.
+                    Task { await lockService.notifyPartnerOfDisableAttempt(reason: "tried to remove the accountability lock entirely") }
                     showRemoveLock = true
                 } else {
                     showLockSetup = true

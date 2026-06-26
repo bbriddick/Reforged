@@ -258,6 +258,20 @@ class SettingsManager: ObservableObject {
         managedGeminiFunctionURL != nil && !supabaseAnonKey.isEmpty
     }
 
+    var supabaseAccountabilityFunctionName: String {
+        bundledConfigValue(for: "SupabaseAccountabilityFunctionName") ?? "accountability-notify"
+    }
+
+    /// Supabase Edge Function that emails/texts the accountability partner when the
+    /// user attempts to lower their Focus & Purity Shield protection.
+    var accountabilityNotifyFunctionURL: URL? {
+        guard let projectURL = supabaseProjectURL else { return nil }
+        return projectURL
+            .appendingPathComponent("functions")
+            .appendingPathComponent("v1")
+            .appendingPathComponent(supabaseAccountabilityFunctionName)
+    }
+
     // MARK: - Sync Preferences
 
     @Published var syncEnabled: Bool {
