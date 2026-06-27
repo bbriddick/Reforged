@@ -211,6 +211,9 @@ class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
         // Notify BibleView to mark chapter as read
         onChapterCompleted?(finishedBook, finishedChapter)
 
+        // Listening to a full chapter earns social-media time (if the daily limit is on).
+        Task { @MainActor in SocialLimitService.shared.grantForChapter() }
+
         // Sleep timer: end of chapter mode stops here
         if sleepTimerEndOfChapter {
             cancelSleepTimer()

@@ -111,7 +111,11 @@ class SettingsManager: ObservableObject {
     }
 
     @Published var dailyMemoryReminders: Bool {
-        didSet { save(dailyMemoryReminders, forKey: Keys.dailyMemoryReminders) }
+        didSet {
+            save(dailyMemoryReminders, forKey: Keys.dailyMemoryReminders)
+            // Gates the memory-review notification alongside `memoryReviewReminders`.
+            NotificationManager.shared.scheduleDailyReminder()
+        }
     }
 
     // MARK: - Notification Settings
@@ -161,7 +165,10 @@ class SettingsManager: ObservableObject {
     }
 
     @Published var lessonReminders: Bool {
-        didSet { save(lessonReminders, forKey: Keys.lessonReminders) }
+        didSet {
+            save(lessonReminders, forKey: Keys.lessonReminders)
+            NotificationManager.shared.scheduleDailyReminder()
+        }
     }
 
     @Published var notificationsEnabled: Bool {
@@ -256,20 +263,6 @@ class SettingsManager: ObservableObject {
 
     var hasManagedGeminiService: Bool {
         managedGeminiFunctionURL != nil && !supabaseAnonKey.isEmpty
-    }
-
-    var supabaseAccountabilityFunctionName: String {
-        bundledConfigValue(for: "SupabaseAccountabilityFunctionName") ?? "accountability-notify"
-    }
-
-    /// Supabase Edge Function that emails/texts the accountability partner when the
-    /// user attempts to lower their Focus & Purity Shield protection.
-    var accountabilityNotifyFunctionURL: URL? {
-        guard let projectURL = supabaseProjectURL else { return nil }
-        return projectURL
-            .appendingPathComponent("functions")
-            .appendingPathComponent("v1")
-            .appendingPathComponent(supabaseAccountabilityFunctionName)
     }
 
     // MARK: - Sync Preferences

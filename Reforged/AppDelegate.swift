@@ -150,6 +150,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                     object: nil,
                     userInfo: [AppNotificationUserInfoKey.tab: 3]
                 )
+            case "open-lessons":
+                NotificationCenter.default.post(
+                    name: .switchTab,
+                    object: nil,
+                    userInfo: [AppNotificationUserInfoKey.tab: 1]
+                )
+            case "refocus":
+                // Tapped a "you hit a block" notification → show the verse passage.
+                var info: [String: Any] = [:]
+                if let text = userInfo["verseText"] as? String { info[AppNotificationUserInfoKey.verseText] = text }
+                if let ref = userInfo["verseReference"] as? String { info[AppNotificationUserInfoKey.reference] = ref }
+                if let suggestion = userInfo["suggestion"] as? String { info[AppNotificationUserInfoKey.suggestion] = suggestion }
+                NotificationCenter.default.post(name: .showRefocusVerse, object: nil, userInfo: info)
             default:
                 break
             }

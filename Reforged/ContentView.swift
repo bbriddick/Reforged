@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var showDonationPrompt = false
     @State private var donationPromptMessage = ""
     @State private var showWhatsNew = false
+    @State private var refocusVerse: RefocusVerse? = nil
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.requestReview) private var requestReview
 
@@ -32,10 +33,12 @@ struct ContentView: View {
             if newPhase == .active {
                 // Re-apply Focus Shield blocking rules every time app foregrounds
                 FocusBlockingService.shared.applyBlockingIfEnabled()
+                // Re-arm the social daily-limit monitoring (and handle the day reset)
+                SocialLimitService.shared.refresh()
                 // Refresh daily insight when app becomes active
                 appState.refreshDailyInsightIfNeeded()
-                // Update notification content based on today's progress
-                NotificationManager.shared.rescheduleWithSmartContent()
+                // Rebuild daily reminders from current settings (idempotent — never stacks)
+                NotificationManager.shared.scheduleDailyReminder()
                 // Regenerate personalized reading reminders (once per day via Gemini)
                 NotificationManager.shared.schedulePersonalizedReadingReminders()
                 // Refresh weekly check-in notifications from Supabase
@@ -66,6 +69,16 @@ struct ContentView: View {
                 appState.queueBibleVerseNavigation(reference, translation: translation)
             }
             selectedTab = 2
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showRefocusVerse)) { notification in
+            refocusVerse = RefocusVerse(
+                verseText: notification.userInfo?[AppNotificationUserInfoKey.verseText] as? String,
+                reference: notification.userInfo?[AppNotificationUserInfoKey.reference] as? String,
+                suggestion: notification.userInfo?[AppNotificationUserInfoKey.suggestion] as? String
+            )
+        }
+        .sheet(item: $refocusVerse) { verse in
+            RefocusVerseSheet(verse: verse)
         }
         .sheet(isPresented: $showFreezeEncouragement) {
             FreezeEncouragementView(isPresented: $showFreezeEncouragement)

@@ -65,6 +65,9 @@ struct MemoryPracticeView: View {
         appState.addXP(earnedXP, source: "practice")
         completedQuality = quality
 
+        // Completing a memory activity earns social-media time (if the daily limit is on).
+        SocialLimitService.shared.grantForMemoryActivity()
+
         // Show celebration
         withAnimation {
             showCelebration = true

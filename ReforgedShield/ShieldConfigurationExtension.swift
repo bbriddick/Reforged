@@ -1,6 +1,7 @@
 import UIKit
 import ManagedSettings
 import ManagedSettingsUI
+import UserNotifications
 
 // MARK: - Shared Encouragement Model
 //
@@ -24,6 +25,10 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     private let appGroup = "group.com.reforged.app"
     private let payloadKey = "shieldEncouragements"
+
+    // Throttle for the "you hit a block" notification (avoid spamming on repeated renders).
+    private let notifThrottleKey = "lastBlockNotificationAt"
+    private let notifThrottle: TimeInterval = 300 // 5 minutes
 
     // Bundled fallback used when the shared store is empty/unavailable.
     private let fallback = ShieldEncouragement(
@@ -71,15 +76,53 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         )
     }
 
+    // MARK: - Block Notification
+
+    /// Fires a local notification when a block is shown so the user can open
+    /// Reforged to a refocusing passage. Throttled via the shared App Group so
+    /// repeated renders / rapid retries don't spam. The notification carries the
+    /// same verse shown on the shield; tapping it deep-links to the passage.
+    private func scheduleRefocusNotificationIfNeeded(_ item: ShieldEncouragement) {
+        guard let defaults = UserDefaults(suiteName: appGroup) else { return }
+        if let last = defaults.object(forKey: notifThrottleKey) as? Date,
+           Date().timeIntervalSince(last) < notifThrottle {
+            return
+        }
+        defaults.set(Date(), forKey: notifThrottleKey)
+
+        let content = UNMutableNotificationContent()
+        content.title = "Pause and refocus"
+        content.body = "\"\(item.verseText)\"\n— \(item.verseReference)"
+        content.sound = .default
+        content.userInfo = [
+            "action": "refocus",
+            "verseText": item.verseText,
+            "verseReference": item.verseReference,
+            "suggestion": item.suggestion
+        ]
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "reforged.refocus.\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
     // MARK: - App Shield
 
     override func configuration(shielding application: Application) -> ShieldConfiguration {
-        makeConfiguration(randomEncouragement())
+        let item = randomEncouragement()
+        scheduleRefocusNotificationIfNeeded(item)
+        return makeConfiguration(item)
     }
 
     // MARK: - Web Domain Shield
 
     override func configuration(shielding webDomain: WebDomain) -> ShieldConfiguration {
-        makeConfiguration(randomEncouragement())
+        let item = randomEncouragement()
+        scheduleRefocusNotificationIfNeeded(item)
+        return makeConfiguration(item)
     }
 }

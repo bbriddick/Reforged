@@ -149,6 +149,9 @@ final class FocusBlockingService: ObservableObject {
         socialSelection = newSelection
         persistState()
         if isAuthorized && blockSocialMedia { applyBlocking() }
+        // Keep the daily-limit monitor in sync: it watches this same selection, so a
+        // change must re-arm its DeviceActivity monitoring with the new tokens.
+        SocialLimitService.shared.refresh()
     }
 
     /// Whether the user has picked anything for social-media blocking yet.

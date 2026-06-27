@@ -432,6 +432,8 @@ enum AppNotificationUserInfoKey {
     static let translation = "translation"
     static let tab = "tab"
     static let url = "url"
+    static let verseText = "verseText"
+    static let suggestion = "suggestion"
 }
 
 extension Notification.Name {
@@ -439,6 +441,9 @@ extension Notification.Name {
     static let switchTab = Notification.Name("SwitchTab")
     static let navigateToBibleVerse = Notification.Name("NavigateToBibleVerse")
     static let navigateToURL = Notification.Name("NavigateToURL")
+    /// Posted when the user taps a "you hit a block" notification — opens a
+    /// temptation-focused verse passage in the app.
+    static let showRefocusVerse = Notification.Name("ShowRefocusVerse")
 }
 
 // MARK: - Bible Reading State

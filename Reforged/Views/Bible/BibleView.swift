@@ -495,9 +495,13 @@ struct BibleView: View {
                         )
                     }
                     .scrollIndicators(.hidden)
-                    // Once the edge drag claims the gesture, stop the ScrollView from panning so the
-                    // two gestures can't fight — this is what keeps navRevealProgress locked & smooth.
-                    .scrollDisabled(isRevealingNavFromEdge)
+                    // NOTE: we deliberately do NOT toggle `.scrollDisabled` while the edge drag is in
+                    // flight. Flipping scrollDisabled mid-gesture reconfigures the ScrollView and CANCELS
+                    // the live simultaneous drag — its translation resets to ~0, so `navRevealProgress`
+                    // snaps back toward 0 then climbs again, producing the visible "fights back and forth"
+                    // glitch on open. The reveal is only claimed once the drag is clearly horizontal
+                    // (`h > v * 1.5` in the gesture below), so the vertical scroll no longer fights it and
+                    // no lockout is needed.
                     .coordinateSpace(name: "bibleScroll")
                     // `topChapterID` is the stable `.scrollPosition` anchor (iOS 17+). It is write-back
                     // ONLY — SwiftUI keeps it pinned to the top row, which holds the viewport steady when

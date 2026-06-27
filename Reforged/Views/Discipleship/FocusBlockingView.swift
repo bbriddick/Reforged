@@ -12,6 +12,10 @@ struct FocusBlockingView: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var focusService = FocusBlockingService.shared
     @StateObject private var lockService = AccountabilityLockService.shared
+    @StateObject private var limitService = SocialLimitService.shared
+
+    /// Whether the social picker is being shown to set up the daily limit (vs. always-block).
+    @State private var socialPickerForLimit = false
 
     @State private var showAppPicker = false
     @State private var pickerSelection = FamilyActivitySelection()
@@ -39,6 +43,8 @@ struct FocusBlockingView: View {
                 }
 
                 blockingControls
+
+                dailyLimitCard
 
                 accountabilityLockCard
 
@@ -80,14 +86,24 @@ struct FocusBlockingView: View {
                 let isEmpty = socialPickerSelection.applicationTokens.isEmpty
                     && socialPickerSelection.categoryTokens.isEmpty
                     && socialPickerSelection.webDomainTokens.isEmpty
+                let forLimit = socialPickerForLimit
+                socialPickerForLimit = false
                 if !isEmpty {
                     focusService.updateSocialSelection(socialPickerSelection)
-                    Task { await focusService.setBlockSocialMedia(true) }
+                    if forLimit {
+                        limitService.setEnabled(true)
+                    } else {
+                        // Always-block and daily-limit are mutually exclusive.
+                        limitService.setEnabled(false)
+                        Task { await focusService.setBlockSocialMedia(true) }
+                    }
                 }
             }
         }
         .onAppear {
             pickerSelection = focusService.selection
+            // Needed so the shield extension can fire "you hit a block" notifications.
+            NotificationManager.shared.requestAuthorization()
             if !UserDefaults.standard.bool(forKey: Self.onboardingSeenKey) {
                 showOnboarding = true
             }
@@ -122,8 +138,6 @@ struct FocusBlockingView: View {
     private func guardedReduce(_ action: @escaping () -> Void) {
         if lockService.isLockEnabled {
             HapticManager.shared.warning()
-            // Notify the accountability partner of the attempt (before the PIN prompt).
-            Task { await lockService.notifyPartnerOfDisableAttempt() }
             pendingUnlockAction = action
             showPINVerify = true
         } else {
@@ -154,8 +168,53 @@ struct FocusBlockingView: View {
                 await focusService.requestAuthorization()
             }
             guard focusService.isAuthorized else { return }
+            socialPickerForLimit = false
             socialPickerSelection = focusService.socialSelection
             showSocialPicker = true
+        }
+    }
+
+    /// Opens the social picker to change the shared social selection (used by both
+    /// the always-block toggle and the daily limit), keeping the two in sync.
+    private func changeSocialApps() {
+        Task {
+            if !focusService.isAuthorized {
+                await focusService.requestAuthorization()
+            }
+            guard focusService.isAuthorized else { return }
+            socialPickerForLimit = true
+            socialPickerSelection = focusService.socialSelection
+            showSocialPicker = true
+        }
+    }
+
+    /// Short summary of the chosen social apps/categories for the limit card.
+    private var socialSelectionSummary: String {
+        let sel = focusService.socialSelection
+        let apps = sel.applicationTokens.count
+        let cats = sel.categoryTokens.count
+        if apps == 0 && cats == 0 { return "Choose" }
+        var parts: [String] = []
+        if cats > 0 { parts.append("\(cats) categor\(cats == 1 ? "y" : "ies")") }
+        if apps > 0 { parts.append("\(apps) app\(apps == 1 ? "" : "s")") }
+        return parts.joined(separator: ", ")
+    }
+
+    /// Turning on the daily limit needs authorization and a social selection. If the
+    /// user hasn't chosen social apps yet, open the picker (committing enables the limit).
+    private func beginDailyLimit() {
+        Task {
+            if !focusService.isAuthorized {
+                await focusService.requestAuthorization()
+            }
+            guard focusService.isAuthorized else { return }
+            if limitService.hasSelection {
+                limitService.setEnabled(true)
+            } else {
+                socialPickerForLimit = true
+                socialPickerSelection = focusService.socialSelection
+                showSocialPicker = true
+            }
         }
     }
 
@@ -398,6 +457,105 @@ struct FocusBlockingView: View {
         }
     }
 
+    // MARK: - Daily Social Limit
+
+    private let limitOptions = [15, 30, 45, 60, 90, 120]
+
+    private var dailyLimitCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 16) {
+                iconBadge("hourglass", color: Color(red: 0.20, green: 0.55, blue: 0.55))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Daily Social Limit")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("Cap social media each day — then earn more time with Scripture.")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { limitService.isEnabled },
+                    set: { newValue in
+                        HapticManager.shared.selectionChanged()
+                        if newValue {
+                            beginDailyLimit()
+                        } else {
+                            guardedReduce { limitService.setEnabled(false) }
+                        }
+                    }
+                ))
+                .labelsHidden()
+                .tint(Color.reforgedGold)
+            }
+
+            if limitService.isEnabled {
+                Divider()
+
+                HStack {
+                    Text("Daily limit")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                    Menu {
+                        ForEach(limitOptions, id: \.self) { m in
+                            Button("\(m) min") { limitService.setLimitMinutes(m) }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("\(limitService.limitMinutes) min").fontWeight(.semibold)
+                            Image(systemName: "chevron.up.chevron.down").font(.caption2)
+                        }
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    }
+                }
+
+                Button {
+                    HapticManager.shared.buttonTap()
+                    changeSocialApps()
+                } label: {
+                    HStack {
+                        Text("Social apps")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Spacer()
+                        Text(socialSelectionSummary)
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if limitService.earnedTodayMinutes > 0 {
+                    HStack(spacing: 6) {
+                        Image(systemName: "gift.fill").font(.caption).foregroundStyle(Color.reforgedGold)
+                        Text("Earned today: +\(limitService.earnedTodayMinutes) of \(SocialLimitKeys.dailyEarnCap) min")
+                            .font(.caption).foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        Spacer()
+                        Text("Today: \(limitService.allowanceMinutes) min")
+                            .font(.caption2).foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                }
+
+                Text("Listen to a full Bible chapter (+\(SocialLimitKeys.chapterReward) min) or finish a memory activity (+\(SocialLimitKeys.memoryReward) min) to extend — up to +\(SocialLimitKeys.dailyEarnCap) min/day.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.06), radius: 8, y: 3)
+    }
+
     // MARK: - Accountability Lock
 
     private var accountabilityLockCard: some View {
@@ -416,12 +574,6 @@ struct FocusBlockingView: View {
                         .font(.caption)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .fixedSize(horizontal: false, vertical: true)
-
-                    if lockService.isLockEnabled, let partner = lockService.partnerContactMasked {
-                        Label("Alerts \(partner) if you try to lower it", systemImage: "bell.fill")
-                            .font(.caption2).fontWeight(.medium)
-                            .foregroundStyle(Color.reforgedGold)
-                    }
                 }
 
                 Spacer()
@@ -430,8 +582,6 @@ struct FocusBlockingView: View {
             Button {
                 HapticManager.shared.buttonTap()
                 if lockService.isLockEnabled {
-                    // Removing the lock is the biggest reduction — alert the partner.
-                    Task { await lockService.notifyPartnerOfDisableAttempt(reason: "tried to remove the accountability lock entirely") }
                     showRemoveLock = true
                 } else {
                     showLockSetup = true
@@ -571,6 +721,148 @@ struct FocusBlockingView: View {
         .background(Color.adaptiveCardBackground(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.06), radius: 8, y: 3)
+    }
+}
+
+// MARK: - Refocus Verse (block notification → passage)
+
+/// The passage shown when the user taps a "you hit a block" notification.
+/// Carries the verse from the notification payload, or falls back to a random
+/// temptation-focused passage from the shield bank.
+struct RefocusVerse: Identifiable {
+    let id = UUID()
+    let verseText: String?
+    let reference: String?
+    let suggestion: String?
+
+    var resolved: ShieldEncouragement {
+        if let verseText, let reference, !verseText.isEmpty {
+            return ShieldEncouragement(
+                suggestion: suggestion ?? "Turn your eyes to the Lord",
+                verseText: verseText,
+                verseReference: reference
+            )
+        }
+        return ShieldContentProvider.fallbackEncouragements.randomElement()
+            ?? ShieldEncouragement(
+                suggestion: "Turn your eyes to the Lord",
+                verseText: "I have stored up your word in my heart, that I might not sin against you.",
+                verseReference: "Psalm 119:11"
+            )
+    }
+}
+
+struct RefocusVerseSheet: View {
+    let verse: RefocusVerse
+    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dismiss) var dismiss
+
+    private var item: ShieldEncouragement { verse.resolved }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.12, green: 0.22, blue: 0.48).opacity(0.18),
+                                         Color.reforgedGold.opacity(0.14)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 88, height: 88)
+                    Image(systemName: "shield.lefthalf.filled")
+                        .font(.system(size: 40, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(red: 0.12, green: 0.22, blue: 0.48), Color.reforgedGold],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                .padding(.top, 12)
+
+                Text("A word for this moment")
+                    .font(.title3).fontWeight(.bold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                // Verse card
+                VStack(spacing: 12) {
+                    Text("\u{201C}\(item.verseText)\u{201D}")
+                        .font(.system(.title3, design: .serif))
+                        .italic()
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineSpacing(6)
+                    Text("\u{2014} \(item.verseReference)")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(Color.reforgedGold)
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.reforgedGold.opacity(0.30), lineWidth: 1.5))
+
+                Text(item.suggestion)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(spacing: 12) {
+                    Button {
+                        HapticManager.shared.buttonTap()
+                        NotificationCenter.default.post(
+                            name: .navigateToBibleVerse,
+                            object: nil,
+                            userInfo: [AppNotificationUserInfoKey.reference: item.verseReference]
+                        )
+                        dismiss()
+                    } label: {
+                        actionLabel("Read it in context", icon: "book.fill", filled: true)
+                    }
+
+                    Button {
+                        HapticManager.shared.buttonTap()
+                        NotificationCenter.default.post(
+                            name: .switchTab,
+                            object: nil,
+                            userInfo: [AppNotificationUserInfoKey.tab: 3]
+                        )
+                        dismiss()
+                    } label: {
+                        actionLabel("Review memory verses", icon: "brain.head.profile", filled: false)
+                    }
+                }
+
+                Button("Close") { dismiss() }
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .padding(.top, 4)
+            }
+            .padding(24)
+        }
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .presentationDragIndicator(.visible)
+    }
+
+    private func actionLabel(_ title: String, icon: String, filled: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon).font(.system(size: 15, weight: .semibold))
+            Text(title).font(.headline)
+        }
+        .foregroundStyle(filled ? .white : Color.adaptiveNavyText(colorScheme))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 15)
+        .background(
+            filled
+                ? AnyShapeStyle(LinearGradient(colors: [Color(red: 0.12, green: 0.22, blue: 0.48), Color.reforgedGold],
+                                               startPoint: .leading, endPoint: .trailing))
+                : AnyShapeStyle(Color.reforgedGold.opacity(0.12))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 

@@ -17,7 +17,7 @@ struct UnifiedNavigationView: View {
     /// so we skip the manual status-bar spacer used by the iPhone overlay.
     var usesSheetPresentation: Bool = false
     @ObservedObject private var olService = OriginalLanguageService.shared
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.colorScheme) var colorScheme 
     @FocusState private var searchFieldFocused: Bool
 
     enum SortOrder { case traditional, alphabetical }

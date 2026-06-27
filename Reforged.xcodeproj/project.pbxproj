@@ -107,6 +107,13 @@
 		AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AL000001279B9E0000000001 /* AccountabilityLockService.swift */; };
 		SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SO000001279B9E0000000001 /* ShieldOnboardingView.swift */; };
 		SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = RS000003279B9E0000000001 /* ReforgedShield.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		SL000002279B9E0000000001 /* SocialLimitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SL000001279B9E0000000001 /* SocialLimitService.swift */; };
+		DAAPP01279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
+		DA000002279B9E0000000001 /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */; };
+		DA000010279B9E0000000001 /* ReforgedActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DA000013279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
+		DA000014279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		DA000015279B9E0000000001 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC000001279B9E0000000001 /* FamilyControls.framework */; };
 		GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = GEM0000B279B9E0000000001 /* GeminiService.swift */; };
 		KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJV0000A279B9E0000000001 /* KJVAudioService.swift */; };
 		MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
@@ -156,6 +163,13 @@
 			remoteGlobalIDString = RS000007279B9E0000000001;
 			remoteInfo = ReforgedShield;
 		};
+		DA000011279B9E0000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DA000007279B9E0000000001;
+			remoteInfo = ReforgedActivityMonitor;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -167,6 +181,7 @@
 			files = (
 				6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */,
 				SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */,
+				DA000010279B9E0000000001 /* ReforgedActivityMonitor.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -278,6 +293,12 @@
 		FDAFE317A9066691D3A47C88 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Reforged/Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
 		FS000001279B9E0000000001 /* FocusBlockingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusBlockingService.swift; sourceTree = "<group>"; };
 		SC000001279B9E0000000001 /* ShieldContentProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldContentProvider.swift; sourceTree = "<group>"; };
+		SL000001279B9E0000000001 /* SocialLimitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialLimitService.swift; sourceTree = "<group>"; };
+		DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
+		DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedActivityMonitor.entitlements; sourceTree = "<group>"; };
+		DA000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DA00DA01279B9E0000000001 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		AL000001279B9E0000000001 /* AccountabilityLockService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityLockService.swift; sourceTree = "<group>"; };
 		SO000001279B9E0000000001 /* ShieldOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldOnboardingView.swift; sourceTree = "<group>"; };
 		GEM0000B279B9E0000000001 /* GeminiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiService.swift; sourceTree = "<group>"; };
@@ -331,6 +352,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6B09D1742FBC9C9900163A25 /* ManagedSettings.framework in Frameworks */,
+				DAAPP01279B9E0000000001 /* DeviceActivity.framework in Frameworks */,
 				6B09D1772FBC9C9B00163A25 /* FamilyControls.framework in Frameworks */,
 				6BFFE30E2FBBAAC200340E22 /* YouVersionPlatform in Frameworks */,
 			);
@@ -342,6 +364,16 @@
 			files = (
 				SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */,
 				MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA000009279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DA000013279B9E0000000001 /* DeviceActivity.framework in Frameworks */,
+				DA000014279B9E0000000001 /* ManagedSettings.framework in Frameworks */,
+				DA000015279B9E0000000001 /* FamilyControls.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -379,6 +411,7 @@
 				A100000D279B9E0000000001 /* Reforged */,
 				6B3C67E62F3303EB008165D9 /* ReforgedWidget */,
 				RS000006279B9E0000000001 /* ReforgedShield */,
+				DA000006279B9E0000000001 /* ReforgedActivityMonitor */,
 				6B3C67BC2F3302EB008165D9 /* Frameworks */,
 				A100000E279B9E0000000001 /* Products */,
 				11826B8D31CD2DF20F878856 /* SettingsManager.swift */,
@@ -423,6 +456,7 @@
 				A1000009279B9E0000000001 /* Reforged.app */,
 				6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */,
 				RS000003279B9E0000000001 /* ReforgedShield.appex */,
+				DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -487,6 +521,7 @@
 				FS000001279B9E0000000001 /* FocusBlockingService.swift */,
 				AL000001279B9E0000000001 /* AccountabilityLockService.swift */,
 				SC000001279B9E0000000001 /* ShieldContentProvider.swift */,
+				SL000001279B9E0000000001 /* SocialLimitService.swift */,
 				BRP00005279B9E0000000001 /* ReadingPlanService.swift */,
 				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
 				RG00000E279B9E0000000001 /* OriginalLanguageService.swift */,
@@ -654,6 +689,16 @@
 			path = ReforgedShield;
 			sourceTree = "<group>";
 		};
+		DA000006279B9E0000000001 /* ReforgedActivityMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */,
+				DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */,
+				DA000005279B9E0000000001 /* Info.plist */,
+			);
+			path = ReforgedActivityMonitor;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -690,6 +735,7 @@
 			dependencies = (
 				6B3C67CE2F3302EC008165D9 /* PBXTargetDependency */,
 				SC000005279B9E0000000001 /* PBXTargetDependency */,
+				DA000012279B9E0000000001 /* PBXTargetDependency */,
 			);
 			name = Reforged;
 			productName = Reforged;
@@ -712,6 +758,24 @@
 			);
 			productName = ReforgedShield;
 			productReference = RS000003279B9E0000000001 /* ReforgedShield.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		DA000007279B9E0000000001 /* ReforgedActivityMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedActivityMonitor" */;
+			buildPhases = (
+				DA000008279B9E0000000001 /* Sources */,
+				DA000009279B9E0000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedActivityMonitor;
+			packageProductDependencies = (
+			);
+			productName = ReforgedActivityMonitor;
+			productReference = DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -754,6 +818,7 @@
 				A100000F279B9E0000000001 /* Reforged */,
 				6B3C67BA2F3302EB008165D9 /* ReforgedWidgetExtension */,
 				RS000007279B9E0000000001 /* ReforgedShield */,
+				DA000007279B9E0000000001 /* ReforgedActivityMonitor */,
 			);
 		};
 /* End PBXProject section */
@@ -869,6 +934,7 @@
 				A1000094279B9E0000000001 /* CloudKitSyncService.swift in Sources */,
 				FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */,
 				SC000002279B9E0000000001 /* ShieldContentProvider.swift in Sources */,
+				SL000002279B9E0000000001 /* SocialLimitService.swift in Sources */,
 				AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */,
 				SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */,
 				DS000002279B9E0000000001 /* DiscipleshipView.swift in Sources */,
@@ -920,6 +986,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DA000008279B9E0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DA000002279B9E0000000001 /* DeviceActivityMonitorExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -935,6 +1009,12 @@
 			target = RS000007279B9E0000000001 /* ReforgedShield */;
 			targetProxy = SC000004279B9E0000000001 /* PBXContainerItemProxy */;
 		};
+		DA000012279B9E0000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = DA000007279B9E0000000001 /* ReforgedActivityMonitor */;
+			targetProxy = DA000011279B9E0000000001 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -946,7 +1026,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -958,7 +1038,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -981,7 +1061,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -993,7 +1073,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1140,7 +1220,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/ReforgedDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1164,7 +1244,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1188,7 +1268,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1209,7 +1289,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1229,7 +1309,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1238,7 +1318,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1255,7 +1335,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1264,8 +1344,60 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		DA00000D279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DA00000E279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -1310,6 +1442,15 @@
 			buildConfigurations = (
 				RS00000D279B9E0000000001 /* Debug */,
 				RS00000E279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedActivityMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA00000D279B9E0000000001 /* Debug */,
+				DA00000E279B9E0000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -122,6 +122,41 @@ final class ShieldContentProvider {
             suggestion: "Flee — and turn toward the Lord",
             verseText: "No temptation has overtaken you that is not common to man. God is faithful... he will also provide the way of escape.",
             verseReference: "1 Corinthians 10:13"
+        ),
+        ShieldEncouragement(
+            suggestion: "Walk by the Spirit right now",
+            verseText: "Walk by the Spirit, and you will not gratify the desires of the flesh.",
+            verseReference: "Galatians 5:16"
+        ),
+        ShieldEncouragement(
+            suggestion: "Run to the One who understands",
+            verseText: "For we do not have a high priest who is unable to sympathize with our weaknesses, but one who in every respect has been tempted as we are, yet without sin.",
+            verseReference: "Hebrews 4:15"
+        ),
+        ShieldEncouragement(
+            suggestion: "Offer yourself to God instead",
+            verseText: "Do not present your members to sin as instruments for unrighteousness, but present yourselves to God.",
+            verseReference: "Romans 6:13"
+        ),
+        ShieldEncouragement(
+            suggestion: "Look up — you were raised with Christ",
+            verseText: "Set your minds on things that are above, not on things that are on earth.",
+            verseReference: "Colossians 3:2"
+        ),
+        ShieldEncouragement(
+            suggestion: "You belong to Him — you were bought with a price",
+            verseText: "Flee from sexual immorality... you are not your own, for you were bought with a price. So glorify God in your body.",
+            verseReference: "1 Corinthians 6:18-20"
+        ),
+        ShieldEncouragement(
+            suggestion: "Draw near and He will draw near",
+            verseText: "Submit yourselves therefore to God. Resist the devil, and he will flee from you. Draw near to God, and he will draw near to you.",
+            verseReference: "James 4:7-8"
+        ),
+        ShieldEncouragement(
+            suggestion: "Stand firm — His grace is enough",
+            verseText: "My grace is sufficient for you, for my power is made perfect in weakness.",
+            verseReference: "2 Corinthians 12:9"
         )
     ]
 }
