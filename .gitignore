@@ -21,3 +21,9 @@ Packages/
 
 # ── CocoaPods ─────────────────────────────────────────────
 Pods/
+
+# ── Claude Code ───────────────────────────────────────────
+.claude/
+
+# ── Marketing / business docs (not part of the app) ───────
+*.docx
