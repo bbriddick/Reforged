@@ -1033,6 +1033,9 @@ struct UnifiedNavigationView: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
         )
+        // Soft elevation shadow cast upward, matching the app's bottom-sheet style
+        // (see TakeNoteView). Opacity adapts so it stays visible in dark mode.
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15), radius: 20, y: -5)
     }
 
     // MARK: - Load Verses
