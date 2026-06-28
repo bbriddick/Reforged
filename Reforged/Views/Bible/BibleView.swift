@@ -594,10 +594,14 @@ struct BibleView: View {
                                     navRevealProgress = min(max(h / (screenW * 0.82), 0), 1)
                                 }
                             }
-                            .onEnded { _ in
+                            .onEnded { value in
                                 defer { edgeDragPhase = .idle }
                                 guard edgeDragPhase == .revealingNav else { return }
-                                if navRevealProgress > 0.4 {
+                                // Open on a short flick: a quick rightward gesture (high predicted
+                                // travel from finger velocity) OR any modest deliberate drag. No
+                                // need to drag most of the way across the screen anymore.
+                                let flick = value.predictedEndTranslation.width > 80
+                                if flick || navRevealProgress > 0.15 {
                                     openNav()
                                 } else {
                                     closeNav()
