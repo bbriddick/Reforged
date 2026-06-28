@@ -25,6 +25,9 @@ class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
     private var timeObserver: Any?
     private let synthesizer = AVSpeechSynthesizer()
 
+    /// Custom KJV/ESV cover for the lock screen, regenerated when the chapter changes.
+    private var currentArtwork: MPMediaItemArtwork?
+
     /// Called when a chapter finishes playing (for marking as read + auto-advance).
     /// Parameters: (book, chapter) of the completed chapter.
     var onChapterCompleted: ((String, Int) -> Void)?
@@ -58,6 +61,7 @@ class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
         currentChapter = chapter
         currentTranslation = translation
         saveAudioState()
+        Task { @MainActor in self.refreshArtwork() }
 
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [])
@@ -197,6 +201,7 @@ class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
         duration = 0
         currentBook = ""
         currentChapter = 0
+        currentArtwork = nil
         clearAudioState()
         clearNowPlayingInfo()
     }
@@ -376,8 +381,20 @@ class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? playbackRate : 0.0
+        if let currentArtwork { nowPlayingInfo[MPMediaItemPropertyArtwork] = currentArtwork }
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+    }
+
+    /// Rebuilds the lock-screen cover for the current translation/chapter.
+    @MainActor
+    private func refreshArtwork() {
+        guard !currentBook.isEmpty else { currentArtwork = nil; return }
+        if let image = AudioArtworkRenderer.image(translation: currentTranslation,
+                                                  book: currentBook, chapter: currentChapter) {
+            currentArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        }
+        updateNowPlayingInfo()
     }
 
     private func clearNowPlayingInfo() {

@@ -90,7 +90,7 @@ struct NowPlayingView: View {
 
                 Spacer(minLength: isWide ? 28 : 20)
 
-                AudioAlbumArtwork(book: displayBook, chapter: displayChapter)
+                AudioAlbumArtwork(book: displayBook, chapter: displayChapter, translation: audioPlayer.currentTranslation)
                     .frame(width: artSize, height: artSize)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .shadow(color: Color.black.opacity(0.5), radius: 30, y: 12)
@@ -154,7 +154,7 @@ struct NowPlayingView: View {
             HStack(alignment: .center, spacing: 0) {
                 // Left: dismiss button overlaid above artwork
                 ZStack(alignment: .topLeading) {
-                    AudioAlbumArtwork(book: displayBook, chapter: displayChapter)
+                    AudioAlbumArtwork(book: displayBook, chapter: displayChapter, translation: audioPlayer.currentTranslation)
                         .frame(width: artSize, height: artSize)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .shadow(color: Color.black.opacity(0.45), radius: 16, y: 6)
@@ -475,6 +475,16 @@ struct SleepTimerButtonView: View, Equatable {
 struct AudioAlbumArtwork: View {
     let book: String
     let chapter: Int
+    var translation: BibleTranslation = .esv
+
+    /// "KJV Audio Bible" / "ESV Audio Bible" — both share the same cover design.
+    private var translationLabel: String {
+        translation == .kjv ? "KJV Audio Bible" : "ESV Audio Bible"
+    }
+    /// KJV is public domain; ESV requires the Crossway notice.
+    private var attribution: String {
+        translation == .kjv ? "Public Domain" : "© 2001 Crossway"
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -542,7 +552,7 @@ struct AudioAlbumArtwork: View {
                         .tracking(4)
                         .foregroundStyle(Color(red: 0.87, green: 0.72, blue: 0.42))
 
-                    Text("ESV Audio Bible")
+                    Text(translationLabel)
                         .font(.system(size: 11, weight: .medium))
                         .tracking(1)
                         .foregroundStyle(Color.white.opacity(0.5))
@@ -563,7 +573,7 @@ struct AudioAlbumArtwork: View {
                 Spacer()
                 HStack {
                     Spacer()
-                    Text("© 2001 Crossway")
+                    Text(attribution)
                         .font(.system(size: 9))
                         .foregroundStyle(Color.white.opacity(0.2))
                         .padding(.trailing, 12)
@@ -579,6 +589,28 @@ struct AudioAlbumArtwork: View {
     }
 }
 
+// MARK: - Lock Screen Artwork Renderer
+
+/// Renders `AudioAlbumArtwork` to a UIImage for the lock screen / Control Center,
+/// so KJV and ESV get the same custom cover there as in the in-app player.
+@MainActor
+enum AudioArtworkRenderer {
+    private static var cache: [String: UIImage] = [:]
+
+    static func image(translation: BibleTranslation, book: String, chapter: Int) -> UIImage? {
+        let key = "\(translation.rawValue)|\(book)|\(chapter)"
+        if let cached = cache[key] { return cached }
+
+        let view = AudioAlbumArtwork(book: book, chapter: chapter, translation: translation)
+            .frame(width: 600, height: 600)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 1
+        guard let image = renderer.uiImage else { return nil }
+        cache[key] = image
+        return image
+    }
+}
+
 // MARK: - Mini Player Bar
 
 struct AudioMiniPlayerBar: View {
@@ -591,19 +623,19 @@ struct AudioMiniPlayerBar: View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 // Small artwork thumbnail
-                AudioAlbumArtwork(book: audioPlayer.currentBook, chapter: audioPlayer.currentChapter)
+                AudioAlbumArtwork(book: audioPlayer.currentBook, chapter: audioPlayer.currentChapter, translation: audioPlayer.currentTranslation)
                     .frame(width: 44, height: 44)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .shadow(color: Color.black.opacity(0.25), radius: 6, y: 2)
 
                 // Track info
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(audioPlayer.currentBook.isEmpty ? "ESV Audio" : "\(audioPlayer.currentBook) \(audioPlayer.currentChapter)")
+                    Text(audioPlayer.currentBook.isEmpty ? "Audio Bible" : "\(audioPlayer.currentBook) \(audioPlayer.currentChapter)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                         .lineLimit(1)
-                    Text("ESV Audio Bible")
+                    Text(audioPlayer.currentTranslation == .kjv ? "KJV Audio Bible" : "ESV Audio Bible")
                         .font(.caption)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }

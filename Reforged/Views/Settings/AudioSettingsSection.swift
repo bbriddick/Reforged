@@ -108,6 +108,32 @@ struct AudioSettingsSection: View {
 
             SettingsDivider()
 
+            // Offline KJV Audio
+            NavigationLink {
+                KJVAudioDownloadsView()
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Offline KJV Audio")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("Download KJV chapters to listen offline")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+                }
+                .contentShape(Rectangle())
+                .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+
+            SettingsDivider()
+
             // Audio Controls Info
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {

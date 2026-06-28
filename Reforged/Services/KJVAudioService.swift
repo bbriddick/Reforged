@@ -1,118 +1,90 @@
 import Foundation
 
 // MARK: - KJV Audio Service
-// Uses the free, no-auth bible.helloao.org API.
-// Fetching a chapter also pre-caches the next chapter's MP3 URL so
-// auto-advancing to the next chapter never needs an extra network round-trip.
+//
+// Sources KJV chapter audio from the free, public-domain repository
+// github.com/jeesusonherraturku/kjv_audio_free. The repo's filenames carry an
+// unpredictable leading counter, so chapter→file resolution is driven by a
+// bundled manifest (kjv_audio_manifest.json, generated from the repo tree).
+//
+// Streaming is served over the jsDelivr CDN, pinned to an immutable commit so
+// URLs never change. Chapters the user has downloaded are played from disk
+// instead (see KJVAudioDownloadManager).
 
 class KJVAudioService {
     static let shared = KJVAudioService()
     private init() {}
 
-    private let baseURL = "https://bible.helloao.org/api"
-
-    // Pre-populated from each chapter response's `nextChapterAudioLinks`
-    private var audioCache: [String: String] = [:]   // "Book:chapter" → mp3 URL string
-
-    // MARK: - Book ID Map (USFM / helloao.org 3-letter IDs)
-
-    private let bookIdMap: [String: String] = [
-        // Old Testament
-        "Genesis": "GEN", "Exodus": "EXO", "Leviticus": "LEV", "Numbers": "NUM",
-        "Deuteronomy": "DEU", "Joshua": "JOS", "Judges": "JDG", "Ruth": "RUT",
-        "1 Samuel": "1SA", "2 Samuel": "2SA", "1 Kings": "1KI", "2 Kings": "2KI",
-        "1 Chronicles": "1CH", "2 Chronicles": "2CH", "Ezra": "EZR", "Nehemiah": "NEH",
-        "Esther": "EST", "Job": "JOB", "Psalms": "PSA", "Proverbs": "PRO",
-        "Ecclesiastes": "ECC", "Song of Solomon": "SNG", "Isaiah": "ISA",
-        "Jeremiah": "JER", "Lamentations": "LAM", "Ezekiel": "EZK", "Daniel": "DAN",
-        "Hosea": "HOS", "Joel": "JOL", "Amos": "AMO", "Obadiah": "OBA",
-        "Jonah": "JON", "Micah": "MIC", "Nahum": "NAM", "Habakkuk": "HAB",
-        "Zephaniah": "ZEP", "Haggai": "HAG", "Zechariah": "ZEC", "Malachi": "MAL",
-        // New Testament
-        "Matthew": "MAT", "Mark": "MRK", "Luke": "LUK", "John": "JHN",
-        "Acts": "ACT", "Romans": "ROM", "1 Corinthians": "1CO", "2 Corinthians": "2CO",
-        "Galatians": "GAL", "Ephesians": "EPH", "Philippians": "PHP", "Colossians": "COL",
-        "1 Thessalonians": "1TH", "2 Thessalonians": "2TH", "1 Timothy": "1TI",
-        "2 Timothy": "2TI", "Titus": "TIT", "Philemon": "PHM", "Hebrews": "HEB",
-        "James": "JAS", "1 Peter": "1PE", "2 Peter": "2PE", "1 John": "1JN",
-        "2 John": "2JN", "3 John": "3JN", "Jude": "JUD", "Revelation": "REV"
-    ]
-
-    // MARK: - Public API
-
-    /// Returns the MP3 URL for the given book + chapter.
-    /// If the previous chapter's response already pre-cached this URL, returns it immediately.
-    /// Otherwise fetches the chapter JSON and caches the next chapter's URL as a side-effect.
-    func getAudioURL(book: String, chapter: Int) async throws -> URL {
-        let key = cacheKey(book: book, chapter: chapter)
-
-        if let cached = audioCache[key], let url = URL(string: cached) {
-            audioCache.removeValue(forKey: key)
-            return url
-        }
-
-        return try await fetchAndCache(book: book, chapter: chapter)
+    /// Immutable pin of jeesusonherraturku/kjv_audio_free so CDN URLs are stable.
+    private let repoSHA = "ba38d9e35c17bc73317796c6526328232c4e9914"
+    private var cdnBase: String {
+        "https://cdn.jsdelivr.net/gh/jeesusonherraturku/kjv_audio_free@\(repoSHA)/"
     }
 
-    // MARK: - Private
+    /// book name → [repo-relative path], index 0 = chapter 1.
+    private lazy var manifest: [String: [String]] = loadManifest()
 
-    private func fetchAndCache(book: String, chapter: Int) async throws -> URL {
-        guard let bookId = bookIdMap[book] else {
-            throw KJVAudioError.unknownBook(book)
+    private func loadManifest() -> [String: [String]] {
+        guard let url = Bundle.main.url(forResource: "kjv_audio_manifest", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode([String: [String]].self, from: data) else {
+            return [:]
         }
+        return decoded
+    }
 
-        let urlString = "\(baseURL)/KJV/\(bookId)/\(chapter).json"
-        guard let requestURL = URL(string: urlString) else {
-            throw KJVAudioError.invalidURL
+    // MARK: - Manifest lookups
+
+    /// Number of chapters with audio for a book (0 if unknown).
+    func chapterCount(book: String) -> Int { manifest[book]?.count ?? 0 }
+
+    /// Repo-relative path for a chapter, or nil if unknown/out of range.
+    func relativePath(book: String, chapter: Int) -> String? {
+        guard let chapters = manifest[book], chapter >= 1, chapter <= chapters.count else { return nil }
+        return chapters[chapter - 1]
+    }
+
+    /// Remote streaming URL on the CDN.
+    func remoteURL(book: String, chapter: Int) -> URL? {
+        guard let path = relativePath(book: book, chapter: chapter),
+              let encoded = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
+            return nil
         }
+        return URL(string: cdnBase + encoded)
+    }
 
-        let (data, response) = try await URLSession.shared.data(from: requestURL)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw KJVAudioError.httpError((response as? HTTPURLResponse)?.statusCode ?? -1)
+    // MARK: - Local cache
+
+    /// Root directory for downloaded KJV audio.
+    static func audioDirectory() -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return base.appendingPathComponent("KJVAudio", isDirectory: true)
+    }
+
+    /// On-disk location for a downloaded chapter (stable, independent of repo naming).
+    func localFileURL(book: String, chapter: Int) -> URL {
+        let safeBook = book.replacingOccurrences(of: " ", with: "_")
+        return Self.audioDirectory()
+            .appendingPathComponent(safeBook, isDirectory: true)
+            .appendingPathComponent("\(chapter).mp3")
+    }
+
+    func isDownloaded(book: String, chapter: Int) -> Bool {
+        FileManager.default.fileExists(atPath: localFileURL(book: book, chapter: chapter).path)
+    }
+
+    // MARK: - Playback resolution
+
+    /// Best URL to play: the downloaded file if present, otherwise the CDN stream.
+    func getAudioURL(book: String, chapter: Int) async throws -> URL {
+        if isDownloaded(book: book, chapter: chapter) {
+            return localFileURL(book: book, chapter: chapter)
         }
-
-        let decoded = try JSONDecoder().decode(HelloAOChapterResponse.self, from: data)
-
-        // Pre-cache next chapter's URL using the next chapter key derived from BibleData
-        if let nextLinks = decoded.nextChapterAudioLinks,
-           let mp3String = preferredURL(from: nextLinks),
-           let next = nextChapterInfo(book: book, chapter: chapter) {
-            audioCache[cacheKey(book: next.book, chapter: next.chapter)] = mp3String
-        }
-
-        guard let mp3String = preferredURL(from: decoded.thisChapterAudioLinks),
-              let audioURL = URL(string: mp3String) else {
+        guard let url = remoteURL(book: book, chapter: chapter) else {
             throw KJVAudioError.noAudioFound
         }
-
-        return audioURL
+        return url
     }
-
-    /// Picks the preferred reader URL. Prefers "gilbert", then "hays", then first available.
-    private func preferredURL(from links: [String: String]?) -> String? {
-        guard let links = links, !links.isEmpty else { return nil }
-        return links["gilbert"] ?? links["hays"] ?? links.values.first
-    }
-
-    private func cacheKey(book: String, chapter: Int) -> String {
-        "\(book):\(chapter)"
-    }
-
-    /// Mirrors BibleAudioPlayer's chapter-advance logic so we can key the pre-cache correctly.
-    private func nextChapterInfo(book: String, chapter: Int) -> (book: String, chapter: Int)? {
-        guard let bookData = BibleData.books.first(where: { $0.name == book }) else { return nil }
-        if chapter < bookData.chapters { return (book, chapter + 1) }
-        guard let idx = BibleData.books.firstIndex(where: { $0.name == book }),
-              idx + 1 < BibleData.books.count else { return nil }
-        return (BibleData.books[idx + 1].name, 1)
-    }
-}
-
-// MARK: - Response Models
-
-private struct HelloAOChapterResponse: Decodable {
-    let thisChapterAudioLinks: [String: String]?
-    let nextChapterAudioLinks: [String: String]?
 }
 
 // MARK: - Errors
@@ -127,7 +99,7 @@ enum KJVAudioError: LocalizedError {
         switch self {
         case .unknownBook(let b): return "Unknown book: \(b)"
         case .invalidURL:        return "Invalid audio URL"
-        case .httpError(let c):  return "KJV audio API error \(c)"
+        case .httpError(let c):  return "KJV audio error \(c)"
         case .noAudioFound:      return "No audio available for this chapter"
         }
     }

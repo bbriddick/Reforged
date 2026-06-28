@@ -116,6 +116,9 @@
 		DA000015279B9E0000000001 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC000001279B9E0000000001 /* FamilyControls.framework */; };
 		GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = GEM0000B279B9E0000000001 /* GeminiService.swift */; };
 		KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJV0000A279B9E0000000001 /* KJVAudioService.swift */; };
+		KJVDLMG2279B9E0000000001 /* KJVAudioDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */; };
+		KJVDLVW2279B9E0000000001 /* KJVAudioDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */; };
+		KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */; };
 		MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
 		NET0000A279B9E0000000001 /* NETService.swift in Sources */ = {isa = PBXBuildFile; fileRef = NET0000B279B9E0000000001 /* NETService.swift */; };
 		PC000002279B9E0000000001 /* PodcastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000001279B9E0000000001 /* PodcastModels.swift */; };
@@ -303,6 +306,9 @@
 		SO000001279B9E0000000001 /* ShieldOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldOnboardingView.swift; sourceTree = "<group>"; };
 		GEM0000B279B9E0000000001 /* GeminiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiService.swift; sourceTree = "<group>"; };
 		KJV0000A279B9E0000000001 /* KJVAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioService.swift; sourceTree = "<group>"; };
+		KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioDownloadManager.swift; sourceTree = "<group>"; };
+		KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KJVAudioDownloadsView.swift; path = Reforged/Views/Settings/KJVAudioDownloadsView.swift; sourceTree = "<group>"; };
+		KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_audio_manifest.json; sourceTree = "<group>"; };
 		MAN00001279B9E0000000001 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		NET0000B279B9E0000000001 /* NETService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NETService.swift; sourceTree = "<group>"; };
 		PC000001279B9E0000000001 /* PodcastModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastModels.swift; sourceTree = "<group>"; };
@@ -420,6 +426,7 @@
 				5190404405A017340CF7CDD3 /* AboutSection.swift */,
 				68C79FE2CBEAC63ABD279754 /* AccountSettingsSection.swift */,
 				C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */,
+				KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */,
 				AIS0000B279B9E0000000001 /* AISettingsSection.swift */,
 				A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */,
 				150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */,
@@ -501,6 +508,7 @@
 				A1000081279B9E0000000001 /* KJVService.swift */,
 				NET0000B279B9E0000000001 /* NETService.swift */,
 				KJV0000A279B9E0000000001 /* KJVAudioService.swift */,
+				KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */,
 				A1AABB01279B9E0000000001 /* ApiBibleService.swift */,
 				BDD100000000000000000002 /* BibleDownloadManager.swift */,
 				BDD10000000000000000000A /* NetworkRetry.swift */,
@@ -629,6 +637,7 @@
 				B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */,
 				B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */,
 				B1A0001B279B9E0000000001 /* kjvpce.json */,
+				KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */,
 				RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */,
 				RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */,
 				RG000004279B9E0000000001 /* Fonts/Roboto.ttf */,
@@ -842,6 +851,7 @@
 				B1A0000C279B9E0000000001 /* StrongHebrewDictionary.json in Resources */,
 				B1A0000E279B9E0000000001 /* StrongGreekDictionary.json in Resources */,
 				B1A0001C279B9E0000000001 /* kjvpce.json in Resources */,
+				KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */,
 				WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */,
 				RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */,
 				RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */,
@@ -914,6 +924,8 @@
 				A1000080279B9E0000000001 /* KJVService.swift in Sources */,
 				NET0000A279B9E0000000001 /* NETService.swift in Sources */,
 				KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */,
+				KJVDLMG2279B9E0000000001 /* KJVAudioDownloadManager.swift in Sources */,
+				KJVDLVW2279B9E0000000001 /* KJVAudioDownloadsView.swift in Sources */,
 				A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */,
 				A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */,
 				A1000084279B9E0000000001 /* ReadingStreakManager.swift in Sources */,
