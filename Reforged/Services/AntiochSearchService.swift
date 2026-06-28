@@ -35,16 +35,16 @@ final class AntiochSearchService {
 
         do {
             let results = try JSONDecoder().decode([AntiochResult].self, from: data)
-            print("[Antioch] returned \(results.count) results for query: \(query)")
+            debugLog("[Antioch] returned \(results.count) results for query: \(query)")
             return results.map { r in
                 let bookName = Self.bookNameFixes[r.book_name] ?? r.book_name
                 let ref = "\(bookName) \(r.chapter_number):\(r.verse_number)"
                 return (reference: ref, preview: r.verse_text)
             }
         } catch {
-            print("[Antioch] decode failed: \(error)")
+            debugLog("[Antioch] decode failed: \(error)")
             if let raw = String(data: data, encoding: .utf8) {
-                print("[Antioch] raw response prefix: \(raw.prefix(300))")
+                debugLog("[Antioch] raw response prefix: \(raw.prefix(300))")
             }
             throw error
         }

@@ -57,12 +57,16 @@ final class FocusBlockingService: ObservableObject {
 
     private init() {
         loadPersistedState()
-        checkAuthorizationStatus()
+        refreshAuthorizationStatus()
     }
 
     // MARK: - Authorization
 
-    private func checkAuthorizationStatus() {
+    /// Refreshes `isAuthorized` from the system. `AuthorizationCenter` can report
+    /// `.notDetermined` for a moment right at process launch, so the value read in
+    /// `init()` may be stale — call this again on view appear / app foreground so
+    /// the "Enable Blocking" card doesn't linger after access was already granted.
+    func refreshAuthorizationStatus() {
         isAuthorized = (AuthorizationCenter.shared.authorizationStatus == .approved)
     }
 
@@ -72,7 +76,7 @@ final class FocusBlockingService: ObservableObject {
             isAuthorized = (AuthorizationCenter.shared.authorizationStatus == .approved)
         } catch {
             isAuthorized = false
-            print("[FocusBlockingService] Authorization failed: \(error.localizedDescription)")
+            debugLog("[FocusBlockingService] Authorization failed: \(error.localizedDescription)")
         }
     }
 

@@ -310,12 +310,12 @@ final class SupabaseAuthService: ObservableObject {
             )
             let (_, response) = try await URLSession.shared.data(for: req)
             if let http = response as? HTTPURLResponse, http.statusCode < 300 {
-                print("✅ Supabase profile upserted")
+                debugLog("✅ Supabase profile upserted")
             } else if let http = response as? HTTPURLResponse {
-                print("⚠️ Supabase upsert status: \(http.statusCode)")
+                debugLog("⚠️ Supabase upsert status: \(http.statusCode)")
             }
         } catch {
-            print("❌ Supabase upsert error: \(error)")
+            debugLog("❌ Supabase upsert error: \(error)")
         }
     }
 
@@ -366,7 +366,7 @@ final class SupabaseAuthService: ObservableObject {
                 weeklyActivity: WeeklyActivity()
             )
         } catch {
-            print("❌ Supabase fetchProfile error: \(error)")
+            debugLog("❌ Supabase fetchProfile error: \(error)")
             return nil
         }
     }

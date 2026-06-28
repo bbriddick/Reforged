@@ -354,7 +354,7 @@ struct AccountSettingsSection: View {
                 try await appState.deleteAccount()
             } catch {
                 showDeleteError = true
-                print("⚠️ Cloud deletion failed (local data cleared): \(error)")
+                debugLog("⚠️ Cloud deletion failed (local data cleared): \(error)")
             }
             isDeletingAccount = false
         }

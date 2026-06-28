@@ -694,7 +694,7 @@ struct SearchPanelView: View {
                     let result = try await GeminiService.shared.smartBibleSearch(query: query)
                     await MainActor.run { smartSearchResult = result; smartSearchLoading = false }
                 } catch {
-                    print("[Search] AI overview failed: \(error)")
+                    debugLog("[Search] AI overview failed: \(error)")
                     await MainActor.run { smartSearchLoading = false }
                 }
             }

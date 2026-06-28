@@ -5,8 +5,7 @@ import FamilyControls
 //
 // The interactive Focus & Purity Shield screen. Lets the user authorize Screen
 // Time, toggle adult-content / social-media blocking, and pick specific apps to
-// shield. Because Apple's shield overlay cannot open the app, the "do this
-// instead" launchpad lives here and routes into Reforged's own features.
+// shield.
 
 struct FocusBlockingView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -102,6 +101,10 @@ struct FocusBlockingView: View {
         }
         .onAppear {
             pickerSelection = focusService.selection
+            // Authorization can read stale at launch — re-check so the "Enable
+            // Blocking" card doesn't show when access is already granted.
+            focusService.refreshAuthorizationStatus()
+            limitService.reloadUsage()
             // Needed so the shield extension can fire "you hit a block" notifications.
             NotificationManager.shared.requestAuthorization()
             if !UserDefaults.standard.bool(forKey: Self.onboardingSeenKey) {
@@ -215,6 +218,18 @@ struct FocusBlockingView: View {
                 socialPickerSelection = focusService.socialSelection
                 showSocialPicker = true
             }
+        }
+    }
+
+    /// Changes the daily limit. Raising it grants more social time = lowering
+    /// protection, so it's PIN-gated when the accountability lock is on. Lowering
+    /// the limit (more protection) applies immediately.
+    private func changeLimit(to minutes: Int) {
+        HapticManager.shared.selectionChanged()
+        if minutes > limitService.limitMinutes {
+            guardedReduce { limitService.setLimitMinutes(minutes) }
+        } else {
+            limitService.setLimitMinutes(minutes)
         }
     }
 
@@ -461,6 +476,65 @@ struct FocusBlockingView: View {
 
     private let limitOptions = [15, 30, 45, 60, 90, 120]
 
+    /// Keeps the countdown fresh while the screen is open (usage is written in the
+    /// background by the monitor extension).
+    private let usageTimer = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
+
+    /// "Time left today" banner — Quittr-style remaining-time readout with a progress bar.
+    private var countdownBanner: some View {
+        let allowance = limitService.allowanceMinutes
+        let used = min(limitService.usedTodayMinutes, allowance)
+        let remaining = limitService.remainingMinutes
+        let fraction = allowance > 0 ? min(1, Double(used) / Double(allowance)) : 0
+        let reached = limitService.isLimitReached
+        let accent = reached ? Color.reforgedCoral : Color(red: 0.20, green: 0.55, blue: 0.55)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if reached {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(accent)
+                    Text("Time's up for today")
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                } else {
+                    Text("\(remaining)")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(accent)
+                    Text("min left today")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                Spacer()
+                Text("\(used) / \(allowance) min")
+                    .font(.caption).fontWeight(.medium)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.adaptiveTextSecondary(colorScheme).opacity(0.18))
+                    Capsule()
+                        .fill(accent)
+                        .frame(width: max(0, geo.size.width * fraction))
+                }
+            }
+            .frame(height: 8)
+
+            if reached {
+                Text("Listen to a Bible chapter or finish a memory activity to unlock more time.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(14)
+        .background(accent.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
     private var dailyLimitCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 16) {
@@ -494,16 +568,25 @@ struct FocusBlockingView: View {
             }
 
             if limitService.isEnabled {
+                if limitService.hasSelection {
+                    countdownBanner
+                }
+
                 Divider()
 
                 HStack {
                     Text("Daily limit")
                         .font(.subheadline)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
+                    if lockService.isLockEnabled {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
                     Spacer()
                     Menu {
                         ForEach(limitOptions, id: \.self) { m in
-                            Button("\(m) min") { limitService.setLimitMinutes(m) }
+                            Button("\(m) min") { changeLimit(to: m) }
                         }
                     } label: {
                         HStack(spacing: 4) {
@@ -516,7 +599,11 @@ struct FocusBlockingView: View {
 
                 Button {
                     HapticManager.shared.buttonTap()
-                    changeSocialApps()
+                    if lockService.isLockEnabled {
+                        guardedReduce { changeSocialApps() }
+                    } else {
+                        changeSocialApps()
+                    }
                 } label: {
                     HStack {
                         Text("Social apps")
@@ -554,6 +641,9 @@ struct FocusBlockingView: View {
         .background(Color.adaptiveCardBackground(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.06), radius: 8, y: 3)
+        .onReceive(usageTimer) { _ in
+            if limitService.isEnabled { limitService.reloadUsage() }
+        }
     }
 
     // MARK: - Accountability Lock

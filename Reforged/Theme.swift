@@ -1,4 +1,20 @@
 import SwiftUI
+import UIKit
+
+// MARK: - Debug logging
+
+/// Console logging that compiles to a no-op in Release builds — keeps diagnostic
+/// output (and any incidental sensitive values, e.g. device tokens) out of shipping
+/// builds' device logs. Drop-in replacement for the standard print function.
+#if DEBUG
+@inline(__always)
+func debugLog(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+    Swift.print(items.map { "\($0)" }.joined(separator: separator), terminator: terminator)
+}
+#else
+@inline(__always)
+func debugLog(_ items: Any..., separator: String = " ", terminator: String = "\n") {}
+#endif
 
 
 
@@ -582,6 +598,22 @@ struct AdaptiveLayout {
     static let minDetailWidth: CGFloat = 400
 }
 
+/// Size of the app's active window. Unlike `UIScreen.main.bounds`, this is correct
+/// under iPad Split View, Slide Over, and Stage Manager — where the app window is
+/// smaller than the physical screen. Reads the key window synchronously, so it
+/// preserves the no-`GeometryReader` behavior some layouts rely on (e.g. the Bible
+/// reader's slide-out nav panel, which avoids GeometryReader to prevent jitter).
+enum AppWindow {
+    static var size: CGSize {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        let window = scene?.windows.first { $0.isKeyWindow } ?? scene?.windows.first
+        return window?.bounds.size ?? UIScreen.main.bounds.size
+    }
+    static var width: CGFloat { size.width }
+    static var height: CGFloat { size.height }
+}
+
 /// Environment key for tracking if we're in a sidebar navigation context
 struct IsSidebarNavigationKey: EnvironmentKey {
     static let defaultValue: Bool = false
@@ -626,6 +658,33 @@ struct ResponsivePadding: ViewModifier {
     }
 }
 
+// MARK: - Dynamic Type
+
+/// A fixed-point-size system font that still scales with the user's Dynamic Type
+/// setting. SwiftUI's `Font.system(size:)` is otherwise frozen and ignores the
+/// accessibility text-size slider, so use `.scaledFont(...)` for UI chrome where
+/// a specific size is desired but accessibility sizes must be respected.
+///
+/// The size is reactively scaled relative to `textStyle` via `@ScaledMetric`.
+struct ScaledSystemFont: ViewModifier {
+    @ScaledMetric private var size: CGFloat
+    private let weight: Font.Weight
+    private let design: Font.Design
+
+    init(size: CGFloat,
+         weight: Font.Weight = .regular,
+         design: Font.Design = .default,
+         relativeTo textStyle: Font.TextStyle = .body) {
+        _size = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, weight: weight, design: design))
+    }
+}
+
 // MARK: - View Extensions
 
 extension View {
@@ -636,6 +695,15 @@ extension View {
     /// Constrains content to readable width on large screens
     func readableContentWidth() -> some View {
         modifier(ReadableContentWidth())
+    }
+
+    /// A fixed-size system font that respects Dynamic Type (unlike `.font(.system(size:))`).
+    /// Prefer this for UI chrome so text scales with the accessibility text-size setting.
+    func scaledFont(_ size: CGFloat,
+                    weight: Font.Weight = .regular,
+                    design: Font.Design = .default,
+                    relativeTo textStyle: Font.TextStyle = .body) -> some View {
+        modifier(ScaledSystemFont(size: size, weight: weight, design: design, relativeTo: textStyle))
     }
 
     /// Applies responsive padding based on device size

@@ -31,6 +31,8 @@ struct ContentView: View {
         .environmentObject(settingsManager)
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
+                // Re-check Screen Time authorization (can read stale right at launch)
+                FocusBlockingService.shared.refreshAuthorizationStatus()
                 // Re-apply Focus Shield blocking rules every time app foregrounds
                 FocusBlockingService.shared.applyBlockingIfEnabled()
                 // Re-arm the social daily-limit monitoring (and handle the day reset)

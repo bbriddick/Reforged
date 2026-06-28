@@ -19,7 +19,7 @@ final class BibleSearchService {
                                                pageSize: pageSizePerTranslation)
                 combinedResults.append(contentsOf: results)
             } catch {
-                print("BibleSearchService: search failed for \(translation.rawValue): \(error)")
+                debugLog("BibleSearchService: search failed for \(translation.rawValue): \(error)")
             }
         }
         return sortResults(combinedResults)
@@ -40,14 +40,14 @@ final class BibleSearchService {
             var results: [BibleSearchResult] = []
             for t in translations where t.isTextSearchable {
                 do { results.append(contentsOf: try await search(query: normalized, translation: t, pageSize: pageSize)) }
-                catch { print("BibleSearchService: \(t.rawValue) failed: \(error)") }
+                catch { debugLog("BibleSearchService: \(t.rawValue) failed: \(error)") }
             }
             return results
         }()
 
         var antiochPairs: [(reference: String, preview: String)]?
         do { antiochPairs = try await antiochTask }
-        catch { print("[BibleSearchService] Antioch failed: \(error)") }
+        catch { debugLog("[BibleSearchService] Antioch failed: \(error)") }
         let textResults = await textTask
 
         let textRefs = Set(textResults.map(\.reference))

@@ -119,7 +119,7 @@ struct StrongsDefinitionSheet: View {
                 aiSummary = try await GeminiService.shared.generateWordStudySummary(result)
             } catch {
                 aiSummaryError = error.localizedDescription
-                print("[WordStudy] AI error: \(error)")
+                debugLog("[WordStudy] AI error: \(error)")
             }
             aiSummaryLoading = false
         }

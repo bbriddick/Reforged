@@ -74,7 +74,7 @@ class BundledDataService {
         guard verseCache.isEmpty else { return }
 
         guard let rows = BundledCSVSupport.loadRows(resource: BundledCSVSupport.verseCacheResource) else {
-            print("Failed to load verse cache CSV")
+            debugLog("Failed to load verse cache CSV")
             return
         }
 
@@ -97,7 +97,7 @@ class BundledDataService {
             verseCache[verse.canonical.lowercased()] = verse
         }
 
-        print("Loaded \(verseCache.count / 2) cached verses")
+        debugLog("Loaded \(verseCache.count / 2) cached verses")
     }
 
     func getCachedVerse(reference: String) -> CachedVerse? {
@@ -124,7 +124,7 @@ class BundledDataService {
         guard dailyInsights.isEmpty else { return }
 
         guard let rows = BundledCSVSupport.loadRows(resource: BundledCSVSupport.dailyInsightsResource) else {
-            print("Failed to load daily insights CSV")
+            debugLog("Failed to load daily insights CSV")
             return
         }
 
@@ -152,7 +152,7 @@ class BundledDataService {
 
         sortedInsightDays = dailyInsights.keys.sorted()
 
-        print("Loaded \(dailyInsights.count) daily insights")
+        debugLog("Loaded \(dailyInsights.count) daily insights")
     }
 
     func getDailyInsight(forDayOfYear day: Int) -> BundledDailyInsight? {

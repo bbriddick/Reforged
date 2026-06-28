@@ -588,10 +588,18 @@ struct BibleView: View {
                                     navRevealProgress = 0
                                     fallthrough
                                 case .revealingNav:
-                                    // Scroll is now disabled, so width tracks the finger directly —
-                                    // clamped to [0,1] for a smooth, monotonic reveal.
-                                    let screenW = UIScreen.main.bounds.width
-                                    navRevealProgress = min(max(h / (screenW * 0.82), 0), 1)
+                                    // Width tracks the finger directly, clamped to [0,1].
+                                    let screenW = AppWindow.width
+                                    let target = min(max(h / (screenW * 0.82), 0), 1)
+                                    // A slow swipe lets the ScrollView intermittently steal the touch;
+                                    // when it does, the DragGesture's translation snaps back toward 0
+                                    // for a frame, which used to yank the panel left then right again
+                                    // — the visible jitter. Advance immediately on forward motion, but
+                                    // ignore small backward blips via a deadband, so only a deliberate
+                                    // pull-back (past ~6%) actually retreats the panel.
+                                    if target >= navRevealProgress || navRevealProgress - target > 0.06 {
+                                        navRevealProgress = target
+                                    }
                                 }
                             }
                             .onEnded { value in
@@ -740,30 +748,23 @@ struct BibleView: View {
             }
 
             } // end inner ZStack
-            // Toned-down 3D parallax: a gentle tilt + dim instead of the previous
-            // text-stretching 12° book-flip. iPhone only — iPad/Mac use a sheet.
-            .rotation3DEffect(
-                .degrees(navRevealProgress * 5),
-                axis: (x: 0, y: 1, z: 0),
-                anchor: .trailing,
-                anchorZ: 0,
-                perspective: 0.5
-            )
-            .scaleEffect(1.0 - navRevealProgress * 0.05)
-            .offset(x: navRevealProgress * UIScreen.main.bounds.width * 0.82)
+            // Flat drawer: the reading content stays fixed and only dims as the panel
+            // slides in over it. No 3D tilt / scale / content-shift — driving several
+            // transforms off the live drag progress amplified every frame of jitter on
+            // a slow swipe. iPhone only — iPad/Mac use a sheet.
             .overlay(
                 Color.black
-                    .opacity(navRevealProgress * 0.18)
+                    .opacity(navRevealProgress * 0.25)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
             )
             .allowsHitTesting(!navPanelVisible)
 
             // Nav panel overlay — not inside the rotating ZStack.
-            // Uses UIScreen.main.bounds.width (same as content offset on line above) to avoid
+            // Uses AppWindow.width (same as content offset on line above) to avoid
             // a GeometryReader layout-pass jitter when the panel first appears during a drag.
             if navPanelVisible {
-                let panelW = UIScreen.main.bounds.width * 0.82
+                let panelW = AppWindow.width * 0.82
                 HStack(spacing: 0) {
                     makeNavigationView(usesSheetPresentation: false)
                     .frame(width: panelW)
@@ -775,13 +776,7 @@ struct BibleView: View {
                             .frame(width: 0.5)
                             .ignoresSafeArea()
                     }
-                    .rotation3DEffect(
-                        .degrees((1.0 - navRevealProgress) * -5),
-                        axis: (x: 0, y: 1, z: 0),
-                        anchor: .leading,
-                        anchorZ: 0,
-                        perspective: 0.5
-                    )
+                    // Flat slide-in: a single horizontal translate tracking the drag.
                     .offset(x: -panelW + navRevealProgress * panelW)
 
                     Color.black.opacity(0.001)
@@ -2155,6 +2150,8 @@ struct BibleTopBar: View {
             }
             .buttonStyle(NoBlobButtonStyle())
             .fixedSize()                          // ← never shrinks or clips
+            .accessibilityLabel("\(displayBookName) \(chapter)")
+            .accessibilityHint("Choose a book and chapter")
 
             // Translation menu — full label when space allows, compact pill otherwise
             translationMenu
@@ -2174,6 +2171,8 @@ struct BibleTopBar: View {
             }
             .buttonStyle(NoBlobButtonStyle())
             .layoutPriority(1)
+            .accessibilityLabel("Search")
+            .accessibilityHint("Search the Bible")
 
             // Audio button
             Button(action: onAudioTap) {
@@ -2191,6 +2190,8 @@ struct BibleTopBar: View {
             }
             .buttonStyle(NoBlobButtonStyle())
             .layoutPriority(1)
+            .accessibilityLabel(audioPlayer.isPlaying ? "Pause audio" : "Play audio")
+            .accessibilityHint("Listen to this chapter")
 
             // Formatting button
             Button(action: onFormatTap) {
@@ -2205,6 +2206,8 @@ struct BibleTopBar: View {
             }
             .buttonStyle(NoBlobButtonStyle())
             .layoutPriority(1)
+            .accessibilityLabel("Text options")
+            .accessibilityHint("Change font, size, and reading layout")
         }
         .padding(.horizontal, horizontalSizeClass == .regular ? 20 : 16)
         .padding(.vertical, 8)
@@ -2324,6 +2327,7 @@ struct FloatingChapterNav: View {
                     .shadow(color: Color.black.opacity(0.12), radius: 6, y: 3)
             }
             .disabled(!hasPrevious)
+            .accessibilityLabel("Previous chapter")
 
             Spacer()
 
@@ -2343,6 +2347,7 @@ struct FloatingChapterNav: View {
                     .shadow(color: Color.black.opacity(0.12), radius: 6, y: 3)
             }
             .disabled(!hasNext)
+            .accessibilityLabel("Next chapter")
         }
         .padding(.horizontal, 16)
     }

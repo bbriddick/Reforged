@@ -1026,7 +1026,7 @@ struct UnifiedNavigationView: View {
                 }
             }
         }
-        .frame(maxHeight: UIScreen.main.bounds.height * 0.55)
+        .frame(maxHeight: AppWindow.height * 0.55)
         .background(Color.adaptiveCardBackground(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(

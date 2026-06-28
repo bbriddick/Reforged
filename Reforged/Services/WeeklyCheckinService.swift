@@ -85,7 +85,7 @@ enum WeeklyCheckinService {
             if !cached.isEmpty {
                 await NotificationManager.shared.scheduleWeeklyCheckins(cached)
             }
-            print("[WeeklyCheckinService] Failed to fetch check-ins: \(error)")
+            debugLog("[WeeklyCheckinService] Failed to fetch check-ins: \(error)")
         }
     }
 

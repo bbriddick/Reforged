@@ -38,11 +38,11 @@ class CloudKitSyncService: ObservableObject {
             let status = try await container.accountStatus()
             isCloudAvailable = (status == .available)
             if !isCloudAvailable {
-                print("CloudKit: iCloud account not available (status: \(status.rawValue))")
+                debugLog("CloudKit: iCloud account not available (status: \(status.rawValue))")
             }
         } catch {
             isCloudAvailable = false
-            print("CloudKit: Error checking account status: \(error)")
+            debugLog("CloudKit: Error checking account status: \(error)")
         }
     }
 

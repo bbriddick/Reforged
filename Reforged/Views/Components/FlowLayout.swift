@@ -52,10 +52,10 @@ struct FlowLayout: Layout {
     // MARK: - Width resolution
 
     /// Guard against nil or infinite width (can occur during SwiftUI's measurement pass inside a
-    /// ScrollView). Fall back to the device screen width so words always wrap rather than running off.
+    /// ScrollView). Fall back to the app window width so words always wrap rather than running off.
     private func resolvedWidth(_ proposed: CGFloat?) -> CGFloat {
-        let raw = proposed ?? UIScreen.main.bounds.width
-        return raw.isFinite ? raw : UIScreen.main.bounds.width
+        let raw = proposed ?? AppWindow.width
+        return raw.isFinite ? raw : AppWindow.width
     }
 
     // MARK: - Arrangement (memoized by width)

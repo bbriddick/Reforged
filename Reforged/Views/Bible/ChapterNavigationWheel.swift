@@ -332,7 +332,7 @@ struct SwipeNavigationModifier: ViewModifier {
                     }
                     .onEnded { value in
                         // Check if swipe started from right edge and moved left
-                        let screenWidth = UIScreen.main.bounds.width
+                        let screenWidth = AppWindow.width
                         if value.startLocation.x > screenWidth - edgeWidth &&
                            value.translation.width < -50 {
                             withAnimation(.spring(response: 0.3)) {

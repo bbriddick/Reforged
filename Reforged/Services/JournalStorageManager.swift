@@ -26,12 +26,12 @@ class JournalStorageManager {
         }
 
         guard let key = getOrCreateEncryptionKey() else {
-            print("Failed to get encryption key")
+            debugLog("Failed to get encryption key")
             return []
         }
 
         guard let decryptedData = decrypt(data: encryptedData, using: key) else {
-            print("Failed to decrypt journal entries")
+            debugLog("Failed to decrypt journal entries")
             return []
         }
 
@@ -39,7 +39,7 @@ class JournalStorageManager {
             let entries = try JSONDecoder().decode([JournalEntry].self, from: decryptedData)
             return entries
         } catch {
-            print("Failed to decode journal entries: \(error)")
+            debugLog("Failed to decode journal entries: \(error)")
             return []
         }
     }
@@ -47,19 +47,19 @@ class JournalStorageManager {
     /// Save all journal entries to secure local storage
     func saveEntries(_ entries: [JournalEntry]) {
         guard let key = getOrCreateEncryptionKey() else {
-            print("Failed to get encryption key")
+            debugLog("Failed to get encryption key")
             return
         }
 
         do {
             let data = try JSONEncoder().encode(entries)
             guard let encryptedData = encrypt(data: data, using: key) else {
-                print("Failed to encrypt journal entries")
+                debugLog("Failed to encrypt journal entries")
                 return
             }
             userDefaults.set(encryptedData, forKey: journalEntriesKey)
         } catch {
-            print("Failed to encode journal entries: \(error)")
+            debugLog("Failed to encode journal entries: \(error)")
         }
     }
 
@@ -159,7 +159,7 @@ class JournalStorageManager {
             let sealedBox = try AES.GCM.seal(data, using: key)
             return sealedBox.combined
         } catch {
-            print("Encryption error: \(error)")
+            debugLog("Encryption error: \(error)")
             return nil
         }
     }
@@ -169,7 +169,7 @@ class JournalStorageManager {
             let sealedBox = try AES.GCM.SealedBox(combined: data)
             return try AES.GCM.open(sealedBox, using: key)
         } catch {
-            print("Decryption error: \(error)")
+            debugLog("Decryption error: \(error)")
             return nil
         }
     }

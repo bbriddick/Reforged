@@ -67,7 +67,7 @@ class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
-            print("Audio session error: \(error)")
+            debugLog("Audio session error: \(error)")
         }
 
         if translation == .kjv {
@@ -76,7 +76,7 @@ class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
                     let url = try await KJVAudioService.shared.getAudioURL(book: book, chapter: chapter)
                     self.startPlayback(url: url, authHeader: nil)
                 } catch {
-                    print("KJV audio error: \(error)")
+                    debugLog("KJV audio error: \(error)")
                     self.isLoading = false
                 }
             }
@@ -96,7 +96,7 @@ class BibleAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
                     let text = verses.map { $0.text }.joined(separator: " ")
                     self.startTTSPlayback(text: text)
                 } catch {
-                    print("TTS fetch error: \(error)")
+                    debugLog("TTS fetch error: \(error)")
                     self.isLoading = false
                     self.isTTSMode = false
                 }

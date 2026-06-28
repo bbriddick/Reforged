@@ -32,6 +32,21 @@ enum SocialLimitKeys {
     static let earnedTodayMinutes  = "socialEarnedTodayMinutes"
     static let dayKey             = "socialLimitDayKey"
     static let selectionData      = "socialLimitSelectionData"
+    /// Highest usage threshold (minutes) the monitor has seen today — drives the
+    /// in-app "time left" countdown. Granularity = `eventStep`.
+    static let usageMinutes       = "socialUsageMinutes"
+    /// Whether the monitor currently has the daily-limit shield applied.
+    static let shieldActive       = "socialLimitShieldActive"
+    /// Throttle for the "time's up" notification fired by the monitor.
+    static let lastLimitNotifAt   = "lastSocialLimitNotificationAt"
+    /// Signature (limit + selection) of the currently-armed monitoring, so we can
+    /// avoid needlessly restarting DeviceActivity (restarts fire spurious events).
+    static let monitorConfig      = "socialLimitMonitorConfig"
+    /// When monitoring was last (re)armed. The monitor ignores threshold callbacks
+    /// that arrive within `monitorGrace` of this, filtering the spurious burst iOS
+    /// emits right after startMonitoring.
+    static let monitorStartedAt   = "socialLimitMonitorStartedAt"
+    static let monitorGrace: TimeInterval = 20
 
     static let storeName          = "reforged-social-limit"
     static let activityName       = "socialDailyLimit"
@@ -56,6 +71,8 @@ final class SocialLimitService: ObservableObject {
     @Published var isEnabled: Bool = false
     @Published var limitMinutes: Int = SocialLimitKeys.defaultLimit
     @Published var earnedTodayMinutes: Int = 0
+    /// Minutes of social usage the monitor has counted today (5-min granularity).
+    @Published var usedTodayMinutes: Int = 0
 
     private let defaults = UserDefaults(suiteName: SocialLimitKeys.suite)
     private let center = DeviceActivityCenter()
@@ -64,6 +81,7 @@ final class SocialLimitService: ObservableObject {
         isEnabled          = defaults?.bool(forKey: SocialLimitKeys.enabled) ?? false
         limitMinutes       = defaults?.object(forKey: SocialLimitKeys.baseMinutes) as? Int ?? SocialLimitKeys.defaultLimit
         earnedTodayMinutes = defaults?.integer(forKey: SocialLimitKeys.earnedTodayMinutes) ?? 0
+        usedTodayMinutes   = defaults?.integer(forKey: SocialLimitKeys.usageMinutes) ?? 0
         resetIfNewDay()
     }
 
@@ -83,6 +101,13 @@ final class SocialLimitService: ObservableObject {
     /// Today's total allowance = base limit + minutes earned today.
     var allowanceMinutes: Int { limitMinutes + earnedTodayMinutes }
 
+    /// Approximate minutes of social time left today (never negative). Usage is
+    /// tracked by the monitor at `eventStep` granularity, so this is a floor estimate.
+    var remainingMinutes: Int { max(0, allowanceMinutes - usedTodayMinutes) }
+
+    /// True once today's social usage has reached the current allowance.
+    var isLimitReached: Bool { usedTodayMinutes >= allowanceMinutes }
+
     var canEarnMore: Bool { earnedTodayMinutes < SocialLimitKeys.dailyEarnCap }
 
     // MARK: - Configuration
@@ -93,7 +118,10 @@ final class SocialLimitService: ObservableObject {
         if enabled {
             // Daily limit and always-on social block are mutually exclusive.
             Task { await FocusBlockingService.shared.setBlockSocialMedia(false) }
-            startMonitoring()
+            // Fresh start: wipe any stale/poisoned usage + shield so the countdown
+            // begins clean from "now" rather than inheriting a stuck state.
+            startFreshDay()
+            startMonitoring(force: true)
         } else {
             stopMonitoring()
         }
@@ -103,15 +131,38 @@ final class SocialLimitService: ObservableObject {
         limitMinutes = max(5, minutes)
         defaults?.set(limitMinutes, forKey: SocialLimitKeys.baseMinutes)
         persistAllowance()
-        if isEnabled { startMonitoring() } // thresholds shifted — re-register
+        // Thresholds shifted — must re-register the events.
+        if isEnabled { startMonitoring(force: true) }
+    }
+
+    /// Resets today's usage/earn/shield state to a clean slate (shared App Group +
+    /// published mirrors). Used when enabling the limit so a previously poisoned or
+    /// stale count can't immediately trip the shield.
+    private func startFreshDay() {
+        earnedTodayMinutes = 0
+        usedTodayMinutes = 0
+        defaults?.set(0, forKey: SocialLimitKeys.earnedTodayMinutes)
+        defaults?.set(0, forKey: SocialLimitKeys.usageMinutes)
+        defaults?.set(false, forKey: SocialLimitKeys.shieldActive)
+        defaults?.set(SocialLimitKeys.todayKey(), forKey: SocialLimitKeys.dayKey)
+        persistAllowance()
+        clearLimitShield()
     }
 
     /// Re-applies monitoring on launch/foreground (and handles the daily reset).
     func refresh() {
         resetIfNewDay()
+        reloadUsage()
         if isEnabled && hasSelection {
             startMonitoring()
         }
+    }
+
+    /// Re-reads the usage the monitor has written to the App Group. Cheap; safe to
+    /// call from a timer while the limit card is on screen so the countdown stays live.
+    func reloadUsage() {
+        let stored = defaults?.integer(forKey: SocialLimitKeys.usageMinutes) ?? 0
+        if stored != usedTodayMinutes { usedTodayMinutes = stored }
     }
 
     // MARK: - Earning
@@ -148,7 +199,10 @@ final class SocialLimitService: ObservableObject {
         let stored = defaults?.string(forKey: SocialLimitKeys.dayKey)
         if stored != today {
             earnedTodayMinutes = 0
+            usedTodayMinutes = 0
             defaults?.set(0, forKey: SocialLimitKeys.earnedTodayMinutes)
+            defaults?.set(0, forKey: SocialLimitKeys.usageMinutes)
+            defaults?.set(false, forKey: SocialLimitKeys.shieldActive)
             defaults?.set(today, forKey: SocialLimitKeys.dayKey)
             persistAllowance()
             clearLimitShield()
@@ -161,7 +215,17 @@ final class SocialLimitService: ObservableObject {
 
     // MARK: - DeviceActivity Monitoring
 
-    private func startMonitoring() {
+    /// A stable fingerprint of the monitoring config (limit + chosen apps). When this
+    /// is unchanged and monitoring is already running, we must NOT restart — repeated
+    /// stop/start churn makes DeviceActivity fire `eventDidReachThreshold` spuriously,
+    /// which instantly slams usage to the cap and shields the apps (the "blocked 20s
+    /// after opening" bug).
+    private func currentSignature() -> String {
+        let selData = (try? JSONEncoder().encode(selection)) ?? Data()
+        return "\(limitMinutes)|\(selData.base64EncodedString())"
+    }
+
+    private func startMonitoring(force: Bool = false) {
         guard hasSelection else { stopMonitoring(); return }
 
         // Share the social selection so the monitor can apply the shield.
@@ -169,6 +233,13 @@ final class SocialLimitService: ObservableObject {
             defaults?.set(data, forKey: SocialLimitKeys.selectionData)
         }
         persistAllowance()
+
+        // Skip the restart entirely if nothing changed and we're already monitoring.
+        let signature = currentSignature()
+        let alreadyMonitoring = center.activities.contains(DeviceActivityName(SocialLimitKeys.activityName))
+        if !force, alreadyMonitoring, defaults?.string(forKey: SocialLimitKeys.monitorConfig) == signature {
+            return
+        }
 
         let schedule = DeviceActivitySchedule(
             intervalStart: DateComponents(hour: 0, minute: 0),
@@ -180,7 +251,10 @@ final class SocialLimitService: ObservableObject {
         let apps = selection.applicationTokens
         let cats = selection.categoryTokens
         let webs = selection.webDomainTokens
-        for m in stride(from: limitMinutes, through: limitMinutes + SocialLimitKeys.dailyEarnCap, by: SocialLimitKeys.eventStep) {
+        // Start thresholds at the first step (not the base limit) so usage is tracked
+        // from the very first minutes — this drives the in-app countdown. The shield
+        // itself is only applied once usage reaches the allowance (handled in the monitor).
+        for m in stride(from: SocialLimitKeys.eventStep, through: limitMinutes + SocialLimitKeys.dailyEarnCap, by: SocialLimitKeys.eventStep) {
             events[DeviceActivityEvent.Name("social_\(m)")] = DeviceActivityEvent(
                 applications: apps,
                 categories: cats,
@@ -196,13 +270,16 @@ final class SocialLimitService: ObservableObject {
                 during: schedule,
                 events: events
             )
+            defaults?.set(signature, forKey: SocialLimitKeys.monitorConfig)
+            defaults?.set(Date(), forKey: SocialLimitKeys.monitorStartedAt)
         } catch {
-            print("[SocialLimit] startMonitoring failed: \(error.localizedDescription)")
+            debugLog("[SocialLimit] startMonitoring failed: \(error.localizedDescription)")
         }
     }
 
     private func stopMonitoring() {
         center.stopMonitoring([DeviceActivityName(SocialLimitKeys.activityName)])
+        defaults?.removeObject(forKey: SocialLimitKeys.monitorConfig)
         clearLimitShield()
     }
 
@@ -211,5 +288,7 @@ final class SocialLimitService: ObservableObject {
         store.shield.applications = nil
         store.shield.applicationCategories = nil
         store.shield.webDomains = nil
+        // Let the monitor re-notify if the user runs out again after earning more time.
+        defaults?.set(false, forKey: SocialLimitKeys.shieldActive)
     }
 }

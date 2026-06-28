@@ -23,7 +23,7 @@ class NotificationManager: NSObject, ObservableObject {
                 }
                 
                 if let error = error {
-                    print("Notification authorization error: \(error.localizedDescription)")
+                    debugLog("Notification authorization error: \(error.localizedDescription)")
                 }
             }
         }
@@ -49,7 +49,7 @@ class NotificationManager: NSObject, ObservableObject {
     func handleDeviceToken(_ deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
         self.deviceToken = token
-        print("Device Token: \(token)")
+        debugLog("Device Token: \(token)")
         
         // TODO: Send this token to your server for push notifications
         // Example: sendTokenToServer(token)
@@ -57,7 +57,7 @@ class NotificationManager: NSObject, ObservableObject {
     
     /// Handle registration failure
     func handleRegistrationError(_ error: Error) {
-        print("Failed to register for remote notifications: \(error.localizedDescription)")
+        debugLog("Failed to register for remote notifications: \(error.localizedDescription)")
     }
     
     // MARK: - Daily Reminders
@@ -215,7 +215,7 @@ class NotificationManager: NSObject, ObservableObject {
                 scheduleDailyReminder()
             } catch {
                 // Gemini unavailable — static reminders from scheduleDailyReminder() remain.
-                print("[NotificationManager] Gemini notification generation failed: \(error)")
+                debugLog("[NotificationManager] Gemini notification generation failed: \(error)")
             }
         }
     }
@@ -264,7 +264,7 @@ class NotificationManager: NSObject, ObservableObject {
         )
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Podcast notification error: \(error.localizedDescription)")
+                debugLog("Podcast notification error: \(error.localizedDescription)")
             }
         }
     }
@@ -280,7 +280,7 @@ class NotificationManager: NSObject, ObservableObject {
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Error scheduling notification: \(error.localizedDescription)")
+                debugLog("Error scheduling notification: \(error.localizedDescription)")
             }
         }
     }

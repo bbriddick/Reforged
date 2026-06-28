@@ -71,7 +71,7 @@ class AppleSignInService: NSObject, ObservableObject {
                 break
             }
         } catch {
-            print("Error checking credential state: \(error)")
+            debugLog("Error checking credential state: \(error)")
         }
     }
 
@@ -147,12 +147,12 @@ class AppleSignInService: NSObject, ObservableObject {
     /// The authorizationCode is one-time use and valid for only 5 minutes.
     func exchangeAuthCodeForTokens(authCode: String) async {
         guard clientSecret != "YOUR_CLIENT_SECRET_JWT_HERE" else {
-            print("⚠️ Client secret not configured — skipping token exchange")
+            debugLog("⚠️ Client secret not configured — skipping token exchange")
             return
         }
 
         guard let url = URL(string: "https://appleid.apple.com/auth/token") else {
-            print("⚠️ Invalid Apple token exchange URL")
+            debugLog("⚠️ Invalid Apple token exchange URL")
             return
         }
         var request = URLRequest(url: url)
@@ -178,13 +178,13 @@ class AppleSignInService: NSObject, ObservableObject {
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let refreshToken = json["refresh_token"] as? String {
                 saveToKeychain(key: keychainRefreshToken, value: refreshToken)
-                print("✅ Apple refresh token obtained and stored")
+                debugLog("✅ Apple refresh token obtained and stored")
             } else {
                 let body = String(data: data, encoding: .utf8) ?? "no body"
-                print("⚠️ Token exchange failed (\(httpResponse.statusCode)): \(body)")
+                debugLog("⚠️ Token exchange failed (\(httpResponse.statusCode)): \(body)")
             }
         } catch {
-            print("⚠️ Token exchange error: \(error)")
+            debugLog("⚠️ Token exchange error: \(error)")
         }
     }
 
@@ -192,17 +192,17 @@ class AppleSignInService: NSObject, ObservableObject {
     /// Should be called during account deletion before clearing local data.
     func revokeToken() async {
         guard clientSecret != "YOUR_CLIENT_SECRET_JWT_HERE" else {
-            print("⚠️ Client secret not configured — skipping token revocation")
+            debugLog("⚠️ Client secret not configured — skipping token revocation")
             return
         }
 
         guard let refreshToken = loadFromKeychain(key: keychainRefreshToken) else {
-            print("⚠️ No refresh token stored — skipping token revocation")
+            debugLog("⚠️ No refresh token stored — skipping token revocation")
             return
         }
 
         guard let url = URL(string: "https://appleid.apple.com/auth/revoke") else {
-            print("⚠️ Invalid Apple token revocation URL")
+            debugLog("⚠️ Invalid Apple token revocation URL")
             return
         }
         var request = URLRequest(url: url)
@@ -223,12 +223,12 @@ class AppleSignInService: NSObject, ObservableObject {
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
-                print("✅ Apple token revoked successfully")
+                debugLog("✅ Apple token revoked successfully")
             } else {
-                print("⚠️ Token revocation returned unexpected response")
+                debugLog("⚠️ Token revocation returned unexpected response")
             }
         } catch {
-            print("⚠️ Token revocation error: \(error)")
+            debugLog("⚠️ Token revocation error: \(error)")
         }
     }
 

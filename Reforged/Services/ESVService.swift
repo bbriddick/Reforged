@@ -145,7 +145,7 @@ class ESVService {
                 cache = cache.filter { !singleChapterBooks.contains($0.value.book) }
                 UserDefaults.standard.set(Self.cacheFormatVersion, forKey: Self.cacheFormatVersionKey)
                 if cache.count < before {
-                    print("ESV cache: migrated to v\(Self.cacheFormatVersion), evicted \(before - cache.count) single-chapter book entries")
+                    debugLog("ESV cache: migrated to v\(Self.cacheFormatVersion), evicted \(before - cache.count) single-chapter book entries")
                 }
             }
 
@@ -155,9 +155,9 @@ class ESVService {
             let evicted = cache.count - cleaned.count
             if evicted > 0 {
                 saveCacheToDisk()
-                print("ESV cache: evicted \(evicted) under-populated entries on load")
+                debugLog("ESV cache: evicted \(evicted) under-populated entries on load")
             }
-            print("Loaded \(cleaned.count) chapters from cache")
+            debugLog("Loaded \(cleaned.count) chapters from cache")
         }
     }
 
@@ -188,7 +188,7 @@ class ESVService {
     func clearCache() {
         chapterCache.removeAll()
         UserDefaults.standard.removeObject(forKey: cacheKey)
-        print("ESV chapter cache cleared.")
+        debugLog("ESV chapter cache cleared.")
     }
 
     /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
@@ -205,7 +205,7 @@ class ESVService {
             )
         }
         saveCacheToDisk()
-        print("ESV bundle injected: \(bundle.count) chapters.")
+        debugLog("ESV bundle injected: \(bundle.count) chapters.")
     }
 
     var cachedChapterCount: Int { chapterCache.count }
@@ -351,7 +351,7 @@ class ESVService {
 
             cacheVerseLocally(reference: reference, text: result.text, canonical: result.canonical)
         } catch {
-            print("Failed to precache verse \(reference): \(error)")
+            debugLog("Failed to precache verse \(reference): \(error)")
         }
     }
 
@@ -740,7 +740,7 @@ class ESVService {
                 // Small delay to avoid rate limiting
                 try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
             } catch {
-                print("Failed to precache \(bookName) \(chapter): \(error)")
+                debugLog("Failed to precache \(bookName) \(chapter): \(error)")
             }
         }
     }

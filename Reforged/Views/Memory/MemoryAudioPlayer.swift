@@ -94,7 +94,7 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
             try AVAudioSession.sharedInstance().setActive(true)
-        } catch { print("MemoryAudioPlayer session error: \(error)") }
+        } catch { debugLog("MemoryAudioPlayer session error: \(error)") }
 
         if activeTranslation == "ESV" {
             playESV()
@@ -195,7 +195,7 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
                 self.isLoading = false
                 self.speakText(text.isEmpty ? verse.text : text)
             } catch {
-                print("MemoryAudioPlayer TTS fetch error: \(error)")
+                debugLog("MemoryAudioPlayer TTS fetch error: \(error)")
                 self.isLoading = false
                 self.speakText(verse.text)
             }

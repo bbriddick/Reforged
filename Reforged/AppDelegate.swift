@@ -163,6 +163,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 if let ref = userInfo["verseReference"] as? String { info[AppNotificationUserInfoKey.reference] = ref }
                 if let suggestion = userInfo["suggestion"] as? String { info[AppNotificationUserInfoKey.suggestion] = suggestion }
                 NotificationCenter.default.post(name: .showRefocusVerse, object: nil, userInfo: info)
+            case "social-limit":
+                // Tapped the "daily social limit reached" notification → offer a
+                // refocus passage (random, since no specific verse is attached).
+                NotificationCenter.default.post(name: .showRefocusVerse, object: nil, userInfo: [:])
             default:
                 break
             }

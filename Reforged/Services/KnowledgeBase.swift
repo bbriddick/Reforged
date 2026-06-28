@@ -87,7 +87,7 @@ class KnowledgeBase: ObservableObject {
         loadVerseCache()
         loadDailyInsights()
         isLoaded = true
-        print("KnowledgeBase: Loaded \(verseCache.count / 2) verses, \(dailyInsights.count) daily insights")
+        debugLog("KnowledgeBase: Loaded \(verseCache.count / 2) verses, \(dailyInsights.count) daily insights")
     }
 
     private func loadVerseCache() {

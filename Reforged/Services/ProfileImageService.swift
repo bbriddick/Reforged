@@ -23,7 +23,7 @@ class ProfileImageService {
             try data.write(to: url)
             return filename
         } catch {
-            print("ProfileImageService: Failed to save image: \(error)")
+            debugLog("ProfileImageService: Failed to save image: \(error)")
             return nil
         }
     }

@@ -121,9 +121,9 @@ class KJVService {
             let evicted = cache.count - cleaned.count
             if evicted > 0 {
                 saveCacheToDisk()
-                print("KJV cache: evicted \(evicted) under-populated entries on load")
+                debugLog("KJV cache: evicted \(evicted) under-populated entries on load")
             }
-            print("Loaded \(cleaned.count) KJV chapters from cache")
+            debugLog("Loaded \(cleaned.count) KJV chapters from cache")
         }
     }
 
@@ -155,7 +155,7 @@ class KJVService {
         cacheQueue.async {
             self.chapterCache.removeAll()
             UserDefaults.standard.removeObject(forKey: self.cacheKey)
-            print("KJV chapter cache cleared.")
+            debugLog("KJV chapter cache cleared.")
         }
     }
 
@@ -174,7 +174,7 @@ class KJVService {
                 )
             }
             self.saveCacheToDisk()
-            print("KJV bundle injected: \(bundle.count) chapters.")
+            debugLog("KJV bundle injected: \(bundle.count) chapters.")
         }
     }
 
@@ -239,7 +239,7 @@ class KJVService {
         bundleLoaded = true
         guard let url = Bundle.main.url(forResource: "kjvpce", withExtension: "json"),
               let data = try? Data(contentsOf: url) else {
-            print("KJV: bundled JSON not found in app bundle")
+            debugLog("KJV: bundled JSON not found in app bundle")
             return
         }
 
@@ -254,7 +254,7 @@ class KJVService {
         }
 
         guard let json = try? JSONDecoder().decode(BundledJSON.self, from: data) else {
-            print("KJV: failed to decode bundled JSON")
+            debugLog("KJV: failed to decode bundled JSON")
             return
         }
 
@@ -291,9 +291,9 @@ class KJVService {
         }
         if injected > 0 {
             saveCacheToDisk()
-            print("KJV: loaded \(injected) chapters from bundled JSON")
+            debugLog("KJV: loaded \(injected) chapters from bundled JSON")
         } else {
-            print("KJV: bundled JSON — all chapters already fresh in cache")
+            debugLog("KJV: bundled JSON — all chapters already fresh in cache")
         }
     }
 

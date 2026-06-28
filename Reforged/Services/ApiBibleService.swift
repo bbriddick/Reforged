@@ -245,9 +245,9 @@ class ApiBibleService {
             let evicted = cache.count - cleaned.count
             if evicted > 0 {
                 saveCacheToDisk()
-                print("API.Bible cache: evicted \(evicted) under-populated entries on load")
+                debugLog("API.Bible cache: evicted \(evicted) under-populated entries on load")
             }
-            print("Loaded \(cleaned.count) API.Bible chapters from cache")
+            debugLog("Loaded \(cleaned.count) API.Bible chapters from cache")
         }
     }
 
@@ -274,7 +274,7 @@ class ApiBibleService {
     func clearCache() {
         chapterCache.removeAll()
         UserDefaults.standard.removeObject(forKey: cacheKey)
-        print("API.Bible chapter cache cleared.")
+        debugLog("API.Bible chapter cache cleared.")
     }
 
     func cachedChapterCount(for translation: BibleTranslation) -> Int {
@@ -288,7 +288,7 @@ class ApiBibleService {
         let prefix = "\(bibleId)_"
         chapterCache = chapterCache.filter { !$0.key.hasPrefix(prefix) }
         saveCacheToDisk()
-        print("\(translation.rawValue) chapter cache cleared.")
+        debugLog("\(translation.rawValue) chapter cache cleared.")
     }
 
     /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
@@ -306,7 +306,7 @@ class ApiBibleService {
             )
         }
         saveCacheToDisk()
-        print("API.Bible bundle injected: \(bundle.count) chapters.")
+        debugLog("API.Bible bundle injected: \(bundle.count) chapters.")
     }
 
     // MARK: - API Request Helper

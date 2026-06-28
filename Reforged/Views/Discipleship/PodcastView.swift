@@ -40,7 +40,7 @@ final class PodcastPlayerViewModel: ObservableObject {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
-            print("AVAudioSession error: \(error)")
+            debugLog("AVAudioSession error: \(error)")
         }
 
         let item = AVPlayerItem(url: episode.audioURL)

@@ -117,29 +117,29 @@ final class GeminiService {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let http = response as? HTTPURLResponse else {
-            print("[Gemini] ❌ Non-HTTP response")
+            debugLog("[Gemini] ❌ Non-HTTP response")
             throw GeminiError.invalidResponse
         }
 
-        print("[Gemini] HTTP \(http.statusCode)")
+        debugLog("[Gemini] HTTP \(http.statusCode)")
 
         guard http.statusCode == 200 else {
             let body = String(data: data, encoding: .utf8) ?? "<binary>"
-            print("[Gemini] ❌ Error body: \(body)")
+            debugLog("[Gemini] ❌ Error body: \(body)")
             throw GeminiError.httpError(http.statusCode)
         }
 
         do {
             let decoded = try JSONDecoder().decode(GeminiResponse.self, from: data)
             guard let text = decoded.candidates.first?.content.parts.first?.text else {
-                print("[Gemini] ❌ No text in candidates")
+                debugLog("[Gemini] ❌ No text in candidates")
                 throw GeminiError.invalidResponse
             }
-            print("[Gemini] ✅ Response received (\(text.count) chars)")
+            debugLog("[Gemini] ✅ Response received (\(text.count) chars)")
             return text
         } catch {
             let body = String(data: data, encoding: .utf8) ?? "<binary>"
-            print("[Gemini] ❌ Decode error: \(error). Raw: \(body.prefix(300))")
+            debugLog("[Gemini] ❌ Decode error: \(error). Raw: \(body.prefix(300))")
             throw GeminiError.decodingError(error.localizedDescription)
         }
     }
@@ -182,11 +182,11 @@ final class GeminiService {
             throw GeminiError.invalidResponse
         }
 
-        print("[GeminiProxy] HTTP \(http.statusCode) — auth: \(bearerToken == anonKey ? "anon" : "user")")
+        debugLog("[GeminiProxy] HTTP \(http.statusCode) — auth: \(bearerToken == anonKey ? "anon" : "user")")
 
         guard http.statusCode == 200 else {
             let errorBody = String(data: data, encoding: .utf8) ?? "<binary>"
-            print("[GeminiProxy] ❌ Error body: \(errorBody)")
+            debugLog("[GeminiProxy] ❌ Error body: \(errorBody)")
             throw GeminiError.httpError(http.statusCode)
         }
 
@@ -197,7 +197,7 @@ final class GeminiService {
 
         do {
             let decoded = try JSONDecoder().decode(ProxyResponse.self, from: data)
-            print("[GeminiProxy] ✅ Response received (\(decoded.text.count) chars, cached: \(decoded.cached ?? false))")
+            debugLog("[GeminiProxy] ✅ Response received (\(decoded.text.count) chars, cached: \(decoded.cached ?? false))")
             return decoded.text
         } catch {
             throw GeminiError.decodingError("Failed to decode Supabase Gemini proxy response")
@@ -289,7 +289,7 @@ final class GeminiService {
         """
 
         let raw = try await generate(prompt: prompt, maxTokens: 2048)
-        print("[SmartSearch] Raw Gemini response: \(raw.prefix(600))")
+        debugLog("[SmartSearch] Raw Gemini response: \(raw.prefix(600))")
         let partial = parseSmartSearchResult(from: raw, query: query)
 
         // Resolve verse references to real KJV texts from the bundle
@@ -555,7 +555,7 @@ final class GeminiService {
         // Gemini sometimes returns a string where an array is expected; we handle that below.
         guard let data = cleaned.data(using: .utf8),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            print("[SmartSearch] ❌ JSON parse failed. Cleaned: \(cleaned.prefix(500))")
+            debugLog("[SmartSearch] ❌ JSON parse failed. Cleaned: \(cleaned.prefix(500))")
             return SmartSearchResult(
                 summary: query, explanation: "", wordUsage: "",
                 verses: [], strongsNumbers: [], relatedTerms: [query]

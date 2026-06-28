@@ -69,7 +69,7 @@ final class ShieldContentProvider {
             store(combined)
             sharedDefaults?.set(Date(), forKey: Keys.refreshedAt)
         } catch {
-            print("[ShieldContentProvider] Gemini refresh failed: \(error.localizedDescription)")
+            debugLog("[ShieldContentProvider] Gemini refresh failed: \(error.localizedDescription)")
             // Fallback already seeded; leave it in place.
         }
     }

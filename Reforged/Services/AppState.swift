@@ -295,7 +295,7 @@ class AppState: ObservableObject {
         // Ensure CloudKit is available
         await cloudKit.checkAccountStatus()
         guard cloudKit.isCloudAvailable else {
-            print("CloudKit not available, skipping sync")
+            debugLog("CloudKit not available, skipping sync")
             hasSyncedFromCloud = true
             return
         }
@@ -308,14 +308,14 @@ class AppState: ObservableObject {
             do {
                 cloudProfile = try await cloudKit.fetchProfile()
             } catch {
-                print("☁️ Could not fetch cloud profile (\(error)) — skipping sync to avoid overwriting data")
+                debugLog("☁️ Could not fetch cloud profile (\(error)) — skipping sync to avoid overwriting data")
                 hasSyncedFromCloud = true
                 return
             }
 
             if cloudProfile == nil && user.onboardingCompleted {
                 // No cloud data but we have local data — push everything up (first-time migration)
-                print("☁️ First CloudKit sync: pushing local data to cloud")
+                debugLog("☁️ First CloudKit sync: pushing local data to cloud")
                 let highlights = Array(BibleReadingState.shared.highlights.values)
                 let notes = Array(BibleReadingState.shared.notes.values)
                 try await cloudKit.pushAllData(
@@ -338,9 +338,9 @@ class AppState: ObservableObject {
             hasSyncedFromCloud = true
             saveToLocalStorage()
 
-            print("✅ Full sync completed")
+            debugLog("✅ Full sync completed")
         } catch {
-            print("❌ Full sync error: \(error)")
+            debugLog("❌ Full sync error: \(error)")
             hasSyncedFromCloud = true // Still mark as synced so app continues
         }
     }
@@ -358,9 +358,9 @@ class AppState: ObservableObject {
                 let notes = Array(BibleReadingState.shared.notes.values)
                 try await cloudKit.saveNotes(notes)
                 lastSyncDate = Date()
-                print("✅ CloudKit sync completed")
+                debugLog("✅ CloudKit sync completed")
             } catch {
-                print("❌ Error syncing to CloudKit: \(error)")
+                debugLog("❌ Error syncing to CloudKit: \(error)")
             }
         }
 
@@ -440,7 +440,7 @@ class AppState: ObservableObject {
                 user.loggedIn = true
             }
         } catch {
-            print("Error loading profile from cloud: \(error)")
+            debugLog("Error loading profile from cloud: \(error)")
         }
     }
 
@@ -456,7 +456,7 @@ class AppState: ObservableObject {
 
             memoryVerses = cloudVerses + localOnlyVerses
         } catch {
-            print("Error loading memory verses from cloud: \(error)")
+            debugLog("Error loading memory verses from cloud: \(error)")
         }
     }
 
@@ -486,7 +486,7 @@ class AppState: ObservableObject {
             // before the next sync cycle (avoids losing cloud data between launches).
             readingState.persistToStorage()
         } catch {
-            print("Error loading highlights from cloud: \(error)")
+            debugLog("Error loading highlights from cloud: \(error)")
         }
     }
 
@@ -516,7 +516,7 @@ class AppState: ObservableObject {
             // before the next sync cycle.
             readingState.persistToStorage()
         } catch {
-            print("Error loading notes from cloud: \(error)")
+            debugLog("Error loading notes from cloud: \(error)")
         }
     }
 
@@ -532,7 +532,7 @@ class AppState: ObservableObject {
                 }
             }
         } catch {
-            print("Error loading track progress from cloud: \(error)")
+            debugLog("Error loading track progress from cloud: \(error)")
         }
     }
 
@@ -642,7 +642,7 @@ class AppState: ObservableObject {
             syncWidgetInsight()
             saveToLocalStorage()
         } catch {
-            print("Daily insight AI enrichment skipped: \(error)")
+            debugLog("Daily insight AI enrichment skipped: \(error)")
         }
     }
 
@@ -1030,7 +1030,7 @@ class AppState: ObservableObject {
             try await cloudKit.deleteAllData()
         } catch {
             cloudDeleteError = error
-            print("⚠️ Failed to delete cloud data: \(error)")
+            debugLog("⚠️ Failed to delete cloud data: \(error)")
         }
 
         // 2. Revoke Apple Sign In token (non-fatal if it fails)

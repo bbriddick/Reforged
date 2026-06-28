@@ -133,7 +133,7 @@ class BibleDownloadManager: ObservableObject {
                     try await downloadBundle(translation: translation, from: url)
                     bundleSucceeded = true
                 } catch {
-                    print("[\(translation.rawValue)] Bundle download failed: \(error). Falling back to chapter-by-chapter.")
+                    debugLog("[\(translation.rawValue)] Bundle download failed: \(error). Falling back to chapter-by-chapter.")
                 }
             }
 

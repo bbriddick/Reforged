@@ -499,7 +499,7 @@ class StrongsLexiconService {
             }
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
-            print("StrongsLexiconService: API fetch failed for \(urlString): \(error)")
+            debugLog("StrongsLexiconService: API fetch failed for \(urlString): \(error)")
             return nil
         }
     }
@@ -622,7 +622,7 @@ class StrongsLexiconService {
 
     private func loadBundledDictionary(named name: String, prefix: String) -> [String: StrongsEntry] {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
-            print("StrongsLexiconService: Could not find \(name).json in bundle")
+            debugLog("StrongsLexiconService: Could not find \(name).json in bundle")
             return [:]
         }
 
@@ -637,7 +637,7 @@ class StrongsLexiconService {
             }
             return result
         } catch {
-            print("StrongsLexiconService: Failed to load \(name).json: \(error)")
+            debugLog("StrongsLexiconService: Failed to load \(name).json: \(error)")
             return [:]
         }
     }
