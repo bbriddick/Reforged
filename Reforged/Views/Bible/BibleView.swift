@@ -112,6 +112,7 @@ struct BibleView: View {
     @State private var selectedVerseForAction: ParsedVerse?
     @State private var memoryVersesSelection: MemoryVersesSelection?
     @State private var verseShareSelection: VerseShareSelection?
+    @State private var selectedVerseForStudy: ParsedVerse?
 
     // Strong's word study state
     @State private var wordLookupResult: WordLookupResult?
@@ -520,7 +521,9 @@ struct BibleView: View {
                         // its natural top (Genesis 1) — ignore scroll-tracking so it can't clobber the
                         // toolbar/reading state or hydrate the wrong region. Also ignore while a prev/next
                         // animation is in flight, so intermediate chapters can't fight the programmatic scroll.
-                        guard focusPositioned, !isProgrammaticScroll, let id, let parsed = parseChapterID(id) else { return }
+                        guard focusPositioned, !isProgrammaticScroll, let id, let parsed = parseChapterID(id) else {
+                            return
+                        }
                         // Update the current chapter (toolbar / prev-next bounds) AND hydrate around the new
                         // center — load nearby chapter bodies, unload distant ones. The spine row collection
                         // is never touched, so this can never shift the viewport.
@@ -804,6 +807,18 @@ struct BibleView: View {
                     selectedVerseForAction = nil
                     withAnimation { readingState.clearSelection() }
                 }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $selectedVerseForStudy, onDismiss: {
+            withAnimation { readingState.clearSelection() }
+        }) { verse in
+            VerseStudySheet(
+                verse: verse,
+                bookName: selectedBook.name,
+                chapter: selectedChapter,
+                translation: currentTranslation,
+                readingState: readingState
             )
             .presentationDetents([.medium, .large])
         }
@@ -1265,17 +1280,47 @@ struct BibleView: View {
             reachChapter()
             focusPositioned = true
             updateCurrentChapter(forChapterID: chapterID)   // sync toolbar immediately to this chapter
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                // Always clear the suppression (this tap's programmatic window is over), but only APPLY the
-                // settle if this is still the current focus. With rapid taps, an older tap's deferred block
-                // can fire after a newer nav — without this guard it would clobber the toolbar with a stale
-                // chapter (the "content N but toolbar N-1" desync).
-                isProgrammaticScroll = false
-                guard focusChapterID == chapterID else { return }
-                secondPass()
-                visibleChapterID = chapterID
-                updateCurrentChapter(forChapterID: chapterID)
+
+            // Verse-by-verse renders one row (with its own GeometryReader + word-tap FlowLayout) per verse,
+            // so `.scrollPosition`'s offset estimate for a chapter that's never actually been laid out on
+            // screen (only data-hydrated) is far less reliable than in paragraph mode — a single `scrollTo`
+            // can silently land short of the target. `ChapterMinYKey`'s preference handler keeps updating
+            // `visibleChapterID` with the TRUE on-screen chapter throughout (only its downstream side effects
+            // are suppressed by `isProgrammaticScroll`), so we use it here to verify the jump actually landed
+            // and re-assert it if not, instead of trusting a single blind `reachChapter()` call.
+            func verifyLanded(attempt: Int) {
+                let delay = readingSettings.verseByVerse ? 0.2 : 0.08
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    // Only act if this is still the current focus. With rapid taps, an older tap's deferred
+                    // block can fire after a newer nav — without this guard it would fight the newer jump.
+                    guard focusChapterID == chapterID else { return }
+                    if visibleChapterID != chapterID, attempt < 4 {
+                        if isVerseTarget {
+                            secondPass()
+                        } else {
+                            // `topChapterID` already equals `chapterID` from the previous attempt, so simply
+                            // re-assigning the same value is a no-op for `.scrollPosition` — SwiftUI only
+                            // reacts to an actual change. Force a real nil -> chapterID transition (with a
+                            // runloop hop so it isn't coalesced away) so the scroll genuinely re-triggers.
+                            topChapterID = nil
+                            DispatchQueue.main.async { reachChapter() }
+                        }
+                        verifyLanded(attempt: attempt + 1)
+                        return
+                    }
+                    updateCurrentChapter(forChapterID: chapterID)
+                    // Grace window: even once landed, verse-by-verse's per-verse rows can still be mid-layout
+                    // for a beat longer, producing a LATE/stale ChapterMinYKey read for the chapter we just
+                    // navigated away from — which would otherwise be treated as trusted scroll-tracking and
+                    // revert selectedChapter right back. Keep suppression up a bit longer to absorb that.
+                    let graceDelay = readingSettings.verseByVerse ? 0.25 : 0.05
+                    DispatchQueue.main.asyncAfter(deadline: .now() + graceDelay) {
+                        guard focusChapterID == chapterID else { return }  // a newer nav owns the flag now
+                        isProgrammaticScroll = false
+                    }
+                }
             }
+            verifyLanded(attempt: 0)
         } else {
             // Fresh load (overlay covering): reach the chapter instantly, then on the second pass fine-tune
             // to the verse (or re-assert the chapter top) once layout has built the body, then reveal.
@@ -1297,7 +1342,7 @@ struct BibleView: View {
 
     @ViewBuilder
     private func verseByVerseContent(_ chapter: LoadedChapter) -> some View {
-        LazyVStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(chapter.verses) { verse in
                 VerseRow(
                     verse: verse,
@@ -1505,7 +1550,9 @@ struct BibleView: View {
     /// the reading focus, and the coordinator hydrates around the new center.
     private func navigateToAdjacentChapter(offset: Int) {
         guard let adj = adjacentChapter(book: selectedBook.name, chapter: selectedChapter, offset: offset),
-              let bookData = BibleData.books.first(where: { $0.name == adj.book }) else { return }
+              let bookData = BibleData.books.first(where: { $0.name == adj.book }) else {
+            return
+        }
         selectedBook = bookData
         selectedChapter = adj.chapter
         loadChapter()
@@ -1516,6 +1563,7 @@ struct BibleView: View {
     private func updateCurrentChapter(book: String, chapter: Int) {
         guard selectedBook.name != book || selectedChapter != chapter else { return }
         guard let bookData = BibleData.books.first(where: { $0.name == book }) else { return }
+        readingState.clearSelection()
         selectedBook = bookData
         selectedChapter = chapter
         readingState.currentBook = book
@@ -1754,6 +1802,12 @@ struct BibleView: View {
                 )
             }
             withAnimation { readingState.clearSelection() }
+
+        case .verseStudy:
+            if let firstRef = readingState.selectedVerses.first,
+               let verse = allLoadedVerses.first(where: { $0.reference == firstRef }) {
+                selectedVerseForStudy = verse
+            }
 
         }
 

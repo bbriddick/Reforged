@@ -639,9 +639,11 @@ struct FeatureDiscipleshipStepView: View {
 
                     // Gamification row
                     HStack(spacing: 12) {
-                        ForEach([("🏆", "30 Levels"), ("🔥", "Streaks"), ("🥇", "Badges")], id: \.0) { emoji, label in
+                        ForEach([("trophy.fill", Color.reforgedGold, "30 Levels"), ("flame.fill", Color.reforgedCoral, "Streaks"), ("star.fill", Color.reforgedGold, "Badges")], id: \.2) { icon, tint, label in
                             VStack(spacing: 4) {
-                                Text(emoji).font(.title2)
+                                Image(systemName: icon)
+                                    .font(.title2)
+                                    .foregroundStyle(tint)
                                 Text(label)
                                     .font(.caption)
                                     .fontWeight(.semibold)
@@ -2283,6 +2285,7 @@ struct NotificationsStepView: View {
                     // Continue button after setting time
                     Button(action: {
                         SettingsManager.shared.dailyReminderTime = reminderTime
+                        SettingsManager.shared.readingPlanReminders = true
                         NotificationManager.shared.scheduleDailyReminder()
                         onNext()
                     }) {

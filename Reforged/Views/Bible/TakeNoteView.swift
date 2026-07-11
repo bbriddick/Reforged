@@ -9,6 +9,7 @@ enum SelectionAction {
     case addToMemory
     case copy
     case share
+    case verseStudy
 }
 
 struct SelectionActionBar: View {
@@ -86,7 +87,7 @@ struct SelectionActionBar: View {
                 }
 
                 // Action buttons
-                HStack(spacing: 16) {
+                HStack(spacing: 12) {
                     ActionBarButton(icon: "highlighter", label: "Highlight") {
                         withAnimation(.spring(response: 0.3)) {
                             showColorPicker.toggle()
@@ -101,6 +102,12 @@ struct SelectionActionBar: View {
                         onAction(.addToMemory)
                     }
 
+                    if readingState.selectedVerses.count == 1 {
+                        ActionBarButton(icon: "text.magnifyingglass", label: "Study") {
+                            onAction(.verseStudy)
+                        }
+                    }
+
                     ActionBarButton(icon: "doc.on.doc", label: "Copy") {
                         onAction(.copy)
                     }
@@ -110,7 +117,7 @@ struct SelectionActionBar: View {
                     }
                 }
                 .padding(.vertical, 16)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 18)
                 .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .shadow(color: Color.black.opacity(0.15), radius: 20, y: -5)
@@ -161,6 +168,7 @@ struct TakeNoteView: View {
     let verses: [ParsedVerse]
     @ObservedObject var readingState: BibleReadingState
     let onDismiss: () -> Void
+    var prefilledPrompt: String? = nil
 
     @State private var noteAttributedText = NSAttributedString()
     @State private var crossReferences: [String] = []
@@ -487,7 +495,11 @@ struct TakeNoteView: View {
             }
             .onAppear {
                 let existing = existingNote?.content ?? ""
-                noteAttributedText = existing.isEmpty ? NSAttributedString() : NSAttributedString.from(existing)
+                if existing.isEmpty, let prefilledPrompt {
+                    noteAttributedText = NSAttributedString.from(prefilledPrompt)
+                } else {
+                    noteAttributedText = existing.isEmpty ? NSAttributedString() : NSAttributedString.from(existing)
+                }
                 crossReferences = existingNote?.crossReferences ?? []
             }
             .sheet(isPresented: $showCrossRefPicker) {

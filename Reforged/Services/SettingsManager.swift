@@ -110,6 +110,10 @@ class SettingsManager: ObservableObject {
         didSet { save(enableSpacedRepetition, forKey: Keys.enableSpacedRepetition) }
     }
 
+    @Published var showFirstLetterHints: Bool {
+        didSet { save(showFirstLetterHints, forKey: Keys.showFirstLetterHints) }
+    }
+
     @Published var dailyMemoryReminders: Bool {
         didSet {
             save(dailyMemoryReminders, forKey: Keys.dailyMemoryReminders)
@@ -307,6 +311,7 @@ class SettingsManager: ObservableObject {
         static let skipInterval = "settings.skipInterval"
         static let continueAudioOnNavigate = "settings.continueAudioOnNavigate"
         static let enableSpacedRepetition = "settings.enableSpacedRepetition"
+        static let showFirstLetterHints = "settings.showFirstLetterHints"
         static let dailyMemoryReminders = "settings.dailyMemoryReminders"
         static let dailyReminderTime = "settings.dailyReminderTime"
         static let dailyReminderHour = "settings.dailyReminderHour"
@@ -369,7 +374,8 @@ class SettingsManager: ObservableObject {
 
         // Load Memory Settings
         self.enableSpacedRepetition = UserDefaults.standard.object(forKey: Keys.enableSpacedRepetition) as? Bool ?? true
-        self.dailyMemoryReminders = UserDefaults.standard.object(forKey: Keys.dailyMemoryReminders) as? Bool ?? true
+        self.showFirstLetterHints = UserDefaults.standard.object(forKey: Keys.showFirstLetterHints) as? Bool ?? true
+        self.dailyMemoryReminders = UserDefaults.standard.object(forKey: Keys.dailyMemoryReminders) as? Bool ?? false
 
         // Load Notification Settings — prefer hour/minute keys, fall back to legacy timestamp
         let savedHour = UserDefaults.standard.object(forKey: Keys.dailyReminderHour) as? Int
@@ -383,13 +389,13 @@ class SettingsManager: ObservableObject {
             let savedTime = UserDefaults.standard.double(forKey: Keys.dailyReminderTime)
             self.dailyReminderTime = savedTime > 0 ? Date(timeIntervalSince1970: savedTime) : Self.defaultReminderTime()
         }
-        self.readingPlanReminders = UserDefaults.standard.object(forKey: Keys.readingPlanReminders) as? Bool ?? true
+        self.readingPlanReminders = UserDefaults.standard.object(forKey: Keys.readingPlanReminders) as? Bool ?? false
         let savedReadingDays = UserDefaults.standard.array(forKey: Keys.readingReminderDays) as? [Int]
         self.readingReminderDays = savedReadingDays.map { Set($0) } ?? Set(1...7)
-        self.memoryReviewReminders = UserDefaults.standard.object(forKey: Keys.memoryReviewReminders) as? Bool ?? true
+        self.memoryReviewReminders = UserDefaults.standard.object(forKey: Keys.memoryReviewReminders) as? Bool ?? false
         let savedMemoryDays = UserDefaults.standard.array(forKey: Keys.memoryReminderDays) as? [Int]
         self.memoryReminderDays = savedMemoryDays.map { Set($0) } ?? Set(1...7)
-        self.lessonReminders = UserDefaults.standard.object(forKey: Keys.lessonReminders) as? Bool ?? true
+        self.lessonReminders = UserDefaults.standard.object(forKey: Keys.lessonReminders) as? Bool ?? false
         self.notificationsEnabled = UserDefaults.standard.object(forKey: Keys.notificationsEnabled) as? Bool ?? true
         self.podcastNewEpisodeNotifications = UserDefaults.standard.object(forKey: Keys.podcastNewEpisodeNotifications) as? Bool ?? false
         let podcastHour = UserDefaults.standard.object(forKey: Keys.podcastNotificationHour) as? Int ?? 9
@@ -401,7 +407,7 @@ class SettingsManager: ObservableObject {
             var c = DateComponents(); c.hour = 9; c.minute = 0
             return Calendar.current.date(from: c) ?? Date()
         }()
-        self.weeklyCheckinEnabled = UserDefaults.standard.object(forKey: Keys.weeklyCheckinEnabled) as? Bool ?? true
+        self.weeklyCheckinEnabled = UserDefaults.standard.object(forKey: Keys.weeklyCheckinEnabled) as? Bool ?? false
         self.weeklyCheckinDay = UserDefaults.standard.object(forKey: Keys.weeklyCheckinDay) as? Int ?? 4 // Wednesday
         let checkinHour = UserDefaults.standard.object(forKey: Keys.weeklyCheckinHour) as? Int ?? 9
         let checkinMinute = UserDefaults.standard.object(forKey: Keys.weeklyCheckinMinute) as? Int ?? 0
@@ -532,19 +538,20 @@ class SettingsManager: ObservableObject {
 
     func resetMemorySettings() {
         enableSpacedRepetition = true
-        dailyMemoryReminders = true
+        showFirstLetterHints = true
+        dailyMemoryReminders = false
     }
 
     func resetNotificationSettings() {
         dailyReminderTime = Self.defaultReminderTime()
-        readingPlanReminders = true
+        readingPlanReminders = false
         readingReminderDays = Set(1...7)
-        memoryReviewReminders = true
+        memoryReviewReminders = false
         memoryReminderDays = Set(1...7)
-        lessonReminders = true
+        lessonReminders = false
         notificationsEnabled = true
         podcastNewEpisodeNotifications = false
-        weeklyCheckinEnabled = true
+        weeklyCheckinEnabled = false
         weeklyCheckinDay = 4 // Wednesday
         var c = DateComponents(); c.hour = 9; c.minute = 0
         weeklyCheckinTime = Calendar.current.date(from: c) ?? Date()

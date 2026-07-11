@@ -147,4 +147,24 @@ enum MemoryMode: String, CaseIterable {
         case .typing: return "Type the entire verse"
         }
     }
+
+    /// Exercise pools by mastery level, ordered easiest to hardest recall.
+    /// Level 1 leans on recognition (flip/reveal); level 5 demands full recall (typing).
+    private static let progressionPools: [Int: [MemoryMode]] = [
+        1: [.flashcard, .tapToReveal],
+        2: [.tapToReveal, .fillInBlank, .dragAndDrop],
+        3: [.fillInBlank, .dragAndDrop, .firstLetter],
+        4: [.firstLetter, .dragAndDrop, .typing],
+        5: [.typing, .firstLetter]
+    ]
+
+    /// Picks an exercise for a due review: harder pools unlock as the verse matures,
+    /// and the choice rotates within its pool as reviewCount changes so the same
+    /// verse doesn't always get the same exercise.
+    static func progressiveMode(for verse: MemoryVerse) -> MemoryMode {
+        let pool = progressionPools[verse.level] ?? progressionPools[1]!
+        let seed = "\(verse.id)-\(verse.reviewCount)".hashValue
+        let index = abs(seed) % pool.count
+        return pool[index]
+    }
 }

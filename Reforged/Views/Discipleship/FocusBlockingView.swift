@@ -481,10 +481,19 @@ struct FocusBlockingView: View {
     private let usageTimer = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
 
     /// "Time left today" banner — Quittr-style remaining-time readout with a progress bar.
+    /// Ticks once a second via `TimelineView` so the bar creeps forward between the
+    /// monitor's real 5-min-granularity updates (see `projectedUsedMinutes`) instead
+    /// of sitting frozen for minutes at a time.
     private var countdownBanner: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            countdownBannerContent(at: context.date)
+        }
+    }
+
+    private func countdownBannerContent(at date: Date) -> some View {
         let allowance = limitService.allowanceMinutes
-        let used = min(limitService.usedTodayMinutes, allowance)
-        let remaining = limitService.remainingMinutes
+        let used = min(limitService.projectedUsedMinutes(at: date), allowance)
+        let remaining = max(0, allowance - used)
         let fraction = allowance > 0 ? min(1, Double(used) / Double(allowance)) : 0
         let reached = limitService.isLimitReached
         let accent = reached ? Color.reforgedCoral : Color(red: 0.20, green: 0.55, blue: 0.55)
@@ -519,6 +528,7 @@ struct FocusBlockingView: View {
                     Capsule()
                         .fill(accent)
                         .frame(width: max(0, geo.size.width * fraction))
+                        .animation(.linear(duration: 1), value: fraction)
                 }
             }
             .frame(height: 8)

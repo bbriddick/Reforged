@@ -19,6 +19,15 @@ struct MemorySettingsSection: View {
 
             SettingsDivider()
 
+            // First Letter Hints
+            SettingsToggleRow(
+                title: "First Letter Hints",
+                subtitle: "Show the first letter of each word on flashcards",
+                isOn: $settings.showFirstLetterHints
+            )
+
+            SettingsDivider()
+
             // Daily Memory Reminders
             SettingsToggleRow(
                 title: "Daily Memory Reminders",

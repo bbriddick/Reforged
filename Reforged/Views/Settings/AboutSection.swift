@@ -74,7 +74,7 @@ struct HelpAndSupportView: View {
                     openSupportEmail()
                 }
                 Divider().padding(.leading, 58)
-                externalRow(emoji: "☕", iconColor: Color.reforgedGold, title: "Support Reforged", subtitle: "Buy the developer a coffee") {
+                externalRow(icon: "cup.and.saucer.fill", iconColor: Color.reforgedGold, title: "Support Reforged", subtitle: "Buy the developer a coffee") {
                     if let url = URL(string: "https://buymeacoffee.com/reforgedapp") { openURL(url) }
                 }
             }
@@ -132,6 +132,16 @@ struct HelpAndSupportView: View {
                 attributionEntry(
                     title: "Brown-Driver-Briggs / Thayer's Lexicon",
                     body: "Enriched word definitions provided by the Brown-Driver-Briggs Hebrew Lexicon and Thayer's Greek Lexicon via the Bolls.life Bible API. These reference works are in the public domain."
+                )
+            }
+
+            SettingsDivider()
+
+            // MARK: Cross References
+            attributionCard(icon: "arrow.triangle.branch", iconColor: Color.adaptiveNavyText(colorScheme), title: "Cross References") {
+                attributionEntry(
+                    title: "Treasury of Scripture Knowledge",
+                    body: "Verse cross-reference data is drawn primarily from the Treasury of Scripture Knowledge, provided by openbible.info under a Creative Commons Attribution license (CC BY 4.0)."
                 )
             }
 
@@ -263,14 +273,16 @@ struct HelpAndSupportView: View {
     }
 
     @ViewBuilder
-    private func externalRow(emoji: String, iconColor: Color, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+    private func externalRow(icon: String, iconColor: Color, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(iconColor.opacity(0.12))
                         .frame(width: 32, height: 32)
-                    Text(emoji).font(.system(size: 16))
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(iconColor)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -414,7 +426,7 @@ struct HelpAndSupportView: View {
 
         5. Intellectual Property
 
-        Scripture quotations are from the ESV® Bible (© 2001 Crossway), KJV (Public Domain), CSB® (© 2017 Holman Bible Publishers), NKJV® (© 1982 Thomas Nelson), NASB® (© 1995 The Lockman Foundation), and Reina-Valera 1960® (© Sociedades Bíblicas en América Latina, 1960; © Renovado Sociedades Bíblicas Unidas, 1988). Used by permission. All rights reserved. Hebrew and Greek word study data is derived from Strong's Exhaustive Concordance (public domain) and the Open Scriptures lexicon project (CC BY-SA 4.0). Enriched definitions from Brown-Driver-Briggs and Thayer's lexicons (public domain) via Bolls.life. All other content and features are owned by Reforged.
+        Scripture quotations are from the ESV® Bible (© 2001 Crossway), KJV (Public Domain), CSB® (© 2017 Holman Bible Publishers), NKJV® (© 1982 Thomas Nelson), NASB® (© 1995 The Lockman Foundation), and Reina-Valera 1960® (© Sociedades Bíblicas en América Latina, 1960; © Renovado Sociedades Bíblicas Unidas, 1988). Used by permission. All rights reserved. Hebrew and Greek word study data is derived from Strong's Exhaustive Concordance (public domain) and the Open Scriptures lexicon project (CC BY-SA 4.0). Enriched definitions from Brown-Driver-Briggs and Thayer's lexicons (public domain) via Bolls.life. Verse cross-reference data is drawn from the Treasury of Scripture Knowledge via openbible.info (CC BY 4.0). All other content and features are owned by Reforged.
 
         6. Disclaimer of Warranties
 

@@ -43,6 +43,14 @@ struct DailyInsightReflection {
     let prayerPrompt: String
 }
 
+/// A key word identified in an Old Testament verse (no bundled Hebrew morphology exists,
+/// so this is inferred from the English text rather than read from lexicon data).
+struct VerseWordTag: Identifiable {
+    var id: String { word }
+    let word: String
+    let partOfSpeech: String
+}
+
 // MARK: - Gemini Response Models (private)
 
 private struct GeminiResponse: Decodable {
@@ -67,6 +75,7 @@ final class GeminiService {
     // In-memory caches (keyed by Strong's number / verse reference)
     private var wordStudyCache: [String: String] = [:]
     private var journalPromptCache: [String: [String]] = [:]
+    private var keyWordCache: [String: [VerseWordTag]] = [:]
 
     // MARK: - Core Request
 
@@ -270,6 +279,34 @@ final class GeminiService {
 
         journalPromptCache[reference] = prompts
         return prompts
+    }
+
+    // MARK: - Feature 7: Verse Study Key Words (Old Testament)
+
+    /// Identifies the main verbs/nouns (and, where grammatically apt, participles) in an
+    /// Old Testament verse's English text. Only needed for the OT — the New Testament already
+    /// has exact, offline Greek morphology via `OriginalLanguageService`.
+    func classifyKeyWords(reference: String, verseText: String) async throws -> [VerseWordTag] {
+        try await checkEnabled()
+
+        if let cached = keyWordCache[reference] { return cached }
+
+        let prompt = """
+        Identify the 4-8 most theologically or grammatically significant words in this Bible verse's \
+        English text: \(reference): "\(verseText)". \
+        For each, give its part of speech using terms appropriate to Hebrew/English grammar \
+        (e.g. "verb", "noun", "participle" — do not use "infinitive" unless the English word \
+        genuinely is one). \
+        Return only a valid JSON array of objects with keys "word" and "partOfSpeech", no markdown \
+        or extra text. Example: [{"word":"created","partOfSpeech":"verb"},{"word":"heavens","partOfSpeech":"noun"}]
+        """
+
+        let raw = try await generate(prompt: prompt, maxTokens: 400)
+        let tags = parseVerseWordTags(from: raw)
+        guard !tags.isEmpty else { throw GeminiError.decodingError("No key words returned") }
+
+        keyWordCache[reference] = tags
+        return tags
     }
 
     // MARK: - Feature 3: Smart Search
@@ -538,6 +575,28 @@ final class GeminiService {
             return []
         }
         return array
+    }
+
+    private func parseVerseWordTags(from text: String) -> [VerseWordTag] {
+        var cleaned = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let start = cleaned.firstIndex(of: "[") { cleaned = String(cleaned[start...]) }
+        if let end = cleaned.lastIndex(of: "]") { cleaned = String(cleaned[...end]) }
+
+        guard let data = cleaned.data(using: .utf8),
+              let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return []
+        }
+
+        return array.compactMap { obj in
+            guard let word = obj["word"] as? String, !word.isEmpty,
+                  let pos = obj["partOfSpeech"] as? String else { return nil }
+            return VerseWordTag(word: word, partOfSpeech: pos)
+        }
     }
 
     private func parseSmartSearchResult(from text: String, query: String) -> SmartSearchResult {

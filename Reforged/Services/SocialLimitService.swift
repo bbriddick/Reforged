@@ -73,6 +73,9 @@ final class SocialLimitService: ObservableObject {
     @Published var earnedTodayMinutes: Int = 0
     /// Minutes of social usage the monitor has counted today (5-min granularity).
     @Published var usedTodayMinutes: Int = 0
+    /// When `usedTodayMinutes` was last confirmed by the monitor. Anchors the
+    /// cosmetic between-updates interpolation in `projectedUsedMinutes`.
+    @Published private(set) var usageAnchorAt: Date = Date()
 
     private let defaults = UserDefaults(suiteName: SocialLimitKeys.suite)
     private let center = DeviceActivityCenter()
@@ -108,6 +111,20 @@ final class SocialLimitService: ObservableObject {
     /// True once today's social usage has reached the current allowance.
     var isLimitReached: Bool { usedTodayMinutes >= allowanceMinutes }
 
+    /// Cosmetic projection of usage between the monitor's real (5-min-granularity)
+    /// updates: creeps forward at a steady 1 min/min from the last confirmed value
+    /// so the countdown bar reads as live, but never past the next threshold step
+    /// the monitor could plausibly report — so it holds there instead of drifting
+    /// indefinitely. Always corrects to the real value once one lands (the anchor
+    /// resets wherever `usedTodayMinutes` is actually assigned).
+    func projectedUsedMinutes(at date: Date = Date()) -> Int {
+        let elapsedMinutes = date.timeIntervalSince(usageAnchorAt) / 60
+        guard elapsedMinutes > 0 else { return usedTodayMinutes }
+        let ceiling = min(usedTodayMinutes + SocialLimitKeys.eventStep, allowanceMinutes)
+        let projected = Double(usedTodayMinutes) + elapsedMinutes
+        return min(Int(projected), ceiling)
+    }
+
     var canEarnMore: Bool { earnedTodayMinutes < SocialLimitKeys.dailyEarnCap }
 
     // MARK: - Configuration
@@ -141,6 +158,7 @@ final class SocialLimitService: ObservableObject {
     private func startFreshDay() {
         earnedTodayMinutes = 0
         usedTodayMinutes = 0
+        usageAnchorAt = Date()
         defaults?.set(0, forKey: SocialLimitKeys.earnedTodayMinutes)
         defaults?.set(0, forKey: SocialLimitKeys.usageMinutes)
         defaults?.set(false, forKey: SocialLimitKeys.shieldActive)
@@ -162,7 +180,10 @@ final class SocialLimitService: ObservableObject {
     /// call from a timer while the limit card is on screen so the countdown stays live.
     func reloadUsage() {
         let stored = defaults?.integer(forKey: SocialLimitKeys.usageMinutes) ?? 0
-        if stored != usedTodayMinutes { usedTodayMinutes = stored }
+        if stored != usedTodayMinutes {
+            usedTodayMinutes = stored
+            usageAnchorAt = Date()
+        }
     }
 
     // MARK: - Earning
@@ -200,6 +221,7 @@ final class SocialLimitService: ObservableObject {
         if stored != today {
             earnedTodayMinutes = 0
             usedTodayMinutes = 0
+            usageAnchorAt = Date()
             defaults?.set(0, forKey: SocialLimitKeys.earnedTodayMinutes)
             defaults?.set(0, forKey: SocialLimitKeys.usageMinutes)
             defaults?.set(false, forKey: SocialLimitKeys.shieldActive)

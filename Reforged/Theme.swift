@@ -65,9 +65,12 @@ extension Color {
     static let reforgedCharcoal = Color(red: 0.20, green: 0.20, blue: 0.20) // #333333 - dark charcoal from logo
     static let reforgedBrandCream = Color(red: 0.91, green: 0.89, blue: 0.86) // #E8E4DC - cream from logo
 
-    // Primary Colors (updated to match brand)
-    static let reforgedNavy = Color(red: 0.20, green: 0.20, blue: 0.22) // Updated to match charcoal theme
-    static let reforgedDarkBlue = Color(red: 0.15, green: 0.15, blue: 0.17) // Darker variant
+    // Primary Colors — aliased to the brand charcoal per the reforged-design spec
+    // (`--surface-hero: var(--reforged-charcoal)`). Kept as separate symbols since
+    // ~185 call sites across the app still reference "navy"/"dark blue"; redefining
+    // them here brings every call site on-spec without a file-by-file rename.
+    static let reforgedNavy = Color(red: 0.20, green: 0.20, blue: 0.20) // #333333 charcoal
+    static let reforgedDarkBlue = Color(red: 0.15, green: 0.15, blue: 0.15) // darker charcoal variant
 
     // Accent Colors
     static let reforgedCoral = Color(red: 0.914, green: 0.271, blue: 0.376) // #e94560
@@ -466,17 +469,11 @@ struct GamifiedStatCardStyle: ViewModifier {
     }
 }
 
-// Hero card style with gradient background
+// Hero card style — solid charcoal surface (spec: no gradients in app chrome)
 struct HeroCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(
-                LinearGradient(
-                    colors: [Color.reforgedNavy, Color.reforgedDarkBlue],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .background(Color.reforgedNavy)
             .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusXLarge))
             .shadow(color: Color.reforgedNavy.opacity(0.3), radius: 16, y: 8)
     }

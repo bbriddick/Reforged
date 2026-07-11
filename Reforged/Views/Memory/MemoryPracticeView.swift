@@ -16,25 +16,10 @@ struct MemoryPracticeView: View {
 
     var body: some View {
         ZStack {
-            Group {
-                switch mode {
-                case .flashcard:
-                    FlashcardPracticeView(verse: verse, onComplete: handleComplete)
-                case .tapToReveal:
-                    TapToRevealView(verse: verse, onComplete: handleComplete)
-                case .dragAndDrop:
-                    DragAndDropView(verse: verse, onComplete: handleComplete)
-                case .fillInBlank:
-                    FillInBlankView(verse: verse, onComplete: handleComplete)
-                case .firstLetter:
-                    FirstLetterView(verse: verse, onComplete: handleComplete)
-                case .typing:
-                    TypingPracticeView(verse: verse, onComplete: handleComplete)
-                }
-            }
-            .navigationTitle(mode.displayName)
-            .navigationBarTitleDisplayMode(.inline)
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            MemoryExerciseView(verse: verse, mode: mode, onComplete: handleComplete)
+                .navigationTitle(mode.displayName)
+                .navigationBarTitleDisplayMode(.inline)
+                .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
 
             // Celebration overlay
             if showCelebration {
@@ -71,6 +56,32 @@ struct MemoryPracticeView: View {
         // Show celebration
         withAnimation {
             showCelebration = true
+        }
+    }
+}
+
+// MARK: - Exercise Router
+
+/// Renders the practice UI for a given mode. Shared by manual practice and progressive due review.
+struct MemoryExerciseView: View {
+    let verse: MemoryVerse
+    let mode: MemoryMode
+    let onComplete: (Int) -> Void
+
+    var body: some View {
+        switch mode {
+        case .flashcard:
+            FlashcardPracticeView(verse: verse, onComplete: onComplete)
+        case .tapToReveal:
+            TapToRevealView(verse: verse, onComplete: onComplete)
+        case .dragAndDrop:
+            DragAndDropView(verse: verse, onComplete: onComplete)
+        case .fillInBlank:
+            FillInBlankView(verse: verse, onComplete: onComplete)
+        case .firstLetter:
+            FirstLetterView(verse: verse, onComplete: onComplete)
+        case .typing:
+            TypingPracticeView(verse: verse, onComplete: onComplete)
         }
     }
 }
@@ -161,6 +172,7 @@ struct FlashcardPracticeView: View {
 struct FlashcardFront: View {
     let verse: MemoryVerse
     let colorScheme: ColorScheme?
+    @ObservedObject private var settings = SettingsManager.shared
 
     // First letters hint
     var firstLetters: String {
@@ -178,23 +190,25 @@ struct FlashcardFront: View {
                 .fontWeight(.bold)
                 .foregroundStyle(Color.adaptiveNavyText(colorScheme))
 
-            Divider()
+            if settings.showFirstLetterHints {
+                Divider()
 
-            VStack(spacing: 12) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.title2)
-                    .foregroundStyle(Color.reforgedGold)
+                VStack(spacing: 12) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color.reforgedGold)
 
-                Text("First letter hint:")
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    Text("First letter hint:")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                Text(firstLetters)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text(firstLetters)
+                        .font(.headline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                }
+                .padding(.vertical, 16)
             }
-            .padding(.vertical, 16)
 
             HStack(spacing: 6) {
                 Image(systemName: "hand.tap.fill")
@@ -1009,20 +1023,31 @@ struct BlankField: View {
 struct FirstLetterView: View {
     let verse: MemoryVerse
     let onComplete: (Int) -> Void
-    @State private var userText = ""
+    @State private var inputText = ""
     @State private var showResult = false
     @State private var hintUsed = false
+    @State private var accuracy: Double = 0
+    @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) var colorScheme
 
-    var firstLetters: String {
-        normalizedVerseWords(from: verse.text)
-            .compactMap { $0.first.map { String($0).uppercased() } }
-            .joined(separator: " ")
+    var expectedLetters: [Character] {
+        normalizedVerseWords(from: verse.text).compactMap { $0.first }
     }
 
-    var hintWords: String {
-        let words = normalizedVerseWords(from: verse.text)
-        return words.prefix(3).joined(separator: " ") + "..."
+    var typedLetters: [Character] {
+        Array(inputText)
+    }
+
+    var correctness: [Bool] {
+        typedLetters.enumerated().map { index, char in
+            index < expectedLetters.count && char == Character(String(expectedLetters[index]).uppercased())
+        }
+    }
+
+    var liveAccuracy: Double {
+        guard !typedLetters.isEmpty else { return 0 }
+        let correctCount = correctness.filter { $0 }.count
+        return Double(correctCount) / Double(typedLetters.count)
     }
 
     var body: some View {
@@ -1034,26 +1059,44 @@ struct FirstLetterView: View {
                     .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                     .padding(.top)
 
-                VStack(spacing: 8) {
-                    Text("First letters hint:")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Text("Type the first letter of each word")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
-                    Text(firstLetters)
-                        .font(.headline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.reforgedGold)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.reforgedNavy.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                if !inputText.isEmpty && !showResult {
+                    HStack(spacing: 6) {
+                        Image(systemName: liveAccuracy >= 0.9 ? "star.fill" : "checkmark.circle")
+                            .foregroundStyle(liveAccuracy >= 0.9 ? Color.reforgedGold : (liveAccuracy >= 0.7 ? Color.green : Color.orange))
+                        Text("Live accuracy: \(Int(liveAccuracy * 100))%")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    .transition(.opacity)
                 }
-                .padding(.horizontal)
 
-                TextEditor(text: $userText)
-                    .frame(minHeight: 150)
+                FlowLayout(spacing: 6) {
+                    ForEach(expectedLetters.indices, id: \.self) { index in
+                        LetterBox(
+                            letter: index < typedLetters.count ? typedLetters[index] : nil,
+                            state: boxState(at: index),
+                            colorScheme: colorScheme
+                        )
+                    }
+                }
+                .padding()
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal)
+                .contentShape(Rectangle())
+                .onTapGesture { isFocused = true }
+
+                TextField("Type here", text: $inputText)
+                    .focused($isFocused)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled(true)
+                    .keyboardType(.asciiCapable)
                     .padding()
-                    .scrollContentBackground(.hidden)
                     .background(Color.adaptiveCardBackground(colorScheme))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
@@ -1062,20 +1105,38 @@ struct FirstLetterView: View {
                     )
                     .disabled(showResult)
                     .padding(.horizontal)
+                    .onChange(of: inputText) { newValue in
+                        let filtered = String(newValue.uppercased().filter { $0.isLetter })
+                        let capped = String(filtered.prefix(expectedLetters.count))
+                        if capped != inputText {
+                            inputText = capped
+                        }
+                    }
+                    .onAppear { isFocused = true }
 
                 if showResult {
-                    VStack(spacing: 12) {
-                        Text("Correct verse:")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    VStack(spacing: 16) {
+                        HStack(spacing: 8) {
+                            Image(systemName: accuracy >= 0.9 ? "star.fill" : "checkmark.circle")
+                                .foregroundStyle(accuracy >= 0.9 ? Color.reforgedGold : (accuracy >= 0.7 ? Color.green : Color.orange))
+                            Text("Accuracy: \(Int(accuracy * 100))%")
+                                .font(.headline)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                        }
 
-                        Text("\"\(verse.text)\"")
-                            .font(.body)
-                            .italic()
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                            .padding()
-                            .background(Color.green.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        VStack(spacing: 8) {
+                            Text("Correct verse:")
+                                .font(.caption)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+                            Text("\"\(verse.text)\"")
+                                .font(.body)
+                                .italic()
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                                .padding()
+                                .background(Color.green.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
                     }
                     .padding(.horizontal)
 
@@ -1087,19 +1148,14 @@ struct FirstLetterView: View {
                     }
                     .padding()
                 } else {
-                    if hintUsed {
-                        Text("Starts with: \"\(hintWords)\"")
-                            .font(.caption)
-                            .italic()
-                            .foregroundStyle(Color.reforgedGold)
-                            .padding(.horizontal)
-                            .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                    HintButton(hintUsed: hintUsed) {
+                        revealNextLetter()
                     }
-
-                    HintButton(hintUsed: hintUsed) { hintUsed = true }
-                        .padding(.horizontal)
+                    .padding(.horizontal)
 
                     Button("Check Answer") {
+                        accuracy = liveAccuracy
+                        isFocused = false
                         withAnimation {
                             showResult = true
                         }
@@ -1108,13 +1164,70 @@ struct FirstLetterView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(userText.isEmpty ? Color.gray : Color.reforgedNavy)
+                    .background(inputText.isEmpty ? Color.gray : Color.reforgedNavy)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal)
-                    .disabled(userText.isEmpty)
+                    .disabled(inputText.isEmpty)
                 }
             }
             .padding(.bottom)
+        }
+        .animation(.easeInOut(duration: 0.15), value: typedLetters.count)
+    }
+
+    func boxState(at index: Int) -> LetterBox.State {
+        guard index < typedLetters.count else { return .empty }
+        return correctness[index] ? .correct : .incorrect
+    }
+
+    func revealNextLetter() {
+        hintUsed = true
+        guard typedLetters.count < expectedLetters.count else { return }
+        inputText += String(expectedLetters[typedLetters.count]).uppercased()
+    }
+}
+
+struct LetterBox: View {
+    enum State { case empty, correct, incorrect }
+    let letter: Character?
+    let state: State
+    let colorScheme: ColorScheme?
+
+    var body: some View {
+        Text(letter.map { String($0) } ?? "")
+            .font(.headline)
+            .fontWeight(.bold)
+            .foregroundStyle(foregroundColor)
+            .frame(width: 30, height: 36)
+            .background(backgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(borderColor, lineWidth: 1)
+            )
+    }
+
+    var foregroundColor: Color {
+        switch state {
+        case .empty: return Color.adaptiveTextSecondary(colorScheme)
+        case .correct: return .green
+        case .incorrect: return .red
+        }
+    }
+
+    var backgroundColor: Color {
+        switch state {
+        case .empty: return Color.adaptiveBorder(colorScheme).opacity(0.3)
+        case .correct: return Color.green.opacity(0.15)
+        case .incorrect: return Color.red.opacity(0.15)
+        }
+    }
+
+    var borderColor: Color {
+        switch state {
+        case .empty: return Color.adaptiveBorder(colorScheme)
+        case .correct: return .green
+        case .incorrect: return .red
         }
     }
 }

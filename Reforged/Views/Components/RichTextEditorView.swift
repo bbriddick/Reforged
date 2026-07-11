@@ -184,6 +184,9 @@ struct RichTextEditorUIKitView: UIViewRepresentable {
         tv.backgroundColor       = .clear
         tv.textContainerInset    = .zero
         tv.textContainer.lineFragmentPadding = 0
+        tv.textContainer.widthTracksTextView = true
+        tv.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tv.font = baseFont
         tv.typingAttributes = [.font: baseFont, .foregroundColor: UIColor.label]
         if attributedText.length > 0 { tv.attributedText = attributedText }
@@ -279,7 +282,7 @@ struct RichTextEditor: View {
                     coordinator: coordinator,
                     attributedText: $attributedText
                 )
-                .frame(minHeight: minHeight)
+                .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
                 .padding(12)
 
                 if isEmpty {

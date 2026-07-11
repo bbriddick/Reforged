@@ -64,6 +64,7 @@
 		AN000001279B9E0000000001 /* AntiochSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AN000002279B9E0000000001 /* AntiochSearchService.swift */; };
 		B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00001279B9E0000000001 /* StrongsModels.swift */; };
 		B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00003279B9E0000000001 /* StrongsLexiconService.swift */; };
+		CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRS00002279B9E0000000001 /* CrossReferenceService.swift */; };
 		B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00005279B9E0000000001 /* WordTappableVerseText.swift */; };
 		B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */; };
 		B1A0000A279B9E0000000001 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00009279B9E0000000001 /* FlowLayout.swift */; };
@@ -98,6 +99,7 @@
 		EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000004279B9E0000000001 /* UnifiedNavigationView.swift */; };
 		EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000006279B9E0000000001 /* SearchPanelView.swift */; };
 		EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000008279B9E0000000001 /* TakeNoteView.swift */; };
+		VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = VSS00002279B9E0000000001 /* VerseStudySheet.swift */; };
 		EXP00002279B9E0000000001 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXP00001279B9E0000000001 /* ExportService.swift */; };
 		F51AB00E9FE5CB264ECF20DF /* AudioSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */; };
 		FB000002279B9E0000000001 /* FocusBlockingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001279B9E0000000001 /* FocusBlockingView.swift */; };
@@ -134,6 +136,7 @@
 		RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000008279B9E0000000001 /* CompleteTheVerseView.swift */; };
 		RG000009279B9E0000000001 /* trparsed.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000A279B9E0000000001 /* trparsed.json */; };
 		RG00000B279B9E0000000001 /* wlc.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000C279B9E0000000001 /* wlc.json */; };
+		CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */ = {isa = PBXBuildFile; fileRef = CRJ00002279B9E0000000001 /* CrossReferences.json */; };
 		RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000001 /* OriginalLanguageService.swift */; };
 		RG00000D279B9E0000000099 /* sblgnt.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000099 /* sblgnt.json */; };
 		RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */; };
@@ -259,6 +262,7 @@
 		AN000002279B9E0000000001 /* AntiochSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntiochSearchService.swift; sourceTree = "<group>"; };
 		B1A00001279B9E0000000001 /* StrongsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsModels.swift; sourceTree = "<group>"; };
 		B1A00003279B9E0000000001 /* StrongsLexiconService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsLexiconService.swift; sourceTree = "<group>"; };
+		CRS00002279B9E0000000001 /* CrossReferenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceService.swift; sourceTree = "<group>"; };
 		B1A00005279B9E0000000001 /* WordTappableVerseText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTappableVerseText.swift; sourceTree = "<group>"; };
 		B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsDefinitionSheet.swift; sourceTree = "<group>"; };
 		B1A00009279B9E0000000001 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
@@ -289,6 +293,7 @@
 		EX000004279B9E0000000001 /* UnifiedNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedNavigationView.swift; sourceTree = "<group>"; };
 		EX000006279B9E0000000001 /* SearchPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPanelView.swift; sourceTree = "<group>"; };
 		EX000008279B9E0000000001 /* TakeNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNoteView.swift; sourceTree = "<group>"; };
+		VSS00002279B9E0000000001 /* VerseStudySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseStudySheet.swift; sourceTree = "<group>"; };
 		EXP00001279B9E0000000001 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		FB000001279B9E0000000001 /* FocusBlockingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusBlockingView.swift; sourceTree = "<group>"; };
 		FC000001279B9E0000000001 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
@@ -324,6 +329,7 @@
 		RG000008279B9E0000000001 /* CompleteTheVerseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTheVerseView.swift; sourceTree = "<group>"; };
 		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trparsed.json; sourceTree = "<group>"; };
 		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wlc.json; sourceTree = "<group>"; };
+		CRJ00002279B9E0000000001 /* CrossReferences.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = CrossReferences.json; sourceTree = "<group>"; };
 		RG00000E279B9E0000000001 /* OriginalLanguageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLanguageService.swift; sourceTree = "<group>"; };
 		RG00000E279B9E0000000099 /* sblgnt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sblgnt.json; sourceTree = "<group>"; };
 		RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/SILEOT.ttf; sourceTree = "<group>"; };
@@ -530,6 +536,7 @@
 				SL000001279B9E0000000001 /* SocialLimitService.swift */,
 				BRP00005279B9E0000000001 /* ReadingPlanService.swift */,
 				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
+				CRS00002279B9E0000000001 /* CrossReferenceService.swift */,
 				RG00000E279B9E0000000001 /* OriginalLanguageService.swift */,
 				A10000D1279B9E0000000001 /* UnsplashService.swift */,
 				E1A00001279B9E0000000001 /* ProfileImageService.swift */,
@@ -601,6 +608,7 @@
 				EX000004279B9E0000000001 /* UnifiedNavigationView.swift */,
 				EX000006279B9E0000000001 /* SearchPanelView.swift */,
 				EX000008279B9E0000000001 /* TakeNoteView.swift */,
+				VSS00002279B9E0000000001 /* VerseStudySheet.swift */,
 				BDD100000000000000000006 /* NowPlayingView.swift */,
 				A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */,
 				B1A00005279B9E0000000001 /* WordTappableVerseText.swift */,
@@ -644,6 +652,7 @@
 				RG00000A279B9E0000000001 /* trparsed.json */,
 				RG00000C279B9E0000000001 /* wlc.json */,
 				RG00000E279B9E0000000099 /* sblgnt.json */,
+				CRJ00002279B9E0000000001 /* CrossReferences.json */,
 				WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */,
 			);
 			path = Resources;
@@ -856,6 +865,7 @@
 				RG000009279B9E0000000001 /* trparsed.json in Resources */,
 				RG00000B279B9E0000000001 /* wlc.json in Resources */,
 				RG00000D279B9E0000000099 /* sblgnt.json in Resources */,
+				CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -905,6 +915,7 @@
 				EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */,
 				EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */,
 				EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */,
+				VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */,
 				BDD100000000000000000005 /* NowPlayingView.swift in Sources */,
 				DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */,
 				A1000040279B9E0000000001 /* ProfileView.swift in Sources */,
@@ -961,6 +972,7 @@
 				CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */,
 				B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */,
 				B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */,
+				CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */,
 				RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */,
 				B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */,
 				B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */,
@@ -1033,7 +1045,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1068,7 +1080,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1227,7 +1239,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/ReforgedDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1274,7 +1286,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1314,7 +1326,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1340,7 +1352,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1366,7 +1378,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1392,7 +1404,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
