@@ -39,17 +39,162 @@ struct UnsplashThumbnail: Identifiable {
     var attribution: UnsplashService.PhotographerAttribution
 }
 
-// MARK: - Shareable Verse Card (1080x1080)
+// MARK: - Shareable Verse Card
 
+/// Renders in two styles: the default "classic" editorial card (cream, serif,
+/// gold accents — no photo), or the photo style when a background is selected.
 struct VerseShareCard: View {
     let verseText: String
     let reference: String
+    let bookName: String
     let translation: String
-    let backgroundImage: UIImage
+    let backgroundImage: UIImage?
     let photographerName: String?
     var noteText: String? = nil
 
+    static let classicSize = CGSize(width: 1080, height: 1350)
+    static let photoSize = CGSize(width: 1080, height: 1080)
+
+    var cardSize: CGSize {
+        backgroundImage == nil ? Self.classicSize : Self.photoSize
+    }
+
     var body: some View {
+        if let image = backgroundImage {
+            photoCard(image)
+        } else {
+            classicCard
+        }
+    }
+
+    // MARK: Classic editorial style (default)
+
+    private var classicCard: some View {
+        ZStack {
+            // Rim behind the rounded card
+            Color(red: 0.945, green: 0.933, blue: 0.914) // #F1EEE9
+
+            RoundedRectangle(cornerRadius: 48)
+                .fill(Color(red: 0.980, green: 0.973, blue: 0.961)) // #FAF8F5
+                .overlay(
+                    RoundedRectangle(cornerRadius: 48)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 2)
+                )
+                .padding(28)
+
+            VStack(spacing: 0) {
+                // Eyebrow: book name
+                HStack {
+                    Text(bookName.uppercased())
+                        .font(.system(size: 28, weight: .bold))
+                        .tracking(9)
+                        .foregroundStyle(Color.reforgedGold)
+                    Spacer()
+                }
+                .padding(.horizontal, 100)
+                .padding(.top, 110)
+
+                Spacer()
+
+                // Decorative quote mark
+                Text("\u{201C}")
+                    .font(Font.custom("LibreBaskerville-Regular", size: 170))
+                    .foregroundStyle(Color.reforgedGold.opacity(0.45))
+                    .frame(height: 120, alignment: .top)
+
+                Spacer().frame(height: 44)
+
+                // Verse text
+                Text(verseText)
+                    .font(Font.custom("LibreBaskerville-Regular", size: classicVerseFontSize))
+                    .foregroundStyle(Color.reforgedCharcoal)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(16)
+                    .padding(.horizontal, 96)
+
+                Spacer().frame(height: 56)
+
+                // Gold divider
+                Capsule()
+                    .fill(Color.reforgedGold.opacity(0.7))
+                    .frame(width: 64, height: 4)
+
+                Spacer().frame(height: 36)
+
+                // Reference · Translation
+                HStack(spacing: 14) {
+                    Text(reference)
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundStyle(Color.reforgedGold)
+                    Text("\u{00B7}")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundStyle(Color.reforgedCharcoal.opacity(0.35))
+                    Text(translation)
+                        .font(.system(size: 32, weight: .regular))
+                        .foregroundStyle(Color.reforgedCharcoal.opacity(0.5))
+                }
+
+                // Note section — shown when a note is attached
+                if let note = noteText, !note.isEmpty {
+                    Spacer().frame(height: 48)
+
+                    Rectangle()
+                        .fill(Color.reforgedCharcoal.opacity(0.12))
+                        .frame(height: 1)
+                        .padding(.horizontal, 180)
+
+                    Spacer().frame(height: 36)
+
+                    Text(note)
+                        .font(Font.custom("LibreBaskerville-Italic", size: classicNoteFontSize))
+                        .foregroundStyle(Color.reforgedCharcoal.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(10)
+                        .padding(.horizontal, 130)
+                }
+
+                Spacer()
+
+                // Footer: logomark + wordmark
+                HStack(spacing: 14) {
+                    Image("ReforgedMark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 36)
+                    Text("REFORGED")
+                        .font(.system(size: 26, weight: .bold))
+                        .tracking(7)
+                        .foregroundStyle(Color.reforgedCharcoal)
+                }
+                .padding(.bottom, 110)
+            }
+        }
+        .frame(width: Self.classicSize.width, height: Self.classicSize.height)
+        .environment(\.colorScheme, .light)
+    }
+
+    private var classicVerseFontSize: CGFloat {
+        let hasNote = !(noteText?.isEmpty ?? true)
+        let length = verseText.count
+        let bump: CGFloat = hasNote ? 6 : 0
+        if length < 80 { return 74 - bump }
+        if length < 150 { return 66 - bump }
+        if length < 250 { return 58 - bump }
+        if length < 400 { return 48 - bump }
+        return 40 - bump
+    }
+
+    private var classicNoteFontSize: CGFloat {
+        let length = noteText?.count ?? 0
+        if length < 80 { return 34 }
+        if length < 180 { return 30 }
+        if length < 300 { return 26 }
+        return 24
+    }
+
+    // MARK: Photo style (when a background is selected)
+
+    private func photoCard(_ backgroundImage: UIImage) -> some View {
         ZStack {
             // Background image (hotlinked from Unsplash CDN)
             Image(uiImage: backgroundImage)
@@ -191,19 +336,20 @@ struct VerseShareSheet: View {
     @State private var isLoadingMore = false
     @State private var selectedUnsplashId: String?
 
-    private var currentBackground: UIImage {
-        selectedImage ?? UnsplashService.fallbackGradientImage()
-    }
-
-    private var shareCard: some View {
+    private var shareCard: VerseShareCard {
         VerseShareCard(
             verseText: selection.fullText,
             reference: selection.referenceText,
+            bookName: selection.book,
             translation: selection.translation,
-            backgroundImage: currentBackground,
+            backgroundImage: selectedImage,
             photographerName: currentAttribution?.name,
             noteText: noteText
         )
+    }
+
+    private var isClassicSelected: Bool {
+        selectedImage == nil
     }
 
     var body: some View {
@@ -216,7 +362,10 @@ struct VerseShareSheet: View {
                         // Preview card
                         shareCard
                             .scaleEffect(0.3)
-                            .frame(width: 324, height: 324)
+                            .frame(
+                                width: shareCard.cardSize.width * 0.3,
+                                height: shareCard.cardSize.height * 0.3
+                            )
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
 
@@ -265,6 +414,12 @@ struct VerseShareSheet: View {
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 10) {
+                                    Button {
+                                        selectClassicStyle()
+                                    } label: {
+                                        classicThumbnailView(isSelected: isClassicSelected)
+                                    }
+
                                     ForEach(bundledImages, id: \.name) { item in
                                         Button {
                                             selectBundledImage(item.image)
@@ -429,7 +584,33 @@ struct VerseShareSheet: View {
             .shadow(color: isSelected ? Color.reforgedGold.opacity(0.3) : .clear, radius: 4)
     }
 
+    private func classicThumbnailView(isSelected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 10)
+            .fill(Color(red: 0.980, green: 0.973, blue: 0.961))
+            .frame(width: 64, height: 64)
+            .overlay(
+                Text("\u{201C}")
+                    .font(Font.custom("LibreBaskerville-Regular", size: 40))
+                    .foregroundStyle(Color.reforgedGold)
+                    .offset(y: 10)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.reforgedGold : Color.black.opacity(0.1), lineWidth: isSelected ? 2.5 : 1)
+            )
+            .shadow(color: isSelected ? Color.reforgedGold.opacity(0.3) : .clear, radius: 4)
+    }
+
     // MARK: - Selection
+
+    private func selectClassicStyle() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            selectedImage = nil
+            currentAttribution = nil
+            selectedUnsplashId = nil
+            renderedImage = nil
+        }
+    }
 
     private func selectBundledImage(_ image: UIImage) {
         withAnimation(.easeInOut(duration: 0.2)) {
@@ -472,10 +653,8 @@ struct VerseShareSheet: View {
     // MARK: - Image Loading
 
     private func loadBundledImages() {
+        // No auto-selection — the classic editorial style (no photo) is the default.
         bundledImages = UnsplashService.shared.allBundledImages()
-        if selectedImage == nil, let first = bundledImages.first {
-            selectedImage = first.image
-        }
     }
 
     private func loadInitialUnsplashImages() {

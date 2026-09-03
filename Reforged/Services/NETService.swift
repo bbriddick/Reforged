@@ -89,6 +89,19 @@ class NETService {
         }
     }
 
+    // Coalesces bursts of chapter caching into a single full-cache encode
+    // instead of re-serializing every chapter fetch. Runs on cacheQueue.
+    private var pendingCacheSave: DispatchWorkItem?
+
+    private func scheduleCacheSave() {
+        pendingCacheSave?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.saveCacheToDisk()
+        }
+        pendingCacheSave = work
+        cacheQueue.asyncAfter(deadline: .now() + 2.0, execute: work)
+    }
+
     private func getCachedChapter(book: String, chapter: Int) -> NETCachedChapter? {
         cacheQueue.sync {
             let key = cacheKeyFor(book: book, chapter: chapter)
@@ -100,12 +113,14 @@ class NETService {
     private func cacheChapter(_ chapter: NETCachedChapter) {
         cacheQueue.async {
             self.chapterCache[self.cacheKeyFor(book: chapter.book, chapter: chapter.chapter)] = chapter
-            self.saveCacheToDisk()
+            self.scheduleCacheSave()
         }
     }
 
     func clearCache() {
         cacheQueue.async {
+            self.pendingCacheSave?.cancel()
+            self.pendingCacheSave = nil
             self.chapterCache.removeAll()
             UserDefaults.standard.removeObject(forKey: self.cacheKey)
         }

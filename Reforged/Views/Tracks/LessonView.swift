@@ -148,12 +148,9 @@ struct LessonView: View {
             return nil
         }.last
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-
         let entry = JournalEntry(
             id: UUID().uuidString,
-            date: dateFormatter.string(from: Date()),
+            date: AppDateFormatters.yearMonthDay.string(from: Date()),
             content: reflectionText,
             tags: ["Lesson Reflection"],
             linkedVerse: nil,
@@ -464,6 +461,8 @@ struct LessonCompleteView: View {
     let lesson: Lesson
     let onDismiss: () -> Void
     @Environment(\.colorScheme) var colorScheme
+    @State private var showConfetti = false
+    @State private var sealScale: CGFloat = 0.6
 
     var body: some View {
         VStack(spacing: 24) {
@@ -472,6 +471,7 @@ struct LessonCompleteView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 80))
                 .foregroundStyle(Color.reforgedGold)
+                .scaleEffect(sealScale)
 
             Text("Lesson Complete!")
                 .font(.title)
@@ -512,6 +512,15 @@ struct LessonCompleteView: View {
             .padding(.horizontal)
         }
         .padding()
+        .confetti(isActive: $showConfetti, intensity: .medium)
+        .onAppear {
+            // The seal springs in under the falling confetti; ConfettiView fires the
+            // achievement haptic itself, so don't double it here.
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) {
+                sealScale = 1.0
+            }
+            showConfetti = true
+        }
     }
 }
 

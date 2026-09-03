@@ -17,7 +17,8 @@ enum OnboardingStep: Int, CaseIterable {
     case displayPreferences    // 11 — theme, font, verse format, orig-lang toggles
     case aiFeatures            // 12 — AI opt-in/out
     case notifications         // 13 — permission request
-    case final                 // 14 — completion
+    case studyLibrary          // 14 — optional commentary/tool downloads
+    case final                 // 15 — completion
 
     /// Steps that can be skipped when the user signs in with Apple
     static let skippableWithAppleSignIn: Set<OnboardingStep> = [.name]
@@ -76,6 +77,8 @@ struct OnboardingFlowView: View {
                 AIFeaturesStepView(onNext: { nextStep() })
             case .notifications:
                 NotificationsStepView(onNext: { nextStep() })
+            case .studyLibrary:
+                OnboardingStudyLibraryStepView(onNext: { nextStep() })
             case .final:
                 FinalStepView(onComplete: { tab in completeOnboarding(navigatingTo: tab) })
             }
@@ -1175,6 +1178,9 @@ struct AuthStepView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showEmailConfirmation = false
+    /// Raw nonce for the in-flight Apple request; hashed onto the request and
+    /// then handed to Supabase to mint a session (see handleAppleSignInResult).
+    @State private var appleRawNonce = ""
 
     private let appleSignIn = AppleSignInService.shared
     private let cloudKit = CloudKitSyncService.shared
@@ -1299,6 +1305,9 @@ struct AuthStepView: View {
                 // Sign In with Apple
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]
+                    let raw = AppleSignInService.randomNonceString()
+                    appleRawNonce = raw
+                    request.nonce = AppleSignInService.sha256(raw)
                 } onCompletion: { result in
                     handleAppleSignInResult(result)
                 }
@@ -1396,6 +1405,20 @@ struct AuthStepView: View {
                 if let authCodeData = credential.authorizationCode,
                    let authCode = String(data: authCodeData, encoding: .utf8) {
                     await appleSignIn.exchangeAuthCodeForTokens(authCode: authCode)
+                }
+
+                // Mint a Supabase session from the Apple identity token so
+                // RLS-backed features (Groups) work without a separate account.
+                if let idTokenData = credential.identityToken,
+                   let idToken = String(data: idTokenData, encoding: .utf8),
+                   !appleRawNonce.isEmpty {
+                    let supaResult = await supabase.signInWithApple(idToken: idToken, rawNonce: appleRawNonce)
+                    if supaResult.success, let uid = supaResult.userId {
+                        appState.signedInWithSupabase(userId: uid, email: email ?? appleSignIn.userEmail ?? "")
+                        onSignedInWithSupabase?()
+                    } else {
+                        debugLog("⚠️ Apple→Supabase exchange failed: \(supaResult.errorMessage ?? "unknown")")
+                    }
                 }
 
                 let resolvedName  = fullName?.givenName ?? appleSignIn.userName

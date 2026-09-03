@@ -24,11 +24,15 @@ struct PodcastEpisode: Identifiable, Codable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    var formattedDate: String {
+    private static let pubDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .none
-        return f.string(from: pubDate)
+        return f
+    }()
+
+    var formattedDate: String {
+        Self.pubDateFormatter.string(from: pubDate)
     }
 
     /// Named series this episode belongs to.

@@ -18,6 +18,20 @@ enum GeminiError: LocalizedError {
         case .decodingError(let msg): return "Failed to decode Gemini response: \(msg)"
         }
     }
+
+    /// Transient failures worth an automatic retry — a network blip, rate limiting,
+    /// a server-side hiccup, or an empty/garbled candidate. Config errors
+    /// (missing key, AI disabled, auth/bad-request 4xx) are not retried.
+    var isRetryable: Bool {
+        switch self {
+        case .missingAPIKey, .aiDisabled:
+            return false
+        case .invalidResponse, .decodingError:
+            return true
+        case .httpError(let code):
+            return code == 429 || (500...599).contains(code)
+        }
+    }
 }
 
 // MARK: - Smart Search Result
@@ -41,6 +55,16 @@ struct SmartSearchResult {
 struct DailyInsightReflection {
     let reflection: String
     let prayerPrompt: String
+}
+
+/// Study-helpful details for a biblical place, generated to enrich the Atlas place sheet.
+struct PlaceInsight {
+    /// 2-3 sentences: what/where the place is, meaning of its name, geography.
+    let overview: String
+    /// Short bullet facts on its biblical significance and key events.
+    let significance: [String]
+    /// One reflective study question tying the place to the reader.
+    let studyPrompt: String
 }
 
 /// A key word identified in an Old Testament verse (no bundled Hebrew morphology exists,
@@ -76,10 +100,36 @@ final class GeminiService {
     private var wordStudyCache: [String: String] = [:]
     private var journalPromptCache: [String: [String]] = [:]
     private var keyWordCache: [String: [VerseWordTag]] = [:]
+    private var placeInsightCache: [String: PlaceInsight] = [:]
 
     // MARK: - Core Request
 
+    /// Number of attempts (1 initial + this many retries) for transient failures.
+    private let maxRetries = 2
+
+    /// Retrying wrapper around ``generateOnce``. AI prompts occasionally fail to load
+    /// on a transient network/server blip; rather than surface an empty result that the
+    /// user has to manually re-trigger, we retry with a short exponential backoff.
     private func generate(prompt: String, maxTokens: Int = 400) async throws -> String {
+        var attempt = 0
+        while true {
+            do {
+                return try await generateOnce(prompt: prompt, maxTokens: maxTokens)
+            } catch {
+                attempt += 1
+                let retryable = (error as? GeminiError)?.isRetryable ?? (error is URLError)
+                guard retryable, attempt <= maxRetries else { throw error }
+
+                // Backoff: 0.6s, then 1.2s — brief enough to stay under the caller's
+                // spinner without the user perceiving a stall.
+                let delayNanos = UInt64(0.6 * Double(attempt) * 1_000_000_000)
+                debugLog("[Gemini] ⟳ Retry \(attempt)/\(maxRetries) after \(error.localizedDescription)")
+                try? await Task.sleep(nanoseconds: delayNanos)
+            }
+        }
+    }
+
+    private func generateOnce(prompt: String, maxTokens: Int = 400) async throws -> String {
         let apiKey = await SettingsManager.shared.effectiveAPIKey
 
         if !apiKey.isEmpty {
@@ -422,6 +472,72 @@ final class GeminiService {
 
         let raw = try await generate(prompt: prompt, maxTokens: 220)
         return try parseDailyInsightReflection(from: raw)
+    }
+
+    // MARK: - Feature: Bible Atlas Place Insight
+
+    /// Generates study-helpful details for a biblical place shown in the Atlas.
+    /// Grounded in the place's own verse references and — when available on device —
+    /// excerpts from public-domain commentaries, so the overview reflects the text
+    /// rather than free-floating trivia.
+    func generatePlaceInsight(
+        name: String,
+        verses: [String],
+        commentaryContext: String = ""
+    ) async throws -> PlaceInsight {
+        try await checkEnabled()
+
+        if let cached = placeInsightCache[name] { return cached }
+
+        let referenceList = verses.prefix(12).joined(separator: ", ")
+        let commentaryBlock = commentaryContext.isEmpty
+            ? ""
+            : "\nRelevant public-domain commentary excerpts (use as grounding, do not quote verbatim):\n\(commentaryContext.prefix(1500))\n"
+
+        let prompt = """
+        You are a biblical geography and study assistant. Provide study-helpful details about the \
+        biblical place "\(name)". \
+        \(referenceList.isEmpty ? "" : "It is mentioned in: \(referenceList).")
+        \(commentaryBlock)
+        Return ONLY a valid JSON object with these exact keys:
+        overview — 2-3 sentences on what and where this place is, the meaning of its name if known, and its geography.
+        significance — an array of 2-4 short strings, each a key fact about its role in Scripture or notable events there. Each under 140 characters.
+        study_prompt — one reflective question (under 120 characters) connecting this place to a reader's faith.
+
+        Ground everything in the biblical text and the excerpts above. If a detail is uncertain, keep it general rather than inventing specifics. Do not use markdown. Do not include any other keys.
+        """
+
+        let raw = try await generate(prompt: prompt, maxTokens: 500)
+        let insight = try parsePlaceInsight(from: raw)
+        placeInsightCache[name] = insight
+        return insight
+    }
+
+    private func parsePlaceInsight(from raw: String) throws -> PlaceInsight {
+        struct Payload: Decodable {
+            let overview: String
+            let significance: [String]
+            let study_prompt: String
+        }
+        var cleaned = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let s = cleaned.firstIndex(of: "{") { cleaned = String(cleaned[s...]) }
+        if let e = cleaned.lastIndex(of: "}") { cleaned = String(cleaned[...e]) }
+        guard let data = cleaned.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(Payload.self, from: data) else {
+            throw GeminiError.decodingError("Could not parse place insight JSON")
+        }
+        let facts = decoded.significance
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return PlaceInsight(
+            overview: decoded.overview.trimmingCharacters(in: .whitespacesAndNewlines),
+            significance: facts,
+            studyPrompt: decoded.study_prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
     }
 
     // MARK: - Feature 6: Focus Shield Encouragements

@@ -5,12 +5,23 @@ import AVFoundation
 
 struct NowPlayingView: View {
     @ObservedObject var audioPlayer: BibleAudioPlayer
+    /// When hosted in the iPad tools sidebar (not a sheet), the environment dismiss
+    /// is a no-op, so the host passes an explicit close. Falls back to `dismiss`.
+    var onClose: (() -> Void)? = nil
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
     @State private var isScrubbing = false
     @State private var scrubPosition: Double = 0
+    @StateObject private var kjvDownloads = KJVAudioDownloadManager.shared
+    @State private var showKJVDownloads = false
+
+    /// KJV is the only translation with downloadable audio; surface the control
+    /// only when a KJV chapter (not TTS) is the active track.
+    var showsKJVDownload: Bool {
+        audioPlayer.currentTranslation == .kjv && !audioPlayer.isTTSMode
+    }
 
     var displayBook: String { audioPlayer.currentBook.isEmpty ? "" : audioPlayer.currentBook }
     var displayChapter: Int { audioPlayer.currentChapter }
@@ -44,7 +55,15 @@ struct NowPlayingView: View {
                 }
             }
         }
-        .onAppear { scrubPosition = audioPlayer.currentTime }
+        .onAppear {
+            scrubPosition = audioPlayer.currentTime
+            kjvDownloads.refreshState()
+        }
+        .sheet(isPresented: $showKJVDownloads) {
+            NavigationStack {
+                KJVAudioDownloadsView()
+            }
+        }
     }
 
     // MARK: - Portrait / iPad layout (existing vertical stack)
@@ -66,7 +85,7 @@ struct NowPlayingView: View {
 
                 // Header
                 HStack {
-                    Button { dismiss() } label: {
+                    Button { onClose?() ?? dismiss() } label: {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(.white)
@@ -127,6 +146,10 @@ struct NowPlayingView: View {
                 HStack(alignment: .center) {
                     speedButton()
                     Spacer()
+                    if showsKJVDownload {
+                        kjvDownloadButton()
+                        Spacer()
+                    }
                     SleepTimerButtonView(audioPlayer: audioPlayer).equatable()
                 }
                 .padding(.horizontal, hPad)
@@ -161,7 +184,7 @@ struct NowPlayingView: View {
                         .scaleEffect(audioPlayer.isPlaying ? 1.0 : 0.92)
                         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: audioPlayer.isPlaying)
 
-                    Button { dismiss() } label: {
+                    Button { onClose?() ?? dismiss() } label: {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.white)
@@ -203,6 +226,10 @@ struct NowPlayingView: View {
             HStack(alignment: .center) {
                 speedButton()
                 Spacer()
+                if showsKJVDownload {
+                    kjvDownloadButton()
+                    Spacer()
+                }
                 SleepTimerButtonView(audioPlayer: audioPlayer).equatable()
             }
             .padding(.horizontal, hPad)
@@ -337,6 +364,50 @@ struct NowPlayingView: View {
             }
 
             if !isWide { Spacer() }
+        }
+    }
+
+    /// Download affordance for KJV audio — surfaces the offline-download screen and
+    /// reflects the current book's state (available / downloading / saved) so it's
+    /// obvious from the player that chapters can be cached for offline listening.
+    @ViewBuilder
+    private func kjvDownloadButton() -> some View {
+        let book = audioPlayer.currentBook
+        let bookProgress = kjvDownloads.bookProgress[book]
+        let isDownloading = bookProgress != nil || kjvDownloads.isDownloadingAll
+        let isSaved = kjvDownloads.downloadedBooks.contains(book)
+
+        Button {
+            showKJVDownloads = true
+        } label: {
+            HStack(spacing: 5) {
+                if isDownloading {
+                    let pct = Int((bookProgress ?? kjvDownloads.allProgress) * 100)
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 13))
+                    Text("\(pct)%")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
+                } else if isSaved {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13))
+                    Text("Saved")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                } else {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 13))
+                    Text("Download")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+            }
+            .foregroundStyle(isSaved ? Color.reforgedGold : Color.white.opacity(0.55))
+            .padding(.horizontal, 13)
+            .padding(.vertical, 7)
+            .background(Color.white.opacity(isSaved ? 0.08 : 0.1))
+            .clipShape(Capsule())
         }
     }
 

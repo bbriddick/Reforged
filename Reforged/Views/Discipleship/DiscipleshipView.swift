@@ -10,6 +10,9 @@ struct DiscipleshipView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var focusService = FocusBlockingService.shared
     @Environment(\.colorScheme) var colorScheme
+    @State private var showTemptedSOS = false
+    @State private var showAccountability = false
+    @State private var showStudyLibraryHub = false
 
     var body: some View {
         NavigationStack {
@@ -20,11 +23,11 @@ struct DiscipleshipView: View {
 
                     sectionLabel("Resources")
                     resourcesGrid
-                    podcastCard
 
                     sectionLabel("Tools")
                     ShareGospelCard()
                     focusShieldCard
+                    temptedSOSCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
@@ -33,6 +36,26 @@ struct DiscipleshipView: View {
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle("Discipleship")
             .navigationBarTitleDisplayMode(.large)
+            .fullScreenCover(isPresented: $showTemptedSOS) {
+                TemptedSOSView()
+            }
+            // Weekly report reminder taps land here (the accountability screen
+            // normally lives two pushes deep under the shield).
+            .sheet(isPresented: $showAccountability) {
+                NavigationStack {
+                    AccountabilityPartnerView()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .showAccountabilityPartner)) { _ in
+                showAccountability = true
+            }
+            // Deep link from the verse-study "Library" button.
+            .navigationDestination(isPresented: $showStudyLibraryHub) {
+                StudyLibraryHubView()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openStudyLibrary)) { _ in
+                showStudyLibraryHub = true
+            }
         }
     }
 
@@ -184,10 +207,94 @@ struct DiscipleshipView: View {
     // MARK: - Resources Grid
 
     private var resourcesGrid: some View {
-        HStack(spacing: 12) {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                            GridItem(.flexible(), spacing: 12)], spacing: 12) {
             readingPlansMiniCard
             tracksMiniCard
+            studyLibraryMiniCard
+            walkTalksMiniCard
         }
+    }
+
+    private var walkTalksMiniCard: some View {
+        NavigationLink(destination: PodcastView()) {
+            VStack(alignment: .leading, spacing: 10) {
+                AsyncImage(url: PodcastService.shared.feed?.artworkURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    default:
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.walkTalksTeal.opacity(0.15))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: "headphones")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(Color.walkTalksTeal)
+                        }
+                    }
+                }
+                .frame(width: 40, height: 40)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Walk Talks")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
+                    Text(podcastSubtitle)
+                        .font(.caption2)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var studyLibraryMiniCard: some View {
+        let accent = Color(red: 0.55, green: 0.35, blue: 0.7)
+        return NavigationLink(destination: StudyLibraryHubView()) {
+            VStack(alignment: .leading, spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(accent.opacity(0.15))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "building.columns.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(accent)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Study Library")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
+                    Text("Atlas, commentaries, dictionaries & devotionals")
+                        .font(.caption2)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
     }
 
     private var readingPlansMiniCard: some View {
@@ -278,54 +385,6 @@ struct DiscipleshipView: View {
 
     // MARK: - Podcast Card
 
-    private var podcastCard: some View {
-        NavigationLink(destination: PodcastView()) {
-            HStack(spacing: 16) {
-                AsyncImage(url: PodcastService.shared.feed?.artworkURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 48, height: 48)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    default:
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.walkTalksTeal.opacity(0.15))
-                                .frame(width: 48, height: 48)
-                            Image(systemName: "headphones")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(Color.walkTalksTeal)
-                        }
-                    }
-                }
-                .frame(width: 48, height: 48)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Walk Talks")
-                        .font(.headline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text(podcastSubtitle)
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            }
-            .padding(16)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
-        }
-        .buttonStyle(.plain)
-    }
-
     private var podcastSubtitle: String {
         if let latest = PodcastService.shared.feed?.episodes.first?.title {
             return "Latest: \(latest)"
@@ -352,6 +411,47 @@ struct DiscipleshipView: View {
                         .font(.headline)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                     Text(focusStatusLabel)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(16)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Tempted SOS Card
+
+    private var temptedSOSCard: some View {
+        Button {
+            HapticManager.shared.buttonTap()
+            showTemptedSOS = true
+        } label: {
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.reforgedCoral.opacity(0.15))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "hand.raised.brakesignal")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Color.reforgedCoral)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("I'm Being Tempted")
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("Pause, breathe, and take hold of a way out")
                         .font(.caption)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .lineLimit(1)
@@ -416,8 +516,10 @@ struct DiscipleshipView: View {
         return "\(total) track\(total == 1 ? "" : "s") · \(completed) completed"
     }
 
+    /// Matches the shield screen's status semantics: green = protected,
+    /// coral = needs attention.
     private var shieldIconColor: Color {
-        focusService.isAnyBlockingActive ? Color.reforgedGold : Color.reforgedCoral
+        focusService.isAnyBlockingActive ? Color.green : Color.reforgedCoral
     }
 
     private var focusStatusLabel: String {

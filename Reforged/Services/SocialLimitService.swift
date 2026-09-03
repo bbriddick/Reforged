@@ -132,9 +132,12 @@ final class SocialLimitService: ObservableObject {
     func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
         defaults?.set(enabled, forKey: SocialLimitKeys.enabled)
+        ShieldStreakService.shared.refreshProtectionState()
         if enabled {
-            // Daily limit and always-on social block are mutually exclusive.
+            // The daily limit, the always-on social block, and the Scripture unlock
+            // gate all shield the same apps — only one may own them.
             Task { await FocusBlockingService.shared.setBlockSocialMedia(false) }
+            UnlockGateService.shared.setEnabled(false)
             // Fresh start: wipe any stale/poisoned usage + shield so the countdown
             // begins clean from "now" rather than inheriting a stuck state.
             startFreshDay()

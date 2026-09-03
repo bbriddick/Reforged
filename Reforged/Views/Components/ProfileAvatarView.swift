@@ -33,7 +33,7 @@ struct ProfileAvatarView: View {
                     .clipShape(Circle())
                     .overlay(
                         Circle()
-                            .stroke(profileBorderColor, lineWidth: size > 60 ? 4 : 2)
+                            .strokeBorder(profileBorderColor, lineWidth: size > 60 ? 4 : 2)
                     )
             } else {
                 Text(appState.user.avatar.isEmpty ? "🦁" : appState.user.avatar)
@@ -43,7 +43,7 @@ struct ProfileAvatarView: View {
                     .clipShape(Circle())
                     .overlay(
                         Circle()
-                            .stroke(profileBorderColor, lineWidth: size > 60 ? 4 : 2)
+                            .strokeBorder(profileBorderColor, lineWidth: size > 60 ? 4 : 2)
                     )
             }
 

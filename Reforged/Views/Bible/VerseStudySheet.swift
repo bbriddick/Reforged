@@ -26,6 +26,9 @@ struct VerseStudySheet: View {
     let chapter: Int
     let translation: BibleTranslation
     @ObservedObject var readingState: BibleReadingState
+    /// When hosted in the iPad tools sidebar (not a sheet), the environment dismiss
+    /// is a no-op, so the host passes an explicit close. Falls back to `dismiss`.
+    var onClose: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
@@ -35,10 +38,17 @@ struct VerseStudySheet: View {
     @State private var isLoadingWords = false
     @State private var studyQuestions: [String] = []
     @State private var isLoadingQuestions = false
+    @State private var questionsFailed = false
     @State private var expandedCrossRefs: Set<String> = []
     @State private var crossRefPreviewText: [String: String] = [:]
+    @State private var crossRefsAsMap = false
+    @State private var expandedTopic: String?
     @State private var wordLookupResult: WordLookupResult?
     @State private var studyNotePrompt: IdentifiablePrompt?
+    @State private var atlasFocusID: String?
+    @State private var showAtlas = false
+    @State private var expandedCommentaries: Set<String> = []
+    @ObservedObject private var commentaryDownloads = CommentaryDownloadManager.shared
 
     private var isNewTestament: Bool {
         BibleData.books.first(where: { $0.name == bookName })?.testament == .new
@@ -46,6 +56,26 @@ struct VerseStudySheet: View {
 
     private var crossReferences: [CrossReferenceEntry] {
         CrossReferenceService.shared.crossReferences(for: verse.reference)
+    }
+
+    private var verseTopics: [String] {
+        TopicalBibleService.shared.topics(for: verse.reference)
+    }
+
+    private var versePlaces: [BiblePlace] {
+        BiblePlaceService.shared.places(forVerse: verse.reference)
+    }
+
+    private var commentaryEntries: [CommentaryEntry] {
+        CommentaryService.shared.entries(for: verse.reference)
+    }
+
+    /// Downloadable commentaries not yet on disk, so the user can fetch more coverage.
+    private var downloadableCommentaries: [CommentarySource] {
+        CommentarySource.allCases.filter {
+            !$0.isBundled && !commentaryDownloads.isDownloaded($0)
+                && ($0.coversWholeBible || bookName == "Psalms")
+        }
     }
 
     private var showWordStudySection: Bool { isNewTestament || settings.aiEnabled }
@@ -65,6 +95,16 @@ struct VerseStudySheet: View {
                     }
 
                     crossReferencesSection
+
+                    commentarySection
+
+                    if !versePlaces.isEmpty {
+                        placesSection
+                    }
+
+                    if !verseTopics.isEmpty {
+                        topicsSection
+                    }
                 }
                 .padding()
             }
@@ -73,7 +113,7 @@ struct VerseStudySheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { onClose?() ?? dismiss() }
                         .fontWeight(.semibold)
                 }
             }
@@ -92,6 +132,21 @@ struct VerseStudySheet: View {
                 prefilledPrompt: prompt.text
             )
             .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showAtlas) {
+            BibleAtlasView(focusPlaceID: atlasFocusID)
+        }
+    }
+
+    /// Closes verse study and deep-links to the Study Library hub in the Discipleship tab.
+    private func openStudyLibrary() {
+        onClose?() ?? dismiss()
+        NotificationCenter.default.post(
+            name: .switchTab, object: nil,
+            userInfo: [AppNotificationUserInfoKey.tab: 1]
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            NotificationCenter.default.post(name: .openStudyLibrary, object: nil)
         }
     }
 
@@ -254,6 +309,18 @@ struct VerseStudySheet: View {
             if isLoadingQuestions {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else if questionsFailed {
+                Button {
+                    Task { await loadStudyQuestions() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Couldn't load — tap to try again")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.reforgedGold)
+                }
+                .buttonStyle(.plain)
             } else if studyQuestions.isEmpty {
                 Text("No study questions available.")
                     .font(.caption)
@@ -292,10 +359,16 @@ struct VerseStudySheet: View {
     private func loadStudyQuestions() async {
         guard settings.aiEnabled else { return }
         isLoadingQuestions = true
-        studyQuestions = (try? await GeminiService.shared.generateJournalPrompts(
-            reference: verse.reference,
-            verseText: verse.text
-        )) ?? []
+        questionsFailed = false
+        do {
+            studyQuestions = try await GeminiService.shared.generateJournalPrompts(
+                reference: verse.reference,
+                verseText: verse.text
+            )
+        } catch {
+            studyQuestions = []
+            questionsFailed = true
+        }
         isLoadingQuestions = false
     }
 
@@ -303,15 +376,35 @@ struct VerseStudySheet: View {
 
     private var crossReferencesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Cross References")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            HStack {
+                Text("Cross References")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Spacer()
+                if !crossReferences.isEmpty {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { crossRefsAsMap.toggle() }
+                    } label: {
+                        Label(crossRefsAsMap ? "List" : "Map",
+                              systemImage: crossRefsAsMap ? "list.bullet" : "point.3.connected.trianglepath.dotted")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.reforgedGold)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
 
             if crossReferences.isEmpty {
                 Text("No cross references found for this verse.")
                     .font(.caption)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
+            } else if crossRefsAsMap {
+                CrossReferenceMapView(
+                    sourceReference: verse.reference,
+                    entries: crossReferences,
+                    onSelect: navigateToReference
+                )
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(crossReferences) { entry in
@@ -320,6 +413,19 @@ struct VerseStudySheet: View {
                 }
             }
         }
+    }
+
+    /// Opens the reader at a cross reference (in the current translation) and closes this sheet.
+    private func navigateToReference(_ reference: String) {
+        NotificationCenter.default.post(
+            name: .navigateToBibleVerse,
+            object: nil,
+            userInfo: [
+                AppNotificationUserInfoKey.reference: reference,
+                AppNotificationUserInfoKey.translation: translation.rawValue
+            ]
+        )
+        onClose?() ?? dismiss()
     }
 
     private func crossReferenceRow(_ entry: CrossReferenceEntry) -> some View {
@@ -364,7 +470,7 @@ struct VerseStudySheet: View {
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     } else {
                         ProgressView()
-                            .task { await loadCrossRefPreview(entry) }
+                            .task { await loadVersePreview(entry.reference) }
                     }
                 }
                 .padding(.leading, 20)
@@ -376,10 +482,10 @@ struct VerseStudySheet: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
-    private func loadCrossRefPreview(_ entry: CrossReferenceEntry) async {
-        guard crossRefPreviewText[entry.reference] == nil else { return }
-        guard let parsed = parseCrossReference(entry.reference) else {
-            crossRefPreviewText[entry.reference] = ""
+    private func loadVersePreview(_ reference: String) async {
+        guard crossRefPreviewText[reference] == nil else { return }
+        guard let parsed = BibleData.parseReference(reference) else {
+            crossRefPreviewText[reference] = ""
             return
         }
 
@@ -389,23 +495,231 @@ struct VerseStudySheet: View {
                 chapter: parsed.chapter,
                 translation: translation
             )
-            crossRefPreviewText[entry.reference] = chapterEntry.verses.first(where: { $0.number == parsed.verseStart })?.text ?? ""
+            crossRefPreviewText[reference] = chapterEntry.verses.first(where: { $0.number == parsed.verseStart })?.text ?? ""
         } catch {
-            crossRefPreviewText[entry.reference] = ""
+            crossRefPreviewText[reference] = ""
         }
     }
 
-    /// Parses "Book Chapter:VerseStart" or "Book Chapter:VerseStart-VerseEnd" into its parts.
-    private func parseCrossReference(_ reference: String) -> (book: String, chapter: Int, verseStart: Int)? {
-        guard let colon = reference.lastIndex(of: ":") else { return nil }
-        let afterColon = reference[reference.index(after: colon)...]
-        let verseStartString = afterColon.split(separator: "-").first.map(String.init) ?? String(afterColon)
-        guard let verseStart = Int(verseStartString) else { return nil }
+    // MARK: - Commentary
 
-        let beforeColon = reference[..<colon]
-        guard let lastSpace = beforeColon.lastIndex(of: " "),
-              let chapter = Int(beforeColon[beforeColon.index(after: lastSpace)...]) else { return nil }
+    private var commentarySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Commentary")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Spacer()
+                Button { openStudyLibrary() } label: {
+                    Label("Library", systemImage: "books.vertical")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.reforgedGold)
+                }
+                .buttonStyle(.plain)
+            }
 
-        return (String(beforeColon[..<lastSpace]), chapter, verseStart)
+            if commentaryEntries.isEmpty && downloadableCommentaries.isEmpty {
+                Text("No commentary available for this verse.")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
+            } else {
+                ForEach(commentaryEntries) { entry in
+                    commentaryRow(entry)
+                }
+                ForEach(downloadableCommentaries) { source in
+                    commentaryDownloadRow(source)
+                }
+            }
+        }
+    }
+
+    private func commentaryRow(_ entry: CommentaryEntry) -> some View {
+        let isExpanded = expandedCommentaries.contains(entry.source.rawValue)
+        return VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if isExpanded { expandedCommentaries.remove(entry.source.rawValue) }
+                    else { expandedCommentaries.insert(entry.source.rawValue) }
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "text.book.closed")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    Text(entry.source.displayName)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                LinkedScriptureText(text: entry.text,
+                                    font: .caption,
+                                    baseColor: Color.adaptiveTextSecondary(colorScheme))
+                    .padding(.leading, 20)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func commentaryDownloadRow(_ source: CommentarySource) -> some View {
+        HStack {
+            Image(systemName: "arrow.down.circle")
+                .font(.caption)
+                .foregroundStyle(Color.reforgedGold)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(source.displayName)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text("Tap to download · \(CommentaryDownloadManager.formatBytes(source.approxBytes))")
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            Spacer()
+            if commentaryDownloads.isBusy(source) {
+                ProgressView()
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !commentaryDownloads.isBusy(source) { commentaryDownloads.download(source) }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: - Places
+
+    private var placesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Places")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Spacer()
+                Button {
+                    atlasFocusID = nil
+                    showAtlas = true
+                } label: {
+                    Label("Atlas", systemImage: "map")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.reforgedGold)
+                }
+                .buttonStyle(.plain)
+            }
+
+            FlowLayout(spacing: 6, lineSpacing: 6) {
+                ForEach(versePlaces) { place in
+                    Button {
+                        atlasFocusID = place.id
+                        showAtlas = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.caption2)
+                            Text(place.name)
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Color.adaptiveChipBackground(colorScheme))
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    // MARK: - Topics
+
+    private var topicsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Topics")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            // Wrap the topic chips instead of scrolling them sideways, so every
+            // topic is visible at once — especially in the narrow iPad tools panel.
+            FlowLayout(spacing: 6, lineSpacing: 6) {
+                ForEach(verseTopics, id: \.self) { topic in
+                    let isExpanded = expandedTopic == topic
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            expandedTopic = isExpanded ? nil : topic
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "tag")
+                                .font(.caption2)
+                            Text(topic.capitalized)
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(isExpanded
+                            ? (colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+                            : Color.adaptiveChipBackground(colorScheme))
+                        .foregroundStyle(isExpanded ? .white : Color.adaptiveNavyText(colorScheme))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if let topic = expandedTopic {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(TopicalBibleService.shared.verses(for: topic).prefix(5)) { entry in
+                        topicVerseRow(entry)
+                    }
+                }
+            }
+        }
+    }
+
+    private func topicVerseRow(_ entry: TopicalVerseEntry) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(entry.reference)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                Text("\(entry.votes) votes")
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+
+            Group {
+                if let text = crossRefPreviewText[entry.reference] {
+                    Text(text.isEmpty ? "Verse text unavailable." : text)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                } else {
+                    ProgressView()
+                        .task { await loadVersePreview(entry.reference) }
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

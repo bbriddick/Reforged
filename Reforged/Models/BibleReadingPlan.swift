@@ -135,6 +135,9 @@ struct BibleReadingPlan: Identifiable {
     let iconName: String
     let accentColor: Color
     let entries: [BiblePlanEntry]
+    /// Devotional plans (e.g. Spurgeon's Morning & Evening) present their own reader instead
+    /// of the generic chapter-list detail view, and their days are read, not "chapters".
+    var isDevotional: Bool = false
 
     var totalDays: Int { entries.count }
     var readingDays: Int { entries.filter { !$0.isReflectionDay }.count }
@@ -143,7 +146,10 @@ struct BibleReadingPlan: Identifiable {
 // MARK: - All Plans namespace
 
 enum BibleReadingPlans {
+    /// Stable id for Spurgeon's Morning & Evening (used to route to its custom reader).
+    static let spurgeonId = "spurgeon-morning-evening"
+
     static let all: [BibleReadingPlan] = [
-        foundation, character, discipleship, bibleInAYear, newTestament
+        foundation, character, discipleship, bibleInAYear, newTestament, spurgeonMorningEvening
     ]
 }

@@ -4,7 +4,6 @@ import SwiftUI
 
 struct WhatsNewView: View {
     @Binding var isPresented: Bool
-    @EnvironmentObject var settingsManager: SettingsManager
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -47,12 +46,6 @@ struct WhatsNewView: View {
                     }
                 }
             }
-
-            Divider()
-                .padding(.horizontal, 24)
-
-            // Settings toggles
-            togglesSection
 
             Divider()
                 .padding(.horizontal, 24)
@@ -104,15 +97,17 @@ struct WhatsNewView: View {
     // MARK: - Feature Row
 
     private func featureRow(_ feature: WhatsNewFeature) -> some View {
-        HStack(alignment: .top, spacing: 16) {
+        let accent = feature.accent.color(colorScheme)
+
+        return HStack(alignment: .top, spacing: 16) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(feature.color.opacity(0.15))
+                    .fill(accent.opacity(0.15))
                     .frame(width: 44, height: 44)
 
                 Image(systemName: feature.icon)
                     .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(feature.color)
+                    .foregroundStyle(accent)
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -129,78 +124,6 @@ struct WhatsNewView: View {
             }
 
             Spacer()
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-    }
-
-    // MARK: - Toggles Section
-
-    private var togglesSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Customize Your Experience")
-                .font(.footnote)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                .textCase(.uppercase)
-                .tracking(0.5)
-                .padding(.bottom, 4)
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-
-            toggleRow(
-                icon: "text.word.spacing",
-                iconColor: Color.reforgedCoral,
-                title: "Words of Christ in Red",
-                subtitle: "Highlight Jesus's words in red throughout the Gospels",
-                isOn: $settingsManager.showRedLetterText
-            )
-
-            Divider()
-                .padding(.leading, 68)
-                .padding(.trailing, 24)
-
-            toggleRow(
-                icon: "sparkles",
-                iconColor: Color.reforgedGold,
-                title: "AI Features",
-                subtitle: "Journal prompts, word study summaries, and smart search",
-                isOn: $settingsManager.aiEnabled
-            )
-        }
-        .padding(.bottom, 8)
-    }
-
-    private func toggleRow(icon: String, iconColor: Color, title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(iconColor.opacity(0.15))
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(iconColor)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    .lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer()
-
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-                .tint(iconColor)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 14)
@@ -236,36 +159,60 @@ struct WhatsNewView: View {
 
 // MARK: - What's New Feature Model
 
+/// Accent for a feature row. `navy` resolves through `adaptiveNavyText` because the
+/// brand navy is near-black charcoal — as a literal color it disappears on a dark card.
+enum WhatsNewAccent {
+    case gold
+    case coral
+    case purple
+    case navy
+
+    func color(_ scheme: ColorScheme?) -> Color {
+        switch self {
+        case .gold: return .reforgedGold
+        case .coral: return .reforgedCoral
+        case .purple: return .purple
+        case .navy: return .adaptiveNavyText(scheme)
+        }
+    }
+}
+
 struct WhatsNewFeature {
     let icon: String
-    let color: Color
+    let accent: WhatsNewAccent
     let title: String
     let description: String
 
     static let currentVersion: [WhatsNewFeature] = [
         WhatsNewFeature(
-            icon: "text.word.spacing",
-            color: .reforgedCoral,
-            title: "Words of Christ in Red",
-            description: "Jesus's words are now highlighted in red throughout the Gospels and Acts for deeper devotional reading."
+            icon: "text.magnifyingglass",
+            accent: .gold,
+            title: "Verse Study",
+            description: "Tap any verse and choose Study for cross references, a Greek and Hebrew word breakdown, and questions to journal through."
         ),
         WhatsNewFeature(
-            icon: "sparkles",
-            color: .reforgedGold,
-            title: "AI-Powered Study Tools",
-            description: "Get journal prompts, word study summaries, and smarter search powered by AI. Can be disabled in Settings."
+            icon: "tag",
+            accent: .navy,
+            title: "Topical Bible",
+            description: "Search a topic like anxiety or forgiveness and jump straight to the passages that speak to it, ranked by what readers found most helpful."
         ),
         WhatsNewFeature(
-            icon: "square.and.arrow.up",
-            color: Color.reforgedNavy,
-            title: "Verse Share Cards",
-            description: "Share beautifully designed verse cards with friends and family directly from any Bible passage."
+            icon: "brain.head.profile",
+            accent: .purple,
+            title: "Sharper Memory Review",
+            description: "Reviews now open with a swipeable flashcard deck, then step each verse up through harder exercises as it sticks."
         ),
         WhatsNewFeature(
-            icon: "rectangle.3.group",
-            color: Color.purple,
-            title: "Home Screen Widget",
-            description: "Add the Verse of the Day widget to your home screen to keep Scripture front and center."
+            icon: "shield.lefthalf.filled",
+            accent: .coral,
+            title: "A Stronger Shield",
+            description: "Set blocking schedules, start a focus session on demand, reach for the SOS flow when tempted, and keep a partner in the loop."
+        ),
+        WhatsNewFeature(
+            icon: "headphones",
+            accent: .gold,
+            title: "KJV Audio, Offline",
+            description: "Listen to the KJV with a new public-domain recording, and download chapters to hear them without a connection."
         ),
     ]
 }

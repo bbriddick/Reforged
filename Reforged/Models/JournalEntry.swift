@@ -82,6 +82,7 @@ struct JournalEntry: Codable, Identifiable {
     var linkedLesson: String?
     var linkedInsight: String?
     var prompt: String?
+    var reflectionMethod: String?   // structured method acronym, e.g. "SOAP" (see ReflectionTemplate)
 
     /// All linked verses, merging legacy `linkedVerse` with `linkedVerses`.
     var allLinkedVerses: [String] {
@@ -104,7 +105,7 @@ struct JournalEntry: Codable, Identifiable {
          formattedContent: RichTextNoteContent? = nil,
          linkedVerse: String? = nil, linkedVerses: [String] = [],
          linkedLesson: String? = nil, linkedInsight: String? = nil,
-         prompt: String? = nil) {
+         prompt: String? = nil, reflectionMethod: String? = nil) {
         self.id = id
         self.date = date
         self.content = content
@@ -115,6 +116,7 @@ struct JournalEntry: Codable, Identifiable {
         self.linkedLesson = linkedLesson
         self.linkedInsight = linkedInsight
         self.prompt = prompt
+        self.reflectionMethod = reflectionMethod
     }
 
     init(from decoder: Decoder) throws {
@@ -129,6 +131,7 @@ struct JournalEntry: Codable, Identifiable {
         linkedLesson  = try c.decodeIfPresent(String.self,   forKey: .linkedLesson)
         linkedInsight = try c.decodeIfPresent(String.self,   forKey: .linkedInsight)
         prompt        = try c.decodeIfPresent(String.self,   forKey: .prompt)
+        reflectionMethod = try c.decodeIfPresent(String.self, forKey: .reflectionMethod)
         if formattedContent == nil {
             formattedContent = RichTextNoteContent.fromPlainText(content)
         }

@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var donationPromptMessage = ""
     @State private var showWhatsNew = false
     @State private var refocusVerse: RefocusVerse? = nil
+    @State private var showTemptedSOS = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.requestReview) private var requestReview
 
@@ -24,6 +25,9 @@ struct ContentView: View {
                 AdaptiveNavigationView(selectedTab: $selectedTab)
                     .preferredColorScheme(themeManager.colorScheme)
                     .id(themeManager.currentMode) // Safe to reset main nav on theme change
+                    // Outside the .id() on purpose: a theme change mid-celebration
+                    // must not tear down an in-flight reward animation.
+                    .celebrationOverlay()
             }
         }
         .environmentObject(appState)
@@ -37,6 +41,16 @@ struct ContentView: View {
                 FocusBlockingService.shared.applyBlockingIfEnabled()
                 // Re-arm the social daily-limit monitoring (and handle the day reset)
                 SocialLimitService.shared.refresh()
+                // Backstop for the unlock gate's midnight re-lock
+                UnlockGateService.shared.refresh()
+                // Backstop for schedule windows and focus sessions whose monitor
+                // callbacks were missed (reboot, extension not woken)
+                ScheduledBlockingService.shared.reconcileNow()
+                FocusSessionService.shared.reconcile()
+                // Detect Screen Time access being revoked in Settings, and keep
+                // the protected-days streak current across day rollovers
+                AccountabilityPartnerService.shared.checkAuthorizationRevocation()
+                ShieldStreakService.shared.refreshProtectionState()
                 // Refresh daily insight when app becomes active
                 appState.refreshDailyInsightIfNeeded()
                 // Rebuild daily reminders from current settings (idempotent — never stacks)
@@ -79,8 +93,17 @@ struct ContentView: View {
                 suggestion: notification.userInfo?[AppNotificationUserInfoKey.suggestion] as? String
             )
         }
+        .onReceive(NotificationCenter.default.publisher(for: .showTemptedSOS)) { _ in
+            showTemptedSOS = true
+        }
         .sheet(item: $refocusVerse) { verse in
             RefocusVerseSheet(verse: verse)
+        }
+        // Panic widget taps land here rather than in DiscipleshipView, so the flow
+        // opens over whatever tab the user was on.
+        .fullScreenCover(isPresented: $showTemptedSOS) {
+            TemptedSOSView()
+                .environmentObject(appState)
         }
         .sheet(isPresented: $showFreezeEncouragement) {
             FreezeEncouragementView(isPresented: $showFreezeEncouragement)
@@ -96,7 +119,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showWhatsNew) {
             WhatsNewView(isPresented: $showWhatsNew)
-                .environmentObject(settingsManager)
         }
     }
 
@@ -105,8 +127,9 @@ struct ContentView: View {
         guard appState.user.streakFreezes == 0 else { return }
         guard appState.user.streak >= 3 else { return } // Only show if they have a streak worth protecting
 
-        // Only show once per day
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        // Only show once per day. Uses the streak engine's local day key so the
+        // prompt turns over with the user's day, not with UTC midnight.
+        let today = ReadingStreakManager.shared.currentDayKey
         let lastShown = UserDefaults.standard.string(forKey: "lastFreezeEncouragementDate") ?? ""
         guard today != lastShown else { return }
 
@@ -455,6 +478,7 @@ struct SidebarNavigationView: View {
                     NavigationRow(icon: "shield.lefthalf.filled", title: "Discipleship", tag: 1, selectedTab: $selectedTab)
                     NavigationRow(icon: "text.book.closed.fill", title: "Bible", tag: 2, selectedTab: $selectedTab)
                     NavigationRow(icon: "brain.head.profile", title: "Memory", tag: 3, selectedTab: $selectedTab)
+                    NavigationRow(icon: "person.3.fill", title: "Groups", tag: 6, selectedTab: $selectedTab)
                 } header: {
                     Text("Reforged")
                         .font(.title2)
@@ -497,6 +521,9 @@ struct SidebarNavigationView: View {
                     .environment(\.isSidebarNavigation, true)
             case 5:
                 SettingsView()
+                    .environment(\.isSidebarNavigation, true)
+            case 6:
+                GroupsView()
                     .environment(\.isSidebarNavigation, true)
             default:
                 BibleView()
@@ -631,11 +658,15 @@ struct MainTabView: View {
                 }
                 .tag(3)
 
-            ProfileView()
+            GroupsView()
                 .tabItem {
-                    Label("Profile", systemImage: "person.fill")
+                    Label("Groups", systemImage: "person.3.fill")
                 }
-                .tag(4)
+                .tag(6)
+
+            // No Profile tab — four tabs read more simply, and Profile is one tap
+            // away via the avatar in HomeView's WelcomeHeader. The iPad sidebar
+            // still lists it (tag 4), so tags 0–3 must keep matching there.
         }
         .tint(Color.reforgedGold)
         .background(Color.adaptiveBackground(colorScheme))

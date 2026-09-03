@@ -402,7 +402,7 @@ final class ExportService {
     }
 
     private func isoDate(_ s: String) -> Date? {
-        ISO8601DateFormatter().date(from: s)
+        AppDateFormatters.iso8601.date(from: s)
     }
 
     private func formattedDate(_ date: Date?) -> String? {

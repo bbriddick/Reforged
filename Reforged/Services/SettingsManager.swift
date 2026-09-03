@@ -74,6 +74,12 @@ class SettingsManager: ObservableObject {
         didSet { save(showRedLetterText, forKey: Keys.showRedLetterText) }
     }
 
+    /// iPad/Mac only: show the vertical study-tools rail down the reader's trailing
+    /// margin. No effect on iPhone, where the tools live in the top bar.
+    @Published var showBibleToolsRail: Bool {
+        didSet { save(showBibleToolsRail, forKey: Keys.showBibleToolsRail) }
+    }
+
     @Published var autoRestoreReadingLocation: Bool {
         didSet { save(autoRestoreReadingLocation, forKey: Keys.autoRestoreReadingLocation) }
     }
@@ -303,6 +309,7 @@ class SettingsManager: ObservableObject {
         static let showSuperscriptVerseNumbers = "settings.showSuperscriptVerseNumbers"
         static let showParagraphHeadings = "settings.showParagraphHeadings"
         static let showRedLetterText = "settings.showRedLetterText"
+        static let showBibleToolsRail = "settings.showBibleToolsRail"
         static let autoRestoreReadingLocation = "settings.autoRestoreReadingLocation"
         static let persistentChapterNavigation = "settings.persistentChapterNavigation"
         static let showOriginalLanguageText = "settings.showOriginalLanguageText"
@@ -362,6 +369,7 @@ class SettingsManager: ObservableObject {
         self.showSuperscriptVerseNumbers = UserDefaults.standard.object(forKey: Keys.showSuperscriptVerseNumbers) as? Bool ?? true
         self.showParagraphHeadings = UserDefaults.standard.object(forKey: Keys.showParagraphHeadings) as? Bool ?? true
         self.showRedLetterText = UserDefaults.standard.object(forKey: Keys.showRedLetterText) as? Bool ?? false
+        self.showBibleToolsRail = UserDefaults.standard.object(forKey: Keys.showBibleToolsRail) as? Bool ?? true
         self.autoRestoreReadingLocation = UserDefaults.standard.object(forKey: Keys.autoRestoreReadingLocation) as? Bool ?? true
         self.persistentChapterNavigation = UserDefaults.standard.object(forKey: Keys.persistentChapterNavigation) as? Bool ?? true
         self.showOriginalLanguageText = UserDefaults.standard.object(forKey: Keys.showOriginalLanguageText) as? Bool ?? true
@@ -516,6 +524,8 @@ class SettingsManager: ObservableObject {
         themeMode = .system
         readingMode = false
         keepScreenOn = false
+        showRedLetterText = false
+        showBibleToolsRail = true
     }
 
     func resetBibleSettings() {

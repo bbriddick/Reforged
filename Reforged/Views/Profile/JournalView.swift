@@ -4,6 +4,7 @@ struct JournalView: View {
     @State private var entries: [JournalEntry] = []
     @State private var showNewEntry = false
     @State private var showPromptEntry = false
+    @State private var showTemplateEntry = false
     @State private var searchText = ""
     @State private var selectedTab = 0
     @State private var showPrivacyInfo = false
@@ -100,20 +101,29 @@ struct JournalView: View {
 
                     // Entry type buttons
                     HStack(spacing: 12) {
-                        JournalTypeButton(
+                        JournalEntryTypeCard(
                             icon: "pencil.line",
                             title: "Free Write",
-                            color: .reforgedNavy
+                            tint: .reforgedNavy,
+                            adaptiveIcon: true
                         ) {
                             showNewEntry = true
                         }
 
-                        JournalTypeButton(
+                        JournalEntryTypeCard(
                             icon: "lightbulb.fill",
                             title: "With Prompt",
-                            color: .reforgedGold
+                            tint: .reforgedGold
                         ) {
                             showPromptEntry = true
+                        }
+
+                        JournalEntryTypeCard(
+                            icon: "list.bullet.clipboard.fill",
+                            title: "Guided Method",
+                            tint: .reforgedCoral
+                        ) {
+                            showTemplateEntry = true
                         }
                     }
 
@@ -183,6 +193,9 @@ struct JournalView: View {
             .sheet(isPresented: $showPromptEntry) {
                 NewJournalEntrySheet(entries: $entries, usePrompt: true, onSave: saveEntries)
             }
+            .sheet(isPresented: $showTemplateEntry) {
+                NewJournalEntrySheet(entries: $entries, templateMode: true, onSave: saveEntries)
+            }
             .sheet(isPresented: $showPrivacyInfo) {
                 JournalPrivacySheet()
             }
@@ -193,6 +206,7 @@ struct JournalView: View {
                 NewJournalEntrySheet(
                     entries: $entries,
                     usePrompt: entry.prompt != nil,
+                    templateMode: entry.reflectionMethod != nil,
                     entryToEdit: entry,
                     onSave: saveEntries
                 )
@@ -384,41 +398,47 @@ struct PrivacyPoint: View {
     }
 }
 
-// MARK: - Journal Type Button
+// MARK: - Journal Entry Type Card
 
-struct JournalTypeButton: View {
+/// Compact vertical card used for the three ways to start an entry
+/// (Free Write, With Prompt, Guided Method).
+struct JournalEntryTypeCard: View {
     let icon: String
     let title: String
-    let color: Color
+    let tint: Color
+    /// When true the glyph flips to an off-white in dark mode (for navy/charcoal tints).
+    var adaptiveIcon: Bool = false
     let action: () -> Void
     @Environment(\.colorScheme) var colorScheme
 
+    private var iconColor: Color {
+        adaptiveIcon ? Color.adaptiveNavyText(colorScheme) : tint
+    }
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            VStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(color.opacity(0.12))
-                        .frame(width: 40, height: 40)
+                        .fill(tint.opacity(0.12))
+                        .frame(width: 44, height: 44)
 
                     Image(systemName: icon)
-                        .font(.callout)
-                        .foregroundStyle(color)
+                        .font(.title3)
+                        .foregroundStyle(iconColor)
                 }
 
                 Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .fontWeight(.semibold)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
             }
-            .padding(ReforgedTheme.spacingM)
             .frame(maxWidth: .infinity)
+            .padding(.vertical, ReforgedTheme.spacingM)
+            .padding(.horizontal, 6)
             .reforgedCard()
         }
         .buttonStyle(.plain)
@@ -628,16 +648,21 @@ struct SwipeToDeleteContainer<Content: View>: View {
 
 // MARK: - Bible Note Row
 
+// Shared by BibleNoteRow/JournalEntryRow — formatter creation is too
+// expensive to repeat on every row render.
+private let journalRowDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "MMM d, yyyy"
+    return formatter
+}()
+
 struct BibleNoteRow: View {
     let note: VerseNote
     @Environment(\.colorScheme) var colorScheme
 
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy"
-
-        if let date = ISO8601DateFormatter().date(from: note.updatedAt) {
-            return formatter.string(from: date)
+        if let date = AppDateFormatters.iso8601.date(from: note.updatedAt) {
+            return journalRowDateFormatter.string(from: date)
         }
         return note.updatedAt
     }
@@ -703,26 +728,31 @@ struct JournalEntryRow: View {
     @Environment(\.colorScheme) var colorScheme
 
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy"
-
-        if let date = ISO8601DateFormatter().date(from: entry.date) {
-            return formatter.string(from: date)
+        if let date = AppDateFormatters.iso8601.date(from: entry.date) {
+            return journalRowDateFormatter.string(from: date)
         }
         return entry.date
     }
 
+    var template: ReflectionTemplate? {
+        ReflectionTemplate.named(entry.reflectionMethod)
+    }
+
     var entryIcon: String {
-        if entry.prompt != nil {
-            return "lightbulb.fill"
-        }
+        if let template { return template.icon }
+        if entry.prompt != nil { return "lightbulb.fill" }
         return "pencil.line"
     }
 
     var iconColor: Color {
-        if entry.prompt != nil {
-            return .reforgedGold
-        }
+        if let template { return template.accent.color(colorScheme) }
+        if entry.prompt != nil { return .reforgedGold }
+        return Color.adaptiveNavyText(colorScheme)
+    }
+
+    var iconTint: Color {
+        if let template { return template.accent.tint }
+        if entry.prompt != nil { return .reforgedGold }
         return .reforgedNavy
     }
 
@@ -732,7 +762,7 @@ struct JournalEntryRow: View {
             HStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(iconColor.opacity(0.12))
+                        .fill(iconTint.opacity(0.12))
                         .frame(width: 36, height: 36)
 
                     Image(systemName: entryIcon)
@@ -778,6 +808,22 @@ struct JournalEntryRow: View {
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 .lineLimit(3)
 
+            // Reflection method badge
+            if let template {
+                HStack(spacing: 6) {
+                    Image(systemName: template.icon)
+                        .font(.system(size: 10))
+                    Text("\(template.name) Method")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(template.accent.color(colorScheme))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(template.accent.tint.opacity(0.1))
+                .clipShape(Capsule())
+            }
+
             // Tags
             if !entry.tags.isEmpty {
                 HStack(spacing: 6) {
@@ -807,6 +853,7 @@ struct NewJournalEntrySheet: View {
     @EnvironmentObject var appState: AppState
     @Binding var entries: [JournalEntry]
     var usePrompt: Bool = false
+    var templateMode: Bool = false
     var verseReference: String? = nil
     var verseText: String? = nil
     var entryToEdit: JournalEntry? = nil
@@ -816,6 +863,11 @@ struct NewJournalEntrySheet: View {
     @State private var selectedPrompt: String?
     @State private var displayedPrompts: [String] = randomJournalPrompts()
     @State private var isLoadingPrompts = false
+    @State private var promptsFailed = false
+    @State private var selectedTemplate: ReflectionTemplate?
+    @State private var lastScaffoldPlain: String = ""
+    @State private var pendingTemplate: ReflectionTemplate?
+    @State private var showReplaceConfirm = false
     @State private var showVersePicker = false
     @State private var pickerBook = BibleData.defaultBook
     @State private var pickerChapter: Int = 1
@@ -860,14 +912,27 @@ struct NewJournalEntrySheet: View {
 
                                 if verseReference != nil && SettingsManager.shared.aiEnabled {
                                     Spacer()
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "sparkles")
-                                            .font(.caption2)
-                                        Text("AI")
-                                            .font(.caption2)
-                                            .fontWeight(.semibold)
+                                    if promptsFailed && !isLoadingPrompts {
+                                        Button {
+                                            Task { await loadVersePrompts() }
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "arrow.clockwise")
+                                                Text("Retry")
+                                            }
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(Color.reforgedGold)
+                                        }
+                                    } else {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "sparkles")
+                                                .font(.caption2)
+                                            Text("AI")
+                                                .font(.caption2)
+                                                .fontWeight(.semibold)
+                                        }
+                                        .foregroundStyle(Color.reforgedGold)
                                     }
-                                    .foregroundStyle(Color.reforgedGold)
                                 }
                             }
 
@@ -899,18 +964,12 @@ struct NewJournalEntrySheet: View {
                                 }
                             }
                         }
-                        .task {
-                            guard usePrompt,
-                                  let ref = verseReference,
-                                  let text = verseText,
-                                  SettingsManager.shared.aiEnabled else { return }
-                            isLoadingPrompts = true
-                            if let generated = try? await GeminiService.shared.generateJournalPrompts(
-                                reference: ref, verseText: text) {
-                                displayedPrompts = generated
-                            }
-                            isLoadingPrompts = false
-                        }
+                        .task { await loadVersePrompts() }
+                    }
+
+                    // Reflection method picker + guide
+                    if templateMode {
+                        reflectionMethodSection
                     }
 
                     // Content
@@ -1027,7 +1086,7 @@ struct NewJournalEntrySheet: View {
                 .padding()
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-            .navigationTitle(isEditing ? "Edit Entry" : (usePrompt ? "Prompted Entry" : "Free Write"))
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1059,6 +1118,19 @@ struct NewJournalEntrySheet: View {
                     }
                 }
             }
+            .confirmationDialog(
+                "Replace your reflection?",
+                isPresented: $showReplaceConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Replace with \(pendingTemplate?.name ?? "template")", role: .destructive) {
+                    if let template = pendingTemplate { applyTemplate(template, force: true) }
+                    pendingTemplate = nil
+                }
+                Button("Keep my text", role: .cancel) { pendingTemplate = nil }
+            } message: {
+                Text("Applying this method will replace what you've written so far.")
+            }
             .onAppear {
                 if let existing = entryToEdit {
                     // Load existing entry for editing
@@ -1071,11 +1143,93 @@ struct NewJournalEntrySheet: View {
                     }
                     linkedVerses = existing.allLinkedVerses
                     selectedPrompt = existing.prompt
+                    selectedTemplate = ReflectionTemplate.named(existing.reflectionMethod)
                 } else if let ref = verseReference, !linkedVerses.contains(ref) {
                     linkedVerses.append(ref)
                 }
             }
         }
+    }
+
+    // MARK: Reflection method (Guided) UI
+
+    private var reflectionMethodSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Choose a Method")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(ReflectionTemplate.all) { template in
+                        ReflectionMethodChip(
+                            template: template,
+                            isSelected: selectedTemplate?.id == template.id
+                        ) {
+                            applyTemplate(template)
+                        }
+                    }
+                }
+            }
+
+            if let template = selectedTemplate {
+                ReflectionMethodGuide(template: template)
+                    .transition(.opacity)
+            } else {
+                Text("Pick a method to scaffold your reflection with guided steps.")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+        }
+    }
+
+    /// Applies a template's scaffold to the editor. Confirms first when the user
+    /// has already written something that isn't just the previous scaffold.
+    private func loadVersePrompts() async {
+        guard usePrompt,
+              let ref = verseReference,
+              let text = verseText,
+              SettingsManager.shared.aiEnabled else { return }
+        isLoadingPrompts = true
+        promptsFailed = false
+        do {
+            displayedPrompts = try await GeminiService.shared.generateJournalPrompts(
+                reference: ref, verseText: text)
+        } catch {
+            // Keep the generic fallback prompts on screen, but surface a Retry affordance.
+            promptsFailed = true
+        }
+        isLoadingPrompts = false
+    }
+
+    private func applyTemplate(_ template: ReflectionTemplate, force: Bool = false) {
+        let current = contentAttributedText.string
+        let currentTrimmed = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        let canReplaceFreely = force
+            || currentTrimmed.isEmpty
+            || current == lastScaffoldPlain
+
+        guard canReplaceFreely else {
+            pendingTemplate = template
+            showReplaceConfirm = true
+            return
+        }
+
+        let seed = template.seedsScripture ? (linkedVerses.first ?? verseReference) : nil
+        let scaffold = template.scaffold(scriptureSeed: seed)
+        withAnimation(.easeInOut(duration: 0.2)) {
+            selectedTemplate = template
+        }
+        contentAttributedText = scaffold
+        lastScaffoldPlain = scaffold.string
+        HapticManager.shared.selectionChanged()
+    }
+
+    private var navigationTitleText: String {
+        if isEditing { return "Edit Entry" }
+        if templateMode { return "Guided Reflection" }
+        return usePrompt ? "Prompted Entry" : "Free Write"
     }
 
     func saveEntry() {
@@ -1096,7 +1250,8 @@ struct NewJournalEntrySheet: View {
                 linkedVerses: linkedVerses,
                 linkedLesson: existing.linkedLesson,
                 linkedInsight: existing.linkedInsight,
-                prompt: selectedPrompt
+                prompt: selectedPrompt,
+                reflectionMethod: selectedTemplate?.acronym ?? existing.reflectionMethod
             )
             if let idx = entries.firstIndex(where: { $0.id == existing.id }) {
                 entries[idx] = updated
@@ -1105,12 +1260,13 @@ struct NewJournalEntrySheet: View {
         } else {
             let entry = JournalEntry(
                 id: UUID().uuidString,
-                date: ISO8601DateFormatter().string(from: Date()),
+                date: AppDateFormatters.iso8601.string(from: Date()),
                 content: plainText,
                 tags: [],
                 formattedContent: richContent,
                 linkedVerses: linkedVerses,
-                prompt: selectedPrompt
+                prompt: selectedPrompt,
+                reflectionMethod: selectedTemplate?.acronym
             )
             entries.insert(entry, at: 0)
             JournalStorageManager.shared.addEntry(entry)
@@ -1146,6 +1302,108 @@ struct PromptChip: View {
                 .shadow(color: isSelected ? Color.reforgedNavy.opacity(0.2) : Color.clear, radius: 4, y: 2)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Reflection Method Chip
+
+struct ReflectionMethodChip: View {
+    let template: ReflectionTemplate
+    let isSelected: Bool
+    let action: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: template.icon)
+                        .font(.callout)
+                        .foregroundStyle(isSelected ? .white : template.accent.color(colorScheme))
+
+                    Text(template.name)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
+
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                Text(template.tagline)
+                    .font(.caption2)
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.9) : Color.adaptiveTextSecondary(colorScheme))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(width: 200, alignment: .leading)
+            .background(isSelected ? template.accent.tint : Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+            .overlay(
+                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                    .stroke(isSelected ? Color.clear : Color.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
+            .shadow(color: isSelected ? template.accent.tint.opacity(0.25) : Color.clear, radius: 4, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Reflection Method Guide
+
+/// A reference card listing each step of the selected method with its guidance,
+/// shown alongside the editor so saved entries stay clean.
+struct ReflectionMethodGuide: View {
+    let template: ReflectionTemplate
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(template.summary)
+                .font(.caption)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(template.sections) { section in
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(template.accent.tint.opacity(0.14))
+                            .frame(width: 30, height: 30)
+                        Text(section.letter)
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(template.accent.color(colorScheme))
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(section.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text(section.guidance)
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .padding(ReforgedTheme.spacingM)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(template.accent.tint.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+        .overlay(
+            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                .stroke(template.accent.tint.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 

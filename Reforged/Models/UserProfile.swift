@@ -149,7 +149,7 @@ struct UserProfile: Codable {
         level: 1,
         streak: 0,
         longestStreak: 0,
-        lastActiveDate: ISO8601DateFormatter().string(from: Date()),
+        lastActiveDate: AppDateFormatters.iso8601.string(from: Date()),
         badges: [],
         completedLessons: [],
         memoryVerses: [],

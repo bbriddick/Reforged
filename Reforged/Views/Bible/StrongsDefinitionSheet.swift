@@ -14,6 +14,23 @@ struct StrongsDefinitionSheet: View {
     @State private var aiSummary: String? = nil
     @State private var aiSummaryLoading = false
     @State private var aiSummaryError: String? = nil
+    @State private var expandedWorks: Set<String> = []
+
+    private var eastonEntry: ReferenceEntry? {
+        ReferenceWorkService.shared.eastonEntry(for: result.tappedWord)
+    }
+
+    private var greekEntry: ReferenceEntry? {
+        guard !result.isHebrew else { return nil }
+        let lemma = result.lexicalForm.isEmpty ? result.originalWord : result.lexicalForm
+        return ReferenceWorkService.shared.greekEntry(forLemma: lemma)
+            ?? ReferenceWorkService.shared.greekEntry(forLemma: result.originalWord)
+    }
+
+    private var referenceEntries: [ReferenceEntry] {
+        [eastonEntry, greekEntry].compactMap { $0 }
+            + ReferenceWorkService.shared.topicalEntries(for: result.tappedWord)
+    }
 
 
     var body: some View {
@@ -40,6 +57,10 @@ struct StrongsDefinitionSheet: View {
                             FallbackEntryCard(entry: entry, colorScheme: colorScheme)
                         }
                         matchQualityBadge(isExact: false)
+                    }
+
+                    if !referenceEntries.isEmpty {
+                        referenceWorksSection
                     }
 
                     // Search & external study actions
@@ -412,6 +433,59 @@ struct StrongsDefinitionSheet: View {
 
     // MARK: - Search Actions
 
+    /// Dictionary, lexicon, and topical entries (Easton, Abbott-Smith, Nave, Thompson)
+    /// matched to the tapped word.
+    private var referenceWorksSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Dictionaries & Topics")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            ForEach(referenceEntries) { entry in
+                let isExpanded = expandedWorks.contains(entry.id)
+                VStack(alignment: .leading, spacing: 8) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if isExpanded { expandedWorks.remove(entry.id) }
+                            else { expandedWorks.insert(entry.id) }
+                        }
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(entry.headword)
+                                    .font(.subheadline).fontWeight(.medium)
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                                Text(entry.work.displayName)
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    if isExpanded {
+                        LinkedScriptureText(text: entry.text,
+                                            font: .caption,
+                                            baseColor: Color.adaptiveTextSecondary(colorScheme))
+                    }
+                }
+                .padding(12)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                )
+            }
+        }
+    }
+
     private var searchActionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Study Further")
@@ -503,6 +577,19 @@ struct StrongsDefinitionSheet: View {
                         subtitle: "Browse occurrences for \(entry.lemma)",
                         icon: "text.magnifyingglass",
                         iconBackground: Color.reforgedGold
+                    )
+                }
+            }
+
+            if !result.tappedWord.isEmpty {
+                NavigationLink {
+                    WordLocatorView(initialWord: result.tappedWord)
+                } label: {
+                    searchActionRow(
+                        title: "Locate “\(result.tappedWord)”",
+                        subtitle: "See where this word appears across the whole Bible",
+                        icon: "chart.bar.xaxis",
+                        iconBackground: Color.adaptiveNavyText(colorScheme)
                     )
                 }
             }

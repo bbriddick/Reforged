@@ -182,6 +182,7 @@ struct TakeNoteView: View {
     @ObservedObject private var settings = SettingsManager.shared
     @State private var studyPrompts: [String] = []
     @State private var isLoadingPrompts = false
+    @State private var promptsFailed = false
 
     private var noteText: String { noteAttributedText.string }
 
@@ -378,6 +379,17 @@ struct TakeNoteView: View {
                                                 .redacted(reason: .placeholder)
                                         }
                                     }
+                                } else if promptsFailed {
+                                    Button {
+                                        Task { await loadStudyPrompts() }
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "arrow.clockwise")
+                                            Text("Couldn't load — tap to try again")
+                                        }
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Color.reforgedGold)
+                                    }
                                 } else if !studyPrompts.isEmpty {
                                     VStack(alignment: .leading, spacing: 8) {
                                         ForEach(studyPrompts, id: \.self) { prompt in
@@ -408,13 +420,7 @@ struct TakeNoteView: View {
                             }
                             .task {
                                 guard studyPrompts.isEmpty else { return }
-                                isLoadingPrompts = true
-                                let verseText = verses.map { $0.text }.joined(separator: " ")
-                                studyPrompts = (try? await GeminiService.shared.generateJournalPrompts(
-                                    reference: noteReference,
-                                    verseText: verseText
-                                )) ?? []
-                                isLoadingPrompts = false
+                                await loadStudyPrompts()
                             }
                         }
 
@@ -530,6 +536,22 @@ struct TakeNoteView: View {
                 )
             }
         }
+    }
+
+    private func loadStudyPrompts() async {
+        isLoadingPrompts = true
+        promptsFailed = false
+        let verseText = verses.map { $0.text }.joined(separator: " ")
+        do {
+            studyPrompts = try await GeminiService.shared.generateJournalPrompts(
+                reference: noteReference,
+                verseText: verseText
+            )
+        } catch {
+            studyPrompts = []
+            promptsFailed = true
+        }
+        isLoadingPrompts = false
     }
 }
 

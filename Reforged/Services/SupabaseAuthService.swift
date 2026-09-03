@@ -209,6 +209,60 @@ final class SupabaseAuthService: ObservableObject {
         }
     }
 
+    // MARK: - Sign In with Apple (id_token exchange)
+
+    /// Exchanges an Apple identity token for a Supabase session so that features
+    /// backed by PostgREST + RLS (e.g. Groups) work for users who authenticated
+    /// with Sign in with Apple. Supabase verifies the token against Apple's
+    /// public keys and checks that `rawNonce` hashes to the token's nonce claim,
+    /// so the caller MUST have set `request.nonce = sha256(rawNonce)` on the
+    /// original Apple request.
+    ///
+    /// Requires the Apple provider to be enabled in the Supabase dashboard with
+    /// the app's bundle id (com.reforged.app) as an authorized client id.
+    func signInWithApple(idToken: String, rawNonce: String) async -> SupabaseAuthResult {
+        do {
+            let body: [String: Any] = [
+                "provider": "apple",
+                "id_token": idToken,
+                "nonce": rawNonce
+            ]
+            let req = try makeRequest(path: "/auth/v1/token?grant_type=id_token",
+                                      method: "POST", body: body)
+            let (data, response) = try await URLSession.shared.data(for: req)
+
+            guard let http = response as? HTTPURLResponse else {
+                return .failure("No response from server.")
+            }
+
+            let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+
+            guard http.statusCode == 200 else {
+                let msg = json["error_description"] as? String
+                    ?? json["msg"] as? String
+                    ?? json["message"] as? String
+                    ?? "Apple sign-in failed (status \(http.statusCode))."
+                return .failure(msg)
+            }
+
+            guard let accessToken  = json["access_token"] as? String,
+                  let refreshToken = json["refresh_token"] as? String,
+                  let userObj      = json["user"] as? [String: Any],
+                  let uid          = userObj["id"] as? String else {
+                return .failure("Unexpected response from server.")
+            }
+
+            let email     = userObj["email"] as? String ?? userEmail ?? ""
+            let expiresIn = json["expires_in"] as? Double ?? 3600
+            saveSession(accessToken: accessToken, refreshToken: refreshToken,
+                        userId: uid, email: email, expiresIn: expiresIn)
+            return .success(userId: uid)
+
+        } catch {
+            return .failure(error.localizedDescription)
+        }
+    }
+
     // MARK: - Sign Out
 
     func signOut() async {

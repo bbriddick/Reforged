@@ -7,8 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0AD119BA881D3D4DCA6BABB0 /* TracksRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */; };
 		1AA2D9EB503E6A1B06F67F3D /* BibleReadingSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */; };
+		1AC23DA38F1D26DD79451A25 /* AgeGateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */; };
 		3B40F38F2FBBD3A08D42F18F /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD4BCA6620AB550441B62CA /* SettingsModels.swift */; };
+		54B4AA75BF152C7102BC424E /* LearnModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B85E73BE6B79BBFC71BA1C8 /* LearnModels.swift */; };
 		5C0D488D9F2B8A357C36FB36 /* AccountSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C79FE2CBEAC63ABD279754 /* AccountSettingsSection.swift */; };
 		5D3891187F2724D10FD5A9F2 /* AboutSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5190404405A017340CF7CDD3 /* AboutSection.swift */; };
 		6B09D1742FBC9C9900163A25 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
@@ -19,6 +22,8 @@
 		6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6B3C67E02F3303EB008165D9 /* ReforgedWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3C67E12F3303EB008165D9 /* ReforgedWidget.swift */; };
 		6B3C67E22F3303EB008165D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B3C67E32F3303EB008165D9 /* Assets.xcassets */; };
+		6B3C67F12F3303EB008165D9 /* PanicWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3C67F22F3303EB008165D9 /* PanicWidget.swift */; };
+		9A4D9885AAA3F662E0376A57 /* LearnViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F811E54E5FD3F7856A5DBC2 /* LearnViews.swift */; };
 		9A7E0011279B9E0000000001 /* VerseOfTheDayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */; };
 		9F25489E7841AF60EE0BEF00 /* DisplaySettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */; };
 		A1000001279B9E0000000001 /* ReforgedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002279B9E0000000001 /* ReforgedApp.swift */; };
@@ -34,6 +39,7 @@
 		A1000030279B9E0000000001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000031279B9E0000000001 /* AppState.swift */; };
 		A1000032279B9E0000000001 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000033279B9E0000000001 /* HomeView.swift */; };
 		A1000034279B9E0000000001 /* TracksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000035279B9E0000000001 /* TracksView.swift */; };
+		A1000034279B9E0000000101 /* HomeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000035279B9E0000000101 /* HomeSearchView.swift */; };
 		A1000036279B9E0000000001 /* LessonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000037279B9E0000000001 /* LessonView.swift */; };
 		A1000038279B9E0000000001 /* MemoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000039279B9E0000000001 /* MemoryView.swift */; };
 		A100003A279B9E0000000001 /* MemoryReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003B279B9E0000000001 /* MemoryReviewView.swift */; };
@@ -60,11 +66,14 @@
 		A10000E2279B9E0000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A10000E1279B9E0000000001 /* PrivacyInfo.xcprivacy */; };
 		A10000E3279B9E0000000001 /* MemoryAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */; };
 		A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1AABB01279B9E0000000001 /* ApiBibleService.swift */; };
+		A68BD1368B4DEE2199B124EE /* GroupsHubViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF048A10273B9C0FD63E00B3 /* GroupsHubViewModel.swift */; };
 		AIS0000A279B9E0000000001 /* AISettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AIS0000B279B9E0000000001 /* AISettingsSection.swift */; };
+		AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AL000001279B9E0000000001 /* AccountabilityLockService.swift */; };
 		AN000001279B9E0000000001 /* AntiochSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AN000002279B9E0000000001 /* AntiochSearchService.swift */; };
+		APS00002279B9E0000000001 /* AccountabilityPartnerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = APS00001279B9E0000000001 /* AccountabilityPartnerService.swift */; };
+		APV00002279B9E0000000001 /* AccountabilityPartnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APV00001279B9E0000000001 /* AccountabilityPartnerView.swift */; };
 		B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00001279B9E0000000001 /* StrongsModels.swift */; };
 		B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00003279B9E0000000001 /* StrongsLexiconService.swift */; };
-		CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRS00002279B9E0000000001 /* CrossReferenceService.swift */; };
 		B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00005279B9E0000000001 /* WordTappableVerseText.swift */; };
 		B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */; };
 		B1A0000A279B9E0000000001 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00009279B9E0000000001 /* FlowLayout.swift */; };
@@ -72,6 +81,8 @@
 		B1A0000E279B9E0000000001 /* StrongGreekDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */; };
 		B1A00012279B9E0000000001 /* ConcordanceSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */; };
 		B1A0001C279B9E0000000001 /* kjvpce.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0001B279B9E0000000001 /* kjvpce.json */; };
+		B9C1AFBE4511D3A9F150099E /* HandoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA13B4D8EC53510341B412A1 /* HandoutViews.swift */; };
+		BAFBE3AE35B043D9E9425DA0 /* GroupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326981E4627DA0FA59373737 /* GroupModels.swift */; };
 		BDD100000000000000000001 /* BibleDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD100000000000000000002 /* BibleDownloadManager.swift */; };
 		BDD100000000000000000005 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD100000000000000000006 /* NowPlayingView.swift */; };
 		BDD100000000000000000009 /* NetworkRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD10000000000000000000A /* NetworkRetry.swift */; };
@@ -79,18 +90,53 @@
 		BRP00004279B9E0000000001 /* BibleReadingPlanData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */; };
 		BRP00006279B9E0000000001 /* ReadingPlanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00005279B9E0000000001 /* ReadingPlanService.swift */; };
 		BRP00008279B9E0000000001 /* ReadingPlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00007279B9E0000000001 /* ReadingPlansView.swift */; };
+		SPDV00002279B9E0000000001 /* SpurgeonDevotionalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */; };
+		SPDS00002279B9E0000000001 /* SpurgeonDevotionalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */; };
+		SPDJ00002279B9E0000000001 /* SpurgeonMorningEvening.json in Resources */ = {isa = PBXBuildFile; fileRef = SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */; };
+		C00F4DA8BD650DA93C8F05F9 /* GroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C1225C9A7896DA8A5F2603 /* GroupsView.swift */; };
 		C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */; };
 		C1A00096279B9E0000000001 /* SuggestedVerses.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A00097279B9E0000000001 /* SuggestedVerses.swift */; };
+		C98C67506FFE873CBB627E7E /* GroupPrayerReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5478BBF8FE099EB550B4A8B3 /* GroupPrayerReviewView.swift */; };
+		CC000001279B9E0000000001 /* VerseCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000002279B9E0000000001 /* VerseCollection.swift */; };
+		CC000003279B9E0000000001 /* CollectionBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000004279B9E0000000001 /* CollectionBuilderView.swift */; };
+		CC000005279B9E0000000001 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000006279B9E0000000001 /* CollectionDetailView.swift */; };
+		CC000090279B9E0000000001 /* ReflectionTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000091279B9E0000000001 /* ReflectionTemplate.swift */; };
+		CEL00002279B9E0000000001 /* CelebrationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEL00001279B9E0000000001 /* CelebrationOverlay.swift */; };
 		CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */; };
+		CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */ = {isa = PBXBuildFile; fileRef = CRJ00002279B9E0000000001 /* CrossReferences.json */; };
+		BPJ00001279B9E0000000001 /* BiblePlaces.json in Resources */ = {isa = PBXBuildFile; fileRef = BPJ00002279B9E0000000001 /* BiblePlaces.json */; };
+		SWJ00011279B9E0000000001 /* Scofield.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00021279B9E0000000001 /* Scofield.json */; };
+		SWJ00012279B9E0000000001 /* Easton.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00022279B9E0000000001 /* Easton.json */; };
+		SWJ00013279B9E0000000001 /* AbbottSmith.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00023279B9E0000000001 /* AbbottSmith.json */; };
+		SWJ00014279B9E0000000001 /* Nave.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00024279B9E0000000001 /* Nave.json */; };
+		SWJ00015279B9E0000000001 /* TCR.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00025279B9E0000000001 /* TCR.json */; };
+		CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRS00002279B9E0000000001 /* CrossReferenceService.swift */; };
+		BRS00001279B9E0000000001 /* BibleReferenceScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */; };
+		WLS00001279B9E0000000001 /* WordLocatorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WLS00002279B9E0000000001 /* WordLocatorService.swift */; };
+		BPS00001279B9E0000000001 /* BiblePlaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BPS00002279B9E0000000001 /* BiblePlaceService.swift */; };
+		CMS00001279B9E0000000001 /* CommentaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMS00002279B9E0000000001 /* CommentaryService.swift */; };
+		CDM00001279B9E0000000001 /* CommentaryDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDM00002279B9E0000000001 /* CommentaryDownloadManager.swift */; };
+		MZP00001279B9E0000000001 /* MinimalZip.swift in Sources */ = {isa = PBXBuildFile; fileRef = MZP00002279B9E0000000001 /* MinimalZip.swift */; };
+		RWS00001279B9E0000000001 /* ReferenceWorkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RWS00002279B9E0000000001 /* ReferenceWorkService.swift */; };
+		BAV00001279B9E0000000001 /* BibleAtlasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAV00002279B9E0000000001 /* BibleAtlasView.swift */; };
+		WLV00001279B9E0000000001 /* WordLocatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WLV00002279B9E0000000001 /* WordLocatorView.swift */; };
 		D1A00005279B9E0000000001 /* LearningTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00001279B9E0000000001 /* LearningTracks.swift */; };
 		D1A00006279B9E0000000001 /* DevotionalTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00002279B9E0000000001 /* DevotionalTracks.swift */; };
 		D1A00007279B9E0000000001 /* DoctrineTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00003279B9E0000000001 /* DoctrineTracks.swift */; };
 		D1A00008279B9E0000000001 /* DoctrineTracksExtended.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */; };
 		D1B00002279B9E0000000001 /* LearningPathView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B00001279B9E0000000001 /* LearningPathView.swift */; };
+		DA000002279B9E0000000001 /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */; };
+		DA000010279B9E0000000001 /* ReforgedActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DA000013279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
+		DA000014279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		DA000015279B9E0000000001 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC000001279B9E0000000001 /* FamilyControls.framework */; };
+		DAAPP01279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
+		DBADC9AD1915DE2F7BB59C49 /* GroupsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A02714018A04BEFD68CAD92 /* GroupsService.swift */; };
 		DC9594E35E6746C572ABE7A5 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11826B8D31CD2DF20F878856 /* SettingsManager.swift */; };
 		DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 667642CA8ACE4CCE82FCC6E8 /* BibleProgressView.swift */; };
 		DD45E35B78B676B857D11FD7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDAFE317A9066691D3A47C88 /* SettingsView.swift */; };
 		DS000002279B9E0000000001 /* DiscipleshipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS000001279B9E0000000001 /* DiscipleshipView.swift */; };
+		SLHB00002279B9E0000000001 /* StudyLibraryHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */; };
 		E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00001279B9E0000000001 /* ProfileImageService.swift */; };
 		E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00003279B9E0000000001 /* ProfileAvatarView.swift */; };
 		E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000002279B9E0000000001 /* BibleSearchService.swift */; };
@@ -99,54 +145,70 @@
 		EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000004279B9E0000000001 /* UnifiedNavigationView.swift */; };
 		EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000006279B9E0000000001 /* SearchPanelView.swift */; };
 		EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000008279B9E0000000001 /* TakeNoteView.swift */; };
-		VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = VSS00002279B9E0000000001 /* VerseStudySheet.swift */; };
 		EXP00002279B9E0000000001 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXP00001279B9E0000000001 /* ExportService.swift */; };
 		F51AB00E9FE5CB264ECF20DF /* AudioSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */; };
 		FB000002279B9E0000000001 /* FocusBlockingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001279B9E0000000001 /* FocusBlockingView.swift */; };
 		FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FS000001279B9E0000000001 /* FocusBlockingService.swift */; };
-		SC000002279B9E0000000001 /* ShieldContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = SC000001279B9E0000000001 /* ShieldContentProvider.swift */; };
-		AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AL000001279B9E0000000001 /* AccountabilityLockService.swift */; };
-		SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SO000001279B9E0000000001 /* ShieldOnboardingView.swift */; };
-		SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = RS000003279B9E0000000001 /* ReforgedShield.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		SL000002279B9E0000000001 /* SocialLimitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SL000001279B9E0000000001 /* SocialLimitService.swift */; };
-		DAAPP01279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
-		DA000002279B9E0000000001 /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */; };
-		DA000010279B9E0000000001 /* ReforgedActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		DA000013279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
-		DA000014279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
-		DA000015279B9E0000000001 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC000001279B9E0000000001 /* FamilyControls.framework */; };
+		FSC00002279B9E0000000001 /* FocusSessionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FSC00001279B9E0000000001 /* FocusSessionCard.swift */; };
+		FSS00002279B9E0000000001 /* FocusSessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FSS00001279B9E0000000001 /* FocusSessionService.swift */; };
 		GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = GEM0000B279B9E0000000001 /* GeminiService.swift */; };
+		HSG00002279B9E0000000001 /* HomeSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = HSG00001279B9E0000000001 /* HomeSuggestion.swift */; };
 		KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJV0000A279B9E0000000001 /* KJVAudioService.swift */; };
+		KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */; };
 		KJVDLMG2279B9E0000000001 /* KJVAudioDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */; };
 		KJVDLVW2279B9E0000000001 /* KJVAudioDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */; };
-		KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */; };
+		CMDLVW2279B9E0000000001 /* CommentaryDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */; };
+		STLB00002279B9E0000000001 /* StudyLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = STLB00001279B9E0000000001 /* StudyLibraryView.swift */; };
+		MCV00002279B9E0000000001 /* MessageComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MCV00001279B9E0000000001 /* MessageComposeView.swift */; };
 		MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
 		NET0000A279B9E0000000001 /* NETService.swift in Sources */ = {isa = PBXBuildFile; fileRef = NET0000B279B9E0000000001 /* NETService.swift */; };
 		PC000002279B9E0000000001 /* PodcastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000001279B9E0000000001 /* PodcastModels.swift */; };
 		PC000004279B9E0000000001 /* PodcastService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000003279B9E0000000001 /* PodcastService.swift */; };
 		PC000006279B9E0000000001 /* PodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000005279B9E0000000001 /* PodcastView.swift */; };
+		PPS00002279B9E0000000001 /* PrayerPromptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = PPS00001279B9E0000000001 /* PrayerPromptSheet.swift */; };
+		PW000002279B9E0000000001 /* PanicWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = PW000001279B9E0000000001 /* PanicWidget.swift */; };
 		RF0000A1279B9E0000000001 /* ReflectionNoteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */; };
 		RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RF0000A4279B9E0000000001 /* DeepDrillView.swift */; };
-		RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */; };
-		RG000003279B9E0000000001 /* Fonts/Roboto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000004279B9E0000000001 /* Fonts/Roboto.ttf */; };
+		RG000001279B9E0000000001 /* LibreBaskerville.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000002279B9E0000000001 /* LibreBaskerville.ttf */; };
+		RG000003279B9E0000000001 /* Roboto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000004279B9E0000000001 /* Roboto.ttf */; };
 		RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000006279B9E0000000001 /* MatchingGameView.swift */; };
-		CC000001279B9E0000000001 /* VerseCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000002279B9E0000000001 /* VerseCollection.swift */; };
-		CC000003279B9E0000000001 /* CollectionBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000004279B9E0000000001 /* CollectionBuilderView.swift */; };
-		CC000005279B9E0000000001 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000006279B9E0000000001 /* CollectionDetailView.swift */; };
 		RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000008279B9E0000000001 /* CompleteTheVerseView.swift */; };
 		RG000009279B9E0000000001 /* trparsed.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000A279B9E0000000001 /* trparsed.json */; };
 		RG00000B279B9E0000000001 /* wlc.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000C279B9E0000000001 /* wlc.json */; };
-		CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */ = {isa = PBXBuildFile; fileRef = CRJ00002279B9E0000000001 /* CrossReferences.json */; };
 		RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000001 /* OriginalLanguageService.swift */; };
 		RG00000D279B9E0000000099 /* sblgnt.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000099 /* sblgnt.json */; };
-		RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */; };
-		RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */; };
-		RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */; };
+		RG00000F279B9E0000000001 /* SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* SILEOT.ttf */; };
+		RG000011279B9E0000000001 /* Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Roboto-Italic.ttf */; };
+		RG000013279B9E0000000001 /* LibreBaskerville-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */; };
 		RS000002279B9E0000000001 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */; };
 		RTE00002279B9E0000000001 /* RichTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTE00001279B9E0000000001 /* RichTextEditorView.swift */; };
+		SA000002279B9E0000000001 /* ShieldActionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = SA000001279B9E0000000001 /* ShieldActionExtension.swift */; };
+		SA00000C279B9E0000000001 /* ReforgedShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = SA000003279B9E0000000001 /* ReforgedShieldAction.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		SAMS0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
 		SB000001279B9E0000000001 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SB000002279B9E0000000001 /* SupabaseAuthService.swift */; };
+		SBS00002279B9E0000000001 /* ScheduledBlockingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SBS00001279B9E0000000001 /* ScheduledBlockingService.swift */; };
+		SC000002279B9E0000000001 /* ShieldContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = SC000001279B9E0000000001 /* ShieldContentProvider.swift */; };
+		SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = RS000003279B9E0000000001 /* ReforgedShield.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */; };
+		SEV00002279B9E0000000001 /* ScheduleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEV00001279B9E0000000001 /* ScheduleEditorView.swift */; };
+		SHC00002279B9E0000000001 /* ShieldComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHC00001279B9E0000000001 /* ShieldComponents.swift */; };
+		SIV00002279B9E0000000001 /* ShieldInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SIV00001279B9E0000000001 /* ShieldInsightsView.swift */; };
+		SL000002279B9E0000000001 /* SocialLimitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SL000001279B9E0000000001 /* SocialLimitService.swift */; };
+		SMV00002279B9E0000000001 /* SocialMediaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SMV00001279B9E0000000001 /* SocialMediaView.swift */; };
+		SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SO000001279B9E0000000001 /* ShieldOnboardingView.swift */; };
+		SR000002279B9E0000000001 /* ReforgedReportExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = SR000001279B9E0000000001 /* ReforgedReportExtension.swift */; };
+		SR00000C279B9E0000000001 /* ReforgedReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = SR000003279B9E0000000001 /* ReforgedReport.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		SRFW0001279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
+		SRFW0002279B9E0000000001 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B3C67BF2F3302EB008165D9 /* SwiftUI.framework */; };
+		SSS00002279B9E0000000001 /* ShieldStreakService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSS00001279B9E0000000001 /* ShieldStreakService.swift */; };
+		TBJ00001279B9E0000000001 /* TopicalVerses.json in Resources */ = {isa = PBXBuildFile; fileRef = TBJ00002279B9E0000000001 /* TopicalVerses.json */; };
+		TBS00001279B9E0000000001 /* TopicalBibleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TBS00002279B9E0000000001 /* TopicalBibleService.swift */; };
+		TSV00002279B9E0000000001 /* TemptedSOSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TSV00001279B9E0000000001 /* TemptedSOSView.swift */; };
 		TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TTS0000B279B9E0000000001 /* TTSVoiceService.swift */; };
+		UGS00002279B9E0000000001 /* UnlockGateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = UGS00001279B9E0000000001 /* UnlockGateService.swift */; };
+		VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = VSS00002279B9E0000000001 /* VerseStudySheet.swift */; };
+		CRM00001279B9E0000000001 /* CrossReferenceMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */; };
+		CMRD00002279B9E0000000001 /* CommentaryReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */; };
 		WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WC000002279B9E0000000001 /* WeeklyCheckinService.swift */; };
 		WNV0000B279B9E0000000001 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WNV0000A279B9E0000000001 /* WhatsNewView.swift */; };
 		WOC00002279B9E0000000001 /* WordsOfChristData.swift in Sources */ = {isa = PBXBuildFile; fileRef = WOC00001279B9E0000000001 /* WordsOfChristData.swift */; };
@@ -161,6 +223,20 @@
 			remoteGlobalIDString = 6B3C67BA2F3302EB008165D9;
 			remoteInfo = ReforgedWidgetExtension;
 		};
+		DA000011279B9E0000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DA000007279B9E0000000001;
+			remoteInfo = ReforgedActivityMonitor;
+		};
+		SA000004279B9E0000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = SA000007279B9E0000000001;
+			remoteInfo = ReforgedShieldAction;
+		};
 		SC000004279B9E0000000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A1000013279B9E0000000001 /* Project object */;
@@ -168,12 +244,12 @@
 			remoteGlobalIDString = RS000007279B9E0000000001;
 			remoteInfo = ReforgedShield;
 		};
-		DA000011279B9E0000000001 /* PBXContainerItemProxy */ = {
+		SR000004279B9E0000000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A1000013279B9E0000000001 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = DA000007279B9E0000000001;
-			remoteInfo = ReforgedActivityMonitor;
+			remoteGlobalIDString = SR000007279B9E0000000001;
+			remoteInfo = ReforgedReport;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -186,19 +262,36 @@
 			files = (
 				6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */,
 				SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */,
+				SA00000C279B9E0000000001 /* ReforgedShieldAction.appex in Embed Foundation Extensions */,
 				DA000010279B9E0000000001 /* ReforgedActivityMonitor.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		SR00000D279B9E0000000099 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				SR00000C279B9E0000000001 /* ReforgedReport.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgeGateManager.swift; sourceTree = "<group>"; };
 		11826B8D31CD2DF20F878856 /* SettingsManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsManager.swift; path = Reforged/Services/SettingsManager.swift; sourceTree = "<group>"; };
 		150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DisplaySettingsSection.swift; path = Reforged/Views/Settings/DisplaySettingsSection.swift; sourceTree = "<group>"; };
+		22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TracksRepository.swift; sourceTree = "<group>"; };
+		2B85E73BE6B79BBFC71BA1C8 /* LearnModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnModels.swift; sourceTree = "<group>"; };
+		326981E4627DA0FA59373737 /* GroupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupModels.swift; sourceTree = "<group>"; };
 		3AD4BCA6620AB550441B62CA /* SettingsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsModels.swift; path = Reforged/Models/SettingsModels.swift; sourceTree = "<group>"; };
 		43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationSettingsSection.swift; path = Reforged/Views/Settings/NotificationSettingsSection.swift; sourceTree = "<group>"; };
 		5190404405A017340CF7CDD3 /* AboutSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AboutSection.swift; path = Reforged/Views/Settings/AboutSection.swift; sourceTree = "<group>"; };
+		5478BBF8FE099EB550B4A8B3 /* GroupPrayerReviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupPrayerReviewView.swift; sourceTree = "<group>"; };
 		667642CA8ACE4CCE82FCC6E8 /* BibleProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleProgressView.swift; sourceTree = "<group>"; };
 		68C79FE2CBEAC63ABD279754 /* AccountSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AccountSettingsSection.swift; path = Reforged/Views/Settings/AccountSettingsSection.swift; sourceTree = "<group>"; };
 		6B0ADE8B2F3259CE00DBAC28 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
@@ -210,8 +303,12 @@
 		6B3C67E32F3303EB008165D9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6B3C67E42F3303EB008165D9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6B3C67E52F3303EB008165D9 /* ReforgedWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedWidget.entitlements; sourceTree = "<group>"; };
+		6B3C67F22F3303EB008165D9 /* PanicWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanicWidget.swift; sourceTree = "<group>"; };
 		6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MemorySettingsSection.swift; path = Reforged/Views/Settings/MemorySettingsSection.swift; sourceTree = "<group>"; };
 		6BC809812FE721A2004233EC /* ReforgedDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedDebug.entitlements; sourceTree = "<group>"; };
+		7A02714018A04BEFD68CAD92 /* GroupsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupsService.swift; sourceTree = "<group>"; };
+		7F811E54E5FD3F7856A5DBC2 /* LearnViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnViews.swift; sourceTree = "<group>"; };
+		93C1225C9A7896DA8A5F2603 /* GroupsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupsView.swift; sourceTree = "<group>"; };
 		9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseOfTheDayWidget.swift; sourceTree = "<group>"; };
 		A1000002279B9E0000000001 /* ReforgedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReforgedApp.swift; sourceTree = "<group>"; };
 		A1000004279B9E0000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -229,6 +326,7 @@
 		A1000031279B9E0000000001 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A1000033279B9E0000000001 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		A1000035279B9E0000000001 /* TracksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TracksView.swift; sourceTree = "<group>"; };
+		A1000035279B9E0000000101 /* HomeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSearchView.swift; sourceTree = "<group>"; };
 		A1000037279B9E0000000001 /* LessonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonView.swift; sourceTree = "<group>"; };
 		A1000039279B9E0000000001 /* MemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryView.swift; sourceTree = "<group>"; };
 		A100003B279B9E0000000001 /* MemoryReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReviewView.swift; sourceTree = "<group>"; };
@@ -258,11 +356,14 @@
 		A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryAudioPlayer.swift; sourceTree = "<group>"; };
 		A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BibleReadingSettingsSection.swift; path = Reforged/Views/Settings/BibleReadingSettingsSection.swift; sourceTree = "<group>"; };
 		A1AABB01279B9E0000000001 /* ApiBibleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiBibleService.swift; sourceTree = "<group>"; };
+		AF048A10273B9C0FD63E00B3 /* GroupsHubViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupsHubViewModel.swift; sourceTree = "<group>"; };
 		AIS0000B279B9E0000000001 /* AISettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AISettingsSection.swift; path = Reforged/Views/Settings/AISettingsSection.swift; sourceTree = "<group>"; };
+		AL000001279B9E0000000001 /* AccountabilityLockService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityLockService.swift; sourceTree = "<group>"; };
 		AN000002279B9E0000000001 /* AntiochSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntiochSearchService.swift; sourceTree = "<group>"; };
+		APS00001279B9E0000000001 /* AccountabilityPartnerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityPartnerService.swift; sourceTree = "<group>"; };
+		APV00001279B9E0000000001 /* AccountabilityPartnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityPartnerView.swift; sourceTree = "<group>"; };
 		B1A00001279B9E0000000001 /* StrongsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsModels.swift; sourceTree = "<group>"; };
 		B1A00003279B9E0000000001 /* StrongsLexiconService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsLexiconService.swift; sourceTree = "<group>"; };
-		CRS00002279B9E0000000001 /* CrossReferenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceService.swift; sourceTree = "<group>"; };
 		B1A00005279B9E0000000001 /* WordTappableVerseText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTappableVerseText.swift; sourceTree = "<group>"; };
 		B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsDefinitionSheet.swift; sourceTree = "<group>"; };
 		B1A00009279B9E0000000001 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
@@ -277,15 +378,47 @@
 		BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReadingPlanData.swift; sourceTree = "<group>"; };
 		BRP00005279B9E0000000001 /* ReadingPlanService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlanService.swift; sourceTree = "<group>"; };
 		BRP00007279B9E0000000001 /* ReadingPlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlansView.swift; sourceTree = "<group>"; };
+		SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpurgeonDevotionalView.swift; sourceTree = "<group>"; };
+		SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpurgeonDevotionalService.swift; sourceTree = "<group>"; };
+		SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SpurgeonMorningEvening.json; sourceTree = "<group>"; };
 		C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterScrollCoordinator.swift; sourceTree = "<group>"; };
 		C1A00097279B9E0000000001 /* SuggestedVerses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedVerses.swift; sourceTree = "<group>"; };
 		C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AudioSettingsSection.swift; path = Reforged/Views/Settings/AudioSettingsSection.swift; sourceTree = "<group>"; };
+		CA13B4D8EC53510341B412A1 /* HandoutViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HandoutViews.swift; sourceTree = "<group>"; };
+		CC000002279B9E0000000001 /* VerseCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseCollection.swift; sourceTree = "<group>"; };
+		CC000004279B9E0000000001 /* CollectionBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionBuilderView.swift; sourceTree = "<group>"; };
+		CC000006279B9E0000000001 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
+		CC000091279B9E0000000001 /* ReflectionTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionTemplate.swift; sourceTree = "<group>"; };
+		CEL00001279B9E0000000001 /* CelebrationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationOverlay.swift; sourceTree = "<group>"; };
+		CRJ00002279B9E0000000001 /* CrossReferences.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = CrossReferences.json; sourceTree = "<group>"; };
+		BPJ00002279B9E0000000001 /* BiblePlaces.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BiblePlaces.json; sourceTree = "<group>"; };
+		SWJ00021279B9E0000000001 /* Scofield.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Scofield.json; sourceTree = "<group>"; };
+		SWJ00022279B9E0000000001 /* Easton.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Easton.json; sourceTree = "<group>"; };
+		SWJ00023279B9E0000000001 /* AbbottSmith.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AbbottSmith.json; sourceTree = "<group>"; };
+		SWJ00024279B9E0000000001 /* Nave.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Nave.json; sourceTree = "<group>"; };
+		SWJ00025279B9E0000000001 /* TCR.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = TCR.json; sourceTree = "<group>"; };
+		CRS00002279B9E0000000001 /* CrossReferenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceService.swift; sourceTree = "<group>"; };
+		BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReferenceScanner.swift; sourceTree = "<group>"; };
+		WLS00002279B9E0000000001 /* WordLocatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordLocatorService.swift; sourceTree = "<group>"; };
+		BPS00002279B9E0000000001 /* BiblePlaceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiblePlaceService.swift; sourceTree = "<group>"; };
+		CMS00002279B9E0000000001 /* CommentaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryService.swift; sourceTree = "<group>"; };
+		CDM00002279B9E0000000001 /* CommentaryDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryDownloadManager.swift; sourceTree = "<group>"; };
+		MZP00002279B9E0000000001 /* MinimalZip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimalZip.swift; sourceTree = "<group>"; };
+		RWS00002279B9E0000000001 /* ReferenceWorkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferenceWorkService.swift; sourceTree = "<group>"; };
+		BAV00002279B9E0000000001 /* BibleAtlasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAtlasView.swift; sourceTree = "<group>"; };
+		WLV00002279B9E0000000001 /* WordLocatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordLocatorView.swift; sourceTree = "<group>"; };
 		D1A00001279B9E0000000001 /* LearningTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningTracks.swift; sourceTree = "<group>"; };
 		D1A00002279B9E0000000001 /* DevotionalTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevotionalTracks.swift; sourceTree = "<group>"; };
 		D1A00003279B9E0000000001 /* DoctrineTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracks.swift; sourceTree = "<group>"; };
 		D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracksExtended.swift; sourceTree = "<group>"; };
 		D1B00001279B9E0000000001 /* LearningPathView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningPathView.swift; sourceTree = "<group>"; };
+		DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
+		DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedActivityMonitor.entitlements; sourceTree = "<group>"; };
+		DA000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DA00DA01279B9E0000000001 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		DS000001279B9E0000000001 /* DiscipleshipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscipleshipView.swift; sourceTree = "<group>"; };
+		SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyLibraryHubView.swift; sourceTree = "<group>"; };
 		E1A00001279B9E0000000001 /* ProfileImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageService.swift; sourceTree = "<group>"; };
 		E1A00003279B9E0000000001 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
 		E2000002279B9E0000000001 /* BibleSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleSearchService.swift; sourceTree = "<group>"; };
@@ -293,55 +426,73 @@
 		EX000004279B9E0000000001 /* UnifiedNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedNavigationView.swift; sourceTree = "<group>"; };
 		EX000006279B9E0000000001 /* SearchPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPanelView.swift; sourceTree = "<group>"; };
 		EX000008279B9E0000000001 /* TakeNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNoteView.swift; sourceTree = "<group>"; };
-		VSS00002279B9E0000000001 /* VerseStudySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseStudySheet.swift; sourceTree = "<group>"; };
 		EXP00001279B9E0000000001 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		FB000001279B9E0000000001 /* FocusBlockingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusBlockingView.swift; sourceTree = "<group>"; };
 		FC000001279B9E0000000001 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		FDAFE317A9066691D3A47C88 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Reforged/Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
 		FS000001279B9E0000000001 /* FocusBlockingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusBlockingService.swift; sourceTree = "<group>"; };
-		SC000001279B9E0000000001 /* ShieldContentProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldContentProvider.swift; sourceTree = "<group>"; };
-		SL000001279B9E0000000001 /* SocialLimitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialLimitService.swift; sourceTree = "<group>"; };
-		DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
-		DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedActivityMonitor.entitlements; sourceTree = "<group>"; };
-		DA000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		DA00DA01279B9E0000000001 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
-		AL000001279B9E0000000001 /* AccountabilityLockService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityLockService.swift; sourceTree = "<group>"; };
-		SO000001279B9E0000000001 /* ShieldOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldOnboardingView.swift; sourceTree = "<group>"; };
+		FSC00001279B9E0000000001 /* FocusSessionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSessionCard.swift; sourceTree = "<group>"; };
+		FSS00001279B9E0000000001 /* FocusSessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSessionService.swift; sourceTree = "<group>"; };
 		GEM0000B279B9E0000000001 /* GeminiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiService.swift; sourceTree = "<group>"; };
+		HSG00001279B9E0000000001 /* HomeSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSuggestion.swift; sourceTree = "<group>"; };
 		KJV0000A279B9E0000000001 /* KJVAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioService.swift; sourceTree = "<group>"; };
+		KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_audio_manifest.json; sourceTree = "<group>"; };
 		KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioDownloadManager.swift; sourceTree = "<group>"; };
 		KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KJVAudioDownloadsView.swift; path = Reforged/Views/Settings/KJVAudioDownloadsView.swift; sourceTree = "<group>"; };
-		KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_audio_manifest.json; sourceTree = "<group>"; };
+		CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CommentaryDownloadsView.swift; path = Reforged/Views/Settings/CommentaryDownloadsView.swift; sourceTree = "<group>"; };
+		STLB00001279B9E0000000001 /* StudyLibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StudyLibraryView.swift; path = Reforged/Views/Settings/StudyLibraryView.swift; sourceTree = "<group>"; };
 		MAN00001279B9E0000000001 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		MCV00001279B9E0000000001 /* MessageComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposeView.swift; sourceTree = "<group>"; };
 		NET0000B279B9E0000000001 /* NETService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NETService.swift; sourceTree = "<group>"; };
 		PC000001279B9E0000000001 /* PodcastModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastModels.swift; sourceTree = "<group>"; };
 		PC000003279B9E0000000001 /* PodcastService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastService.swift; sourceTree = "<group>"; };
 		PC000005279B9E0000000001 /* PodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastView.swift; sourceTree = "<group>"; };
+		PPS00001279B9E0000000001 /* PrayerPromptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerPromptSheet.swift; sourceTree = "<group>"; };
+		PW000001279B9E0000000001 /* PanicWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanicWidget.swift; sourceTree = "<group>"; };
 		RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionNoteSheet.swift; sourceTree = "<group>"; };
 		RF0000A4279B9E0000000001 /* DeepDrillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepDrillView.swift; sourceTree = "<group>"; };
-		RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/LibreBaskerville.ttf; sourceTree = "<group>"; };
-		RG000004279B9E0000000001 /* Fonts/Roboto.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/Roboto.ttf; sourceTree = "<group>"; };
+		RG000002279B9E0000000001 /* LibreBaskerville.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/LibreBaskerville.ttf; sourceTree = "<group>"; };
+		RG000004279B9E0000000001 /* Roboto.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/Roboto.ttf; sourceTree = "<group>"; };
 		RG000006279B9E0000000001 /* MatchingGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingGameView.swift; sourceTree = "<group>"; };
-		CC000002279B9E0000000001 /* VerseCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseCollection.swift; sourceTree = "<group>"; };
-		CC000004279B9E0000000001 /* CollectionBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionBuilderView.swift; sourceTree = "<group>"; };
-		CC000006279B9E0000000001 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
 		RG000008279B9E0000000001 /* CompleteTheVerseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTheVerseView.swift; sourceTree = "<group>"; };
 		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trparsed.json; sourceTree = "<group>"; };
 		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wlc.json; sourceTree = "<group>"; };
-		CRJ00002279B9E0000000001 /* CrossReferences.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = CrossReferences.json; sourceTree = "<group>"; };
 		RG00000E279B9E0000000001 /* OriginalLanguageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLanguageService.swift; sourceTree = "<group>"; };
 		RG00000E279B9E0000000099 /* sblgnt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sblgnt.json; sourceTree = "<group>"; };
-		RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/SILEOT.ttf; sourceTree = "<group>"; };
-		RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto-Italic.ttf"; sourceTree = "<group>"; };
-		RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/LibreBaskerville-Italic.ttf"; sourceTree = "<group>"; };
+		RG000010279B9E0000000001 /* SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/SILEOT.ttf; sourceTree = "<group>"; };
+		RG000012279B9E0000000001 /* Roboto-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto-Italic.ttf"; sourceTree = "<group>"; };
+		RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/LibreBaskerville-Italic.ttf"; sourceTree = "<group>"; };
 		RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldConfigurationExtension.swift; sourceTree = "<group>"; };
 		RS000003279B9E0000000001 /* ReforgedShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		RS000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		RTE00001279B9E0000000001 /* RichTextEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextEditorView.swift; sourceTree = "<group>"; };
+		SA000001279B9E0000000001 /* ShieldActionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldActionExtension.swift; sourceTree = "<group>"; };
+		SA000003279B9E0000000001 /* ReforgedShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		SA00000A279B9E0000000001 /* ReforgedShieldAction.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedShieldAction.entitlements; sourceTree = "<group>"; };
+		SA00000B279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		SB000002279B9E0000000001 /* SupabaseAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthService.swift; sourceTree = "<group>"; };
+		SBS00001279B9E0000000001 /* ScheduledBlockingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBlockingService.swift; sourceTree = "<group>"; };
+		SC000001279B9E0000000001 /* ShieldContentProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldContentProvider.swift; sourceTree = "<group>"; };
 		SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		SEV00001279B9E0000000001 /* ScheduleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleEditorView.swift; sourceTree = "<group>"; };
+		SHC00001279B9E0000000001 /* ShieldComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldComponents.swift; sourceTree = "<group>"; };
+		SIV00001279B9E0000000001 /* ShieldInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldInsightsView.swift; sourceTree = "<group>"; };
+		SL000001279B9E0000000001 /* SocialLimitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialLimitService.swift; sourceTree = "<group>"; };
+		SMV00001279B9E0000000001 /* SocialMediaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialMediaView.swift; sourceTree = "<group>"; };
+		SO000001279B9E0000000001 /* ShieldOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldOnboardingView.swift; sourceTree = "<group>"; };
+		SR000001279B9E0000000001 /* ReforgedReportExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReforgedReportExtension.swift; sourceTree = "<group>"; };
+		SR000003279B9E0000000001 /* ReforgedReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		SR00000A279B9E0000000001 /* ReforgedReport.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedReport.entitlements; sourceTree = "<group>"; };
+		SR00000B279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		SSS00001279B9E0000000001 /* ShieldStreakService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldStreakService.swift; sourceTree = "<group>"; };
+		TBJ00002279B9E0000000001 /* TopicalVerses.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = TopicalVerses.json; sourceTree = "<group>"; };
+		TBS00002279B9E0000000001 /* TopicalBibleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicalBibleService.swift; sourceTree = "<group>"; };
+		TSV00001279B9E0000000001 /* TemptedSOSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemptedSOSView.swift; sourceTree = "<group>"; };
 		TTS0000B279B9E0000000001 /* TTSVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSVoiceService.swift; sourceTree = "<group>"; };
+		UGS00001279B9E0000000001 /* UnlockGateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockGateService.swift; sourceTree = "<group>"; };
+		VSS00002279B9E0000000001 /* VerseStudySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseStudySheet.swift; sourceTree = "<group>"; };
+		CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceMapView.swift; sourceTree = "<group>"; };
+		CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryReaderView.swift; sourceTree = "<group>"; };
 		WC000002279B9E0000000001 /* WeeklyCheckinService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyCheckinService.swift; sourceTree = "<group>"; };
 		WNV0000A279B9E0000000001 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
 		WOC00001279B9E0000000001 /* WordsOfChristData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordsOfChristData.swift; sourceTree = "<group>"; };
@@ -368,15 +519,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		RS000009279B9E0000000001 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */,
-				MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		DA000009279B9E0000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -387,9 +529,72 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		RS000009279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */,
+				MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SA000009279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SAMS0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SR000009279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SRFW0001279B9E0000000001 /* DeviceActivity.framework in Frameworks */,
+				SRFW0002279B9E0000000001 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0D25205077E81A17B7F863AE /* Groups */ = {
+			isa = PBXGroup;
+			children = (
+				93C1225C9A7896DA8A5F2603 /* GroupsView.swift */,
+				5478BBF8FE099EB550B4A8B3 /* GroupPrayerReviewView.swift */,
+				CA13B4D8EC53510341B412A1 /* HandoutViews.swift */,
+			);
+			name = Groups;
+			path = Groups;
+			sourceTree = "<group>";
+		};
+		1D0773BF52EC137008448331 /* Learn */ = {
+			isa = PBXGroup;
+			children = (
+				7F811E54E5FD3F7856A5DBC2 /* LearnViews.swift */,
+			);
+			name = Learn;
+			path = Learn;
+			sourceTree = "<group>";
+		};
+		4AE0CDA58A8F9A1E0D2ABE54 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				AF048A10273B9C0FD63E00B3 /* GroupsHubViewModel.swift */,
+			);
+			name = ViewModels;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		6B1AD23B3001DE8200754446 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				DA00DA01279B9E0000000001 /* DeviceActivity.framework */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		6B3C67BC2F3302EB008165D9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -406,6 +611,8 @@
 			isa = PBXGroup;
 			children = (
 				6B3C67E12F3303EB008165D9 /* ReforgedWidget.swift */,
+				6B3C67F22F3303EB008165D9 /* PanicWidget.swift */,
+				PW000001279B9E0000000001 /* PanicWidget.swift */,
 				9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */,
 				6B3C67E32F3303EB008165D9 /* Assets.xcassets */,
 				6B3C67E42F3303EB008165D9 /* Info.plist */,
@@ -421,6 +628,8 @@
 				A100000D279B9E0000000001 /* Reforged */,
 				6B3C67E62F3303EB008165D9 /* ReforgedWidget */,
 				RS000006279B9E0000000001 /* ReforgedShield */,
+				SA000006279B9E0000000001 /* ReforgedShieldAction */,
+				SR000006279B9E0000000001 /* ReforgedReport */,
 				DA000006279B9E0000000001 /* ReforgedActivityMonitor */,
 				6B3C67BC2F3302EB008165D9 /* Frameworks */,
 				A100000E279B9E0000000001 /* Products */,
@@ -431,11 +640,14 @@
 				68C79FE2CBEAC63ABD279754 /* AccountSettingsSection.swift */,
 				C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */,
 				KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */,
+				CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */,
+				STLB00001279B9E0000000001 /* StudyLibraryView.swift */,
 				AIS0000B279B9E0000000001 /* AISettingsSection.swift */,
 				A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */,
 				150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */,
 				6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */,
 				43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */,
+				6B1AD23B3001DE8200754446 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -457,6 +669,7 @@
 				A100000A279B9E0000000001 /* Info.plist */,
 				A10000E1279B9E0000000001 /* PrivacyInfo.xcprivacy */,
 				A100001D279B9E0000000001 /* Reforged.entitlements */,
+				4AE0CDA58A8F9A1E0D2ABE54 /* ViewModels */,
 			);
 			path = Reforged;
 			sourceTree = "<group>";
@@ -467,6 +680,8 @@
 				A1000009279B9E0000000001 /* Reforged.app */,
 				6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */,
 				RS000003279B9E0000000001 /* ReforgedShield.appex */,
+				SA000003279B9E0000000001 /* ReforgedShieldAction.appex */,
+				SR000003279B9E0000000001 /* ReforgedReport.appex */,
 				DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */,
 			);
 			name = Products;
@@ -480,12 +695,15 @@
 				CC000002279B9E0000000001 /* VerseCollection.swift */,
 				A1000025279B9E0000000001 /* UserProfile.swift */,
 				A1000027279B9E0000000001 /* JournalEntry.swift */,
+				CC000091279B9E0000000001 /* ReflectionTemplate.swift */,
 				A1000061279B9E0000000001 /* BibleModels.swift */,
 				A1000071279B9E0000000001 /* SettingsModels.swift */,
 				B1A00001279B9E0000000001 /* StrongsModels.swift */,
 				C1A00097279B9E0000000001 /* SuggestedVerses.swift */,
 				BRP00001279B9E0000000001 /* BibleReadingPlan.swift */,
 				PC000001279B9E0000000001 /* PodcastModels.swift */,
+				326981E4627DA0FA59373737 /* GroupModels.swift */,
+				2B85E73BE6B79BBFC71BA1C8 /* LearnModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -534,14 +752,31 @@
 				AL000001279B9E0000000001 /* AccountabilityLockService.swift */,
 				SC000001279B9E0000000001 /* ShieldContentProvider.swift */,
 				SL000001279B9E0000000001 /* SocialLimitService.swift */,
+				SBS00001279B9E0000000001 /* ScheduledBlockingService.swift */,
+				FSS00001279B9E0000000001 /* FocusSessionService.swift */,
+				UGS00001279B9E0000000001 /* UnlockGateService.swift */,
+				APS00001279B9E0000000001 /* AccountabilityPartnerService.swift */,
+				SSS00001279B9E0000000001 /* ShieldStreakService.swift */,
 				BRP00005279B9E0000000001 /* ReadingPlanService.swift */,
 				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
 				CRS00002279B9E0000000001 /* CrossReferenceService.swift */,
+				BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */,
+				WLS00002279B9E0000000001 /* WordLocatorService.swift */,
+				BPS00002279B9E0000000001 /* BiblePlaceService.swift */,
+				SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */,
+				CMS00002279B9E0000000001 /* CommentaryService.swift */,
+				CDM00002279B9E0000000001 /* CommentaryDownloadManager.swift */,
+				MZP00002279B9E0000000001 /* MinimalZip.swift */,
+				RWS00002279B9E0000000001 /* ReferenceWorkService.swift */,
+				TBS00002279B9E0000000001 /* TopicalBibleService.swift */,
 				RG00000E279B9E0000000001 /* OriginalLanguageService.swift */,
 				A10000D1279B9E0000000001 /* UnsplashService.swift */,
 				E1A00001279B9E0000000001 /* ProfileImageService.swift */,
 				EXP00001279B9E0000000001 /* ExportService.swift */,
 				PC000003279B9E0000000001 /* PodcastService.swift */,
+				7A02714018A04BEFD68CAD92 /* GroupsService.swift */,
+				08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */,
+				22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -559,7 +794,10 @@
 				A1000059279B9E0000000001 /* Onboarding */,
 				B1A00010279B9E0000000001 /* Components */,
 				CA97E9787DB142498D99D497 /* Progress */,
+				SHG00001279B9E0000000001 /* Shared */,
 				WNV0000A279B9E0000000001 /* WhatsNewView.swift */,
+				0D25205077E81A17B7F863AE /* Groups */,
+				1D0773BF52EC137008448331 /* Learn */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -568,6 +806,8 @@
 			isa = PBXGroup;
 			children = (
 				A1000033279B9E0000000001 /* HomeView.swift */,
+				HSG00001279B9E0000000001 /* HomeSuggestion.swift */,
+				A1000035279B9E0000000101 /* HomeSearchView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -609,6 +849,10 @@
 				EX000006279B9E0000000001 /* SearchPanelView.swift */,
 				EX000008279B9E0000000001 /* TakeNoteView.swift */,
 				VSS00002279B9E0000000001 /* VerseStudySheet.swift */,
+				CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */,
+				CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */,
+				WLV00002279B9E0000000001 /* WordLocatorView.swift */,
+				BAV00002279B9E0000000001 /* BibleAtlasView.swift */,
 				BDD100000000000000000006 /* NowPlayingView.swift */,
 				A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */,
 				B1A00005279B9E0000000001 /* WordTappableVerseText.swift */,
@@ -644,15 +888,23 @@
 				B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */,
 				B1A0001B279B9E0000000001 /* kjvpce.json */,
 				KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */,
-				RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */,
-				RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */,
-				RG000004279B9E0000000001 /* Fonts/Roboto.ttf */,
-				RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */,
-				RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */,
+				RG000002279B9E0000000001 /* LibreBaskerville.ttf */,
+				RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */,
+				RG000004279B9E0000000001 /* Roboto.ttf */,
+				RG000012279B9E0000000001 /* Roboto-Italic.ttf */,
+				RG000010279B9E0000000001 /* SILEOT.ttf */,
 				RG00000A279B9E0000000001 /* trparsed.json */,
 				RG00000C279B9E0000000001 /* wlc.json */,
 				RG00000E279B9E0000000099 /* sblgnt.json */,
 				CRJ00002279B9E0000000001 /* CrossReferences.json */,
+				BPJ00002279B9E0000000001 /* BiblePlaces.json */,
+				SWJ00021279B9E0000000001 /* Scofield.json */,
+				SWJ00022279B9E0000000001 /* Easton.json */,
+				SWJ00023279B9E0000000001 /* AbbottSmith.json */,
+				SWJ00024279B9E0000000001 /* Nave.json */,
+				SWJ00025279B9E0000000001 /* TCR.json */,
+				SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */,
+				TBJ00002279B9E0000000001 /* TopicalVerses.json */,
 				WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */,
 			);
 			path = Resources;
@@ -672,6 +924,7 @@
 			isa = PBXGroup;
 			children = (
 				BRP00007279B9E0000000001 /* ReadingPlansView.swift */,
+				SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */,
 			);
 			path = ReadingPlans;
 			sourceTree = "<group>";
@@ -684,11 +937,30 @@
 			path = Progress;
 			sourceTree = "<group>";
 		};
+		DA000006279B9E0000000001 /* ReforgedActivityMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */,
+				DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */,
+				DA000005279B9E0000000001 /* Info.plist */,
+			);
+			path = ReforgedActivityMonitor;
+			sourceTree = "<group>";
+		};
 		DS000003279B9E0000000001 /* Discipleship */ = {
 			isa = PBXGroup;
 			children = (
 				DS000001279B9E0000000001 /* DiscipleshipView.swift */,
+				SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */,
 				FB000001279B9E0000000001 /* FocusBlockingView.swift */,
+				SEV00001279B9E0000000001 /* ScheduleEditorView.swift */,
+				FSC00001279B9E0000000001 /* FocusSessionCard.swift */,
+				SMV00001279B9E0000000001 /* SocialMediaView.swift */,
+				SHC00001279B9E0000000001 /* ShieldComponents.swift */,
+				APV00001279B9E0000000001 /* AccountabilityPartnerView.swift */,
+				PPS00001279B9E0000000001 /* PrayerPromptSheet.swift */,
+				TSV00001279B9E0000000001 /* TemptedSOSView.swift */,
+				SIV00001279B9E0000000001 /* ShieldInsightsView.swift */,
 				SO000001279B9E0000000001 /* ShieldOnboardingView.swift */,
 				PC000005279B9E0000000001 /* PodcastView.swift */,
 			);
@@ -705,14 +977,33 @@
 			path = ReforgedShield;
 			sourceTree = "<group>";
 		};
-		DA000006279B9E0000000001 /* ReforgedActivityMonitor */ = {
+		SA000006279B9E0000000001 /* ReforgedShieldAction */ = {
 			isa = PBXGroup;
 			children = (
-				DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */,
-				DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */,
-				DA000005279B9E0000000001 /* Info.plist */,
+				SA00000A279B9E0000000001 /* ReforgedShieldAction.entitlements */,
+				SA000001279B9E0000000001 /* ShieldActionExtension.swift */,
+				SA00000B279B9E0000000001 /* Info.plist */,
 			);
-			path = ReforgedActivityMonitor;
+			path = ReforgedShieldAction;
+			sourceTree = "<group>";
+		};
+		SHG00001279B9E0000000001 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				MCV00001279B9E0000000001 /* MessageComposeView.swift */,
+				CEL00001279B9E0000000001 /* CelebrationOverlay.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		SR000006279B9E0000000001 /* ReforgedReport */ = {
+			isa = PBXGroup;
+			children = (
+				SR00000A279B9E0000000001 /* ReforgedReport.entitlements */,
+				SR000001279B9E0000000001 /* ReforgedReportExtension.swift */,
+				SR00000B279B9E0000000001 /* Info.plist */,
+			);
+			path = ReforgedReport;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -731,8 +1022,6 @@
 			dependencies = (
 			);
 			name = ReforgedWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = ReforgedWidgetExtension;
 			productReference = 6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -745,36 +1034,21 @@
 				A100000B279B9E0000000001 /* Frameworks */,
 				A1000012279B9E0000000001 /* Resources */,
 				6B3C67D02F3302EC008165D9 /* Embed Foundation Extensions */,
+				SR00000D279B9E0000000099 /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				6B3C67CE2F3302EC008165D9 /* PBXTargetDependency */,
 				SC000005279B9E0000000001 /* PBXTargetDependency */,
+				SA000005279B9E0000000001 /* PBXTargetDependency */,
+				SR000005279B9E0000000001 /* PBXTargetDependency */,
 				DA000012279B9E0000000001 /* PBXTargetDependency */,
 			);
 			name = Reforged;
 			productName = Reforged;
 			productReference = A1000009279B9E0000000001 /* Reforged.app */;
 			productType = "com.apple.product-type.application";
-		};
-		RS000007279B9E0000000001 /* ReforgedShield */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = RS00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShield" */;
-			buildPhases = (
-				RS000008279B9E0000000001 /* Sources */,
-				RS000009279B9E0000000001 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = ReforgedShield;
-			packageProductDependencies = (
-			);
-			productName = ReforgedShield;
-			productReference = RS000003279B9E0000000001 /* ReforgedShield.appex */;
-			productType = "com.apple.product-type.app-extension";
 		};
 		DA000007279B9E0000000001 /* ReforgedActivityMonitor */ = {
 			isa = PBXNativeTarget;
@@ -788,11 +1062,57 @@
 			dependencies = (
 			);
 			name = ReforgedActivityMonitor;
-			packageProductDependencies = (
-			);
 			productName = ReforgedActivityMonitor;
 			productReference = DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		RS000007279B9E0000000001 /* ReforgedShield */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = RS00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShield" */;
+			buildPhases = (
+				RS000008279B9E0000000001 /* Sources */,
+				RS000009279B9E0000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedShield;
+			productName = ReforgedShield;
+			productReference = RS000003279B9E0000000001 /* ReforgedShield.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		SA000007279B9E0000000001 /* ReforgedShieldAction */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = SA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShieldAction" */;
+			buildPhases = (
+				SA000008279B9E0000000001 /* Sources */,
+				SA000009279B9E0000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedShieldAction;
+			productName = ReforgedShieldAction;
+			productReference = SA000003279B9E0000000001 /* ReforgedShieldAction.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		SR000007279B9E0000000001 /* ReforgedReport */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = SR00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedReport" */;
+			buildPhases = (
+				SR000008279B9E0000000001 /* Sources */,
+				SR000009279B9E0000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedReport;
+			productName = ReforgedReport;
+			productReference = SR000003279B9E0000000001 /* ReforgedReport.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -831,6 +1151,8 @@
 				A100000F279B9E0000000001 /* Reforged */,
 				6B3C67BA2F3302EB008165D9 /* ReforgedWidgetExtension */,
 				RS000007279B9E0000000001 /* ReforgedShield */,
+				SA000007279B9E0000000001 /* ReforgedShieldAction */,
+				SR000007279B9E0000000001 /* ReforgedReport */,
 				DA000007279B9E0000000001 /* ReforgedActivityMonitor */,
 			);
 		};
@@ -857,15 +1179,23 @@
 				B1A0001C279B9E0000000001 /* kjvpce.json in Resources */,
 				KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */,
 				WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */,
-				RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */,
-				RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */,
-				RG000003279B9E0000000001 /* Fonts/Roboto.ttf in Resources */,
-				RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */,
-				RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */,
+				RG000001279B9E0000000001 /* LibreBaskerville.ttf in Resources */,
+				RG000013279B9E0000000001 /* LibreBaskerville-Italic.ttf in Resources */,
+				RG000003279B9E0000000001 /* Roboto.ttf in Resources */,
+				RG000011279B9E0000000001 /* Roboto-Italic.ttf in Resources */,
+				RG00000F279B9E0000000001 /* SILEOT.ttf in Resources */,
 				RG000009279B9E0000000001 /* trparsed.json in Resources */,
 				RG00000B279B9E0000000001 /* wlc.json in Resources */,
 				RG00000D279B9E0000000099 /* sblgnt.json in Resources */,
 				CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */,
+				BPJ00001279B9E0000000001 /* BiblePlaces.json in Resources */,
+				SWJ00011279B9E0000000001 /* Scofield.json in Resources */,
+				SWJ00012279B9E0000000001 /* Easton.json in Resources */,
+				SWJ00013279B9E0000000001 /* AbbottSmith.json in Resources */,
+				SWJ00014279B9E0000000001 /* Nave.json in Resources */,
+				SWJ00015279B9E0000000001 /* TCR.json in Resources */,
+				SPDJ00002279B9E0000000001 /* SpurgeonMorningEvening.json in Resources */,
+				TBJ00001279B9E0000000001 /* TopicalVerses.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -877,6 +1207,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				6B3C67E02F3303EB008165D9 /* ReforgedWidget.swift in Sources */,
+				6B3C67F12F3303EB008165D9 /* PanicWidget.swift in Sources */,
+				PW000002279B9E0000000001 /* PanicWidget.swift in Sources */,
 				9A7E0011279B9E0000000001 /* VerseOfTheDayWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -893,9 +1225,11 @@
 				A1000022279B9E0000000001 /* MemoryVerse.swift in Sources */,
 				A1000024279B9E0000000001 /* UserProfile.swift in Sources */,
 				A1000026279B9E0000000001 /* JournalEntry.swift in Sources */,
+				CC000090279B9E0000000001 /* ReflectionTemplate.swift in Sources */,
 				A1000028279B9E0000000001 /* SampleData.swift in Sources */,
 				A1000030279B9E0000000001 /* AppState.swift in Sources */,
 				A1000032279B9E0000000001 /* HomeView.swift in Sources */,
+				A1000034279B9E0000000101 /* HomeSearchView.swift in Sources */,
 				A1000034279B9E0000000001 /* TracksView.swift in Sources */,
 				A1000036279B9E0000000001 /* LessonView.swift in Sources */,
 				A1000038279B9E0000000001 /* MemoryView.swift in Sources */,
@@ -916,6 +1250,8 @@
 				EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */,
 				EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */,
 				VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */,
+				CRM00001279B9E0000000001 /* CrossReferenceMapView.swift in Sources */,
+				CMRD00002279B9E0000000001 /* CommentaryReaderView.swift in Sources */,
 				BDD100000000000000000005 /* NowPlayingView.swift in Sources */,
 				DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */,
 				A1000040279B9E0000000001 /* ProfileView.swift in Sources */,
@@ -932,6 +1268,8 @@
 				KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */,
 				KJVDLMG2279B9E0000000001 /* KJVAudioDownloadManager.swift in Sources */,
 				KJVDLVW2279B9E0000000001 /* KJVAudioDownloadsView.swift in Sources */,
+				CMDLVW2279B9E0000000001 /* CommentaryDownloadsView.swift in Sources */,
+				STLB00002279B9E0000000001 /* StudyLibraryView.swift in Sources */,
 				A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */,
 				A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */,
 				A1000084279B9E0000000001 /* ReadingStreakManager.swift in Sources */,
@@ -953,9 +1291,26 @@
 				FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */,
 				SC000002279B9E0000000001 /* ShieldContentProvider.swift in Sources */,
 				SL000002279B9E0000000001 /* SocialLimitService.swift in Sources */,
+				SBS00002279B9E0000000001 /* ScheduledBlockingService.swift in Sources */,
+				FSS00002279B9E0000000001 /* FocusSessionService.swift in Sources */,
+				UGS00002279B9E0000000001 /* UnlockGateService.swift in Sources */,
+				HSG00002279B9E0000000001 /* HomeSuggestion.swift in Sources */,
+				SEV00002279B9E0000000001 /* ScheduleEditorView.swift in Sources */,
+				FSC00002279B9E0000000001 /* FocusSessionCard.swift in Sources */,
+				SMV00002279B9E0000000001 /* SocialMediaView.swift in Sources */,
+				SHC00002279B9E0000000001 /* ShieldComponents.swift in Sources */,
+				APS00002279B9E0000000001 /* AccountabilityPartnerService.swift in Sources */,
+				SSS00002279B9E0000000001 /* ShieldStreakService.swift in Sources */,
+				APV00002279B9E0000000001 /* AccountabilityPartnerView.swift in Sources */,
+				MCV00002279B9E0000000001 /* MessageComposeView.swift in Sources */,
+				CEL00002279B9E0000000001 /* CelebrationOverlay.swift in Sources */,
+				PPS00002279B9E0000000001 /* PrayerPromptSheet.swift in Sources */,
+				TSV00002279B9E0000000001 /* TemptedSOSView.swift in Sources */,
+				SIV00002279B9E0000000001 /* ShieldInsightsView.swift in Sources */,
 				AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */,
 				SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */,
 				DS000002279B9E0000000001 /* DiscipleshipView.swift in Sources */,
+				SLHB00002279B9E0000000001 /* StudyLibraryHubView.swift in Sources */,
 				FB000002279B9E0000000001 /* FocusBlockingView.swift in Sources */,
 				PC000002279B9E0000000001 /* PodcastModels.swift in Sources */,
 				PC000004279B9E0000000001 /* PodcastService.swift in Sources */,
@@ -973,6 +1328,18 @@
 				B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */,
 				B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */,
 				CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */,
+				BRS00001279B9E0000000001 /* BibleReferenceScanner.swift in Sources */,
+				WLS00001279B9E0000000001 /* WordLocatorService.swift in Sources */,
+				BPS00001279B9E0000000001 /* BiblePlaceService.swift in Sources */,
+				SPDS00002279B9E0000000001 /* SpurgeonDevotionalService.swift in Sources */,
+				SPDV00002279B9E0000000001 /* SpurgeonDevotionalView.swift in Sources */,
+				CMS00001279B9E0000000001 /* CommentaryService.swift in Sources */,
+				CDM00001279B9E0000000001 /* CommentaryDownloadManager.swift in Sources */,
+				MZP00001279B9E0000000001 /* MinimalZip.swift in Sources */,
+				RWS00001279B9E0000000001 /* ReferenceWorkService.swift in Sources */,
+				BAV00001279B9E0000000001 /* BibleAtlasView.swift in Sources */,
+				WLV00001279B9E0000000001 /* WordLocatorView.swift in Sources */,
+				TBS00001279B9E0000000001 /* TopicalBibleService.swift in Sources */,
 				RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */,
 				B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */,
 				B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */,
@@ -994,6 +1361,24 @@
 				WNV0000B279B9E0000000001 /* WhatsNewView.swift in Sources */,
 				RTE00002279B9E0000000001 /* RichTextEditorView.swift in Sources */,
 				EXP00002279B9E0000000001 /* ExportService.swift in Sources */,
+				BAFBE3AE35B043D9E9425DA0 /* GroupModels.swift in Sources */,
+				DBADC9AD1915DE2F7BB59C49 /* GroupsService.swift in Sources */,
+				1AC23DA38F1D26DD79451A25 /* AgeGateManager.swift in Sources */,
+				A68BD1368B4DEE2199B124EE /* GroupsHubViewModel.swift in Sources */,
+				C00F4DA8BD650DA93C8F05F9 /* GroupsView.swift in Sources */,
+				C98C67506FFE873CBB627E7E /* GroupPrayerReviewView.swift in Sources */,
+				B9C1AFBE4511D3A9F150099E /* HandoutViews.swift in Sources */,
+				54B4AA75BF152C7102BC424E /* LearnModels.swift in Sources */,
+				0AD119BA881D3D4DCA6BABB0 /* TracksRepository.swift in Sources */,
+				9A4D9885AAA3F662E0376A57 /* LearnViews.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA000008279B9E0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DA000002279B9E0000000001 /* DeviceActivityMonitorExtension.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1005,11 +1390,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		DA000008279B9E0000000001 /* Sources */ = {
+		SA000008279B9E0000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DA000002279B9E0000000001 /* DeviceActivityMonitorExtension.swift in Sources */,
+				SA000002279B9E0000000001 /* ShieldActionExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SR000008279B9E0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SR000002279B9E0000000001 /* ReforgedReportExtension.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1022,17 +1415,29 @@
 			target = 6B3C67BA2F3302EB008165D9 /* ReforgedWidgetExtension */;
 			targetProxy = 6B3C67CD2F3302EC008165D9 /* PBXContainerItemProxy */;
 		};
+		DA000012279B9E0000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = DA000007279B9E0000000001 /* ReforgedActivityMonitor */;
+			targetProxy = DA000011279B9E0000000001 /* PBXContainerItemProxy */;
+		};
+		SA000005279B9E0000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = SA000007279B9E0000000001 /* ReforgedShieldAction */;
+			targetProxy = SA000004279B9E0000000001 /* PBXContainerItemProxy */;
+		};
 		SC000005279B9E0000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			platformFilter = ios;
 			target = RS000007279B9E0000000001 /* ReforgedShield */;
 			targetProxy = SC000004279B9E0000000001 /* PBXContainerItemProxy */;
 		};
-		DA000012279B9E0000000001 /* PBXTargetDependency */ = {
+		SR000005279B9E0000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			platformFilter = ios;
-			target = DA000007279B9E0000000001 /* ReforgedActivityMonitor */;
-			targetProxy = DA000011279B9E0000000001 /* PBXContainerItemProxy */;
+			target = SR000007279B9E0000000001 /* ReforgedReport */;
+			targetProxy = SR000004279B9E0000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1045,7 +1450,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1057,7 +1462,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1080,7 +1485,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1092,7 +1497,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1239,7 +1644,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/ReforgedDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1262,7 +1667,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1286,7 +1691,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1306,7 +1711,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1320,65 +1725,13 @@
 			};
 			name = Release;
 		};
-		RS00000D279B9E0000000001 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
-				DEVELOPMENT_TEAM = 53998XCUML;
-				INFOPLIST_FILE = ReforgedShield/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		RS00000E279B9E0000000001 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
-				DEVELOPMENT_TEAM = 53998XCUML;
-				INFOPLIST_FILE = ReforgedShield/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		DA00000D279B9E0000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1387,7 +1740,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1404,7 +1757,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1413,8 +1766,164 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		RS00000D279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 17;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedShield/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		RS00000E279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 17;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedShield/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		SA00000D279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedShieldAction/ReforgedShieldAction.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 17;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shieldaction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		SA00000E279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedShieldAction/ReforgedShieldAction.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 17;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shieldaction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		SR00000D279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedReport/ReforgedReport.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 17;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedReport/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.report;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		SR00000E279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedReport/ReforgedReport.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 17;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedReport/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.report;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -1454,15 +1963,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		RS00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShield" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				RS00000D279B9E0000000001 /* Debug */,
-				RS00000E279B9E0000000001 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		DA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedActivityMonitor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1472,8 +1972,34 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		RS00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShield" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				RS00000D279B9E0000000001 /* Debug */,
+				RS00000E279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		SA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShieldAction" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				SA00000D279B9E0000000001 /* Debug */,
+				SA00000E279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		SR00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedReport" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				SR00000D279B9E0000000001 /* Debug */,
+				SR00000E279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
-
 	};
 	rootObject = A1000013279B9E0000000001 /* Project object */;
 }

@@ -51,6 +51,15 @@ struct SearchPanelView: View {
     @State private var smartSearchLoading = false
     @State private var smartVerseFilter: String = "All"   // "All", "OT", "NT"
 
+    // Topical Bible (offline, openbible.info dataset)
+    @State private var topicalMatches: [(topic: String, entries: [TopicalVerseEntry])] = []
+    @State private var topicalPreviewText: [String: String] = [:]
+
+    // Offline study data (dictionaries/lexicon/topical works + Bible places)
+    @State private var referenceMatches: [ReferenceEntry] = []
+    @State private var placeMatches: [BiblePlace] = []
+    @State private var selectedReference: ReferenceEntry?
+
     private func isConceptualQuery(_ query: String) -> Bool {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         if q.contains("?") { return true }
@@ -181,6 +190,9 @@ struct SearchPanelView: View {
                                 searchQuery = ""
                                 searchResults = []
                                 smartSearchResult = nil
+                                topicalMatches = []
+                                referenceMatches = []
+                                placeMatches = []
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
@@ -310,6 +322,18 @@ struct SearchPanelView: View {
                                 }
                                 .padding(.vertical, 4)
                             }
+                        }
+
+                        ForEach(topicalMatches, id: \.topic) { match in
+                            topicalSectionCard(topic: match.topic, entries: match.entries)
+                        }
+
+                        if !placeMatches.isEmpty {
+                            placeSectionCard
+                        }
+
+                        if !referenceMatches.isEmpty {
+                            referenceSectionCard
                         }
 
                         if smartSearchLoading {
@@ -467,6 +491,232 @@ struct SearchPanelView: View {
         .onChange(of: searchResults) { _ in rebuildCaches() }
         .onChange(of: selectedCategory) { _ in rebuildCaches() }
         .onChange(of: selectedVersion) { _ in rebuildCaches() }
+        .sheet(item: $selectedReference) { entry in
+            ReferenceEntryDetailView(entry: entry)
+        }
+    }
+
+    // MARK: - Topical Bible
+
+    @ViewBuilder
+    func topicalSectionCard(topic: String, entries: [TopicalVerseEntry]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "tag")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                Text(topic.capitalized)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                Text("Topical Bible")
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
+            Divider().padding(.horizontal, 14)
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(entries) { entry in
+                    topicalVerseRow(entry)
+                }
+            }
+            .padding(14)
+
+            Text("Ranked by community votes · openbible.info (CC BY)")
+                .font(.caption2)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
+        }
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.reforgedNavy.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Places & Dictionary (offline study data)
+
+    private var placeSectionCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "map")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color(red: 0.2, green: 0.6, blue: 0.5))
+                Text("Places")
+                    .font(.caption).fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                Text("Bible Atlas")
+                    .font(.caption2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(.horizontal, 14).padding(.top, 14).padding(.bottom, 10)
+
+            Divider().padding(.horizontal, 14)
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(placeMatches) { place in
+                    Button {
+                        if let first = place.verses.first {
+                            onSelectResult(BibleSearchResult(reference: first, content: "", translation: translation))
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(Color(red: 0.2, green: 0.6, blue: 0.5))
+                            Text(place.name)
+                                .font(.caption).fontWeight(.semibold)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                            Spacer()
+                            Text("\(place.verses.count) verse\(place.verses.count == 1 ? "" : "s")")
+                                .font(.caption2)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10)
+                        .background(Color.adaptiveBackground(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(14)
+        }
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.reforgedNavy.opacity(0.2), lineWidth: 1))
+    }
+
+    private var referenceSectionCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "character.book.closed.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color(red: 0.85, green: 0.45, blue: 0.15))
+                Text("Dictionary & Topics")
+                    .font(.caption).fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+            }
+            .padding(.horizontal, 14).padding(.top, 14).padding(.bottom, 10)
+
+            Divider().padding(.horizontal, 14)
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(referenceMatches) { entry in
+                    Button { selectedReference = entry } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(entry.headword)
+                                    .font(.caption).fontWeight(.bold)
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                                Text(entry.work.displayName)
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            }
+                            Text(entry.text)
+                                .font(.caption)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10)
+                        .background(Color.adaptiveBackground(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(14)
+
+            Text("Public-domain study works · CrossWire")
+                .font(.caption2)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .padding(.horizontal, 14).padding(.bottom, 12)
+        }
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.reforgedNavy.opacity(0.2), lineWidth: 1))
+    }
+
+    private func topicalVerseRow(_ entry: TopicalVerseEntry) -> some View {
+        Button {
+            onSelectResult(BibleSearchResult(
+                reference: entry.reference,
+                content: topicalPreviewText[entry.reference] ?? "",
+                translation: translation
+            ))
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(entry.reference)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.reforgedGold)
+                    Text("\(entry.votes) votes")
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.adaptiveBackground(colorScheme))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .clipShape(Capsule())
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+
+                if let text = topicalPreviewText[entry.reference], !text.isEmpty {
+                    Text(text)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(3)
+                        .lineSpacing(2)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(Color.adaptiveBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .task(id: entry.reference) { await loadTopicalPreview(entry) }
+    }
+
+    private func loadTopicalPreview(_ entry: TopicalVerseEntry) async {
+        guard topicalPreviewText[entry.reference] == nil else { return }
+        guard let parsed = BibleData.parseReference(entry.reference) else {
+            topicalPreviewText[entry.reference] = ""
+            return
+        }
+
+        do {
+            let chapterEntry = try await ChapterScrollCoordinator.performChapterFetch(
+                book: parsed.book,
+                chapter: parsed.chapter,
+                translation: translation
+            )
+            topicalPreviewText[entry.reference] = chapterEntry.verses.first(where: { $0.number == parsed.verseStart })?.text ?? ""
+        } catch {
+            topicalPreviewText[entry.reference] = ""
+        }
     }
 
     @ViewBuilder
@@ -684,6 +934,15 @@ struct SearchPanelView: View {
         smartVerseFilter = "All"
 
         let query = searchQuery
+
+        // Offline topical matches (openbible.info) — synchronous, shown above results
+        topicalMatches = TopicalBibleService.shared.matchingTopics(for: query, limit: 2).map { topic in
+            (topic: topic, entries: Array(TopicalBibleService.shared.verses(for: topic).prefix(8)))
+        }
+
+        // Offline dictionary/lexicon/topical + place matches (bundled study data)
+        referenceMatches = ReferenceWorkService.shared.search(query, limit: 4)
+        placeMatches = BiblePlaceService.shared.search(query, limit: 5)
         let versions = selectedVersion.map { [$0] } ?? BibleTranslation.searchableTextVersions
 
         // Auto-run AI overview for conceptual / question queries

@@ -2,106 +2,111 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var streakManager = ReadingStreakManager.shared
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.isSidebarNavigation) var isSidebarNavigation
+    @StateObject private var searchModel = HomeSearchModel()
+    @State private var searchText = ""
+    /// Measured content width (after the 1200pt cap), used to pick the iPad
+    /// dashboard's column count. Read from a background GeometryReader rather than
+    /// horizontalSizeClass, so a narrow iPad split view still lays out sensibly.
+    @State private var dashboardWidth: CGFloat = 0
 
+    private var isSearchActive: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    // Reward overlays are not here — they're attached once at the root in
+    // ContentView (`.celebrationOverlay()`), so XP earned in the Bible reader or a
+    // lesson celebrates where it was earned instead of only over Home.
     var body: some View {
-        ZStack {
-            Group {
-                if isSidebarNavigation {
-                    // iPad/Mac: No NavigationStack needed (provided by parent)
+        Group {
+            if isSidebarNavigation {
+                // iPad/Mac: No NavigationStack needed (provided by parent)
+                homeContent
+            } else {
+                NavigationStack {
                     homeContent
-                } else {
-                    NavigationStack {
-                        homeContent
-                            .navigationTitle("Reforged")
-                            .navigationBarTitleDisplayMode(.large)
-                    }
-                }
-            }
-
-            // XP Gain Notification
-            VStack {
-                Spacer()
-                XPGainView(
-                    amount: appState.lastXPGain,
-                    source: appState.lastXPSource,
-                    isPresented: $appState.showXPGain
-                )
-                .padding(.bottom, 120)
-            }
-
-            // Level Up Celebration
-            LevelUpView(
-                newLevel: appState.newLevel,
-                isPresented: $appState.showLevelUp
-            )
-
-            // Streak Milestone Celebration
-            StreakMilestoneView(
-                streakCount: streakManager.milestoneDays,
-                isPresented: $streakManager.showMilestoneCelebration
-            )
-
-            // Badge Earned Celebration
-            if let badge = appState.earnedBadge {
-                BadgeEarnedView(
-                    badge: badge,
-                    isPresented: $appState.showBadgeEarned
-                )
-                .onChange(of: appState.showBadgeEarned) { showing in
-                    if !showing {
-                        appState.earnedBadge = nil
-                    }
+                        .navigationTitle("Reforged")
+                        .navigationBarTitleDisplayMode(.large)
+                        .toolbar { profileToolbarItem }
                 }
             }
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: appState.showXPGain)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: appState.showLevelUp)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: streakManager.showMilestoneCelebration)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: appState.showBadgeEarned)
+    }
+
+    /// The account button — top-trailing of the Home nav bar, the same place App
+    /// Store, Music, and Fitness put it. This is Profile's only entry point on
+    /// iPhone, which has no Profile tab (iPad reaches it from the sidebar).
+    ///
+    /// On iOS 26 the toolbar wraps each item in a Liquid Glass capsule, which reads
+    /// as a grey blob around an avatar that already draws its own ring — so the
+    /// shared background is hidden and the avatar sits directly on the bar.
+    @ToolbarContentBuilder
+    private var profileToolbarItem: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .topBarTrailing) {
+                profileToolbarButton
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .topBarTrailing) {
+                profileToolbarButton
+            }
+        }
+    }
+
+    private var profileToolbarButton: some View {
+        NavigationLink {
+            ProfileView(embedsNavigationStack: false)
+                .environmentObject(appState)
+        } label: {
+            ProfileAvatarView(size: 40)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Profile")
+        .accessibilityHint("Your profile, badges, and app settings")
     }
 
     var homeContent: some View {
+        ZStack {
+            homeScroll
+
+            if isSearchActive {
+                HomeSearchResultsView(query: searchText, model: searchModel)
+                    .environmentObject(appState)
+            }
+        }
+        .searchable(text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .automatic),
+                    prompt: "Search Scripture, topics, words…")
+        .onChange(of: searchText) { query in
+            if query.isEmpty { searchModel.invalidateJournalCache() }
+            searchModel.updateLocal(query: query, appState: appState)
+        }
+        .onSubmit(of: .search) {
+            searchModel.runDeepSearch(query: searchText)
+        }
+    }
+
+    // Ordered by what the screen is asking of the reader, not by card size:
+    // the hero names the one thing to do, DueTodaySection lists what's actually
+    // outstanding, the stat cards report where that leaves them, and everything
+    // below is optional — devotional reading, then browsing, then utilities.
+    private var homeScroll: some View {
         ScrollView {
             VStack(spacing: ReforgedTheme.spacingL) {
-                // Welcome Header
                 WelcomeHeader()
 
-                // Stats Cards - Responsive layout
-                StatsSection()
-
-                // iPad/Mac: Two-column layout for middle content
+                // iPad/Mac: an adaptive multi-column dashboard that fills the
+                // width. iPhone keeps the single-column stack.
                 if horizontalSizeClass == .regular {
-                    HStack(alignment: .top, spacing: ReforgedTheme.spacingL) {
-                        // Left column
-                        VStack(spacing: ReforgedTheme.spacingL) {
-                            DailyInsightCard()
-                            TodayReadingCard()
-                            ContinueLearningSection()
-                        }
-                        .frame(maxWidth: .infinity)
-
-                        // Right column
-                        VStack(spacing: ReforgedTheme.spacingL) {
-                            ReviewDueSection()
-                            QuickActionsSection()
-                            BibleProgressCard()
-                            ShareGospelCard()
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
+                    iPadDashboard
                 } else {
-                    // iPhone: Single column
+                    DueTodaySection()
+                    StatsSection()
                     DailyInsightCard()
-
-                    TodayReadingCard()
-
                     ContinueLearningSection()
-
-                    ReviewDueSection()
                     QuickActionsSection()
                     BibleProgressCard()
                     ShareGospelCard()
@@ -113,8 +118,96 @@ struct HomeView: View {
             .padding(.vertical)
             .frame(maxWidth: horizontalSizeClass == .regular ? 1200 : .infinity)
             .frame(maxWidth: .infinity)
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(key: DashboardWidthKey.self, value: geo.size.width)
+                }
+            )
+            .onPreferenceChange(DashboardWidthKey.self) { dashboardWidth = $0 }
         }
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+    }
+
+    /// 3 columns on a full-screen iPad/Mac, 2 on a narrower regular width (portrait
+    /// or split view), 1 as a safety net. Thresholds are content width after the cap.
+    private var dashboardColumnCount: Int {
+        if dashboardWidth >= 1040 { return 3 }
+        if dashboardWidth >= 680 { return 2 }
+        return 1
+    }
+
+    /// The iPad/Mac home layout: a balanced multi-column dashboard.
+    ///
+    /// The two stat cards are broken out of `StatsSection` and placed as individual
+    /// dashboard tiles so every card in the grid shares one column width, rather than
+    /// the old two-column split that left the stat cards stretched. Assignment is
+    /// curated (not measured) — the actionable "Due Today" leads the primary column,
+    /// devotional and browse content fill the rest.
+    @ViewBuilder
+    private var iPadDashboard: some View {
+        let spacing = ReforgedTheme.spacingL
+        switch dashboardColumnCount {
+        case 3:
+            HStack(alignment: .top, spacing: spacing) {
+                VStack(spacing: spacing) {
+                    DueTodaySection()
+                    ContinueLearningSection()
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: spacing) {
+                    DailyInsightCard()
+                    QuickActionsSection()
+                    BibleProgressCard()
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: spacing) {
+                    StreakCard()
+                    LevelCard(xp: appState.user.xp)
+                    ShareGospelCard()
+                }
+                .frame(maxWidth: .infinity)
+            }
+        case 2:
+            HStack(alignment: .top, spacing: spacing) {
+                VStack(spacing: spacing) {
+                    DueTodaySection()
+                    DailyInsightCard()
+                    BibleProgressCard()
+                    ShareGospelCard()
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: spacing) {
+                    HStack(spacing: spacing) {
+                        StreakCard()
+                        LevelCard(xp: appState.user.xp)
+                    }
+                    ContinueLearningSection()
+                    QuickActionsSection()
+                }
+                .frame(maxWidth: .infinity)
+            }
+        default:
+            VStack(spacing: spacing) {
+                DueTodaySection()
+                StatsSection()
+                DailyInsightCard()
+                ContinueLearningSection()
+                QuickActionsSection()
+                BibleProgressCard()
+                ShareGospelCard()
+            }
+        }
+    }
+}
+
+/// Content width of the home stack, used to choose the iPad dashboard columns.
+private struct DashboardWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
@@ -167,32 +260,88 @@ struct BibleProgressCard: View {
     }
 }
 
+// MARK: - Due Today
+//
+// The reading plan and the verses waiting for review are the only two things on
+// Home with a deadline, so they're one group directly under the hero rather than
+// two unrelated cards spaced apart by the insight and lesson cards. Both rows are
+// gated from here, which is also what keeps the VStack from reserving a spacing
+// slot for a section that renders nothing.
+
+struct DueTodaySection: View {
+    @EnvironmentObject var appState: AppState
+    @StateObject private var planService = ReadingPlanService.shared
+    @Environment(\.colorScheme) var colorScheme
+
+    @StateObject private var streakManager = ReadingStreakManager.shared
+
+    private var versesForReview: [MemoryVerse] {
+        appState.getVersesForReview()
+    }
+
+    /// The pill tracks the day's two-discipline goal, not a count of the cards
+    /// below. The reading plan is a self-paced queue with a next entry always
+    /// waiting, so "items on screen" can't tell you whether the day is done —
+    /// only the disciplines completed today can. (This is exactly the bug where
+    /// the pill read "1 left" forever no matter how many chapters were marked.)
+    private var goalDone: Int { min(streakManager.todayActivityKinds.count, ReadingStreakManager.dailyActivityGoal) }
+    private var goalTotal: Int { ReadingStreakManager.dailyActivityGoal }
+
+    var body: some View {
+        if planService.activePlan != nil || !versesForReview.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Due Today")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                    Spacer()
+
+                    if streakManager.isDailyGoalMet {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Done for today")
+                                .fontWeight(.semibold)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(Color.reforgedGold)
+                    } else {
+                        Text("\(goalDone) of \(goalTotal)")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.reforgedCoral)
+                            .clipShape(Capsule())
+                            .accessibilityLabel("\(goalDone) of \(goalTotal) daily disciplines done")
+                    }
+                }
+
+                if let plan = planService.activePlan, let entry = planService.activeEntry {
+                    TodayReadingCard(plan: plan, entry: entry)
+                }
+
+                if !versesForReview.isEmpty {
+                    ReviewDueCard(verses: versesForReview)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Today's Reading Card
 
 struct TodayReadingCard: View {
+    let plan: BibleReadingPlan
+    let entry: BiblePlanEntry
+
     @StateObject private var service = ReadingPlanService.shared
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
 
-    /// First plan that has been started but not yet finished.
-    private var activePlan: BibleReadingPlan? {
-        BibleReadingPlans.all.first { service.hasStarted($0.id) && !service.isComplete($0.id) }
-    }
-
-    private var currentEntry: BiblePlanEntry? {
-        guard let plan = activePlan else { return nil }
-        let day = service.currentDay(for: plan.id)
-        return plan.entries.first { $0.day == day }
-    }
-
     var body: some View {
-        if let plan = activePlan, let entry = currentEntry {
-            cardContent(plan: plan, entry: entry)
-        }
-    }
-
-    @ViewBuilder
-    private func cardContent(plan: BibleReadingPlan, entry: BiblePlanEntry) -> some View {
         let isComplete = service.isDayComplete(entry.day, planId: plan.id)
 
         HStack(spacing: 14) {
@@ -306,58 +455,125 @@ struct BuyMeACoffeeButton: View {
 }
 
 // MARK: - Welcome Header (Hero Style)
+//
+// Suggestion-first: the greeting is a single quiet line and the hero's real job
+// is naming the ONE thing to do first (see HomeSuggestion). The suggestion
+// re-rolls on every app open, so this is the screen's live entry point rather
+// than a static banner. The avatar lives in the nav bar now — one account
+// control, not two.
 
 struct WelcomeHeader: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var streakManager = ReadingStreakManager.shared
+    @StateObject private var gateService = UnlockGateService.shared
+    @StateObject private var planService = ReadingPlanService.shared
+    @Environment(\.scenePhase) private var scenePhase
 
-    var greeting: String {
+    @State private var suggestion: HomeSuggestion = .readChapter
+    @State private var showJournal = false
+
+    private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
+        let name = appState.user.displayName.isEmpty ? "friend" : appState.user.displayName
         switch hour {
-        case 0..<12: return "Good morning"
-        case 12..<17: return "Good afternoon"
-        default: return "Good evening"
+        case 0..<12:  return "Good morning, \(name)"
+        case 12..<17: return "Good afternoon, \(name)"
+        default:      return "Good evening, \(name)"
         }
     }
 
-    var subtitle: String {
-        if streakManager.hasReadToday {
-            let s = streakManager.currentStreak
-            return s > 1 ? "Great reading today — \(s)-day streak and counting!" : "Great reading today — keep it up!"
-        } else if streakManager.currentStreak > 1 {
-            return "You're on a \(streakManager.currentStreak)-day streak — read a chapter to keep it going!"
-        } else {
-            return "Your daily journey in God's Word awaits"
-        }
+    private var versesDue: Int {
+        appState.memoryVerses.filter { $0.isDueForReview }.count
+    }
+
+    private func reroll() {
+        suggestion = HomeSuggestion.pick(
+            excluding: suggestion,
+            hasReadToday: streakManager.hasReadToday,
+            isDailyGoalMet: streakManager.isDailyGoalMet,
+            versesDue: versesDue,
+            hasAnyVerses: !appState.memoryVerses.isEmpty,
+            isGateLocked: gateService.isGateActive
+        )
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(greeting)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.white.opacity(0.8))
+        VStack(alignment: .leading, spacing: 18) {
+            Text(greeting)
+                .font(.subheadline)
+                .foregroundStyle(Color.white.opacity(0.7))
 
-                    Text(appState.user.displayName.isEmpty ? "Friend" : appState.user.displayName)
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white)
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.reforgedGold.opacity(0.18))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: suggestion.icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.reforgedGold)
                 }
 
-                Spacer()
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(suggestion.eyebrow)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .tracking(1.2)
+                        .textCase(.uppercase)
+                        .foregroundStyle(Color.reforgedGold)
 
-                ProfileAvatarView(size: 56)
+                    Text(suggestion.title)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
             }
 
-            Text(subtitle)
+            Text(suggestion.detail)
                 .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.9))
+                .foregroundStyle(Color.white.opacity(0.8))
                 .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                HapticManager.shared.buttonTap()
+                switch suggestion.destination {
+                case .tab(let index):
+                    NotificationCenter.default.post(
+                        name: .switchTab,
+                        object: nil,
+                        userInfo: [AppNotificationUserInfoKey.tab: index]
+                    )
+                case .journal:
+                    showJournal = true
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(suggestion.actionLabel)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 11)
+                .background(Color.reforgedCoral)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(NoBlobButtonStyle())
         }
         .padding(ReforgedTheme.spacingL)
         .frame(maxWidth: .infinity, alignment: .leading)
         .heroCard()
+        .animation(.easeInOut(duration: 0.25), value: suggestion)
+        .navigationDestination(isPresented: $showJournal) { JournalView() }
+        .onAppear { reroll() }
+        .onChange(of: scenePhase) { phase in
+            // "Every app open" — a fresh suggestion each time the app foregrounds.
+            if phase == .active { reroll() }
+        }
     }
 }
 
@@ -377,6 +593,69 @@ struct StatsSection: View {
     }
 }
 
+/// The seven days of the current week, marking which are already satisfied.
+/// Duolingo's core "don't break the chain" affordance — the gap is the motivator.
+struct WeekStreakStrip: View {
+    @StateObject private var streakManager = ReadingStreakManager.shared
+    let colorScheme: ColorScheme
+
+    private static let weekdayInitials = ["S", "M", "T", "W", "T", "F", "S"]
+    private let calendar = Calendar.current
+
+    var body: some View {
+        let today = Date()
+        HStack(spacing: 3) {
+            ForEach(Array(streakManager.currentWeekDates().enumerated()), id: \.offset) { index, date in
+                let isFuture = calendar.compare(date, to: today, toGranularity: .day) == .orderedDescending
+                let isToday = calendar.isDate(date, inSameDayAs: today)
+                let isDone = streakManager.didRead(on: date)
+                let isFrozen = streakManager.wasFrozen(on: date)
+
+                VStack(spacing: 2) {
+                    Text(Self.weekdayInitials[index])
+                        .font(.system(size: 7, weight: .medium))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+                    ZStack {
+                        Circle()
+                            .fill(fill(isDone: isDone, isFrozen: isFrozen, isFuture: isFuture))
+                            .frame(width: 12, height: 12)
+
+                        if isFrozen {
+                            Image(systemName: "snowflake")
+                                .font(.system(size: 6, weight: .bold))
+                                .foregroundStyle(.white)
+                        } else if isDone {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 6, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .overlay(
+                        Circle()
+                            .stroke(Color.reforgedCoral, lineWidth: isToday && !isDone ? 1.5 : 0)
+                            .frame(width: 12, height: 12)
+                    )
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(accessibilityLabel(date: date, isDone: isDone, isFrozen: isFrozen))
+            }
+        }
+    }
+
+    private func fill(isDone: Bool, isFrozen: Bool, isFuture: Bool) -> Color {
+        if isFrozen { return .blue.opacity(0.7) }
+        if isDone { return .reforgedCoral }
+        return Color.adaptiveTextSecondary(colorScheme).opacity(isFuture ? 0.12 : 0.25)
+    }
+
+    private func accessibilityLabel(date: Date, isDone: Bool, isFrozen: Bool) -> String {
+        let day = date.formatted(.dateTime.weekday(.wide))
+        if isFrozen { return "\(day): protected by a streak freeze" }
+        return isDone ? "\(day): complete" : "\(day): not complete"
+    }
+}
+
 struct StreakCard: View {
     @StateObject private var streakManager = ReadingStreakManager.shared
     @EnvironmentObject var appState: AppState
@@ -388,15 +667,25 @@ struct StreakCard: View {
         streakManager.currentStreak
     }
 
+    /// Sourced from the engine so the card and the celebration agree on what
+    /// counts as a milestone.
     var nextMilestone: Int {
-        let milestones = [7, 14, 30, 60, 90, 180, 365]
-        return milestones.first(where: { $0 > streak }) ?? 365
+        streakManager.nextMilestone ?? ReadingStreakManager.milestones.last ?? 365
     }
 
     var progress: Double {
-        let prev = [0, 7, 14, 30, 60, 90, 180].last(where: { $0 < nextMilestone }) ?? 0
-        guard nextMilestone > prev else { return 1 }
-        return Double(streak - prev) / Double(nextMilestone - prev)
+        guard streakManager.nextMilestone != nil else { return 1 }
+        let previous = ReadingStreakManager.milestones.last(where: { $0 <= streak }) ?? 0
+        guard nextMilestone > previous else { return 1 }
+        return Double(streak - previous) / Double(nextMilestone - previous)
+    }
+
+    /// The streak is alive but today isn't satisfied yet — the flame goes cold
+    /// to create the "don't lose it" pull.
+    private var isAtRisk: Bool { streakManager.isStreakAtRisk }
+
+    private var flameColor: Color {
+        isAtRisk ? Color.adaptiveTextSecondary(colorScheme).opacity(0.5) : Color.reforgedCoral
     }
 
     var body: some View {
@@ -407,7 +696,13 @@ struct StreakCard: View {
                 HStack {
                     Image(systemName: "flame.fill")
                         .font(.title2)
-                        .foregroundStyle(Color.reforgedCoral)
+                        .foregroundStyle(flameColor)
+
+                    if streakManager.isInStreakSociety {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.reforgedGold)
+                    }
 
                     Spacer()
 
@@ -415,6 +710,8 @@ struct StreakCard: View {
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                 }
+
+                WeekStreakStrip(colorScheme: colorScheme)
 
                 HStack(spacing: 4) {
                     Text("Daily Streak")
@@ -442,16 +739,20 @@ struct StreakCard: View {
                     .frame(height: 6)
 
                     HStack(alignment: .top, spacing: 6) {
-                        if streakManager.hasReadToday {
-                            Text("Read today! \(nextMilestone - streak) days to \(nextMilestone)-day milestone")
+                        if streakManager.hasActivityToday {
+                            Text("Done today! \(nextMilestone - streak) days to \(nextMilestone)-day milestone")
                                 .font(.system(size: 10))
                                 .foregroundStyle(Color.reforgedCoral)
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                         } else {
-                            Text("Read a chapter to keep your streak!")
+                            // Any of the three core activities keeps the streak, so don't
+                            // name only reading here.
+                            Text(streak > 0
+                                 ? "Read, review, or finish a lesson to keep your streak!"
+                                 : "Read, review, or finish a lesson to start a streak!")
                                 .font(.system(size: 10))
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                .foregroundStyle(isAtRisk ? Color.reforgedCoral : Color.adaptiveTextSecondary(colorScheme))
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -475,7 +776,9 @@ struct StreakCard: View {
 
             }
             .padding(ReforgedTheme.spacingM)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // maxHeight before the card background so the background paints the
+            // stretched height, letting both stat cards match the taller one.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .gamifiedStatCard(accent: .reforgedCoral)
         }
         .buttonStyle(.plain)
@@ -597,6 +900,7 @@ struct ReadingCalendarView: View {
                                         date: date,
                                         isToday: calendar.isDateInToday(date),
                                         didRead: streakManager.didRead(on: date),
+                                        isFrozen: streakManager.wasFrozen(on: date),
                                         chaptersRead: streakManager.chaptersRead(on: date)
                                     )
                                 } else {
@@ -613,19 +917,20 @@ struct ReadingCalendarView: View {
 
                     // Legend
                     HStack(spacing: 20) {
-                        LegendItem(color: .reforgedCoral, label: "Chapter read")
+                        LegendItem(color: .reforgedCoral, label: "Active day")
+                        LegendItem(color: .blue.opacity(0.7), label: "Freeze used")
                         LegendItem(color: .clear, borderColor: .reforgedCoral, label: "Today")
                     }
                     .padding(.horizontal)
 
                     // Encouragement message
-                    if !streakManager.hasReadToday {
+                    if !streakManager.hasActivityToday {
                         VStack(spacing: 8) {
                             Image(systemName: "book.fill")
                                 .font(.title2)
                                 .foregroundStyle(Color.adaptiveNavyText(colorScheme))
 
-                            Text("Read a chapter today to keep your streak going!")
+                            Text("Read, review a verse, or finish a lesson today to keep your streak going!")
                                 .font(.subheadline)
                                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                                 .multilineTextAlignment(.center)
@@ -817,10 +1122,14 @@ struct ReadingCalendarView: View {
         }
     }
 
-    var monthYearString: String {
+    private static let monthYearFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: currentMonth)
+        return formatter
+    }()
+
+    var monthYearString: String {
+        Self.monthYearFormatter.string(from: currentMonth)
     }
 
     var canGoForward: Bool {
@@ -849,9 +1158,7 @@ struct ReadingCalendarView: View {
     var daysReadThisMonth: Int {
         let currentComponents = calendar.dateComponents([.year, .month], from: Date())
         return streakManager.readingDates.filter { dateString in
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            guard let date = formatter.date(from: dateString) else { return false }
+            guard let date = AppDateFormatters.yearMonthDay.date(from: dateString) else { return false }
             let components = calendar.dateComponents([.year, .month], from: date)
             return components.year == currentComponents.year && components.month == currentComponents.month
         }.count
@@ -890,6 +1197,7 @@ struct CalendarDayCell: View {
     let date: Date
     let isToday: Bool
     let didRead: Bool
+    let isFrozen: Bool
     let chaptersRead: [String]
     @Environment(\.colorScheme) var colorScheme
     @State private var showChapters = false
@@ -911,7 +1219,12 @@ struct CalendarDayCell: View {
             }
         } label: {
             ZStack {
-                if didRead {
+                // A frozen day counts for the streak but wasn't earned — mark it
+                // blue so the calendar tells the truth about how the run survived.
+                if isFrozen {
+                    Circle()
+                        .fill(Color.blue.opacity(0.7))
+                } else if didRead {
                     Circle()
                         .fill(Color.reforgedCoral)
                 }
@@ -921,19 +1234,29 @@ struct CalendarDayCell: View {
                         .stroke(Color.reforgedCoral, lineWidth: 2)
                 }
 
-                Text("\(dayNumber)")
-                    .font(.subheadline)
-                    .fontWeight(isToday ? .bold : .regular)
-                    .foregroundStyle(
-                        didRead ? .white :
-                        isFutureDate ? Color.adaptiveTextSecondary(colorScheme).opacity(0.3) :
-                        Color.adaptiveText(colorScheme)
-                    )
+                if isFrozen {
+                    Image(systemName: "snowflake")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                } else {
+                    Text("\(dayNumber)")
+                        .font(.subheadline)
+                        .fontWeight(isToday ? .bold : .regular)
+                        .foregroundStyle(
+                            didRead ? .white :
+                            isFutureDate ? Color.adaptiveTextSecondary(colorScheme).opacity(0.3) :
+                            Color.adaptiveText(colorScheme)
+                        )
+                }
             }
             .frame(height: 44)
         }
         .buttonStyle(.plain)
         .disabled(chaptersRead.isEmpty)
+        .accessibilityLabel(
+            isFrozen ? "\(dayNumber): protected by a streak freeze"
+                     : "\(dayNumber): \(didRead ? "complete" : "not complete")"
+        )
         .popover(isPresented: $showChapters) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Chapters Read")
@@ -1008,6 +1331,10 @@ struct LevelCard: View {
                 .fontWeight(.medium)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
+            // Absorbs the slack from whichever card is shorter, so both progress
+            // bars sit on the same baseline instead of floating mid-card.
+            Spacer(minLength: 0)
+
             // XP Progress
             VStack(alignment: .leading, spacing: 4) {
                 GeometryReader { geo in
@@ -1028,7 +1355,9 @@ struct LevelCard: View {
             }
         }
         .padding(ReforgedTheme.spacingM)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // maxHeight before the card background so the background paints the
+        // stretched height, letting both stat cards match the taller one.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .gamifiedStatCard(accent: .reforgedGold)
     }
 }
@@ -1191,10 +1520,14 @@ struct DailyInsightCard: View {
         }
     }
 
-    var formattedDate: String {
+    private static let headerDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMMM d"
-        return formatter.string(from: Date())
+        return formatter
+    }()
+
+    var formattedDate: String {
+        Self.headerDateFormatter.string(from: Date())
     }
 
     private func fetchVerseText(reference: String) async -> String? {
@@ -1331,78 +1664,71 @@ struct ContinueLearningSection: View {
     }
 }
 
-// MARK: - Review Due Section
+// MARK: - Review Due Card
+//
+// Deliberately shaped like TodayReadingCard: same icon tile, eyebrow, and trailing
+// action capsule. The two rows are the same kind of thing — a commitment with a
+// deadline — so they should read as siblings rather than as two different designs.
 
-struct ReviewDueSection: View {
-    @EnvironmentObject var appState: AppState
+struct ReviewDueCard: View {
+    let verses: [MemoryVerse]
+
     @Environment(\.colorScheme) var colorScheme
 
-    var versesForReview: [MemoryVerse] {
-        appState.getVersesForReview()
+    private var subtitle: String {
+        let reference = verses.first?.reference ?? ""
+        guard verses.count > 1 else { return reference }
+        return "\(reference) + \(verses.count - 1) more"
     }
 
     var body: some View {
-        if !versesForReview.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Verses Due for Review")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
+        NavigationLink(destination: MemoryReviewView()) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.reforgedCoral.opacity(0.15))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.reforgedCoral)
+                }
 
-                    Spacer()
-
-                    Text("\(versesForReview.count) due")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Verse Review")
                         .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.reforgedCoral)
-                        .clipShape(Capsule())
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.reforgedCoral)
+                    Text(verses.count == 1 ? "1 verse due" : "\(verses.count) verses due")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineLimit(1)
                 }
 
-                NavigationLink(destination: MemoryReviewView()) {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                                .fill(Color.reforgedCoral.opacity(0.12))
-                                .frame(width: 56, height: 56)
+                Spacer(minLength: 4)
 
-                            Image(systemName: "brain.head.profile")
-                                .font(.title2)
-                                .foregroundStyle(Color.reforgedCoral)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(versesForReview.first?.reference ?? "")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                            Text("Tap to start review session")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        }
-
-                        Spacer()
-
-                        ZStack {
-                            Circle()
-                                .fill(Color.reforgedCoral)
-                                .frame(width: 40, height: 40)
-
-                            Image(systemName: "arrow.right")
-                                .font(.caption.bold())
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    .padding(ReforgedTheme.spacingM)
-                    .gamifiedStatCard(accent: .reforgedCoral)
+                HStack(spacing: 4) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Review")
+                        .font(.system(size: 11, weight: .semibold))
                 }
-                .buttonStyle(.plain)
+                .foregroundStyle(Color.reforgedCoral)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Color.reforgedCoral.opacity(0.12))
+                .clipShape(Capsule())
             }
+            .padding(14)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: ReforgedTheme.cardShadow, radius: ReforgedTheme.cardShadowRadius, y: ReforgedTheme.cardShadowY)
         }
+        .buttonStyle(.plain)
     }
 }
 

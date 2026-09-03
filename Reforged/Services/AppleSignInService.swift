@@ -1,6 +1,7 @@
 import Foundation
 import AuthenticationServices
 import Combine
+import CryptoKit
 
 // MARK: - Apple Sign In Service
 
@@ -47,6 +48,33 @@ class AppleSignInService: NSObject, ObservableObject {
                 await checkCredentialState(userIdentifier: userIdentifier)
             }
         }
+    }
+
+    // MARK: - Nonce (for Supabase id_token exchange)
+    //
+    // Apple returns the *hashed* nonce inside the identity token; the raw value
+    // is sent to Supabase, which re-hashes and compares. Flow: generate a raw
+    // nonce, set `request.nonce = sha256(raw)` on the Apple request, then pass
+    // the raw nonce to `SupabaseAuthService.signInWithApple(idToken:rawNonce:)`.
+
+    /// Cryptographically-random nonce string using the URL-safe character set
+    /// Apple/Supabase expect.
+    static func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] =
+            Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
+        var bytes = [UInt8](repeating: 0, count: length)
+        if SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) != errSecSuccess {
+            for i in bytes.indices { bytes[i] = UInt8.random(in: 0...255) }
+        }
+        return String(bytes.map { charset[Int($0) % charset.count] })
+    }
+
+    /// Lowercase hex SHA-256 of `input`, matching what Apple embeds in the token.
+    static func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
     // MARK: - Credential State

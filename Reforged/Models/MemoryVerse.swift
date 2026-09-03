@@ -143,20 +143,32 @@ enum MemoryMode: String, CaseIterable {
         case .tapToReveal: return "Reveal phrase by phrase"
         case .dragAndDrop: return "Drag words to fill blanks"
         case .fillInBlank: return "Type missing words"
-        case .firstLetter: return "Use first letters as hints"
+        case .firstLetter: return "Type first letters, words reveal"
         case .typing: return "Type the entire verse"
         }
     }
 
     /// Exercise pools by mastery level, ordered easiest to hardest recall.
-    /// Level 1 leans on recognition (flip/reveal); level 5 demands full recall (typing).
+    /// The ladder is a deliberate ramp so a verse is eased in and then pushed harder
+    /// as it matures:
+    ///   L1 Learning    → flashcards (pure recognition, swipe deck)
+    ///   L2 Familiar    → phrase-by-phrase reveal
+    ///   L3 Known       → fill-in / drag-and-drop (cued recall)
+    ///   L4 Well-Known  → first-letter (near-free recall)
+    ///   L5 Mastered    → typing (full free recall)
     private static let progressionPools: [Int: [MemoryMode]] = [
-        1: [.flashcard, .tapToReveal],
-        2: [.tapToReveal, .fillInBlank, .dragAndDrop],
-        3: [.fillInBlank, .dragAndDrop, .firstLetter],
-        4: [.firstLetter, .dragAndDrop, .typing],
+        1: [.flashcard],
+        2: [.tapToReveal],
+        3: [.fillInBlank, .dragAndDrop],
+        4: [.firstLetter, .dragAndDrop],
         5: [.typing, .firstLetter]
     ]
+
+    /// True while the verse is still at the recognition (flashcard) stage. These verses
+    /// are batched into the Quizlet-style swipe deck at the start of a review session.
+    static func isFlashcardStage(_ verse: MemoryVerse) -> Bool {
+        progressiveMode(for: verse) == .flashcard
+    }
 
     /// Picks an exercise for a due review: harder pools unlock as the verse matures,
     /// and the choice rotates within its pool as reviewCount changes so the same

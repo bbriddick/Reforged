@@ -390,6 +390,28 @@ extension BibleReadingPlans {
                                 entries: entries)
     }
 
+    // MARK: Spurgeon's Morning & Evening — 366 daily devotions
+
+    static var spurgeonMorningEvening: BibleReadingPlan {
+        // Content lives in SpurgeonDevotionalService (bundled); entries here exist for
+        // discovery + progress tracking. The morning verse reference carries a colon, so
+        // `requiredChapters` is empty and days never auto-complete — the devotional reader
+        // marks them read manually.
+        let entries = SpurgeonDevotionalService.shared.allDays.map { day in
+            BiblePlanEntry(planId: BibleReadingPlans.spurgeonId,
+                           day: day.day,
+                           scriptureReference: day.morning.reference,
+                           refinementPrompt: day.label)
+        }
+        return BibleReadingPlan(id: BibleReadingPlans.spurgeonId,
+                                name: "Morning & Evening",
+                                description: "C. H. Spurgeon's classic daily devotional — a morning and an evening reading for every day of the year.",
+                                iconName: "sun.and.horizon.fill",
+                                accentColor: Color(red: 0.55, green: 0.35, blue: 0.7),
+                                entries: entries,
+                                isDevotional: true)
+    }
+
     // MARK: - Factory
 
     private static func makePlan(id: String, name: String, description: String,

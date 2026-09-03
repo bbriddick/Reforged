@@ -1360,6 +1360,147 @@ struct StreakMilestoneView: View {
     }
 }
 
+// MARK: - Perfect Week Celebration
+
+/// Fires when all seven days of a week are covered. Lighter-weight than the
+/// milestone card — it's a weekly rhythm, not a rare event, so it stays a
+/// tap-to-dismiss banner rather than a full modal.
+struct PerfectWeekView: View {
+    @Binding var isPresented: Bool
+    @State private var showConfetti = false
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        if isPresented {
+            VStack {
+                Spacer()
+
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.reforgedGold.opacity(0.2))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(Color.reforgedGold)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Perfect Week!")
+                            .font(.headline)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("All seven days. Well done.")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .padding(16)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .shadow(color: Color.black.opacity(0.18), radius: 20)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 120)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .onTapGesture { dismiss() }
+            }
+            .confetti(isActive: $showConfetti, intensity: .medium)
+            .onAppear {
+                HapticManager.shared.streakMilestone()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { showConfetti = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) { dismiss() }
+            }
+        }
+    }
+
+    private func dismiss() {
+        guard isPresented else { return }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            isPresented = false
+        }
+    }
+}
+
+// MARK: - Freeze Used Notice
+
+/// Shown when freezes were spent to repair a gap. The user needs to know the
+/// streak survived *and* that it cost them something, or the freeze economy is
+/// invisible and the inventory drop looks like a bug.
+struct FreezeUsedView: View {
+    let freezesSpent: Int
+    @Binding var isPresented: Bool
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        if isPresented {
+            ZStack {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture { dismiss() }
+
+                VStack(spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.blue, .blue.opacity(0.6)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 88, height: 88)
+                            .shadow(color: .blue.opacity(0.45), radius: 18)
+
+                        Image(systemName: "snowflake")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.white)
+                    }
+
+                    VStack(spacing: 8) {
+                        Text("Streak Saved!")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        Text(freezesSpent == 1
+                             ? "A streak freeze covered the day you missed."
+                             : "\(freezesSpent) streak freezes covered the days you missed.")
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Keep Going!")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.reforgedCoral)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                }
+                .padding(32)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .shadow(color: Color.black.opacity(0.2), radius: 30)
+                .padding(40)
+                .transition(.scale.combined(with: .opacity))
+            }
+            .onAppear { HapticManager.shared.streakMilestone() }
+        }
+    }
+
+    private func dismiss() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            isPresented = false
+        }
+    }
+}
+
 // MARK: - Level Up Celebration
 
 struct LevelUpView: View {

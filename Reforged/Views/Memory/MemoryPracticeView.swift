@@ -50,8 +50,10 @@ struct MemoryPracticeView: View {
         appState.addXP(earnedXP, source: "practice")
         completedQuality = quality
 
-        // Completing a memory activity earns social-media time (if the daily limit is on).
+        // Completing a memory activity earns social-media time (if the daily limit is
+        // on) and satisfies the unlock gate.
         SocialLimitService.shared.grantForMemoryActivity()
+        UnlockGateService.shared.clear(with: .memoryVerse)
 
         // Show celebration
         withAnimation {
@@ -86,60 +88,174 @@ struct MemoryExerciseView: View {
     }
 }
 
-// MARK: - Flashcard Practice View (Tap-to-Flip)
+// MARK: - Flashcard swipe direction
+
+/// A Quizlet-style swipe verdict on a flashcard.
+enum FlashcardSwipe {
+    case known    // swipe right  → recalled it
+    case unknown  // swipe left   → still learning
+
+    /// Maps the verdict onto the SM-2 quality scale.
+    var quality: Int {
+        switch self {
+        case .known: return 4
+        case .unknown: return 1
+        }
+    }
+}
+
+// MARK: - Swipeable Flashcard (tap-to-flip + swipe left/right)
+
+/// The shared card used by both single-verse practice and the review swipe deck.
+/// Tap flips front↔back; dragging left/right past a threshold reports a verdict.
+/// Set `onSwipe` to nil to disable swiping (flip-only).
+struct SwipeableFlashcard: View {
+    let verse: MemoryVerse
+    var onSwipe: ((FlashcardSwipe) -> Void)? = nil
+    var onFlip: (() -> Void)? = nil
+    @State private var isFlipped = false
+    @State private var rotation: Double = 0
+    @State private var cardScale: CGFloat = 1.0
+    @State private var dragOffset: CGSize = .zero
+    @State private var isLeaving = false
+    @Environment(\.colorScheme) var colorScheme
+
+    private let swipeThreshold: CGFloat = 110
+
+    /// Which verdict the current drag is leaning toward (for the live stamp overlay).
+    private var swipeHint: FlashcardSwipe? {
+        guard abs(dragOffset.width) > 36 else { return nil }
+        return dragOffset.width > 0 ? .known : .unknown
+    }
+
+    var body: some View {
+        ZStack {
+            // Back side (verse text)
+            FlashcardBack(verse: verse, colorScheme: colorScheme)
+                .opacity(isFlipped ? 1 : 0)
+                .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
+
+            // Front side (reference + prompt)
+            FlashcardFront(verse: verse, colorScheme: colorScheme)
+                .opacity(isFlipped ? 0 : 1)
+
+            // Live swipe stamp
+            if let hint = swipeHint {
+                SwipeStamp(kind: hint)
+                    .opacity(min(1, Double(abs(dragOffset.width) - 36) / 80))
+            }
+        }
+        .scaleEffect(cardScale)
+        .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
+        .rotationEffect(.degrees(Double(dragOffset.width / 22)))
+        .offset(dragOffset)
+        .onTapGesture {
+            HapticManager.shared.cardFlip()
+            withAnimation(.easeInOut(duration: 0.1)) { cardScale = 0.95 }
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                rotation += 180
+                isFlipped.toggle()
+            }
+            withAnimation(.easeOut(duration: 0.2).delay(0.1)) { cardScale = 1.0 }
+            onFlip?()
+        }
+        .gesture(onSwipe == nil ? nil : dragGesture)
+        .padding(.horizontal)
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 14)
+            .onChanged { value in
+                guard !isLeaving else { return }
+                dragOffset = value.translation
+            }
+            .onEnded { value in
+                guard !isLeaving else { return }
+                if abs(value.translation.width) > swipeThreshold {
+                    commitSwipe(value.translation.width > 0 ? .known : .unknown)
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        dragOffset = .zero
+                    }
+                }
+            }
+    }
+
+    private func commitSwipe(_ verdict: FlashcardSwipe) {
+        isLeaving = true
+        switch verdict {
+        case .known: HapticManager.shared.correctAnswer()
+        case .unknown: HapticManager.shared.incorrectAnswer()
+        }
+        // Fly the card off in the swiped direction, then report the verdict.
+        withAnimation(.easeOut(duration: 0.28)) {
+            dragOffset.width = verdict == .known ? 700 : -700
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
+            onSwipe?(verdict)
+        }
+    }
+}
+
+/// The "KNOWN" / "STILL LEARNING" stamp that fades in while dragging.
+private struct SwipeStamp: View {
+    let kind: FlashcardSwipe
+
+    var body: some View {
+        let known = kind == .known
+        return Text(known ? "KNOWN" : "STILL LEARNING")
+            .font(.system(size: known ? 34 : 22, weight: .heavy))
+            .foregroundStyle(known ? Color.green : Color.red)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(known ? Color.green : Color.red, lineWidth: 4)
+            )
+            .rotationEffect(.degrees(known ? -18 : 18))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Flashcard Practice View (single verse: swipe or flip + rate)
 
 struct FlashcardPracticeView: View {
     let verse: MemoryVerse
     let onComplete: (Int) -> Void
-    @State private var isFlipped = false
-    @State private var rotation: Double = 0
-    @State private var cardScale: CGFloat = 1.0
+    @State private var hasFlipped = false
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
 
-            // Flipping Card
-            ZStack {
-                // Back side (verse text)
-                FlashcardBack(verse: verse, colorScheme: colorScheme)
-                    .opacity(isFlipped ? 1 : 0)
-                    .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
+            SwipeableFlashcard(verse: verse, onSwipe: { verdict in
+                onComplete(verdict.quality)
+            }, onFlip: {
+                // Track the first flip so we can surface the finer 4-way rating.
+                hasFlipped = true
+            })
 
-                // Front side (reference + prompt)
-                FlashcardFront(verse: verse, colorScheme: colorScheme)
-                    .opacity(isFlipped ? 0 : 1)
+            // Swipe hint
+            HStack(spacing: 16) {
+                Label("Still learning", systemImage: "arrow.left")
+                    .foregroundStyle(.red)
+                HStack(spacing: 4) {
+                    Text("Known")
+                    Image(systemName: "arrow.right")
+                }
+                .foregroundStyle(.green)
             }
-            .scaleEffect(cardScale)
-            .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
-            .onTapGesture {
-                // Haptic feedback for card flip
-                HapticManager.shared.cardFlip()
-
-                // Scale animation for tactile feel
-                withAnimation(.easeInOut(duration: 0.1)) {
-                    cardScale = 0.95
-                }
-
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    rotation += 180
-                    isFlipped.toggle()
-                }
-
-                // Return to normal scale
-                withAnimation(.easeOut(duration: 0.2).delay(0.1)) {
-                    cardScale = 1.0
-                }
-            }
-            .padding(.horizontal)
+            .font(.caption)
+            .fontWeight(.medium)
 
             Spacer()
 
-            // Rating Buttons (shown after flip)
-            if isFlipped {
+            // Optional finer rating once the card has been flipped to reveal the text.
+            if hasFlipped {
                 VStack(spacing: 12) {
-                    Text("How well did you recall?")
+                    Text("Or rate how well you recalled")
                         .font(.subheadline)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
@@ -166,6 +282,7 @@ struct FlashcardPracticeView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: hasFlipped)
     }
 }
 
@@ -1019,67 +1136,94 @@ struct BlankField: View {
 }
 
 // MARK: - First Letter View
+//
+// One-shot recall test: the user types the first letter of each word and the
+// WHOLE word reveals immediately — green if the letter matched, red if not.
+// There is no backspace, so the run is an honest measure of recall, and the
+// resulting accuracy is mapped straight onto the SM-2 quality scale (no manual
+// self-rating). Typing the last word's letter auto-grades the verse.
 
 struct FirstLetterView: View {
     let verse: MemoryVerse
     let onComplete: (Int) -> Void
-    @State private var inputText = ""
+    /// Append-only record of committed keystrokes. Never shrinks — backspace is
+    /// swallowed so mistakes stay locked in.
+    @State private var typed: [Character] = []
     @State private var showResult = false
-    @State private var hintUsed = false
     @State private var accuracy: Double = 0
+    @State private var fieldText = ""
     @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) var colorScheme
 
-    var expectedLetters: [Character] {
-        normalizedVerseWords(from: verse.text).compactMap { $0.first }
+    private var words: [String] { normalizedVerseWords(from: verse.text) }
+
+    private var expectedLetters: [Character] {
+        words.compactMap { $0.first.map { Character(String($0).uppercased()) } }
     }
 
-    var typedLetters: [Character] {
-        Array(inputText)
+    private var correctCount: Int {
+        typed.indices.filter { $0 < expectedLetters.count && typed[$0] == expectedLetters[$0] }.count
     }
 
-    var correctness: [Bool] {
-        typedLetters.enumerated().map { index, char in
-            index < expectedLetters.count && char == Character(String(expectedLetters[index]).uppercased())
+    private var quality: Int {
+        switch accuracy {
+        case 0.95...:      return 5
+        case 0.85..<0.95:  return 4
+        case 0.65..<0.85:  return 3
+        case 0.40..<0.65:  return 2
+        default:           return 1
         }
     }
 
-    var liveAccuracy: Double {
-        guard !typedLetters.isEmpty else { return 0 }
-        let correctCount = correctness.filter { $0 }.count
-        return Double(correctCount) / Double(typedLetters.count)
+    private var gradeLabel: String {
+        switch quality {
+        case 5: return "Perfect recall"
+        case 4: return "You know this well"
+        case 3: return "Solid — keep reviewing"
+        case 2: return "Shaky — review soon"
+        default: return "Needs work — back soon"
+        }
+    }
+
+    private var gradeColor: Color {
+        switch quality {
+        case 5: return Color.reforgedGold
+        case 4, 3: return .green
+        case 2: return .orange
+        default: return .red
+        }
     }
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: 20) {
                 Text(verse.reference)
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                     .padding(.top)
 
-                Text("Type the first letter of each word")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                if showResult {
+                    resultSection
+                } else {
+                    Text("Type the first letter of each word. The word reveals as you go — no going back.")
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .padding(.horizontal)
 
-                if !inputText.isEmpty && !showResult {
-                    HStack(spacing: 6) {
-                        Image(systemName: liveAccuracy >= 0.9 ? "star.fill" : "checkmark.circle")
-                            .foregroundStyle(liveAccuracy >= 0.9 ? Color.reforgedGold : (liveAccuracy >= 0.7 ? Color.green : Color.orange))
-                        Text("Live accuracy: \(Int(liveAccuracy * 100))%")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                    .transition(.opacity)
+                    Text("\(min(typed.count, words.count)) / \(words.count) words")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
 
-                FlowLayout(spacing: 6) {
-                    ForEach(expectedLetters.indices, id: \.self) { index in
-                        LetterBox(
-                            letter: index < typedLetters.count ? typedLetters[index] : nil,
-                            state: boxState(at: index),
+                // Word grid — reveals whole words as letters are committed.
+                FlowLayout(spacing: 8) {
+                    ForEach(words.indices, id: \.self) { index in
+                        WordRevealChip(
+                            word: words[index],
+                            state: chipState(at: index),
                             colorScheme: colorScheme
                         )
                     }
@@ -1089,146 +1233,168 @@ struct FirstLetterView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal)
                 .contentShape(Rectangle())
-                .onTapGesture { isFocused = true }
-
-                TextField("Type here", text: $inputText)
-                    .focused($isFocused)
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled(true)
-                    .keyboardType(.asciiCapable)
-                    .padding()
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                    )
-                    .disabled(showResult)
-                    .padding(.horizontal)
-                    .onChange(of: inputText) { newValue in
-                        let filtered = String(newValue.uppercased().filter { $0.isLetter })
-                        let capped = String(filtered.prefix(expectedLetters.count))
-                        if capped != inputText {
-                            inputText = capped
-                        }
-                    }
-                    .onAppear { isFocused = true }
+                .onTapGesture { if !showResult { isFocused = true } }
 
                 if showResult {
-                    VStack(spacing: 16) {
-                        HStack(spacing: 8) {
-                            Image(systemName: accuracy >= 0.9 ? "star.fill" : "checkmark.circle")
-                                .foregroundStyle(accuracy >= 0.9 ? Color.reforgedGold : (accuracy >= 0.7 ? Color.green : Color.orange))
-                            Text("Accuracy: \(Int(accuracy * 100))%")
-                                .font(.headline)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                        }
-
-                        VStack(spacing: 8) {
-                            Text("Correct verse:")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                            Text("\"\(verse.text)\"")
-                                .font(.body)
-                                .italic()
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                                .padding()
-                                .background(Color.green.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    HStack(spacing: 10) {
-                        RatingButton(label: "Again", color: .red, quality: 1, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                        RatingButton(label: "Hard", color: .orange, quality: 2, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                        RatingButton(label: "Good", color: .green, quality: 4, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                        RatingButton(label: "Easy", color: .blue, quality: 5, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                    }
-                    .padding()
-                } else {
-                    HintButton(hintUsed: hintUsed) {
-                        revealNextLetter()
-                    }
-                    .padding(.horizontal)
-
-                    Button("Check Answer") {
-                        accuracy = liveAccuracy
-                        isFocused = false
-                        withAnimation {
-                            showResult = true
-                        }
+                    Button("Continue") {
+                        onComplete(quality)
                     }
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(inputText.isEmpty ? Color.gray : Color.reforgedNavy)
+                    .background(Color.reforgedNavy)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal)
-                    .disabled(inputText.isEmpty)
+                } else {
+                    // Hidden capture field: drives the keyboard while the chips
+                    // above are the real display. Backspace is blocked below.
+                    TextField("", text: $fieldText)
+                        .focused($isFocused)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled(true)
+                        .keyboardType(.asciiCapable)
+                        .textContentType(.oneTimeCode)
+                        .opacity(0.02)
+                        .frame(height: 1)
+                        .onChange(of: fieldText) { newValue in handleInput(newValue) }
+                        .onAppear { isFocused = true }
+
+                    Text("Tap the words above and type — every letter counts.")
+                        .font(.caption2)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
             }
             .padding(.bottom)
         }
-        .animation(.easeInOut(duration: 0.15), value: typedLetters.count)
+        .animation(.easeInOut(duration: 0.15), value: typed.count)
+        .animation(.easeInOut(duration: 0.2), value: showResult)
     }
 
-    func boxState(at index: Int) -> LetterBox.State {
-        guard index < typedLetters.count else { return .empty }
-        return correctness[index] ? .correct : .incorrect
+    @ViewBuilder
+    private var resultSection: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: quality >= 5 ? "star.fill" : (quality >= 3 ? "checkmark.circle.fill" : "arrow.counterclockwise.circle.fill"))
+                    .foregroundStyle(gradeColor)
+                Text(gradeLabel)
+                    .font(.headline)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+            }
+
+            Text("\(correctCount) of \(words.count) first letters correct · \(Int(accuracy * 100))%")
+                .font(.subheadline)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            Text("\"\(verse.text)\"")
+                .font(.body)
+                .italic()
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(gradeColor.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .padding(.horizontal)
     }
 
-    func revealNextLetter() {
-        hintUsed = true
-        guard typedLetters.count < expectedLetters.count else { return }
-        inputText += String(expectedLetters[typedLetters.count]).uppercased()
+    private func chipState(at index: Int) -> WordRevealChip.State {
+        if index < typed.count {
+            return typed[index] == expectedLetters[index] ? .correct : .incorrect
+        }
+        return index == typed.count ? .current : .upcoming
+    }
+
+    /// Accepts only forward-appended letters. Deletions revert the field, so the
+    /// committed sequence can never shrink. Each new letter reveals its word;
+    /// the final letter grades the run.
+    private func handleInput(_ raw: String) {
+        guard !showResult else { return }
+        let letters = raw.uppercased().filter { $0.isLetter }
+
+        // Block backspace / edits: never let the count drop below what's committed.
+        guard letters.count > typed.count else {
+            if fieldText != String(typed) { fieldText = String(typed) }
+            return
+        }
+
+        // Commit newly appended letters, capped to the word count.
+        var next = typed
+        for ch in letters.dropFirst(typed.count) {
+            guard next.count < words.count else { break }
+            next.append(ch)
+        }
+        typed = next
+
+        let committed = String(typed)
+        if fieldText != committed { fieldText = committed }
+
+        // Feedback reflects whether the latest letter matched.
+        if let last = typed.indices.last, last < expectedLetters.count {
+            if typed[last] == expectedLetters[last] {
+                HapticManager.shared.correctAnswer()
+            } else {
+                HapticManager.shared.incorrectAnswer()
+            }
+        }
+
+        if typed.count >= words.count {
+            finish()
+        }
+    }
+
+    private func finish() {
+        accuracy = words.isEmpty ? 0 : Double(correctCount) / Double(words.count)
+        isFocused = false
+        withAnimation { showResult = true }
     }
 }
 
-struct LetterBox: View {
-    enum State { case empty, correct, incorrect }
-    let letter: Character?
+// MARK: - Word Reveal Chip
+
+struct WordRevealChip: View {
+    enum State { case upcoming, current, correct, incorrect }
+    let word: String
     let state: State
     let colorScheme: ColorScheme?
 
+    private var placeholder: String { String(repeating: "_", count: max(word.count, 1)) }
+
     var body: some View {
-        Text(letter.map { String($0) } ?? "")
-            .font(.headline)
-            .fontWeight(.bold)
+        Text(state == .correct || state == .incorrect ? word : placeholder)
+            .font(.title3)
+            .fontWeight(.semibold)
             .foregroundStyle(foregroundColor)
-            .frame(width: 30, height: 36)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
             .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(borderColor, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(borderColor, lineWidth: state == .current ? 2 : 0)
             )
     }
 
-    var foregroundColor: Color {
+    private var foregroundColor: Color {
         switch state {
-        case .empty: return Color.adaptiveTextSecondary(colorScheme)
+        case .upcoming: return Color.adaptiveTextSecondary(colorScheme).opacity(0.5)
+        case .current: return Color.adaptivePrimaryIcon(colorScheme)
         case .correct: return .green
         case .incorrect: return .red
         }
     }
 
-    var backgroundColor: Color {
+    private var backgroundColor: Color {
         switch state {
-        case .empty: return Color.adaptiveBorder(colorScheme).opacity(0.3)
-        case .correct: return Color.green.opacity(0.15)
-        case .incorrect: return Color.red.opacity(0.15)
+        case .upcoming: return .clear
+        case .current: return Color.adaptivePrimaryIcon(colorScheme).opacity(0.10)
+        case .correct: return Color.green.opacity(0.12)
+        case .incorrect: return Color.red.opacity(0.12)
         }
     }
 
-    var borderColor: Color {
-        switch state {
-        case .empty: return Color.adaptiveBorder(colorScheme)
-        case .correct: return .green
-        case .incorrect: return .red
-        }
+    private var borderColor: Color {
+        state == .current ? Color.adaptivePrimaryIcon(colorScheme) : .clear
     }
 }
 

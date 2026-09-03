@@ -129,6 +129,17 @@ struct BibleReadingSettingsSection: View {
 
             SettingsDivider()
 
+            // Offline Commentaries
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Offline Commentaries")
+                    .font(.subheadline).fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                CommentaryDownloadsView()
+            }
+            .padding(.vertical, 10)
+
+            SettingsDivider()
+
             // Reset Button
             SettingsButtonRow(
                 title: "Reset Bible Settings",

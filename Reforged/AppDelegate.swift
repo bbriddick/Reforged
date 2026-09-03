@@ -167,6 +167,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 // Tapped the "daily social limit reached" notification → offer a
                 // refocus passage (random, since no specific verse is attached).
                 NotificationCenter.default.post(name: .showRefocusVerse, object: nil, userInfo: [:])
+            case "open-accountability":
+                // Tapped the weekly report reminder → open the accountability screen.
+                NotificationCenter.default.post(
+                    name: .switchTab,
+                    object: nil,
+                    userInfo: [AppNotificationUserInfoKey.tab: 1]
+                )
+                NotificationCenter.default.post(name: .showAccountabilityPartner, object: nil)
             default:
                 break
             }

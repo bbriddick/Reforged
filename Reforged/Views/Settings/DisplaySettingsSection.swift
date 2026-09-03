@@ -200,6 +200,18 @@ struct DisplaySettingsSection: View {
 
             SettingsDivider()
 
+            // Study Tools Rail — iPad/Mac only, where the reader has wide margins
+            // to host it. Hidden on iPhone, where it would have no effect.
+            if horizontalSizeClass == .regular {
+                SettingsToggleRow(
+                    title: "Study Tools Sidebar",
+                    subtitle: "Show a rail of study tools — notes, highlights, audio, and more — down the side of the Bible reader.",
+                    isOn: $settings.showBibleToolsRail
+                )
+
+                SettingsDivider()
+            }
+
             // Reset Button
             SettingsButtonRow(
                 title: "Reset Display Settings",

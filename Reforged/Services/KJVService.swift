@@ -134,6 +134,20 @@ class KJVService {
         }
     }
 
+    // Coalesces bursts of chapter caching (e.g. whole-Bible downloads) into a
+    // single full-cache encode instead of re-serializing every chapter fetch.
+    // Always called on cacheQueue; the flush also runs on cacheQueue.
+    private var pendingCacheSave: DispatchWorkItem?
+
+    private func scheduleCacheSave() {
+        pendingCacheSave?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.saveCacheToDisk()
+        }
+        pendingCacheSave = work
+        cacheQueue.asyncAfter(deadline: .now() + 2.0, execute: work)
+    }
+
     private func getCachedChapter(book: String, chapter: Int) -> KJVCachedChapter? {
         cacheQueue.sync {
             let key = cacheKeyFor(book: book, chapter: chapter)
@@ -147,12 +161,14 @@ class KJVService {
         cacheQueue.async {
             let key = self.cacheKeyFor(book: chapter.book, chapter: chapter.chapter)
             self.chapterCache[key] = chapter
-            self.saveCacheToDisk()
+            self.scheduleCacheSave()
         }
     }
 
     func clearCache() {
         cacheQueue.async {
+            self.pendingCacheSave?.cancel()
+            self.pendingCacheSave = nil
             self.chapterCache.removeAll()
             UserDefaults.standard.removeObject(forKey: self.cacheKey)
             debugLog("KJV chapter cache cleared.")

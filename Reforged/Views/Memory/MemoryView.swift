@@ -242,7 +242,14 @@ struct MemoryView: View {
     @ViewBuilder
     private var populatedContent: some View {
 
-        // Stats row — Reviews only turns coral when there are actual reviews due
+        // Review card first — it's the primary daily action when verses are due.
+        if !versesForReview.isEmpty {
+            ReviewCard(count: versesForReview.count)
+        }
+
+        // Stats row — glanceable progress. The Reviews count lives in the card
+        // above, so the third stat is Streak (motivating + consistent across
+        // widths). Regular width has room to also show Reviews.
         LazyVGrid(columns: statsColumns, spacing: 12) {
             MemoryStatCard(
                 value: "\(totalVerses)",
@@ -257,26 +264,38 @@ struct MemoryView: View {
                 color: .reforgedGold
             )
             MemoryStatCard(
-                value: "\(versesForReview.count)",
-                label: "Reviews",
-                icon: "arrow.triangle.2.circlepath",
-                color: versesForReview.isEmpty
-                    ? Color.adaptiveTextSecondary(colorScheme)
-                    : .reforgedCoral
+                value: "\(appState.user.streak)",
+                label: "Streak",
+                icon: "flame.fill",
+                color: Color(red: 1.0, green: 0.5, blue: 0.0)
             )
             if horizontalSizeClass == .regular {
                 MemoryStatCard(
-                    value: "\(appState.user.streak)",
-                    label: "Streak",
-                    icon: "flame.fill",
-                    color: Color(red: 1.0, green: 0.5, blue: 0.0)
+                    value: "\(versesForReview.count)",
+                    label: "Reviews",
+                    icon: "arrow.triangle.2.circlepath",
+                    color: versesForReview.isEmpty
+                        ? Color.adaptiveTextSecondary(colorScheme)
+                        : .reforgedCoral
                 )
             }
         }
 
-        // Review card — prominent CTA when verses are due
-        if !versesForReview.isEmpty {
-            ReviewCard(count: versesForReview.count)
+        // My Verses — the user's own content, surfaced right after progress so
+        // it isn't buried below the secondary Practice/Collections sections.
+        VStack(alignment: .leading, spacing: 14) {
+            sectionHeader(title: "My Verses", actionTitle: "Add") {
+                showAddVerse = true
+            }
+
+            LazyVGrid(columns: verseColumns, spacing: 16) {
+                ForEach(appState.memoryVerses) { verse in
+                    VerseCard(verse: verse, onDelete: {
+                        verseToDelete = verse
+                        showDeleteConfirmation = true
+                    })
+                }
+            }
         }
 
         // Practice Games
@@ -310,33 +329,35 @@ struct MemoryView: View {
 
         // Collections
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Collections")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                Spacer()
-                Button(action: { showCollectionBuilder = true }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus").font(.caption.bold())
-                        Text("New").font(.subheadline).fontWeight(.semibold)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color.reforgedNavy)
-                    .clipShape(Capsule())
-                }
+            sectionHeader(title: "Collections", actionTitle: "New") {
+                showCollectionBuilder = true
             }
 
             if appState.verseCollections.isEmpty {
-                Text("Import a chapter or build your own set, then practice it with any game in order or shuffled.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Compact, tappable empty state — invites the action instead of
+                // sitting as a large block of dead text.
+                Button(action: { showCollectionBuilder = true }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "rectangle.stack.badge.plus")
+                            .font(.title3)
+                            .foregroundStyle(Color.adaptivePrimaryIcon(colorScheme))
+                        Text("Import a chapter or build your own set, then practice it in order or shuffled.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
                     .padding(ReforgedTheme.spacingM)
                     .background(Color.adaptiveCardBackground(colorScheme))
                     .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                            .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
             } else {
                 LazyVGrid(columns: verseColumns, spacing: 12) {
                     ForEach(appState.verseCollections) { collection in
@@ -352,39 +373,32 @@ struct MemoryView: View {
             }
         }
 
-        // My Verses list
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("My Verses")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                Spacer()
-                Button(action: { showAddVerse = true }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus").font(.caption.bold())
-                        Text("Add").font(.subheadline).fontWeight(.semibold)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color.reforgedNavy)
-                    .clipShape(Capsule())
-                }
-            }
-
-            LazyVGrid(columns: verseColumns, spacing: 16) {
-                ForEach(appState.memoryVerses) { verse in
-                    VerseCard(verse: verse, onDelete: {
-                        verseToDelete = verse
-                        showDeleteConfirmation = true
-                    })
-                }
-            }
-        }
-
         // Suggested verses (discover more to add)
         SuggestedVersesSection()
+    }
+
+    /// Shared section header: bold title on the left, a pill "+ action" button
+    /// on the right. Keeps My Verses / Collections visually consistent.
+    @ViewBuilder
+    private func sectionHeader(title: String, actionTitle: String, action: @escaping () -> Void) -> some View {
+        HStack {
+            Text(title)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+            Spacer()
+            Button(action: action) {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus").font(.caption.bold())
+                    Text(actionTitle).font(.subheadline).fontWeight(.semibold)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.reforgedNavy)
+                .clipShape(Capsule())
+            }
+        }
     }
 }
 
@@ -904,7 +918,7 @@ struct SuggestedVerseCard: View {
                 esvText: translation == .esv ? ready : nil,
                 category: verse.category,
                 translation: translation.rawValue,
-                lastFetched: ISO8601DateFormatter().string(from: Date()),
+                lastFetched: AppDateFormatters.iso8601.string(from: Date()),
                 nextReviewDate: Date(),
                 reviewCount: 0,
                 easeFactor: 2.5,
@@ -927,7 +941,7 @@ struct SuggestedVerseCard: View {
                 esvText: verse.text,
                 category: verse.category,
                 translation: translation.rawValue,
-                lastFetched: ISO8601DateFormatter().string(from: Date()),
+                lastFetched: AppDateFormatters.iso8601.string(from: Date()),
                 nextReviewDate: Date(),
                 reviewCount: 0,
                 easeFactor: 2.5,
@@ -970,7 +984,7 @@ struct SuggestedVerseCard: View {
                         esvText: nil,
                         category: verse.category,
                         translation: translation.rawValue,
-                        lastFetched: ISO8601DateFormatter().string(from: Date()),
+                        lastFetched: AppDateFormatters.iso8601.string(from: Date()),
                         nextReviewDate: Date(),
                         reviewCount: 0,
                         easeFactor: 2.5,
@@ -1333,7 +1347,7 @@ struct AddVerseSheet: View {
             esvText: selectedTranslation == .esv ? text : nil,
             category: category,
             translation: selectedTranslation.rawValue,
-            lastFetched: ISO8601DateFormatter().string(from: Date()),
+            lastFetched: AppDateFormatters.iso8601.string(from: Date()),
             nextReviewDate: Date(),
             reviewCount: 0,
             easeFactor: 2.5,
@@ -1353,6 +1367,22 @@ struct PracticeOptionsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
     @State private var showReflectionEditor = false
+
+    private let modeColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    @ViewBuilder
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .tracking(0.6)
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
+    }
 
     var body: some View {
         NavigationStack {
@@ -1396,21 +1426,26 @@ struct PracticeOptionsSheet: View {
                         .buttonStyle(.plain)
                     }
 
-                    // Practice mode cards
-                    ForEach(MemoryMode.allCases, id: \.self) { mode in
-                        NavigationLink(destination: MemoryPracticeView(verse: verse, mode: mode)) {
-                            PracticeModeCard(mode: mode)
+                    // Practice modes — compact 2-column grid so all six fit
+                    // without long scrolling.
+                    sectionLabel("Practice modes")
+                    LazyVGrid(columns: modeColumns, spacing: 12) {
+                        ForEach(MemoryMode.allCases, id: \.self) { mode in
+                            NavigationLink(destination: MemoryPracticeView(verse: verse, mode: mode)) {
+                                PracticeModeTile(mode: mode)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
-                    // Deep Drill card
+                    // Featured / secondary actions stay full-width so they read
+                    // as distinct from the mode grid above.
+                    sectionLabel("Go deeper")
                     NavigationLink(destination: DeepDrillView(verse: verse)) {
                         DeepDrillCard()
                     }
                     .buttonStyle(.plain)
 
-                    // Listen on Loop card
                     Button {
                         MemoryAudioPlayer.shared.play(verse: verse)
                         dismiss()
@@ -1436,41 +1471,41 @@ struct PracticeOptionsSheet: View {
     }
 }
 
-struct PracticeModeCard: View {
+// MARK: - Practice Mode Tile (compact grid cell)
+
+struct PracticeModeTile: View {
     let mode: MemoryMode
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        HStack(spacing: 16) {
-            // Icon
+        VStack(alignment: .leading, spacing: 10) {
             ZStack {
                 Circle()
                     .fill(colorScheme == .dark ? Color.white.opacity(0.10) : Color.reforgedNavy.opacity(0.10))
-                    .frame(width: 50, height: 50)
+                    .frame(width: 44, height: 44)
 
                 Image(systemName: mode.icon)
                     .font(.title3)
                     .foregroundStyle(Color.adaptivePrimaryIcon(colorScheme))
             }
 
-            // Text
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(mode.displayName)
-                    .font(.headline)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                     .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 Text(mode.description)
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
         }
-        .padding()
+        .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+        .padding(14)
         .background(Color.adaptiveCardBackground(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(

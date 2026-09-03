@@ -167,6 +167,24 @@ class ESVService {
         }
     }
 
+    // Coalesces bursts of chapter caching (e.g. whole-Bible downloads) into a
+    // single full-cache encode instead of re-serializing every chapter fetch.
+    private var pendingCacheSave: DispatchWorkItem?
+    private let cacheSaveDelay: TimeInterval = 2.0
+
+    private func scheduleCacheSave() {
+        pendingCacheSave?.cancel()
+        let snapshot = chapterCache
+        let key = cacheKey
+        let work = DispatchWorkItem {
+            if let data = try? JSONEncoder().encode(snapshot) {
+                UserDefaults.standard.set(data, forKey: key)
+            }
+        }
+        pendingCacheSave = work
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + cacheSaveDelay, execute: work)
+    }
+
     private func getCachedChapter(book: String, chapter: Int) -> ESVCachedChapter? {
         let key = cacheKeyFor(book: book, chapter: chapter)
         guard let cached = chapterCache[key] else { return nil }
@@ -182,10 +200,12 @@ class ESVService {
     private func cacheChapter(_ chapter: ESVCachedChapter) {
         let key = cacheKeyFor(book: chapter.book, chapter: chapter.chapter)
         chapterCache[key] = chapter
-        saveCacheToDisk()
+        scheduleCacheSave()
     }
 
     func clearCache() {
+        pendingCacheSave?.cancel()
+        pendingCacheSave = nil
         chapterCache.removeAll()
         UserDefaults.standard.removeObject(forKey: cacheKey)
         debugLog("ESV chapter cache cleared.")
@@ -204,6 +224,8 @@ class ESVService {
                 verses: chapter.verses
             )
         }
+        pendingCacheSave?.cancel()
+        pendingCacheSave = nil
         saveCacheToDisk()
         debugLog("ESV bundle injected: \(bundle.count) chapters.")
     }
@@ -357,22 +379,30 @@ class ESVService {
 
     // MARK: - Local Verse Cache (UserDefaults)
 
-    private func getLocalCachedVerse(reference: String) -> (text: String, canonical: String)? {
-        guard let data = UserDefaults.standard.data(forKey: verseCacheKey),
-              let cache = try? JSONDecoder().decode([String: LocalCachedVerse].self, from: data),
-              let cached = cache[reference.lowercased()] else {
-            return nil
+    // Loaded lazily once; every lookup previously decoded the entire dictionary
+    // from UserDefaults.
+    private var localVerseCache: [String: LocalCachedVerse]?
+
+    private func loadedLocalVerseCache() -> [String: LocalCachedVerse] {
+        if let cache = localVerseCache { return cache }
+        var cache: [String: LocalCachedVerse] = [:]
+        if let data = UserDefaults.standard.data(forKey: verseCacheKey),
+           let decoded = try? JSONDecoder().decode([String: LocalCachedVerse].self, from: data) {
+            cache = decoded
         }
+        localVerseCache = cache
+        return cache
+    }
+
+    private func getLocalCachedVerse(reference: String) -> (text: String, canonical: String)? {
+        guard let cached = loadedLocalVerseCache()[reference.lowercased()] else { return nil }
         return (text: cached.text, canonical: cached.canonical)
     }
 
     private func cacheVerseLocally(reference: String, text: String, canonical: String) {
-        var cache: [String: LocalCachedVerse] = [:]
-        if let data = UserDefaults.standard.data(forKey: verseCacheKey),
-           let existing = try? JSONDecoder().decode([String: LocalCachedVerse].self, from: data) {
-            cache = existing
-        }
+        var cache = loadedLocalVerseCache()
         cache[reference.lowercased()] = LocalCachedVerse(text: text, canonical: canonical, cachedAt: Date())
+        localVerseCache = cache
         if let data = try? JSONEncoder().encode(cache) {
             UserDefaults.standard.set(data, forKey: verseCacheKey)
         }
@@ -750,7 +780,7 @@ class ESVService {
         // Remove from cache
         let key = cacheKeyFor(book: book, chapter: chapter)
         chapterCache.removeValue(forKey: key)
-        saveCacheToDisk()
+        scheduleCacheSave()
 
         // Fetch fresh
         return try await fetchChapterParsed(book: book, chapter: chapter)

@@ -42,17 +42,17 @@ struct ReadingStreakProvider: TimelineProvider {
         // Load from shared UserDefaults (App Group)
         let userDefaults = UserDefaults(suiteName: "group.com.reforged.app") ?? UserDefaults.standard
 
-        let readingDatesArray = userDefaults.array(forKey: "reforged_reading_dates") as? [String] ?? []
-        let readingDates = Set(readingDatesArray)
-
-        let currentStreak = calculateStreak(from: readingDates)
-        let hasReadToday = readingDates.contains(todayString())
+        // Any qualifying activity satisfies a day, and freezes cover the gaps —
+        // mirror ReadingStreakManager's `coveredDates` union exactly.
+        let activityDates = Set(userDefaults.array(forKey: "reforged_streak_dates") as? [String] ?? [])
+        let frozenDates = Set(userDefaults.array(forKey: "reforged_frozen_dates") as? [String] ?? [])
+        let covered = activityDates.union(frozenDates)
 
         return ReadingStreakEntry(
             date: Date(),
-            currentStreak: currentStreak,
-            hasReadToday: hasReadToday,
-            readingDates: readingDates
+            currentStreak: calculateStreak(from: covered),
+            hasReadToday: activityDates.contains(todayString()),
+            readingDates: covered
         )
     }
 
@@ -72,39 +72,36 @@ struct ReadingStreakProvider: TimelineProvider {
         return formatter.string(from: logicalDate)
     }
 
-    private func calculateStreak(from readingDates: Set<String>) -> Int {
-        guard !readingDates.isEmpty else { return 0 }
+    /// Walks the covered days backwards from today. Must stay in step with
+    /// `ReadingStreakManager.calculateCurrentStreak` — the widget can't import the
+    /// app target, so `covered` has to be the same union (activity + freezes) the
+    /// app writes to the App Group, or the widget shows a lower number than Home.
+    private func calculateStreak(from covered: Set<String>) -> Int {
+        guard !covered.isEmpty else { return 0 }
 
         let calendar = Calendar.current
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
         // Anchor on todayString so the widget respects dayStartHour, matching the app.
-        let todayStr = todayString()
-        guard let todayDate = formatter.date(from: todayStr) else { return 0 }
-        var streak = 0
+        guard let todayDate = formatter.date(from: todayString()) else { return 0 }
 
-        if readingDates.contains(todayStr) {
+        // Today is a grace day: the streak survives until midnight even before
+        // today's activity, so start from yesterday when today is empty.
+        var cursor = todayDate
+        var streak = 0
+        if covered.contains(formatter.string(from: todayDate)) {
             streak = 1
-            var cur = calendar.date(byAdding: .day, value: -1, to: todayDate) ?? todayDate
-            while readingDates.contains(formatter.string(from: cur)) {
-                streak += 1
-                guard let prev = calendar.date(byAdding: .day, value: -1, to: cur) else { break }
-                cur = prev
-            }
         } else {
-            // Grace period: streak still live if yesterday was read
-            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: todayDate) else { return streak }
-            if readingDates.contains(formatter.string(from: yesterday)) {
-                var cur = yesterday
-                while readingDates.contains(formatter.string(from: cur)) {
-                    streak += 1
-                    guard let prev = calendar.date(byAdding: .day, value: -1, to: cur) else { break }
-                    cur = prev
-                }
-            }
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: todayDate),
+                  covered.contains(formatter.string(from: yesterday)) else { return 0 }
         }
 
+        while let previous = calendar.date(byAdding: .day, value: -1, to: cursor) {
+            guard covered.contains(formatter.string(from: previous)) else { break }
+            streak += 1
+            cursor = previous
+        }
         return streak
     }
 
@@ -586,6 +583,7 @@ struct ReadingStreakWidget: Widget {
 struct ReforgedWidgetBundle: WidgetBundle {
     var body: some Widget {
         ReadingStreakWidget()
+        PanicWidget()
         // VerseOfTheDayWidget()
     }
 }

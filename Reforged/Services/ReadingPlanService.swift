@@ -54,6 +54,26 @@ final class ReadingPlanService: ObservableObject {
         return (completedDaysMap[planId]?.count ?? 0) >= plan.totalDays
     }
 
+    // MARK: - Active plan
+    //
+    // Home's "Due Today" row and the hero suggestion both need to agree on what
+    // the plan is asking for right now, so the answer lives here rather than
+    // being derived separately in each view.
+
+    /// First plan that has been started but not yet finished.
+    var activePlan: BibleReadingPlan? {
+        BibleReadingPlans.all.first { hasStarted($0.id) && !isComplete($0.id) }
+    }
+
+    /// The entry the active plan is currently on. Note this is the next UNREAD day
+    /// (see `currentDay`), not a day derived from the calendar — the plan is a
+    /// self-paced queue, so there is always a next entry until the plan is finished.
+    /// Don't read "is the user done today?" off this; ask ReadingStreakManager.
+    var activeEntry: BiblePlanEntry? {
+        guard let plan = activePlan else { return nil }
+        return plan.entries.first { $0.day == currentDay(for: plan.id) }
+    }
+
     // MARK: - Mutations
 
     func markDayComplete(_ day: Int, planId: String) {
@@ -61,8 +81,19 @@ final class ReadingPlanService: ObservableObject {
             completedDaysMap[planId] = []
             startDates[planId] = Date()
         }
-        completedDaysMap[planId]?.insert(day)
+        let isNewlyComplete = completedDaysMap[planId]?.insert(day).inserted ?? false
         save()
+
+        // Finishing a plan day is Bible reading, whether it happened via the Bible
+        // view or by ticking the checkmark in the plan. Routing it through the
+        // streak manager is also what writes the App Group and reloads the widget —
+        // this service's own `save()` only touches UserDefaults.standard, so the
+        // checkmark path used to leave both the streak and the widget untouched.
+        // recordActivity is idempotent within a day, so the Bible-view path (which
+        // already recorded) stays a no-op here.
+        if isNewlyComplete {
+            ReadingStreakManager.shared.recordActivity(.reading)
+        }
     }
 
     func toggleDay(_ day: Int, planId: String) {

@@ -10,7 +10,13 @@ struct ReadingPlansView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 16) {
                 ForEach(BibleReadingPlans.all) { plan in
-                    NavigationLink(destination: ReadingPlanDetailView(plan: plan)) {
+                    NavigationLink {
+                        if plan.isDevotional {
+                            SpurgeonDevotionalView(plan: plan)
+                        } else {
+                            ReadingPlanDetailView(plan: plan)
+                        }
+                    } label: {
                         ReadingPlanCard(plan: plan)
                     }
                     .buttonStyle(.plain)
@@ -36,6 +42,7 @@ private struct ReadingPlanCard: View {
     private var started: Bool { service.hasStarted(plan.id) }
     private var finished: Bool { service.isComplete(plan.id) }
     private var currentDay: Int { service.currentDay(for: plan.id) }
+    private var completedCount: Int { service.completedDays(for: plan.id).count }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -84,7 +91,9 @@ private struct ReadingPlanCard: View {
                         }
                         .frame(height: 5)
 
-                        Text("Day \(currentDay)/\(plan.totalDays)")
+                        Text(plan.isDevotional
+                             ? "\(completedCount)/\(plan.totalDays) read"
+                             : "Day \(currentDay)/\(plan.totalDays)")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(plan.accentColor)
                             .fixedSize()
@@ -339,11 +348,22 @@ private struct PlanDayRow: View {
 
     private var checkmarkButton: some View {
         Button {
-            service.toggleDay(entry.day, planId: plan.id)
+            // Reward the check, not the uncheck — undoing a day shouldn't feel
+            // like an accomplishment.
+            let completing = !isComplete
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                service.toggleDay(entry.day, planId: plan.id)
+            }
+            if completing {
+                HapticManager.shared.success()
+            } else {
+                HapticManager.shared.lightImpact()
+            }
         } label: {
             Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 22))
                 .foregroundStyle(isComplete ? plan.accentColor : Color.adaptiveTextSecondary(colorScheme).opacity(0.5))
+                .scaleEffect(isComplete ? 1.0 : 0.92)
         }
         .buttonStyle(.plain)
     }

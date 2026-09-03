@@ -17,6 +17,9 @@ class AppState: ObservableObject {
     @Published var dailyInsight: DailyInsight?
     @Published var pendingBibleVerseReference: String?
     @Published var pendingBibleTranslation: BibleTranslation?
+    /// Invite code from a `reforged://join?code=…` deep link, consumed by the
+    /// Groups tab to auto-join once the user is signed in and age-verified.
+    @Published var pendingGroupInviteCode: String?
     @Published var isLoading = true
     @Published var hasSyncedFromCloud = false
     @Published var isSyncing = false
@@ -28,6 +31,11 @@ class AppState: ObservableObject {
     @Published var lastXPSource: String = ""
     @Published var showLevelUp = false
     @Published var newLevel: Int = 0
+
+    /// Set when freezes were spent to repair a gap, so the UI can tell the user
+    /// their streak was saved and how many freezes it cost.
+    @Published var showFreezeUsedNotice = false
+    @Published var lastFreezesSpent: Int = 0
     @Published var showBadgeEarned = false
     @Published var earnedBadge: Badge? = nil
     @Published var showStreakMilestone = false
@@ -147,6 +155,13 @@ class AppState: ObservableObject {
 
         // Replenish streak freezes at start of each month
         checkMonthlyFreezeReplenish()
+
+        // Reconcile the old duplicate counter, repair any gap that opened while the
+        // app was closed, then mirror the engine's streak onto the profile so every
+        // screen agrees on launch.
+        migrateLegacyStreakIfNeeded()
+        applyPendingStreakFreezes()
+        syncStreakFromManager()
 
         // Load daily insight - always check if it's from today
         loadTodaysDailyInsight()
@@ -578,9 +593,7 @@ class AppState: ObservableObject {
     }
 
     private func getTodayDateString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
+        AppDateFormatters.yearMonthDay.string(from: Date())
     }
 
     private func syncWidgetInsight() {
@@ -673,7 +686,7 @@ class AppState: ObservableObject {
     // MARK: - XP & Progress
 
     func addXP(_ amount: Int, source: String = "other") {
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        let today = AppDateFormatters.utcDayString()
         let oldLevel = user.currentLevel
 
         // Calculate multiplier
@@ -700,7 +713,11 @@ class AppState: ObservableObject {
         let finalAmount = Int(Double(amount) * multiplier) + dailyBonus
         user.xp += finalAmount
         user.weeklyActivity.xpEarned.append(XPActivity(date: today, amount: finalAmount, source: source))
-        recordActivity()
+        if let activity = StreakActivity.forXPSource(source) {
+            recordActivity(activity)
+        } else {
+            touchActiveDate()
+        }
 
         // Trigger XP gain notification
         lastXPGain = finalAmount
@@ -725,7 +742,7 @@ class AppState: ObservableObject {
     func completeLesson(_ lessonId: String) {
         guard !user.completedLessons.contains(lessonId) else { return }
 
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        let today = AppDateFormatters.utcDayString()
         user.completedLessons.append(lessonId)
         user.weeklyActivity.lessonsCompleted.append(LessonActivity(lessonId: lessonId, date: today))
 
@@ -745,43 +762,89 @@ class AppState: ObservableObject {
         checkAndAwardBadges()
     }
 
-    func recordActivity() {
+    /// Records a day's activity against the streak.
+    ///
+    /// `ReadingStreakManager` owns the streak; this only forwards the activity and
+    /// mirrors the result onto `user` so it can round-trip through CloudKit/Supabase.
+    func recordActivity(_ kind: StreakActivity) {
+        // Spend freezes on any gap before today, before the day is counted —
+        // otherwise today's activity would anchor a fresh streak and the missed
+        // days could never be repaired.
+        applyPendingStreakFreezes()
+
+        ReadingStreakManager.shared.recordActivity(kind)
+        syncStreakFromManager()
+        touchActiveDate()
+        checkAndAwardBadges()
+    }
+
+    /// Marks the user present today without touching the streak. For XP sources
+    /// that don't satisfy the daily requirement.
+    private func touchActiveDate() {
         let today = SettingsManager.shared.currentLogicalDateString()
-        let lastActive = user.lastActiveDate.prefix(10)
-
-        guard lastActive != today else {
-            if !user.activeDates.contains(today) {
-                user.activeDates.append(today)
-            }
-            return
-        }
-
-        let calendar = Calendar.current
-        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) else { return }
-        let yesterdayStr = String(ISO8601DateFormatter().string(from: yesterday).prefix(10))
-
-        if lastActive == yesterdayStr {
-            user.streak += 1
-        } else {
-            // Check for auto-freeze
-            if user.streakFreezes > 0 {
-                user.streakFreezes -= 1
-                user.freezeUsedDates.append(yesterdayStr)
-                user.streak += 1
-                ReadingStreakManager.shared.noteFreezeUsed(on: yesterdayStr)
-            } else {
-                user.streak = 1
-            }
-        }
-
-        user.longestStreak = max(user.longestStreak, user.streak)
-        user.lastActiveDate = ISO8601DateFormatter().string(from: Date())
-
+        user.lastActiveDate = AppDateFormatters.iso8601.string(from: Date())
         if !user.activeDates.contains(today) {
             user.activeDates.append(today)
         }
+    }
 
-        checkAndAwardBadges()
+    /// One-time reconciliation of the pre-unification `user.streak`.
+    ///
+    /// That counter incremented on any XP award, so it could legitimately exceed
+    /// what the reading log proves. Where it does, we back-fill history to match
+    /// rather than take a streak away from someone for a split they never knew about.
+    /// Only runs for a streak that's still live — a stale counter from someone who
+    /// left months ago stays dead.
+    private func migrateLegacyStreakIfNeeded() {
+        let key = "reforged_legacy_streak_migrated_v1"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+
+        guard user.streak > 0 else { return }
+
+        let manager = ReadingStreakManager.shared
+        // lastActiveDate is a UTC timestamp while the engine's keys are local, so
+        // compare with >= rather than equality. yyyy-MM-dd sorts chronologically,
+        // and erring toward "still live" is the generous direction here.
+        let lastActive = String(user.lastActiveDate.prefix(10))
+        guard lastActive >= manager.previousDayKey else { return }
+
+        manager.seedStreak(count: user.streak)
+    }
+
+    /// Copies the streak engine's values onto `user`. The profile fields are a
+    /// mirror for sync only — never the source of truth.
+    func syncStreakFromManager() {
+        let manager = ReadingStreakManager.shared
+        user.streak = manager.currentStreak
+        // Include currentStreak: seeding can back-fill a run longer than anything
+        // previously recorded as the longest.
+        let longest = max(user.longestStreak, manager.longestStreak, manager.currentStreak)
+        user.longestStreak = longest
+        manager.longestStreak = longest
+    }
+
+    /// Spends freezes to cover any missed days, Duolingo-style: one freeze per
+    /// missed day. Freezes are only spent when the whole gap can be covered —
+    /// burning the last two on a three-day gap would break the streak anyway.
+    /// Call on launch and before recording activity.
+    @discardableResult
+    func applyPendingStreakFreezes() -> Int {
+        let manager = ReadingStreakManager.shared
+        let missed = manager.missedDaysNeedingFreeze()
+
+        guard !missed.isEmpty, missed.count <= user.streakFreezes else { return 0 }
+
+        for day in missed {
+            user.streakFreezes -= 1
+            user.freezeUsedDates.append(day)
+            manager.noteFreezeUsed(on: day)
+        }
+        lastFreezesSpent = missed.count
+        showFreezeUsedNotice = true
+        syncStreakFromManager()
+        saveToLocalStorage()
+        return missed.count
     }
 
     // MARK: - Streak Freezes
@@ -796,8 +859,13 @@ class AppState: ObservableObject {
     func useStreakFreeze() -> Bool {
         guard user.streakFreezes > 0 else { return false }
         user.streakFreezes -= 1
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        // Must be the engine's local day key — a UTC key here would record the
+        // freeze against a day the streak walk never looks at.
+        let today = ReadingStreakManager.shared.currentDayKey
         user.freezeUsedDates.append(today)
+        ReadingStreakManager.shared.noteFreezeUsed(on: today)
+        syncStreakFromManager()
+        saveToLocalStorage()
         return true
     }
 
@@ -813,11 +881,15 @@ class AppState: ObservableObject {
         return true
     }
 
-    /// Replenish freezes to 4 at the start of each month
-    func checkMonthlyFreezeReplenish() {
+    private static let monthKeyFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM"
-        let currentMonth = formatter.string(from: Date())
+        return formatter
+    }()
+
+    /// Replenish freezes to 4 at the start of each month
+    func checkMonthlyFreezeReplenish() {
+        let currentMonth = Self.monthKeyFormatter.string(from: Date())
 
         guard user.lastFreezeReplenishMonth != currentMonth else { return }
 
@@ -837,7 +909,7 @@ class AppState: ObservableObject {
     func updateVerseReview(verseId: String, quality: Int) {
         guard let index = memoryVerses.firstIndex(where: { $0.id == verseId }) else { return }
 
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        let today = AppDateFormatters.utcDayString()
         user.weeklyActivity.versesReviewed.append(VerseActivity(verseId: verseId, date: today))
 
         memoryVerses[index].updateReview(quality: quality)
@@ -877,6 +949,9 @@ class AppState: ObservableObject {
 
     func markChapterRead(book: String, chapter: Int) -> Bool {
         let chapterKey = "\(book) \(chapter)"
+        // Satisfies the Scripture unlock gate even on a re-read — the guard below
+        // only exists to keep XP and the read list from double-counting.
+        UnlockGateService.shared.clear(with: .chapterRead)
         guard !user.chaptersRead.contains(chapterKey) else { return false }
 
         let today = SettingsManager.shared.currentLogicalDateString()
@@ -907,7 +982,7 @@ class AppState: ObservableObject {
 
     /// Check all badge conditions and award any newly earned badges
     func checkAndAwardBadges() {
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        let today = AppDateFormatters.utcDayString()
         let chaptersCount = user.chaptersRead.count
         let verseCount = memoryVerses.count
         let streak = user.streak
@@ -984,7 +1059,7 @@ class AppState: ObservableObject {
 
     /// Award the "perfect-review" badge (called from review flow when 5 easy in a row)
     func awardPerfectReviewBadge() {
-        let today = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
+        let today = AppDateFormatters.utcDayString()
         guard let index = user.badges.firstIndex(where: { $0.id == "perfect-review" && !$0.isEarned }) else { return }
         user.badges[index].isEarned = true
         user.badges[index].earnedDate = today

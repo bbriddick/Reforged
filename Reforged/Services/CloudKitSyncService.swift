@@ -153,7 +153,7 @@ class CloudKitSyncService: ObservableObject {
             level: record["level"] as? Int ?? 1,
             streak: record["streak"] as? Int ?? 0,
             longestStreak: record["longestStreak"] as? Int ?? 0,
-            lastActiveDate: record["lastActiveDate"] as? String ?? ISO8601DateFormatter().string(from: Date()),
+            lastActiveDate: record["lastActiveDate"] as? String ?? AppDateFormatters.iso8601.string(from: Date()),
             badges: badges,
             completedLessons: record["completedLessons"] as? [String] ?? [],
             memoryVerses: [],
@@ -350,7 +350,7 @@ class CloudKitSyncService: ObservableObject {
             chapter: record["chapter"] as? Int ?? 0,
             verse: record["verse"] as? Int ?? 0,
             color: color,
-            createdAt: record["createdAt"] as? String ?? ISO8601DateFormatter().string(from: Date())
+            createdAt: record["createdAt"] as? String ?? AppDateFormatters.iso8601.string(from: Date())
         )
     }
 
@@ -432,8 +432,8 @@ class CloudKitSyncService: ObservableObject {
             chapter: record["chapter"] as? Int ?? 0,
             verse: record["verse"] as? Int ?? 0,
             content: content,
-            createdAt: record["createdAt"] as? String ?? ISO8601DateFormatter().string(from: Date()),
-            updatedAt: record["updatedAt"] as? String ?? ISO8601DateFormatter().string(from: Date()),
+            createdAt: record["createdAt"] as? String ?? AppDateFormatters.iso8601.string(from: Date()),
+            updatedAt: record["updatedAt"] as? String ?? AppDateFormatters.iso8601.string(from: Date()),
             crossReferences: crossRefs
         )
     }

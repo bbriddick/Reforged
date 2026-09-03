@@ -30,11 +30,17 @@ final class FocusBlockingService: ObservableObject {
 
     private let store = ManagedSettingsStore(named: ManagedSettingsStore.Name("reforged-shield"))
 
+    /// Blocking state lives in the shared App Group so the shield/monitor
+    /// extensions can read the always-on selection too (they can't see
+    /// UserDefaults.standard).
+    private let defaults = UserDefaults(suiteName: "group.com.reforged.app") ?? .standard
+
     private enum Keys {
         static let blockNSFW          = "focusBlockNSFW"
         static let blockSocialMedia   = "focusBlockSocialMedia"
         static let selectionData      = "focusSelectionData"
         static let socialSelectionData = "focusSocialSelectionData"
+        static let migratedFlag       = "focusSettingsMigratedToAppGroup_v1"
     }
 
     // MARK: - Domain Lists
@@ -56,6 +62,7 @@ final class FocusBlockingService: ObservableObject {
     // MARK: - Init
 
     private init() {
+        migrateToAppGroupIfNeeded()
         loadPersistedState()
         refreshAuthorizationStatus()
     }
@@ -153,9 +160,10 @@ final class FocusBlockingService: ObservableObject {
         socialSelection = newSelection
         persistState()
         if isAuthorized && blockSocialMedia { applyBlocking() }
-        // Keep the daily-limit monitor in sync: it watches this same selection, so a
-        // change must re-arm its DeviceActivity monitoring with the new tokens.
+        // Keep the daily-limit monitor and the unlock gate in sync: both watch this
+        // same selection, so a change must re-arm them with the new tokens.
         SocialLimitService.shared.refresh()
+        UnlockGateService.shared.refresh()
     }
 
     /// Whether the user has picked anything for social-media blocking yet.
@@ -187,8 +195,23 @@ final class FocusBlockingService: ObservableObject {
 
     // MARK: - Persistence
 
+    /// One-time copy of blocking state from UserDefaults.standard (its pre-App-Group
+    /// home) into the shared suite. Old values are left in place so a downgrade
+    /// still finds them.
+    private func migrateToAppGroupIfNeeded() {
+        guard !defaults.bool(forKey: Keys.migratedFlag) else { return }
+        let old = UserDefaults.standard
+        for key in [Keys.blockNSFW, Keys.blockSocialMedia, Keys.selectionData, Keys.socialSelectionData] {
+            if defaults.object(forKey: key) == nil, let value = old.object(forKey: key) {
+                defaults.set(value, forKey: key)
+            }
+        }
+        defaults.set(true, forKey: Keys.migratedFlag)
+    }
+
     func persistState() {
-        let defaults = UserDefaults.standard
+        // Keep the protected-days streak anchor in step with protection changes.
+        ShieldStreakService.shared.refreshProtectionState()
         defaults.set(blockNSFW,        forKey: Keys.blockNSFW)
         defaults.set(blockSocialMedia, forKey: Keys.blockSocialMedia)
         if let encoded = try? JSONEncoder().encode(selection) {
@@ -200,7 +223,6 @@ final class FocusBlockingService: ObservableObject {
     }
 
     private func loadPersistedState() {
-        let defaults = UserDefaults.standard
         blockNSFW        = defaults.bool(forKey: Keys.blockNSFW)
         blockSocialMedia = defaults.bool(forKey: Keys.blockSocialMedia)
         if let data = defaults.data(forKey: Keys.selectionData),

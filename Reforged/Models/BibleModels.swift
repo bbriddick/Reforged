@@ -1,6 +1,32 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Shared Date Formatters
+
+/// Formatter creation is expensive (~ms each); reuse these shared instances
+/// instead of allocating one per call. Both formatter classes are thread-safe.
+/// NOTE: `iso8601` formats in UTC — matches the historical inline
+/// `ISO8601DateFormatter()` call sites it replaces; don't use it for
+/// local-day logic that ReadingStreakManager/SettingsManager handle with
+/// local-timezone formatters.
+enum AppDateFormatters {
+    static let iso8601 = ISO8601DateFormatter()
+
+    /// "yyyy-MM-dd" in the user's locale/timezone (same behavior as the
+    /// inline `DateFormatter()` instances it replaces).
+    static let yearMonthDay: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    /// UTC "yyyy-MM-dd" for the current moment (historical app convention
+    /// for streak/XP day keys).
+    static func utcDayString(from date: Date = Date()) -> String {
+        String(iso8601.string(from: date).prefix(10))
+    }
+}
+
 // MARK: - Parsed Verse Model
 
 struct ParsedVerse: Identifiable, Equatable {
@@ -423,6 +449,20 @@ struct BibleData {
     static func chaptersIn(book: String) -> Int {
         books.first { $0.name == book }?.chapters ?? 1
     }
+
+    /// Parses "Book Chapter:Verse" or "Book Chapter:VerseStart-VerseEnd" into its parts.
+    static func parseReference(_ reference: String) -> (book: String, chapter: Int, verseStart: Int)? {
+        guard let colon = reference.lastIndex(of: ":") else { return nil }
+        let afterColon = reference[reference.index(after: colon)...]
+        let verseStartString = afterColon.split(separator: "-").first.map(String.init) ?? String(afterColon)
+        guard let verseStart = Int(verseStartString) else { return nil }
+
+        let beforeColon = reference[..<colon]
+        guard let lastSpace = beforeColon.lastIndex(of: " "),
+              let chapter = Int(beforeColon[beforeColon.index(after: lastSpace)...]) else { return nil }
+
+        return (String(beforeColon[..<lastSpace]), chapter, verseStart)
+    }
 }
 
 // MARK: - Notifications
@@ -444,6 +484,15 @@ extension Notification.Name {
     /// Posted when the user taps a "you hit a block" notification — opens a
     /// temptation-focused verse passage in the app.
     static let showRefocusVerse = Notification.Name("ShowRefocusVerse")
+    /// Posted when the user taps the weekly report reminder — opens the
+    /// accountability screen so they can send it.
+    static let showAccountabilityPartner = Notification.Name("ShowAccountabilityPartner")
+    /// Posted when the user taps the panic widget (reforged://panic) — opens the
+    /// Tempted SOS flow from wherever they are, without a tab switch first.
+    static let showTemptedSOS = Notification.Name("ShowTemptedSOS")
+    /// Posted (after switching to the Discipleship tab) to push the Study Library hub —
+    /// e.g. from the verse-study Commentary "Library" button.
+    static let openStudyLibrary = Notification.Name("OpenStudyLibrary")
 }
 
 // MARK: - Bible Reading State
@@ -478,7 +527,7 @@ class BibleReadingState: ObservableObject {
             chapter: chapter,
             verse: verse,
             color: color.rawValue,
-            createdAt: ISO8601DateFormatter().string(from: Date())
+            createdAt: AppDateFormatters.iso8601.string(from: Date())
         )
         highlights[reference] = highlight
         saveToStorage()
@@ -497,7 +546,7 @@ class BibleReadingState: ObservableObject {
 
     func addNote(reference: String, book: String, chapter: Int, verse: Int,
                  content: String, crossReferences: [String] = []) {
-        let now = ISO8601DateFormatter().string(from: Date())
+        let now = AppDateFormatters.iso8601.string(from: Date())
         let note = VerseNote(
             id: UUID().uuidString,
             reference: reference,
@@ -515,7 +564,7 @@ class BibleReadingState: ObservableObject {
 
     func updateNote(reference: String, content: String, crossReferences: [String] = []) {
         guard var note = notes[reference] else { return }
-        note.updatedAt = ISO8601DateFormatter().string(from: Date())
+        note.updatedAt = AppDateFormatters.iso8601.string(from: Date())
         notes[reference] = VerseNote(
             id: note.id,
             reference: note.reference,

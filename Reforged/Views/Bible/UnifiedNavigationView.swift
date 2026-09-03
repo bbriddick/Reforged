@@ -908,8 +908,9 @@ struct UnifiedNavigationView: View {
                 .onAppear {
                     let bookID = selectedBook.id
                     expandedBookID = bookID
+                    // Jump straight to the current book — no scroll animation.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation { proxy.scrollTo(bookID, anchor: .center) }
+                        proxy.scrollTo(bookID, anchor: .center)
                     }
                 }
                 .onChange(of: expandedBookID) { newID in

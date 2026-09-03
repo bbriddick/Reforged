@@ -2,6 +2,10 @@ import SwiftUI
 import PhotosUI
 
 struct ProfileView: View {
+    /// Pass false when pushing this onto an existing stack (the Home avatar does) —
+    /// SwiftUI must not nest NavigationStacks. The sidebar branch never embeds one.
+    var embedsNavigationStack: Bool = true
+
     @EnvironmentObject var appState: AppState
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.colorScheme) var colorScheme
@@ -25,19 +29,10 @@ struct ProfileView: View {
                             }
                         }
                     }
+            } else if embedsNavigationStack {
+                NavigationStack { titledContent }
             } else {
-                NavigationStack {
-                    profileContent
-                        .navigationTitle("Profile")
-                        .toolbar {
-                            ToolbarItem(placement: .primaryAction) {
-                                Button(action: { showEditProfile = true }) {
-                                    Image(systemName: "pencil.circle.fill")
-                                        .font(.title2)
-                                }
-                            }
-                        }
-                }
+                titledContent
             }
         }
         .sheet(isPresented: $showEditProfile) {
@@ -52,6 +47,21 @@ struct ProfileView: View {
         } message: {
             Text("Your progress is saved to the cloud.")
         }
+    }
+
+    /// The screen as it appears inside a navigation stack — whether that stack is
+    /// this view's own or the Home tab's.
+    private var titledContent: some View {
+        profileContent
+            .navigationTitle("Profile")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { showEditProfile = true }) {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.title2)
+                    }
+                }
+            }
     }
 
     var profileContent: some View {

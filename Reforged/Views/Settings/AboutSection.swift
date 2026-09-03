@@ -137,11 +137,33 @@ struct HelpAndSupportView: View {
 
             SettingsDivider()
 
-            // MARK: Cross References
-            attributionCard(icon: "arrow.triangle.branch", iconColor: Color.adaptiveNavyText(colorScheme), title: "Cross References") {
+            // MARK: Cross References, Topics & Places
+            attributionCard(icon: "arrow.triangle.branch", iconColor: Color.adaptiveNavyText(colorScheme), title: "Cross References, Topics & Places") {
                 attributionEntry(
                     title: "Treasury of Scripture Knowledge",
                     body: "Verse cross-reference data is drawn primarily from the Treasury of Scripture Knowledge, provided by openbible.info under a Creative Commons Attribution license (CC BY 4.0)."
+                )
+                attributionEntry(
+                    title: "Topical Bible",
+                    body: "Topic-to-verse data, ranked by community votes, is drawn from the openbible.info Topical Bible under a Creative Commons Attribution license (CC BY 4.0)."
+                )
+                attributionEntry(
+                    title: "Bible Geocoding",
+                    body: "Place locations in the Bible Atlas are drawn from the openbible.info Bible Geocoding project under a Creative Commons Attribution license (CC BY 4.0)."
+                )
+            }
+
+            SettingsDivider()
+
+            // MARK: Commentaries & Study Resources
+            attributionCard(icon: "text.book.closed.fill", iconColor: Color.adaptiveNavyText(colorScheme), title: "Commentaries & Study Resources") {
+                attributionEntry(
+                    title: "Public-Domain Works via CrossWire",
+                    body: "Commentary, dictionary, lexicon, and topical study data is derived from public-domain works distributed as SWORD modules by the CrossWire Bible Society (crosswire.org): Scofield Reference Notes, Matthew Henry's Commentary, Barnes' Notes, Spurgeon's Treasury of David, Calvin's Commentaries, Easton's Bible Dictionary, the Abbott-Smith Manual Greek Lexicon, Nave's Topical Bible, and Thompson Chain topics."
+                )
+                attributionEntry(
+                    title: "Morning & Evening",
+                    body: "The Morning & Evening reading plan is C. H. Spurgeon's public-domain daily devotional, distributed as a SWORD module by CrossWire (crosswire.org) from the Christian Classics Ethereal Library (CCEL)."
                 )
             }
 
@@ -426,7 +448,7 @@ struct HelpAndSupportView: View {
 
         5. Intellectual Property
 
-        Scripture quotations are from the ESV® Bible (© 2001 Crossway), KJV (Public Domain), CSB® (© 2017 Holman Bible Publishers), NKJV® (© 1982 Thomas Nelson), NASB® (© 1995 The Lockman Foundation), and Reina-Valera 1960® (© Sociedades Bíblicas en América Latina, 1960; © Renovado Sociedades Bíblicas Unidas, 1988). Used by permission. All rights reserved. Hebrew and Greek word study data is derived from Strong's Exhaustive Concordance (public domain) and the Open Scriptures lexicon project (CC BY-SA 4.0). Enriched definitions from Brown-Driver-Briggs and Thayer's lexicons (public domain) via Bolls.life. Verse cross-reference data is drawn from the Treasury of Scripture Knowledge via openbible.info (CC BY 4.0). All other content and features are owned by Reforged.
+        Scripture quotations are from the ESV® Bible (© 2001 Crossway), KJV (Public Domain), CSB® (© 2017 Holman Bible Publishers), NKJV® (© 1982 Thomas Nelson), NASB® (© 1995 The Lockman Foundation), and Reina-Valera 1960® (© Sociedades Bíblicas en América Latina, 1960; © Renovado Sociedades Bíblicas Unidas, 1988). Used by permission. All rights reserved. Hebrew and Greek word study data is derived from Strong's Exhaustive Concordance (public domain) and the Open Scriptures lexicon project (CC BY-SA 4.0). Enriched definitions from Brown-Driver-Briggs and Thayer's lexicons (public domain) via Bolls.life. Verse cross-reference data is drawn from the Treasury of Scripture Knowledge, topical verse data from the Topical Bible, and place locations from the Bible Geocoding project, all via openbible.info (CC BY 4.0). All other content and features are owned by Reforged.
 
         6. Disclaimer of Warranties
 

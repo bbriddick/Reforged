@@ -24,6 +24,39 @@ private struct FocusScrollRequest: Equatable {
     let alreadyLoaded: Bool
 }
 
+/// Tools shown in the iPad/Mac study-tools rail. The first four are "action"
+/// tools that reuse the reader's existing sheets/panels; `notes`, `highlights`,
+/// and `info` expand an inline content panel beside the rail.
+enum BibleToolPanelKind: String, Identifiable {
+    case navigation, search, audio, display
+    case notes, highlights, info
+    case study, noteEditor
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .navigation: return "Navigate"
+        case .search:     return "Search"
+        case .audio:      return "Audio"
+        case .display:    return "Display"
+        case .notes:      return "Notes"
+        case .highlights: return "Highlights"
+        case .info:       return "Passage Info"
+        case .study:      return "Verse Study"
+        case .noteEditor: return "Take Note"
+        }
+    }
+
+    /// Whether this panel supports the pin toggle (the reference/results panels).
+    var isPinnable: Bool {
+        switch self {
+        case .notes, .highlights, .info, .display: return true
+        default: return false
+        }
+    }
+}
+
 // MARK: - Bible View (Unified Single View)
 
 struct BibleView: View {
@@ -122,6 +155,17 @@ struct BibleView: View {
     // iPad/Mac: Show navigation sidebar
     @State private var showNavigationSidebar = false
 
+    // iPad/Mac: which study-tools-rail panel is expanded (nil = rail collapsed to icons)
+    @State private var activeToolPanel: BibleToolPanelKind?
+    /// Full-screen reading: hides the entire tools sidebar (rail + any panel) so the
+    /// reader takes the whole width. Persisted so the choice sticks across launches.
+    @AppStorage("bible.readerFullScreen") private var readerFullScreen = false
+    /// When pinned, the panel stays put while the user works in the Bible —
+    /// verse Study/Note actions fall back to sheets instead of replacing it.
+    @State private var toolPanelPinned = false
+    /// The verse a sidebar-hosted study / note panel is acting on.
+    @State private var panelVerse: ParsedVerse?
+
     // Reading streak tracking
     @StateObject private var streakManager = ReadingStreakManager.shared
 
@@ -141,6 +185,12 @@ struct BibleView: View {
     // Maximum content width for readability on large screens
     var maxContentWidth: CGFloat {
         horizontalSizeClass == .regular ? 800 : .infinity
+    }
+
+    /// True when the iPad/Mac study-tools rail is active, so verse actions and
+    /// Display route into the trailing sidebar instead of modal sheets.
+    private var usesToolSidebar: Bool {
+        isSidebarNavigation && settingsManager.showBibleToolsRail
     }
 
     // MARK: - Continuous-scroll helpers
@@ -261,9 +311,14 @@ struct BibleView: View {
         }
     }
 
-    /// Builds the navigation view shared by the iPhone reveal panel and the iPad/Mac sheet.
-    private func makeNavigationView(usesSheetPresentation: Bool) -> some View {
-        UnifiedNavigationView(
+    /// Builds the navigation view shared by the iPhone reveal panel, the iPad/Mac
+    /// sheet, and the iPad tools sidebar. `dismiss` closes whichever container hosts
+    /// it (defaults to the iPhone/sheet `closeNav`; the sidebar passes its own).
+    private func makeNavigationView(usesSheetPresentation: Bool,
+                                    focusSearch: Bool? = nil,
+                                    dismiss: (() -> Void)? = nil) -> some View {
+        let close = dismiss ?? closeNav
+        return UnifiedNavigationView(
             selectedBook: $selectedBook,
             selectedChapter: $selectedChapter,
             recentPassages: recentPassages,
@@ -271,7 +326,7 @@ struct BibleView: View {
             onSelect: {
                 loadChapter()
                 addToRecentPassages()
-                closeNav()
+                close()
             },
             onSelectVerse: { verseNum in
                 // Route verse-level taps (search results, AI key verses, verse picker) through the SAME
@@ -285,41 +340,153 @@ struct BibleView: View {
                 // So it fully establishes the passage itself: focus + scroll target via loadChapter (which
                 // sets `focusChapterID`/`pendingScrollTarget` and lets hydration complete before the scroll),
                 // then records it in recents just like the chapter-top `onSelect` path does.
-                closeNav()
+                close()
                 pendingNavigationVerse = verseNum
                 loadChapter()
                 addToRecentPassages()
             },
             translation: currentTranslation,
             translationOrder: settingsManager.translationOrder,
-            focusSearch: navFocusSearch,
-            onDismiss: closeNav,
+            focusSearch: focusSearch ?? navFocusSearch,
+            onDismiss: close,
             usesSheetPresentation: usesSheetPresentation
         )
     }
 
     private func onNavigationTap() {
-        openNav()
+        if usesToolSidebar {
+            openToolPanel(.navigation)
+        } else {
+            openNav()
+        }
     }
 
     private func onSearchTap() {
-        openNav(focusSearch: true)
+        if usesToolSidebar {
+            openToolPanel(.search)
+        } else {
+            openNav(focusSearch: true)
+        }
     }
 
-    private func onAudioTap() {
-        // Start audio if not already loaded
+    /// Opens a tools-sidebar panel, resetting transient state. Toggles closed if
+    /// the same panel is already showing.
+    private func openToolPanel(_ kind: BibleToolPanelKind) {
+        if activeToolPanel == kind {
+            closeToolPanel()
+            return
+        }
+        panelVerse = nil
+        toolPanelPinned = false
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            activeToolPanel = kind
+        }
+    }
+
+    /// Starts playback of the current chapter if nothing is loaded yet.
+    private func startAudioIfNeeded() {
         if !audioPlayer.isPlaying && audioPlayer.currentTime == 0 && audioPlayer.currentBook.isEmpty {
             audioPlayer.updateFromSettings()
             audioPlayer.play(book: selectedBook.name, chapter: selectedChapter, translation: currentTranslation)
             showAudioPlayer = true
         }
-        showNowPlaying = true
+    }
+
+    private func onAudioTap() {
+        startAudioIfNeeded()
+        // iPad/Mac with the rail: dock the player as a side panel. Otherwise the sheet.
+        if usesToolSidebar {
+            panelVerse = nil
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                activeToolPanel = .audio
+            }
+        } else {
+            showNowPlaying = true
+        }
     }
 
     private func onFormatTap() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             showFormattingPanel = true
         }
+    }
+
+    // MARK: - Nearest-verse helpers (sidebar Study / Note tools)
+
+    /// Verses of the chapter the reader is currently focused on.
+    private func currentChapterVerses() -> [ParsedVerse] {
+        let prefix = "\(selectedBook.name) \(selectedChapter):"
+        return allLoadedVerses.filter { $0.reference.hasPrefix(prefix) }
+    }
+
+    /// The verse nearest the top of the viewport, for auto-selecting when the user
+    /// opens a verse tool without having tapped a verse first.
+    private func nearestVisibleVerse() -> ParsedVerse? {
+        let verses = currentChapterVerses()
+        return verses.first { $0.number == firstVisibleVerseNumber } ?? verses.first
+    }
+
+    /// The first currently-selected verse, if any.
+    private func firstSelectedVerse() -> ParsedVerse? {
+        allLoadedVerses.first { readingState.selectedVerses.contains($0.reference) }
+    }
+
+    /// Study rail tool: shows study info for the selected verse, auto-selecting the
+    /// nearest visible verse first when nothing is selected.
+    private func onStudyTap() {
+        if activeToolPanel == .study {
+            closeToolPanel()
+            return
+        }
+        if readingState.selectedVerses.isEmpty, let v = nearestVisibleVerse() {
+            readingState.selectedVerses.insert(v.reference)
+        }
+        panelVerse = firstSelectedVerse() ?? nearestVisibleVerse()
+        toolPanelPinned = false
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            activeToolPanel = .study
+        }
+    }
+
+    /// Note rail tool: auto-selects the nearest visible verse (so the note tools are
+    /// ready) and opens the notes panel, which also lists nearby notes.
+    private func onNoteTap() {
+        if activeToolPanel == .notes {
+            closeToolPanel()
+            return
+        }
+        if readingState.selectedVerses.isEmpty, let v = nearestVisibleVerse() {
+            readingState.selectedVerses.insert(v.reference)
+        }
+        panelVerse = nil
+        toolPanelPinned = false
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            activeToolPanel = .notes
+        }
+    }
+
+    /// Opens the note editor for a specific verse reference. Works even when the
+    /// verse's chapter isn't currently loaded (e.g. tapping a note from another
+    /// chapter) by synthesising a minimal verse from the reference / saved note.
+    private func openNoteEditor(for reference: String) {
+        let verse = allLoadedVerses.first(where: { $0.reference == reference })
+            ?? synthesizedVerse(for: reference)
+        guard let verse else { return }
+        // The editor loads by reference, so clear any lingering multi-verse
+        // selection that would otherwise widen the range it edits.
+        readingState.selectedVerses = [verse.reference]
+        panelVerse = verse
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            activeToolPanel = .noteEditor
+        }
+    }
+
+    /// Builds a minimal `ParsedVerse` from a reference (e.g. "John 3:16"), using the
+    /// saved note's verse text isn't stored, so text is left blank — the editor keys
+    /// off the reference and loads the existing note content itself.
+    private func synthesizedVerse(for reference: String) -> ParsedVerse? {
+        guard let parsed = parseReference(reference) else { return nil }
+        return ParsedVerse(id: reference, number: parsed.verse, text: "", reference: reference)
     }
 
     private func onTranslationSelect(_ newTranslation: BibleTranslation) {
@@ -434,6 +601,578 @@ struct BibleView: View {
         }
     }
 
+    // MARK: - Study Tools Sidebar (iPad/Mac)
+
+    /// Panel width. Collapsed is a comfortable reading column (audio gets a touch
+    /// more for the player); widened caps at half the window so the reader keeps
+    /// enough room. 0 when no panel is open.
+    private var toolPanelWidth: CGFloat {
+        guard let panel = activeToolPanel else { return 0 }
+        return panel == .audio ? 320 : 340
+    }
+
+    /// The trailing study-tools region: a floating, rounded panel (when a tool is
+    /// open) beside the floating icon rail. Sized by `safeAreaInset`, so the reader
+    /// reflows to the space that's left.
+    @ViewBuilder
+    private var bibleToolsSidebar: some View {
+        // .center so the compact rail sits vertically centred against the reader /
+        // the full-height panel, rather than floating at the top with dead space below.
+        HStack(alignment: .center, spacing: 10) {
+            if let panel = activeToolPanel {
+                bibleToolPanel(panel)
+                    .frame(width: toolPanelWidth)
+                    .frame(maxHeight: .infinity)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                    )
+                    .shadow(color: Color.black.opacity(0.18), radius: 20, x: -4, y: 8)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+
+            // Rail + (when audio is playing but its panel is collapsed) a control pill.
+            VStack(spacing: 10) {
+                if !audioPlayer.currentBook.isEmpty && activeToolPanel != .audio {
+                    bibleAudioPill
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+                bibleToolsRail
+            }
+        }
+        .frame(maxHeight: .infinity)
+        .padding(.trailing, 12)
+        .padding(.vertical, 12)
+    }
+
+    /// Collapsed-audio control pill that sits above the rail while a chapter is
+    /// loaded but the full audio panel is closed. Tapping the artwork re-expands
+    /// the player; the play/pause and skip stay reachable while reading.
+    private var bibleAudioPill: some View {
+        VStack(spacing: 6) {
+            Button {
+                startAudioIfNeeded()
+                panelVerse = nil
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                    activeToolPanel = .audio
+                }
+            } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 9)
+                        .fill(Color.reforgedNavy)
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "cross.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.reforgedGold)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open audio player")
+
+            Button { audioPlayer.togglePlayPause() } label: {
+                Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(audioPlayer.isPlaying ? "Pause" : "Play")
+
+            Button { audioPlayer.skipForward(15) } label: {
+                Image(systemName: "goforward.15")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Skip forward")
+        }
+        .padding(.vertical, 8)
+        .frame(width: 56)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.reforgedGold.opacity(0.35), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 12, x: -2, y: 5)
+    }
+
+    /// The always-visible floating column of tool icons. Compact — it hugs its
+    /// icons and is centred vertically by the enclosing HStack.
+    private var bibleToolsRail: some View {
+        VStack(spacing: 6) {
+            // Navigation tools — hosted in the sidebar on iPad.
+            toolRailPanelButton(.navigation, systemImage: "text.book.closed.fill")
+            toolRailPanelButton(.search, systemImage: "magnifyingglass")
+
+            Divider().frame(width: 24).padding(.vertical, 4)
+
+            // Study & content tools.
+            if currentTranslation.supportsAudio {
+                toolRailAudioButton
+            }
+            toolRailButton(.study, systemImage: "sparkles.rectangle.stack") { onStudyTap() }
+            toolRailButton(.notes, systemImage: "note.text") { onNoteTap() }
+            toolRailPanelButton(.highlights, systemImage: "highlighter")
+            toolRailPanelButton(.display, systemImage: "textformat.size")
+            toolRailPanelButton(.info, systemImage: "info.circle")
+
+            // Pin / close appear for whatever panel is open; full-screen is always
+            // available. Bottom of the tools bar, so every panel shares them.
+            Divider().frame(width: 24).padding(.vertical, 4)
+            if activeToolPanel != nil {
+                toolRailPinButton
+                toolRailCloseButton
+            }
+            toolRailFullScreenButton
+        }
+        .padding(.vertical, 12)
+        .frame(width: 56)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 14, x: -2, y: 6)
+    }
+
+    /// Audio rail button: opens the audio player as a side panel, starting playback
+    /// first if nothing is loaded.
+    private var toolRailAudioButton: some View {
+        let isActive = activeToolPanel == .audio
+        let playing = !audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying
+        return Button {
+            HapticManager.shared.lightImpact()
+            if isActive {
+                closeToolPanel()
+            } else {
+                startAudioIfNeeded()
+                panelVerse = nil
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                    activeToolPanel = .audio
+                }
+            }
+        } label: {
+            Image(systemName: audioPlayer.isPlaying ? "speaker.wave.2.fill" : "headphones")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(isActive ? .white : (playing ? Color.reforgedGold : Color.adaptiveNavyText(colorScheme)))
+                .frame(width: 40, height: 40)
+                .background(isActive ? Color.reforgedNavy : Color.adaptiveChipBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Audio")
+        .accessibilityAddTraits(isActive ? [.isSelected] : [])
+    }
+
+    /// Bottom-of-rail pin — locks the open panel so working in the Bible (verse
+    /// Study/Note) won't replace it. Applies to whichever panel is open.
+    private var toolRailPinButton: some View {
+        Button {
+            HapticManager.shared.lightImpact()
+            toolPanelPinned.toggle()
+        } label: {
+            Image(systemName: toolPanelPinned ? "pin.fill" : "pin")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(toolPanelPinned ? .white : Color.adaptiveNavyText(colorScheme))
+                .frame(width: 40, height: 40)
+                .background(toolPanelPinned ? Color.reforgedNavy : Color.adaptiveChipBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(toolPanelPinned ? "Unpin panel" : "Pin panel open")
+    }
+
+    /// Full-screen reading: hides the whole tools sidebar and collapses any open
+    /// panel so the reader takes the full width. A floating tab restores it.
+    private var toolRailFullScreenButton: some View {
+        Button {
+            HapticManager.shared.lightImpact()
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                activeToolPanel = nil
+                readerFullScreen = true
+            }
+            toolPanelPinned = false
+        } label: {
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                .frame(width: 40, height: 40)
+                .background(Color.adaptiveChipBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Full-screen reading")
+    }
+
+    /// Floating tab shown while in full-screen reading, to bring the tools back.
+    private var fullScreenExitTab: some View {
+        Button {
+            HapticManager.shared.lightImpact()
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                readerFullScreen = false
+            }
+        } label: {
+            Image(systemName: "sidebar.trailing")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                .frame(width: 40, height: 44)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                )
+                .shadow(color: Color.black.opacity(0.15), radius: 10, x: -2, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Show study tools")
+    }
+
+    /// Bottom-of-rail close for the open panel.
+    private var toolRailCloseButton: some View {
+        Button {
+            HapticManager.shared.lightImpact()
+            closeToolPanel()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                .frame(width: 40, height: 40)
+                .background(Color.adaptiveChipBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close panel")
+    }
+
+    /// A rail button that fires a custom action. Highlights when its panel is open.
+    private func toolRailButton(_ tool: BibleToolPanelKind,
+                                systemImage: String,
+                                tint: Color? = nil,
+                                action: @escaping () -> Void) -> some View {
+        let isActive = activeToolPanel == tool
+        return Button {
+            HapticManager.shared.lightImpact()
+            action()
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(isActive ? .white : (tint ?? Color.adaptiveNavyText(colorScheme)))
+                .frame(width: 40, height: 40)
+                .background(isActive ? Color.reforgedNavy : Color.adaptiveChipBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tool.title)
+        .accessibilityAddTraits(isActive ? [.isSelected] : [])
+    }
+
+    /// A rail button that toggles an inline content panel.
+    private func toolRailPanelButton(_ tool: BibleToolPanelKind, systemImage: String) -> some View {
+        let isActive = activeToolPanel == tool
+        return Button {
+            HapticManager.shared.lightImpact()
+            if isActive {
+                closeToolPanel()
+            } else {
+                panelVerse = nil
+                toolPanelPinned = false
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                    activeToolPanel = tool
+                }
+            }
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(isActive ? .white : Color.adaptiveNavyText(colorScheme))
+                .frame(width: 40, height: 40)
+                .background(isActive ? Color.reforgedNavy : Color.adaptiveChipBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tool.title)
+        .accessibilityAddTraits(isActive ? [.isSelected] : [])
+    }
+
+    /// Closes the tools panel and resets its transient state. `readerFullScreen`
+    /// is a separate, persisted mode and is not touched here.
+    private func closeToolPanel() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            activeToolPanel = nil
+        }
+        toolPanelPinned = false
+        panelVerse = nil
+    }
+
+    /// The content for an open panel tool. Study and note-taking host their own
+    /// self-contained views (with their own navigation chrome); the rest use the
+    /// shared header + scroll wrapper.
+    @ViewBuilder
+    private func bibleToolPanel(_ kind: BibleToolPanelKind) -> some View {
+        switch kind {
+        case .navigation:
+            makeNavigationView(usesSheetPresentation: false, focusSearch: false,
+                               dismiss: { closeToolPanel() })
+        case .search:
+            makeNavigationView(usesSheetPresentation: false, focusSearch: true,
+                               dismiss: { closeToolPanel() })
+
+        case .study:
+            if let verse = panelVerse {
+                VerseStudySheet(
+                    verse: verse,
+                    bookName: selectedBook.name,
+                    chapter: selectedChapter,
+                    translation: currentTranslation,
+                    readingState: readingState,
+                    onClose: { closeToolPanel() }
+                )
+            } else {
+                toolPanelChrome(title: kind.title) {
+                    toolPanelEmptyState(icon: "sparkles.rectangle.stack",
+                                        message: "Select a verse, then tap Study to explore it here.")
+                }
+            }
+
+        case .noteEditor:
+            let selected = allLoadedVerses.filter { readingState.selectedVerses.contains($0.reference) }
+            let verses = selected.isEmpty ? (panelVerse.map { [$0] } ?? []) : selected
+            if !verses.isEmpty {
+                TakeNoteView(
+                    verses: verses,
+                    readingState: readingState,
+                    onDismiss: {
+                        closeToolPanel()
+                        withAnimation { readingState.clearSelection() }
+                    }
+                )
+            } else {
+                toolPanelChrome(title: kind.title) {
+                    toolPanelEmptyState(icon: "square.and.pencil",
+                                        message: "Select a verse, then tap Note to write here.")
+                }
+            }
+
+        case .audio:
+            BibleAudioSidebarPanel(audioPlayer: audioPlayer,
+                                   onCollapse: { closeToolPanel() },
+                                   onClose: { closeToolPanel() })
+
+        case .display:
+            toolPanelChrome(title: kind.title) {
+                FormattingPreviewCard(settings: readingSettings)
+                    .padding(.bottom, 4)
+                FormattingPanelScrollContent(settings: readingSettings, themeManager: themeManager)
+            }
+
+        case .notes:
+            toolPanelChrome(title: kind.title) { bibleNotesPanelContent }
+        case .highlights:
+            toolPanelChrome(title: kind.title) { bibleHighlightsPanelContent }
+        case .info:
+            toolPanelChrome(title: kind.title) { bibleInfoPanelContent }
+
+        default:
+            EmptyView()
+        }
+    }
+
+    /// Shared header (title + pin + close) and scroll wrapper for the list panels.
+    @ViewBuilder
+    private func toolPanelChrome<Content: View>(title: String,
+                                                @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+
+                Button {
+                    closeToolPanel()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .frame(width: 28, height: 28)
+                        .background(Color.adaptiveChipBackground(colorScheme))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close \(title)")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    content()
+                }
+                .padding(16)
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Notes for the chapter in view. Leads with a "write a note" action for the
+    /// selected (or nearest) verse — the note tool auto-selects one on open — then
+    /// lists the notes already placed on nearby verses.
+    @ViewBuilder
+    private var bibleNotesPanelContent: some View {
+        let targetRef = firstSelectedVerse()?.reference ?? nearestVisibleVerse()?.reference
+        let chapterNotes = readingState.notes.values
+            .filter { $0.book == selectedBook.name && $0.chapter == selectedChapter }
+            .sorted { $0.verse < $1.verse }
+
+        if let ref = targetRef {
+            Button {
+                HapticManager.shared.lightImpact()
+                openNoteEditor(for: ref)
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(Color.reforgedCoral)
+                        .clipShape(RoundedRectangle(cornerRadius: 9))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Write a note")
+                            .font(.subheadline).fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text(ref)
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption).foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.reforgedCoral.opacity(0.3), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+
+        Text("Notes in \(selectedBook.name) \(selectedChapter)")
+            .font(.caption).fontWeight(.semibold)
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .padding(.top, 4)
+
+        if chapterNotes.isEmpty {
+            toolPanelEmptyState(icon: "note.text",
+                                message: "No notes here yet. Write one on the verse above.")
+        } else {
+            ForEach(chapterNotes) { note in
+                Button {
+                    openNoteEditor(for: note.reference)
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Verse \(note.verse)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.reforgedGold)
+                        Text(note.content)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                            .lineLimit(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// Highlights recorded in the chapter currently in view.
+    @ViewBuilder
+    private var bibleHighlightsPanelContent: some View {
+        let chapterHighlights = readingState.highlights.values
+            .filter { $0.book == selectedBook.name && $0.chapter == selectedChapter }
+            .sorted { $0.verse < $1.verse }
+
+        if chapterHighlights.isEmpty {
+            toolPanelEmptyState(icon: "highlighter",
+                                message: "No highlights in \(selectedBook.name) \(selectedChapter) yet. Select a verse and choose a highlight color.")
+        } else {
+            ForEach(chapterHighlights) { highlight in
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(highlight.baseColor)
+                        .frame(width: 12, height: 12)
+                    Text("Verse \(highlight.verse)")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+        }
+    }
+
+    /// Passage / translation reference info.
+    @ViewBuilder
+    private var bibleInfoPanelContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            infoRow(label: "Passage", value: "\(selectedBook.name) \(selectedChapter)")
+            infoRow(label: "Translation", value: currentTranslation.fullName)
+            infoRow(label: "Testament", value: selectedBook.testament == .old ? "Old Testament" : "New Testament")
+            infoRow(label: "Chapters read", value: "\(appState.user.chaptersRead.count) of 1189")
+
+            Divider()
+
+            Text(currentTranslation.copyright)
+                .font(.caption)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased())
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func toolPanelEmptyState(icon: String, message: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 28))
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.5))
+            Text(message)
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
+    }
+
     var body: some View {
         ZStack {
             // Fill background so 3D rotation gaps don't show as pure black
@@ -504,6 +1243,15 @@ struct BibleView: View {
                     // (`h > v * 1.5` in the gesture below), so the vertical scroll no longer fights it and
                     // no lockout is needed.
                     .coordinateSpace(name: "bibleScroll")
+                    // Opt the reader out of the sidebar's open/close animation. Without
+                    // this, the panel's spring animates the reader's WIDTH over ~0.35s,
+                    // so its per-word text relayout and chapter hydration run on every
+                    // frame of the resize — which looked like the chapters reloading.
+                    // The panel still animates; the reader just snaps to its new width
+                    // and reflows once.
+                    .animation(nil, value: activeToolPanel)
+                    .animation(nil, value: readerFullScreen)
+                    .animation(nil, value: settingsManager.showBibleToolsRail)
                     // `topChapterID` is the stable `.scrollPosition` anchor (iOS 17+). It is write-back
                     // ONLY — SwiftUI keeps it pinned to the top row, which holds the viewport steady when
                     // chapter bodies hydrate/dehydrate elsewhere in the spine. Navigation positioning uses
@@ -679,8 +1427,15 @@ struct BibleView: View {
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
 
-            // Floating chapter navigation buttons
+            // Floating chapter navigation buttons.
+            // Hide the mini player when the full audio panel is docked in the
+            // sidebar — otherwise it duplicates the panel and overlaps the text.
+            // On iPad with the rail, the collapsed-audio control pill lives in the
+            // sidebar, so the bottom bar is suppressed there — except in full-screen
+            // reading, where the sidebar (and its pill) is hidden. iPhone keeps it.
             let miniPlayerVisible = !audioPlayer.currentBook.isEmpty
+                && activeToolPanel != .audio
+                && (!usesToolSidebar || readerFullScreen)
             if barsVisible && readingState.selectedVerses.isEmpty {
                 VStack {
                     Spacer()
@@ -692,6 +1447,10 @@ struct BibleView: View {
                         onPrevious: { navigateToAdjacentChapter(offset: -1) },
                         onNext: { navigateToAdjacentChapter(offset: 1) }
                     )
+                    // Match the reading column so the prev/next buttons frame the text
+                    // and keep their position whether or not a side panel is open.
+                    .frame(maxWidth: maxContentWidth)
+                    .frame(maxWidth: .infinity)
                     .padding(.bottom, miniPlayerVisible ? 80 : 16)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -791,6 +1550,36 @@ struct BibleView: View {
                 .transition(.identity)
             }
 
+        }
+        // iPad/Mac study-tools rail lives in the trailing margin. safeAreaInset (not
+        // an overlay) reserves the width so the centered reader reflows left instead
+        // of the rail/panel sitting on top of the text.
+        .safeAreaInset(edge: .trailing, spacing: 0) {
+            if isSidebarNavigation && settingsManager.showBibleToolsRail && barsVisible {
+                if readerFullScreen {
+                    // Full-screen reading: sidebar hidden, a slim tab restores it.
+                    VStack {
+                        Spacer()
+                        fullScreenExitTab
+                        Spacer()
+                    }
+                    .padding(.trailing, 12)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                } else {
+                    bibleToolsSidebar
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+            }
+        }
+        // Animate only the sidebar itself (its own withAnimation calls). The body-level
+        // implicit animation is intentionally omitted so it can't animate the reader's
+        // width — the reader opts out explicitly above.
+        // Keep the study panel in step with the reader's selection — selecting a new
+        // verse pulls up its study info without reopening the panel.
+        .onChange(of: readingState.selectedVerses) { newSelection in
+            guard activeToolPanel == .study,
+                  let verse = allLoadedVerses.first(where: { newSelection.contains($0.reference) }) else { return }
+            panelVerse = verse
         }
         .sheet(isPresented: $showNavigationSidebar) {
             makeNavigationView(usesSheetPresentation: true)
@@ -899,24 +1688,29 @@ struct BibleView: View {
                 }
                 #endif
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: onSearchTap) {
-                        Label("Search", systemImage: "magnifyingglass")
-                    }
-                }
-
-                if currentTranslation.supportsAudio {
+                // Search / Audio / Display live in the trailing tools rail when it's
+                // shown; only fall back to the toolbar when the rail is turned off,
+                // so the two never duplicate each other.
+                if !settingsManager.showBibleToolsRail {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: onAudioTap) {
-                            Label("Audio", systemImage: audioPlayer.isPlaying ? "speaker.wave.2.fill" : "headphones")
+                        Button(action: onSearchTap) {
+                            Label("Search", systemImage: "magnifyingglass")
                         }
-                        .tint(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? Color.reforgedGold : nil)
                     }
-                }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: onFormatTap) {
-                        Label("Display", systemImage: "textformat.size")
+                    if currentTranslation.supportsAudio {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button(action: onAudioTap) {
+                                Label("Audio", systemImage: audioPlayer.isPlaying ? "speaker.wave.2.fill" : "headphones")
+                            }
+                            .tint(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? Color.reforgedGold : nil)
+                        }
+                    }
+
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: onFormatTap) {
+                            Label("Display", systemImage: "textformat.size")
+                        }
                     }
                 }
             }
@@ -1664,12 +2458,11 @@ struct BibleView: View {
         // Auto-complete any reading plan day whose chapters are now all read
         ReadingPlanService.shared.notifyChapterRead(bookName: book, chapter: chapter)
 
-        // Also record in app state for XP
+        // Also record in app state for XP. The +15 XP, any badge, and any level-up
+        // now celebrate right here in the reader — ContentView hosts the overlay.
         _ = appState.markChapterRead(book: book, chapter: chapter)
 
-        // Haptic feedback
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+        HapticManager.shared.success()
     }
 
     func navigateToSearchResult(_ result: BibleSearchResult) {
@@ -1752,11 +2545,20 @@ struct BibleView: View {
             withAnimation { readingState.clearSelection() }
 
         case .addNote:
-            // Use the first selected verse as the sheet trigger; the sheet reads
-            // all selectedVerses from readingState to build the range.
+            // Use the first selected verse as the trigger; the editor reads all
+            // selectedVerses from readingState to build the range. On iPad with the
+            // tools rail, host it in the sidebar instead of a modal sheet.
             if let firstRef = readingState.selectedVerses.first,
                let verse = allLoadedVerses.first(where: { $0.reference == firstRef }) {
-                selectedVerseForAction = verse
+                // A pinned panel stays put; the editor opens as a sheet instead.
+                if usesToolSidebar && !toolPanelPinned {
+                    panelVerse = verse
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                        activeToolPanel = .noteEditor
+                    }
+                } else {
+                    selectedVerseForAction = verse
+                }
             }
 
         case .addToMemory:
@@ -1806,7 +2608,15 @@ struct BibleView: View {
         case .verseStudy:
             if let firstRef = readingState.selectedVerses.first,
                let verse = allLoadedVerses.first(where: { $0.reference == firstRef }) {
-                selectedVerseForStudy = verse
+                // A pinned panel stays put; the study opens as a sheet instead.
+                if usesToolSidebar && !toolPanelPinned {
+                    panelVerse = verse
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                        activeToolPanel = .study
+                    }
+                } else {
+                    selectedVerseForStudy = verse
+                }
             }
 
         }
@@ -2356,6 +3166,245 @@ struct BibleTopBar: View {
 
 // MARK: - Floating Chapter Navigation (Side-positioned Circle Buttons)
 
+// MARK: - Compact Audio Sidebar Panel (iPad tools rail)
+
+/// A slim, sidebar-friendly audio player: album artwork, transport, an audio-version
+/// switcher, plus collapse-to-pill and stop-and-close controls.
+struct BibleAudioSidebarPanel: View {
+    @ObservedObject var audioPlayer: BibleAudioPlayer
+    /// Collapses the panel to the sidebar audio pill (audio keeps playing).
+    var onCollapse: (() -> Void)? = nil
+    /// Dismisses the panel entirely (paired with `audioPlayer.stop()`).
+    var onClose: (() -> Void)? = nil
+    @Environment(\.colorScheme) var colorScheme
+    @State private var isScrubbing = false
+    @State private var scrubPosition: Double = 0
+
+    /// Translations that have real audio (not TTS).
+    private var audioVersions: [BibleTranslation] {
+        BibleTranslation.allCases.filter { $0.supportsAudio }
+    }
+
+    private var progressFraction: CGFloat {
+        guard audioPlayer.duration > 0 else { return 0 }
+        let t = isScrubbing ? scrubPosition : audioPlayer.currentTime
+        return CGFloat(max(0, min(1, t / audioPlayer.duration)))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            // Header: collapse-to-pill + label + stop/close
+            HStack(spacing: 10) {
+                Button {
+                    onCollapse?()
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .frame(width: 28, height: 28)
+                        .background(Color.adaptiveChipBackground(colorScheme))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Collapse audio player")
+
+                Text("NOW PLAYING")
+                    .font(.caption2).fontWeight(.semibold)
+                    .tracking(1.5)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+                Spacer()
+
+                // Stop playback and dismiss the player entirely.
+                Button {
+                    audioPlayer.stop()
+                    onClose?()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .frame(width: 28, height: 28)
+                        .background(Color.adaptiveChipBackground(colorScheme))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Stop and close audio")
+            }
+
+            // Album artwork
+            AudioAlbumArtwork(book: audioPlayer.currentBook,
+                              chapter: audioPlayer.currentChapter,
+                              translation: audioPlayer.currentTranslation)
+                .frame(maxWidth: .infinity)
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxWidth: 220)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+            // Title + version switcher
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(audioPlayer.currentBook.isEmpty
+                         ? "Audio Bible"
+                         : "\(audioPlayer.currentBook) \(audioPlayer.currentChapter)")
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
+                    Text(audioSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                versionMenu
+            }
+
+            // Scrubber
+            if !audioPlayer.isTTSMode {
+                VStack(spacing: 6) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.adaptiveTextSecondary(colorScheme).opacity(0.2)).frame(height: 4)
+                            Capsule().fill(Color.reforgedCoral).frame(width: geo.size.width * progressFraction, height: 4)
+                        }
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { v in
+                                    isScrubbing = true
+                                    scrubPosition = Double(max(0, min(1, v.location.x / geo.size.width))) * audioPlayer.duration
+                                }
+                                .onEnded { v in
+                                    let f = max(0, min(1, v.location.x / geo.size.width))
+                                    audioPlayer.seek(to: Double(f) * audioPlayer.duration)
+                                    isScrubbing = false
+                                }
+                        )
+                    }
+                    .frame(height: 16)
+                    HStack {
+                        Text(timeString(isScrubbing ? scrubPosition : audioPlayer.currentTime))
+                        Spacer()
+                        Text("-" + timeString(max(0, audioPlayer.duration - (isScrubbing ? scrubPosition : audioPlayer.currentTime))))
+                    }
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+
+            // Transport controls
+            HStack {
+                controlButton("backward.fill", size: 18) { audioPlayer.playPreviousChapter() }
+                Spacer()
+                controlButton("gobackward.15", size: 20) { audioPlayer.skipBackward(15) }
+                Spacer()
+                Button { audioPlayer.togglePlayPause() } label: {
+                    Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(colorScheme == .dark ? .black : .white)
+                        .frame(width: 56, height: 56)
+                        .background(Color.adaptiveText(colorScheme))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                Spacer()
+                controlButton("goforward.15", size: 20) { audioPlayer.skipForward(15) }
+                Spacer()
+                controlButton("forward.fill", size: 18) { audioPlayer.playNextChapter() }
+            }
+            .padding(.top, 4)
+
+            // Footer: speed + sleep
+            HStack {
+                speedMenu
+                Spacer()
+                SleepTimerButtonView(audioPlayer: audioPlayer).equatable()
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .onAppear { scrubPosition = audioPlayer.currentTime }
+    }
+
+    private var audioSubtitle: String {
+        audioPlayer.isTTSMode
+            ? "\(audioPlayer.currentTranslation.rawValue.uppercased()) · Text-to-Speech"
+            : "\(audioPlayer.currentTranslation.rawValue.uppercased()) Audio Bible"
+    }
+
+    private var versionMenu: some View {
+        Menu {
+            ForEach(audioVersions) { version in
+                Button {
+                    guard version != audioPlayer.currentTranslation else { return }
+                    audioPlayer.updateFromSettings()
+                    audioPlayer.play(book: audioPlayer.currentBook.isEmpty ? "John" : audioPlayer.currentBook,
+                                     chapter: max(1, audioPlayer.currentChapter),
+                                     translation: version)
+                } label: {
+                    HStack {
+                        Text(version.rawValue)
+                        if version == audioPlayer.currentTranslation { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(audioPlayer.currentTranslation.rawValue)
+                    .font(.subheadline).fontWeight(.semibold)
+                Image(systemName: "chevron.up.chevron.down").font(.caption2)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Color.reforgedNavy)
+            .clipShape(Capsule())
+        }
+    }
+
+    private func controlButton(_ systemName: String, size: CGFloat, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var speedMenu: some View {
+        Menu {
+            ForEach([0.75, 1.0, 1.25, 1.5, 2.0] as [Float], id: \.self) { rate in
+                Button {
+                    audioPlayer.setPlaybackRate(rate)
+                } label: {
+                    HStack {
+                        Text(rate == 1.0 ? "1×" : "\(String(format: "%g", rate))×")
+                        if audioPlayer.playbackRate == rate { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "gauge.with.dots.needle.67percent").font(.system(size: 13))
+                Text(audioPlayer.playbackRate == 1.0 ? "1×" : "\(String(format: "%g", audioPlayer.playbackRate))×")
+                    .font(.caption).fontWeight(.semibold).monospacedDigit()
+            }
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .padding(.horizontal, 13).padding(.vertical, 7)
+            .background(Color.adaptiveChipBackground(colorScheme))
+            .clipShape(Capsule())
+        }
+    }
+
+    private func timeString(_ t: TimeInterval) -> String {
+        guard t.isFinite, t >= 0 else { return "0:00" }
+        let total = Int(t)
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+}
+
 struct FloatingChapterNav: View {
     let hasPrevious: Bool
     let hasNext: Bool
@@ -2418,11 +3467,16 @@ struct FormattingPanelView: View {
     var body: some View {
         FormattingPanelScrollContent(settings: settings, themeManager: themeManager)
             .safeAreaInset(edge: .top, spacing: 0) {
-                FormattingPanelHeader(isPresented: $isPresented)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .overlay(alignment: .bottom) {
-                        Divider()
-                    }
+                VStack(spacing: 0) {
+                    FormattingPanelHeader(isPresented: $isPresented)
+                    FormattingPreviewCard(settings: settings)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+                }
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .overlay(alignment: .bottom) {
+                    Divider()
+                }
             }
             .background(Color.adaptiveCardBackground(colorScheme))
     }
@@ -2458,6 +3512,92 @@ private struct FormattingPanelHeader: View {
     }
 }
 
+// MARK: - Live Preview
+
+/// Pinned sample passage that re-renders as the reader settings change, so the
+/// effect of every control is visible without dismissing the panel.
+/// John 3:16–17 is used because it is words of Christ — it doubles as the
+/// red-letter preview.
+private struct FormattingPreviewCard: View {
+    @ObservedObject var settings: BibleReadingSettings
+    @StateObject private var settingsManager = SettingsManager.shared
+    @Environment(\.colorScheme) var colorScheme
+
+    private static let wocColor = Color(red: 0.75, green: 0.1, blue: 0.1)
+
+    private static let samples: [(number: Int, text: String)] = [
+        (16, "For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life."),
+        (17, "For God did not send his Son into the world to condemn the world, but in order that the world might be saved through him.")
+    ]
+
+    private var textColor: Color {
+        settingsManager.showRedLetterText ? Self.wocColor : Color.adaptiveText(colorScheme)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Group {
+                if settings.verseByVerse {
+                    VStack(alignment: .leading, spacing: settings.lineSpacing.spacing + 6) {
+                        ForEach(Self.samples, id: \.number) { sample in
+                            HStack(alignment: .top, spacing: 4) {
+                                verseNumber(sample.number)
+                                verseText(sample.text)
+                            }
+                        }
+                    }
+                } else {
+                    Self.samples.reduce(Text("")) { partial, sample in
+                        partial + inlineVerseNumber(sample.number) + inlineVerseText(sample.text) + Text(" ")
+                    }
+                    .lineSpacing(settings.lineSpacing.spacing)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: settings.verseByVerse)
+
+            Text("John 3:16–17")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundStyle(Color.reforgedGold)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.adaptiveBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Preview of John 3 verses 16 to 17 in the current display settings")
+    }
+
+    private func verseNumber(_ number: Int) -> some View {
+        Text("\(number)")
+            .font(.system(size: settings.effectiveVerseNumberSize, weight: .bold, design: .rounded))
+            .foregroundStyle(Color.reforgedGold)
+            .baselineOffset(6)
+    }
+
+    private func verseText(_ text: String) -> some View {
+        Text(text)
+            .font(settings.fontType.font(size: settings.effectiveFontSize))
+            .foregroundStyle(textColor)
+            .lineSpacing(settings.lineSpacing.spacing)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func inlineVerseNumber(_ number: Int) -> Text {
+        Text("\(number) ")
+            .font(.system(size: settings.effectiveVerseNumberSize, weight: .bold, design: .rounded))
+            .foregroundColor(Color.reforgedGold)
+            .baselineOffset(6)
+    }
+
+    private func inlineVerseText(_ text: String) -> Text {
+        Text(text)
+            .font(settings.fontType.font(size: settings.effectiveFontSize))
+            .foregroundColor(textColor)
+    }
+}
+
 // MARK: - Formatting Panel Scroll Content
 
 private struct FormattingPanelScrollContent: View {
@@ -2469,30 +3609,30 @@ private struct FormattingPanelScrollContent: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
+                // Text: the controls the preview above responds to most directly
+                FormattingCard {
+                    FormattingFontSizeSection(settings: settings)
+                    Divider()
+                    FormattingFontTypeSection(settings: settings)
+                    Divider()
+                    FormattingLineSpacingSection(settings: settings)
+                }
+
+                // Layout + red letter — also reflected in the preview
+                FormattingCard {
+                    FormattingVerseLayoutSection(settings: settings)
+                    Divider()
+                    FormattingRedLetterSection(isOn: $settingsManager.showRedLetterText)
+                }
+
                 // Theme
                 FormattingCard {
                     FormattingThemeSection(themeManager: themeManager)
                 }
 
-                // Font size + type together
+                // Reading mode — affects the reader chrome, not the text
                 FormattingCard {
-                    FormattingFontSizeSection(settings: settings)
-                    Divider()
-                    FormattingFontTypeSection(settings: settings)
-                }
-
-                // Line spacing
-                FormattingCard {
-                    FormattingLineSpacingSection(settings: settings)
-                }
-
-                // Toggles grouped in one card
-                FormattingCard {
-                    FormattingVerseLayoutSection(settings: settings)
-                    Divider()
                     FormattingReadingModeSection(isOn: $settingsManager.readingMode)
-                    Divider()
-                    FormattingRedLetterSection(isOn: $settingsManager.showRedLetterText)
                 }
             }
             .padding(.horizontal, 16)
@@ -2533,6 +3673,7 @@ private struct FormattingThemeSection: View {
                 ForEach(ThemeMode.allCases, id: \.self) { mode in
                     FormattingThemeButton(mode: mode, isSelected: themeManager.currentMode == mode) {
                         themeManager.currentMode = mode
+                        HapticManager.shared.lightImpact()
                     }
                 }
             }
@@ -2567,6 +3708,8 @@ private struct FormattingThemeSection: View {
                     .stroke(isSelected ? Color.clear : Color.adaptiveTextSecondary(colorScheme).opacity(0.2), lineWidth: 1)
             )
         }
+        .accessibilityLabel("\(mode.rawValue) theme")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -2620,6 +3763,8 @@ private struct FormattingFontSizeSection: View {
                     step: 1
                 )
                 .tint(Color.reforgedGold)
+                .accessibilityLabel("Font size")
+                .accessibilityValue(settings.fontSize.displayName)
 
                 Text("A")
                     .font(.system(size: 22, weight: .medium))
@@ -2686,6 +3831,7 @@ private struct FormattingLineSpacingSection: View {
                 ForEach(BibleReadingSettings.LineSpacingOption.allCases, id: \.self) { spacing in
                     FormattingLineSpacingButton(spacing: spacing, isSelected: settings.lineSpacing == spacing) {
                         settings.lineSpacing = spacing
+                        HapticManager.shared.lightImpact()
                     }
                 }
             }
@@ -2699,23 +3845,51 @@ private struct FormattingLineSpacingButton: View {
     let action: () -> Void
     @Environment(\.colorScheme) var colorScheme
 
+    /// Gap between the glyph's lines — a scaled-down stand-in for the real spacing.
+    private var glyphGap: CGFloat {
+        switch spacing {
+        case .tight:   return 2
+        case .normal:  return 4
+        case .relaxed: return 6
+        case .wide:    return 8
+        }
+    }
+
     var body: some View {
         Button(action: action) {
-            Text(spacing.displayName)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(isSelected
-                    ? (colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
-                    : Color.adaptiveCardBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSelected ? Color.clear : Color.adaptiveTextSecondary(colorScheme).opacity(0.2), lineWidth: 1)
-                )
+            VStack(spacing: 8) {
+                VStack(spacing: glyphGap) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(foreground)
+                            .frame(height: 2)
+                    }
+                }
+                .frame(height: 30)
+                .padding(.horizontal, 6)
+
+                Text(spacing.displayName)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(foreground)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(isSelected
+                ? (colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
+                : Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.clear : Color.adaptiveTextSecondary(colorScheme).opacity(0.2), lineWidth: 1)
+            )
         }
+        .accessibilityLabel(spacing.displayName)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    private var foreground: Color {
+        isSelected ? .white : Color.adaptiveText(colorScheme)
     }
 }
 
@@ -2743,6 +3917,7 @@ private struct FormattingVerseLayoutSection: View {
                 }
             }
             .tint(Color.reforgedGold)
+            .onChange(of: settings.verseByVerse) { _ in HapticManager.shared.lightImpact() }
         }
     }
 }
@@ -2770,7 +3945,8 @@ private struct FormattingReadingModeSection: View {
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
             }
-            .tint(Color.reforgedNavy)
+            .tint(Color.reforgedGold)
+            .onChange(of: isOn) { _ in HapticManager.shared.lightImpact() }
         }
     }
 }
@@ -2799,6 +3975,7 @@ private struct FormattingRedLetterSection: View {
                 }
             }
             .tint(Color(red: 0.75, green: 0.1, blue: 0.1))
+            .onChange(of: isOn) { _ in HapticManager.shared.lightImpact() }
         }
     }
 }
@@ -3319,7 +4496,7 @@ struct AddToMemorySheet: View {
             esvText: combinedText,
             category: selectedCategory,
             translation: translation.rawValue,
-            lastFetched: ISO8601DateFormatter().string(from: Date()),
+            lastFetched: AppDateFormatters.iso8601.string(from: Date()),
             nextReviewDate: Date(),
             reviewCount: 0,
             easeFactor: 2.5,

@@ -257,6 +257,24 @@ class ApiBibleService {
         }
     }
 
+    // Coalesces bursts of chapter caching (e.g. whole-Bible downloads) into a
+    // single full-cache encode instead of re-serializing every chapter fetch.
+    private var pendingCacheSave: DispatchWorkItem?
+    private let cacheSaveDelay: TimeInterval = 2.0
+
+    private func scheduleCacheSave() {
+        pendingCacheSave?.cancel()
+        let snapshot = chapterCache
+        let key = cacheKey
+        let work = DispatchWorkItem {
+            if let data = try? JSONEncoder().encode(snapshot) {
+                UserDefaults.standard.set(data, forKey: key)
+            }
+        }
+        pendingCacheSave = work
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + cacheSaveDelay, execute: work)
+    }
+
     private func getCachedChapter(translation: String, book: String, chapter: Int) -> ApiBibleCachedChapter? {
         let key = cacheKeyFor(translation: translation, book: book, chapter: chapter)
         guard let cached = chapterCache[key] else { return nil }
@@ -268,10 +286,12 @@ class ApiBibleService {
     private func cacheChapter(_ chapter: ApiBibleCachedChapter, translation: String) {
         let key = cacheKeyFor(translation: translation, book: chapter.book, chapter: chapter.chapter)
         chapterCache[key] = chapter
-        saveCacheToDisk()
+        scheduleCacheSave()
     }
 
     func clearCache() {
+        pendingCacheSave?.cancel()
+        pendingCacheSave = nil
         chapterCache.removeAll()
         UserDefaults.standard.removeObject(forKey: cacheKey)
         debugLog("API.Bible chapter cache cleared.")
@@ -287,6 +307,8 @@ class ApiBibleService {
         guard let bibleId = ApiBibleConfig.bibleIds[translation] else { return }
         let prefix = "\(bibleId)_"
         chapterCache = chapterCache.filter { !$0.key.hasPrefix(prefix) }
+        pendingCacheSave?.cancel()
+        pendingCacheSave = nil
         saveCacheToDisk()
         debugLog("\(translation.rawValue) chapter cache cleared.")
     }
@@ -305,6 +327,8 @@ class ApiBibleService {
                 content: chapter.content
             )
         }
+        pendingCacheSave?.cancel()
+        pendingCacheSave = nil
         saveCacheToDisk()
         debugLog("API.Bible bundle injected: \(bundle.count) chapters.")
     }

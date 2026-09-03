@@ -77,7 +77,7 @@ class NotificationManager: NSObject, ObservableObject {
     /// Includes legacy IDs (`daily-reading-reminder`, `daily-review-reminder`) so
     /// reminders scheduled by older app versions get cleaned up too.
     private var allManagedIdentifiers: [String] {
-        var ids: [String] = ["daily-reading-reminder", "daily-review-reminder"]
+        var ids: [String] = ["daily-reading-reminder", "daily-review-reminder", "partner-report-reminder"]
         for weekday in 1...7 {
             ids.append("reading-reminder-\(weekday)")
             ids.append("review-reminder-\(weekday)")
@@ -186,6 +186,38 @@ class NotificationManager: NSObject, ObservableObject {
                                  body: "Pick up where you left off in your discipleship track.",
                                  action: "open-lessons", center: center)
         }
+
+        // Weekly accountability-report reminder — its own day/time, independent of
+        // the daily reminder slots. Only fires once a partner actually exists.
+        scheduleWeeklyPartnerReportReminder(center: center)
+    }
+
+    /// Weekly nudge to send the accountability report. Opt-in (defaults off) and
+    /// scheduled here so `scheduleDailyReminder()` stays the single source of
+    /// truth — it removes `partner-report-reminder` before every rebuild, so this
+    /// can never stack.
+    @MainActor private func scheduleWeeklyPartnerReportReminder(center: UNUserNotificationCenter) {
+        let partner = AccountabilityPartnerService.shared
+        guard partner.reminderEnabled, partner.hasPartner else { return }
+
+        let time = Calendar.current.dateComponents([.hour, .minute], from: partner.reminderTime)
+        var trigger = DateComponents()
+        trigger.weekday = partner.reminderDay
+        trigger.hour = time.hour
+        trigger.minute = time.minute
+
+        let content = UNMutableNotificationContent()
+        content.title = "Send your accountability report"
+        content.body = "Take a minute to send \(partner.partnerName) this week's shield report."
+        content.sound = .default
+        content.userInfo = ["action": "open-accountability"]
+
+        let request = UNNotificationRequest(
+            identifier: "partner-report-reminder",
+            content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: trigger, repeats: true)
+        )
+        center.add(request, withCompletionHandler: nil)
     }
 
     // MARK: - Personalized Daily Reading Notifications (Gemini)
