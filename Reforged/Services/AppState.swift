@@ -365,7 +365,11 @@ class AppState: ObservableObject {
         if appleSignIn.isSignedIn, user.onboardingCompleted, hasSyncedFromCloud,
            cloudKit.isCloudAvailable {
             do {
-                try await cloudKit.saveProfile(user)
+                // Attach the full streak/reading history so it round-trips through the
+                // profile record (kept off `user` itself, which is the local-persisted copy).
+                var profileToSave = user
+                profileToSave.streakHistory = ReadingStreakManager.shared.exportHistory()
+                try await cloudKit.saveProfile(profileToSave)
                 try await cloudKit.saveMemoryVerses(memoryVerses)
                 try await cloudKit.saveTrackProgress(tracks)
                 let highlights = Array(BibleReadingState.shared.highlights.values)
@@ -420,36 +424,50 @@ class AppState: ObservableObject {
                 if !cloudProfile.displayName.isEmpty { user.displayName = cloudProfile.displayName }
                 if !cloudProfile.avatar.isEmpty { user.avatar = cloudProfile.avatar }
                 if !cloudProfile.goals.isEmpty { user.goals = cloudProfile.goals }
+                // XP/level is a running counter, not a set: keep the higher total.
                 if cloudProfile.xp > 0 { user.xp = max(user.xp, cloudProfile.xp) }
-                if cloudProfile.streak > 0 {
-                    user.streak = max(user.streak, cloudProfile.streak)
-                    // If local reading-date history is empty (fresh install), seed it from
-                    // the synced streak count so the HomeView StreakCard shows the correct
-                    // value immediately rather than showing 0.
-                    ReadingStreakManager.shared.seedStreak(count: user.streak)
-                }
                 user.longestStreak = max(user.longestStreak, cloudProfile.longestStreak)
                 if !cloudProfile.lastActiveDate.isEmpty { user.lastActiveDate = cloudProfile.lastActiveDate }
+
+                // Everything below is additive progress — UNION, never overwrite, so a
+                // day/badge/lesson recorded on either device always survives the merge.
                 if !cloudProfile.completedLessons.isEmpty {
-                    // Merge completed lessons (union)
-                    let merged = Set(user.completedLessons).union(Set(cloudProfile.completedLessons))
-                    user.completedLessons = Array(merged)
+                    user.completedLessons = Array(Set(user.completedLessons).union(cloudProfile.completedLessons))
                 }
                 user.streakFreezes = max(user.streakFreezes, cloudProfile.streakFreezes)
                 if !cloudProfile.freezeUsedDates.isEmpty {
-                    user.freezeUsedDates = cloudProfile.freezeUsedDates
-                    ReadingStreakManager.shared.seedFrozenDates(cloudProfile.freezeUsedDates)
+                    user.freezeUsedDates = Array(Set(user.freezeUsedDates).union(cloudProfile.freezeUsedDates))
                 }
                 if !cloudProfile.activeDates.isEmpty {
-                    let merged = Set(user.activeDates).union(Set(cloudProfile.activeDates))
-                    user.activeDates = Array(merged)
+                    user.activeDates = Array(Set(user.activeDates).union(cloudProfile.activeDates))
                 }
                 if !cloudProfile.chaptersRead.isEmpty {
-                    let merged = Set(user.chaptersRead).union(Set(cloudProfile.chaptersRead))
-                    user.chaptersRead = Array(merged)
+                    user.chaptersRead = Array(Set(user.chaptersRead).union(cloudProfile.chaptersRead))
                 }
-                if !cloudProfile.badges.isEmpty { user.badges = cloudProfile.badges }
-                user.weeklyActivity = cloudProfile.weeklyActivity
+                if !cloudProfile.badges.isEmpty {
+                    // Union by id: keep a badge earned on either device.
+                    var byID = Dictionary(user.badges.map { ($0.id, $0) }, uniquingKeysWith: { local, _ in local })
+                    for badge in cloudProfile.badges where byID[badge.id] == nil { byID[badge.id] = badge }
+                    user.badges = Array(byID.values)
+                }
+                // Weekly-activity feed: merge each list instead of clobbering local.
+                user.weeklyActivity = mergeWeeklyActivity(user.weeklyActivity, cloudProfile.weeklyActivity)
+
+                // Streak / reading history: import the REAL merged history so the streak
+                // walk and reading calendar rebuild exactly on this device. Fall back to
+                // the legacy count-seed only for old cloud records that predate history sync.
+                let manager = ReadingStreakManager.shared
+                if let history = cloudProfile.streakHistory {
+                    manager.importHistory(history)
+                } else if cloudProfile.streak > 0 {
+                    manager.seedStreak(count: max(user.streak, cloudProfile.streak))
+                }
+                if !user.freezeUsedDates.isEmpty {
+                    manager.seedFrozenDates(user.freezeUsedDates)
+                }
+                // Recompute the mirror from the merged history — the manager is the source
+                // of truth; the stored streak number is never left ahead of the real one.
+                syncStreakFromManager()
 
                 user.onboardingCompleted = true
                 user.loggedIn = true
@@ -457,6 +475,30 @@ class AppState: ObservableObject {
         } catch {
             debugLog("Error loading profile from cloud: \(error)")
         }
+    }
+
+    /// Union two lists, treating two elements with the same `key` as the same entry.
+    /// Local order is kept first so a re-sync is stable.
+    private func unionByKey<T>(_ local: [T], _ remote: [T], key: (T) -> String) -> [T] {
+        var seen = Set<String>()
+        var result: [T] = []
+        for item in local + remote where seen.insert(key(item)).inserted {
+            result.append(item)
+        }
+        return result
+    }
+
+    /// Merge two weekly-activity feeds list-by-list so neither device's entries are
+    /// lost. XP totals are reconciled separately (max), so collapsing identical
+    /// same-day XP events here is intentional and harmless.
+    private func mergeWeeklyActivity(_ a: WeeklyActivity, _ b: WeeklyActivity) -> WeeklyActivity {
+        var merged = WeeklyActivity()
+        merged.lessonsCompleted   = unionByKey(a.lessonsCompleted,   b.lessonsCompleted)   { "\($0.lessonId)|\($0.date)" }
+        merged.versesReviewed     = unionByKey(a.versesReviewed,     b.versesReviewed)     { "\($0.verseId)|\($0.date)" }
+        merged.chaptersRead       = unionByKey(a.chaptersRead,       b.chaptersRead)       { "\($0.chapter)|\($0.date)" }
+        merged.reflectionsWritten = unionByKey(a.reflectionsWritten, b.reflectionsWritten) { "\($0.date)|\($0.xp)" }
+        merged.xpEarned           = unionByKey(a.xpEarned,           b.xpEarned)           { "\($0.date)|\($0.source)|\($0.amount)" }
+        return merged
     }
 
     // MARK: - Memory Verses Sync
@@ -947,20 +989,48 @@ class AppState: ObservableObject {
 
     // MARK: - Bible Reading
 
+    /// The single entry point for "a chapter was read." Every mark-as-read path —
+    /// the reader button, audio completion, reading-plan auto-complete — funnels
+    /// through here so the streak, the widget, the freeze repair, and the synced
+    /// `user.streak` mirror can never disagree.
+    ///
+    /// Safe to call on every read, including re-reads: the streak side always runs,
+    /// so no screen ever shows a stale number. XP and the unique chapters-read
+    /// progress list only grow on the *first* read of a given chapter. Returns true
+    /// when this was that first read.
+    @discardableResult
     func markChapterRead(book: String, chapter: Int) -> Bool {
         let chapterKey = "\(book) \(chapter)"
-        // Satisfies the Scripture unlock gate even on a re-read — the guard below
-        // only exists to keep XP and the read list from double-counting.
-        UnlockGateService.shared.clear(with: .chapterRead)
-        guard !user.chaptersRead.contains(chapterKey) else { return false }
 
-        let today = SettingsManager.shared.currentLogicalDateString()
-        user.chaptersRead.append(chapterKey)
-        user.weeklyActivity.chaptersRead.append(ChapterActivity(chapter: chapterKey, date: today))
-        addXP(15, source: "chapter")
+        // --- Streak side: runs on EVERY read, before the dedupe guard, so a
+        // re-read still advances the streak, repairs coverable gaps, mirrors the
+        // value onto user.streak, and clears the Scripture unlock gate. The manager
+        // is the single source of truth (see ReadingStreakManager); syncStreakFromManager
+        // is the ONLY way user.streak is allowed to change.
+        applyPendingStreakFreezes()
+        ReadingStreakManager.shared.recordChapterRead(book: book, chapter: chapter)
+        syncStreakFromManager()
+        touchActiveDate()
+        UnlockGateService.shared.clear(with: .chapterRead)
+        // Auto-complete any reading-plan day whose chapters are now all read.
+        ReadingPlanService.shared.notifyChapterRead(bookName: book, chapter: chapter)
+
+        // --- Progress + XP side: only the first read of this chapter counts. ---
+        let isFirstRead = !user.chaptersRead.contains(chapterKey)
+        if isFirstRead {
+            let today = SettingsManager.shared.currentLogicalDateString()
+            user.chaptersRead.append(chapterKey)
+            user.weeklyActivity.chaptersRead.append(ChapterActivity(chapter: chapterKey, date: today))
+            // addXP idempotently re-touches the streak; harmless after the sync above.
+            addXP(15, source: "chapter")
+        } else {
+            // Streak just advanced on a re-read — re-check streak-based badges.
+            checkAndAwardBadges()
+        }
+
         // Save immediately so progress survives force-quit (don't rely on debounce alone)
         saveToLocalStorage()
-        return true
+        return isFirstRead
     }
 
     // MARK: - Badge & Perk System

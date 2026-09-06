@@ -88,6 +88,15 @@ class CloudKitSyncService: ObservableObject {
             record["weeklyActivity"] = activityJSON as CKRecordValue
         }
 
+        // Full streak / reading-calendar history so a new device rebuilds the real
+        // history (not a fabricated run). Populated by the caller from
+        // ReadingStreakManager.exportHistory().
+        if let history = profile.streakHistory,
+           let historyData = try? JSONEncoder().encode(history),
+           let historyJSON = String(data: historyData, encoding: .utf8) {
+            record["streakHistory"] = historyJSON as CKRecordValue
+        }
+
         // Profile image as CKAsset
         if let imagePath = profile.profileImagePath,
            let imageURL = ProfileImageService.shared.imageURL(named: imagePath) {
@@ -132,6 +141,15 @@ class CloudKitSyncService: ObservableObject {
             return WeeklyActivity()
         }()
 
+        let streakHistory: StreakHistory? = {
+            if let json = record["streakHistory"] as? String,
+               let data = json.data(using: .utf8),
+               let decoded = try? JSONDecoder().decode(StreakHistory.self, from: data) {
+                return decoded
+            }
+            return nil
+        }()
+
         // Restore profile image from CloudKit asset
         var profileImagePath: String? = nil
         if let asset = record["profileImage"] as? CKAsset,
@@ -141,7 +159,7 @@ class CloudKitSyncService: ObservableObject {
             profileImagePath = ProfileImageService.shared.saveImage(image)
         }
 
-        return UserProfile(
+        var profile = UserProfile(
             id: record.recordID.recordName,
             firstName: record["firstName"] as? String ?? "",
             lastName: record["lastName"] as? String ?? "",
@@ -166,6 +184,8 @@ class CloudKitSyncService: ObservableObject {
             weeklyActivity: weeklyActivity,
             profileImagePath: profileImagePath
         )
+        profile.streakHistory = streakHistory
+        return profile
     }
 
     // MARK: - Memory Verses

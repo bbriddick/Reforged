@@ -593,6 +593,17 @@ struct AdaptiveLayout {
 
     /// Minimum detail view width
     static let minDetailWidth: CGFloat = 400
+
+    /// Left nav-sidebar width WHILE the Bible reader is shown. Matched to the study-
+    /// tools panel footprint (panel width 340 + the 10pt rail gap) so that collapsing
+    /// the nav sidebar when a panel opens frees exactly the width the panel takes on
+    /// the right — the reader shifts over but keeps its reading width, and the
+    /// whole-Bible spine does not reflow.
+    static let bibleToolPanelWidth: CGFloat = 340
+    /// The left sidebar slot width while the Bible reader is shown. The docked panel
+    /// occupies exactly this width, and the reader's fixed width is the window minus
+    /// this — so the panel replaces the nav sidebar's space with the reader untouched.
+    static let bibleNavSidebarWidth: CGFloat = 340
 }
 
 /// Size of the app's active window. Unlike `UIScreen.main.bounds`, this is correct

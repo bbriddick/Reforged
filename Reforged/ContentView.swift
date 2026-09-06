@@ -478,7 +478,9 @@ struct SidebarNavigationView: View {
                     NavigationRow(icon: "shield.lefthalf.filled", title: "Discipleship", tag: 1, selectedTab: $selectedTab)
                     NavigationRow(icon: "text.book.closed.fill", title: "Bible", tag: 2, selectedTab: $selectedTab)
                     NavigationRow(icon: "brain.head.profile", title: "Memory", tag: 3, selectedTab: $selectedTab)
-                    NavigationRow(icon: "person.3.fill", title: "Groups", tag: 6, selectedTab: $selectedTab)
+                    // Groups tab hidden for now — restore this row to bring it back
+                    // (GroupsView and the `case 6` detail branch below are left intact).
+                    // NavigationRow(icon: "person.3.fill", title: "Groups", tag: 6, selectedTab: $selectedTab)
                 } header: {
                     Text("Reforged")
                         .font(.title2)
@@ -498,6 +500,9 @@ struct SidebarNavigationView: View {
             }
             .listStyle(.sidebar)
             .navigationTitle("")
+            // Matched to the Bible reader's docked-panel width so the panel replaces
+            // the sidebar's slot exactly, leaving the reader untouched.
+            .navigationSplitViewColumnWidth(AdaptiveLayout.bibleNavSidebarWidth)
             #if targetEnvironment(macCatalyst)
             .frame(minWidth: 220)
             #endif
@@ -511,7 +516,7 @@ struct SidebarNavigationView: View {
                 DiscipleshipView()
                     .environment(\.isSidebarNavigation, true)
             case 2:
-                BibleView()
+                BibleView(navColumnVisibility: $columnVisibility)
                     .environment(\.isSidebarNavigation, true)
             case 3:
                 MemoryView()
@@ -526,7 +531,7 @@ struct SidebarNavigationView: View {
                 GroupsView()
                     .environment(\.isSidebarNavigation, true)
             default:
-                BibleView()
+                BibleView(navColumnVisibility: $columnVisibility)
                     .environment(\.isSidebarNavigation, true)
             }
         }
@@ -658,11 +663,12 @@ struct MainTabView: View {
                 }
                 .tag(3)
 
-            GroupsView()
-                .tabItem {
-                    Label("Groups", systemImage: "person.3.fill")
-                }
-                .tag(6)
+            // Groups tab hidden for now — uncomment to bring it back.
+            // GroupsView()
+            //     .tabItem {
+            //         Label("Groups", systemImage: "person.3.fill")
+            //     }
+            //     .tag(6)
 
             // No Profile tab — four tabs read more simply, and Profile is one tap
             // away via the avatar in HomeView's WelcomeHeader. The iPad sidebar

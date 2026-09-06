@@ -45,6 +45,20 @@ enum StreakActivity: String, Codable, CaseIterable {
     }
 }
 
+/// A complete, transferable snapshot of everything the streak walk and the
+/// reading calendar are derived from. Synced through the CloudKit profile record
+/// so a new device rebuilds the REAL history instead of a fabricated run.
+/// All fields are additive: merging two snapshots is a union that can never lose
+/// a day either device recorded.
+struct StreakHistory: Codable {
+    var readingDates: [String]
+    var activityDates: [String]
+    var frozenDates: [String]
+    var chaptersReadByDate: [String: [String]]
+    var activityKindsByDate: [String: [String]]   // StreakActivity rawValues
+    var longestStreak: Int
+}
+
 /// Single source of truth for the daily streak.
 ///
 /// A day counts if the user did any `StreakActivity` on it, or if a streak freeze
@@ -355,6 +369,46 @@ class ReadingStreakManager: ObservableObject {
     func seedFrozenDates(_ dates: [String]) {
         guard !dates.isEmpty else { return }
         frozenDates.formUnion(dates)
+        saveToStorage()
+        objectWillChange.send()
+    }
+
+    // MARK: - Cross-device history sync
+
+    /// A snapshot of everything the streak + reading calendar derive from, for
+    /// syncing to the cloud profile record.
+    func exportHistory() -> StreakHistory {
+        StreakHistory(
+            readingDates: Array(readingDates),
+            activityDates: Array(activityDates),
+            frozenDates: Array(frozenDates),
+            chaptersReadByDate: chaptersReadByDate,
+            activityKindsByDate: activityKindsByDate.mapValues { $0.map(\.rawValue) },
+            longestStreak: longestStreak
+        )
+    }
+
+    /// Merge a snapshot from another device into this one. Everything unions —
+    /// progress is additive, so a union never drops a day either device recorded —
+    /// and the current streak is left to recompute from the merged sets rather than
+    /// trusting any stored number.
+    func importHistory(_ h: StreakHistory) {
+        readingDates.formUnion(h.readingDates)
+        activityDates.formUnion(h.activityDates)
+        frozenDates.formUnion(h.frozenDates)
+
+        for (date, chapters) in h.chaptersReadByDate {
+            var merged = Set(chaptersReadByDate[date] ?? [])
+            merged.formUnion(chapters)
+            chaptersReadByDate[date] = Array(merged).sorted()
+        }
+        for (date, kinds) in h.activityKindsByDate {
+            let mapped = kinds.compactMap { StreakActivity(rawValue: $0) }
+            activityKindsByDate[date, default: []].formUnion(mapped)
+        }
+
+        longestStreak = max(longestStreak, h.longestStreak, calculateCurrentStreak())
+
         saveToStorage()
         objectWillChange.send()
     }

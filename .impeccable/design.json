@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-04T00:00:00Z",
+  "title": "Design System: Reforged",
+  "extensions": {
+    "colorMeta": {
+      "coral": { "role": "primary", "displayName": "Signal Coral", "canonical": "#E94560", "tonalRamp": ["#3A0E16", "#5E1622", "#8C2133", "#C32C45", "#E94560", "#F27186", "#FBE0E5", "#FDF1F3"] },
+      "gold": { "role": "secondary", "displayName": "Devotional Gold", "canonical": "#D4A574", "tonalRamp": ["#3A2E1E", "#5E4A30", "#8C6E48", "#B07F4E", "#D4A574", "#E3C29A", "#F3E7D6", "#FAF3E9"] },
+      "charcoal": { "role": "neutral", "displayName": "Logo Charcoal", "canonical": "#333333", "tonalRamp": ["#0E0E10", "#1C1C1F", "#2B2B2E", "#333333", "#4A4A4A", "#666666", "#9A9A9C", "#C7C7C9"] },
+      "cream": { "role": "neutral", "displayName": "Logo Cream", "canonical": "#E8E4DC", "tonalRamp": ["#4A463E", "#6E6A61", "#928D82", "#B4AFA4", "#D0CBC1", "#E8E4DC", "#F2EFE9", "#FAF8F5"] },
+      "app-bg": { "role": "neutral", "displayName": "Warm Paper", "canonical": "#FAF8F5", "tonalRamp": ["#1C1C1F", "#2B2B2E", "#4A4A4A", "#9A9A9C", "#C7C7C9", "#EFEDE9", "#F5F2EE", "#FAF8F5"] },
+      "track-green": { "role": "tertiary", "displayName": "Track Green", "canonical": "#339966", "tonalRamp": ["#0E2A1D", "#16402C", "#21603F", "#2B7F53", "#339966", "#5CB585", "#9AD4B5", "#D6EFE1"] },
+      "track-indigo": { "role": "tertiary", "displayName": "Track Indigo", "canonical": "#4D4D99", "tonalRamp": ["#16162B", "#222240", "#33335E", "#40407F", "#4D4D99", "#7A7AB5", "#A8A8D0", "#DEDEEF"] },
+      "track-purple": { "role": "tertiary", "displayName": "Track Purple", "canonical": "#804D99", "tonalRamp": ["#26162B", "#3C2240", "#5A335E", "#6E407F", "#804D99", "#A57AB5", "#C6A8D0", "#EADEEF"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Archivo Black, uppercase. Marketing posters and campaign heroes only — never in app chrome." },
+      "headline": { "displayName": "Headline / Screen Title", "purpose": "Large navigation titles, collapsing to inline on scroll." },
+      "title": { "displayName": "Title / Card Headline", "purpose": "Card and section headings." },
+      "body": { "displayName": "Body", "purpose": "Default UI copy; Scripture reading defaults to 18px." },
+      "scripture": { "displayName": "Scripture", "purpose": "Verse and devotional text — serif, 1.65 line-height, always referenced and translation-tagged." },
+      "label": { "displayName": "Label / Eyebrow", "purpose": "Small wide-tracked uppercase gold labels above sections and book names." }
+    },
+    "shadows": [
+      { "name": "resting-card", "value": "0 4px 8px rgba(0,0,0,0.06)", "purpose": "Every default white card at rest." },
+      { "name": "elevated", "value": "0 8px 16px rgba(0,0,0,0.12)", "purpose": "Sheets, popovers, raised cards." },
+      { "name": "floating", "value": "0 6px 16px rgba(0,0,0,0.16)", "purpose": "Bottom tab bar and floating action buttons." },
+      { "name": "glow-coral", "value": "0 6px 18px rgba(233,69,96,0.22)", "purpose": "Coral reward/streak stat tiles — gentle same-hue backlight." },
+      { "name": "glow-gold", "value": "0 6px 18px rgba(212,165,116,0.22)", "purpose": "Gold level/XP stat tiles." },
+      { "name": "sunken-inset", "value": "inset 0 1px 2px rgba(0,0,0,0.04)", "purpose": "Inset quote/verse wells and pressed surfaces." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for state and view transitions." },
+      { "name": "ease-spring", "value": "cubic-bezier(0.34, 1.4, 0.64, 1)", "purpose": "Gentle spring reserved for genuine gamified celebrations (level-up, badge)." },
+      { "name": "dur-fast", "value": "0.2s", "purpose": "Presses, hovers, small state changes." },
+      { "name": "dur-medium", "value": "0.3s", "purpose": "Card and sheet transitions." },
+      { "name": "dur-slow", "value": "0.5s", "purpose": "Progress-fill and celebratory reveals." },
+      { "name": "press-scale", "value": "0.97", "purpose": "Tactile press scale on buttons and cards; shadow collapses with it." }
+    ],
+    "breakpoints": [
+      { "name": "phone-max", "value": "440px" },
+      { "name": "ipad-sidebar", "value": "320px" },
+      { "name": "ipad-detail-min", "value": "400px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single most important action on a screen (e.g. 'Review now'). One per screen.",
+      "html": "<button class=\"ds-btn-primary\">Review now</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; min-height:52px; padding:16px 24px; background:#E94560; color:#FFFFFF; font-family:-apple-system,system-ui,'Roboto Flex',sans-serif; font-weight:700; font-size:17px; letter-spacing:-0.01em; border:none; border-radius:999px; box-shadow:0 4px 8px rgba(0,0,0,0.06); cursor:pointer; transition:background .2s cubic-bezier(0.4,0,0.2,1), transform .2s cubic-bezier(0.4,0,0.2,1), box-shadow .2s; } .ds-btn-primary:hover { background:#C32C45; } .ds-btn-primary:focus-visible { outline:2px solid #C32C45; outline-offset:2px; } .ds-btn-primary:active { transform:scale(0.97); box-shadow:none; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Lower-priority action; pill shape, no fill.",
+      "html": "<button class=\"ds-btn-ghost\">Share</button>",
+      "css": ".ds-btn-ghost { display:inline-flex; align-items:center; justify-content:center; min-height:52px; padding:16px 24px; background:#FFFFFF; color:#E94560; font-family:-apple-system,system-ui,'Roboto Flex',sans-serif; font-weight:600; font-size:17px; border:1px solid #E5E5E5; border-radius:999px; cursor:pointer; transition:background .2s, transform .2s; } .ds-btn-ghost:hover { background:#FDF1F3; } .ds-btn-ghost:active { transform:scale(0.97); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Default white content card lifted above the warm paper.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Reading Progress</div><div class=\"ds-card-sub\">1 of 1,189 chapters read</div></div>",
+      "css": ".ds-card { background:#FFFFFF; border-radius:16px; padding:16px; box-shadow:0 4px 8px rgba(0,0,0,0.06); } .ds-card-title { font-family:-apple-system,system-ui,sans-serif; font-weight:700; font-size:22px; color:#2D2D2D; letter-spacing:-0.01em; } .ds-card-sub { margin-top:4px; font-family:-apple-system,system-ui,sans-serif; font-size:14px; color:#666666; }"
+    },
+    {
+      "name": "Hero Greeting Card",
+      "kind": "card",
+      "refersTo": "card-hero",
+      "description": "The inverted charcoal greeting/prompt card at the top of Home.",
+      "html": "<div class=\"ds-hero\"><div class=\"ds-hero-eyebrow\">VERSES DUE</div><div class=\"ds-hero-title\">One verse is ready for review</div></div>",
+      "css": ".ds-hero { background:#333333; color:#E8E4DC; border-radius:24px; padding:24px; box-shadow:0 8px 16px rgba(0,0,0,0.12); } .ds-hero-eyebrow { font-family:-apple-system,system-ui,sans-serif; font-weight:600; font-size:13px; letter-spacing:0.12em; text-transform:uppercase; color:#D4A574; } .ds-hero-title { margin-top:8px; font-family:-apple-system,system-ui,sans-serif; font-weight:700; font-size:24px; line-height:1.2; color:#F2EFE9; }"
+    },
+    {
+      "name": "Stat Tile (Coral)",
+      "kind": "custom",
+      "refersTo": "stat-tile-coral",
+      "description": "Compact colored KPI tile for streak/memory — the one place color fills a surface.",
+      "html": "<div class=\"ds-stat-coral\"><div class=\"ds-stat-num\">0</div><div class=\"ds-stat-label\">Daily streak</div></div>",
+      "css": ".ds-stat-coral { min-width:96px; padding:16px; background:#FDF1F3; border-radius:16px; box-shadow:0 6px 18px rgba(233,69,96,0.22); } .ds-stat-num { font-family:-apple-system,system-ui,sans-serif; font-weight:700; font-size:34px; line-height:1; color:#C32C45; } .ds-stat-label { margin-top:6px; font-family:-apple-system,system-ui,sans-serif; font-weight:600; font-size:13px; color:#C32C45; }"
+    },
+    {
+      "name": "Stat Tile (Gold)",
+      "kind": "custom",
+      "refersTo": "stat-tile-gold",
+      "description": "Compact colored KPI tile for level/XP.",
+      "html": "<div class=\"ds-stat-gold\"><div class=\"ds-stat-num-g\">Lv.1</div><div class=\"ds-stat-label-g\">65 / 100 XP</div></div>",
+      "css": ".ds-stat-gold { min-width:96px; padding:16px; background:#FAF3E9; border-radius:16px; box-shadow:0 6px 18px rgba(212,165,116,0.22); } .ds-stat-num-g { font-family:-apple-system,system-ui,sans-serif; font-weight:700; font-size:28px; line-height:1; color:#B07F4E; } .ds-stat-label-g { margin-top:6px; font-family:-apple-system,system-ui,sans-serif; font-weight:600; font-size:13px; color:#B07F4E; }"
+    },
+    {
+      "name": "Verse Card",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Scripture set in serif with reference and translation tag — the sacred-serif signature.",
+      "html": "<div class=\"ds-verse\"><p class=\"ds-verse-text\">“Trust in the LORD with all thine heart; and lean not unto thine own understanding.”</p><div class=\"ds-verse-ref\">— Proverbs 3:5 <span class=\"ds-verse-tag\">KJV</span></div></div>",
+      "css": ".ds-verse { background:#EFEDE9; border-radius:16px; padding:20px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.04); } .ds-verse-text { margin:0; font-family:'New York','Libre Baskerville',Georgia,serif; font-size:18px; line-height:1.65; color:#2D2D2D; font-style:italic; } .ds-verse-ref { margin-top:12px; font-family:-apple-system,system-ui,sans-serif; font-weight:600; font-size:14px; color:#B07F4E; } .ds-verse-tag { margin-left:6px; font-size:11px; letter-spacing:0.08em; color:#9A9A9C; }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Soft wash tag / filter (e.g. 'Problem', 'Penalty').",
+      "html": "<span class=\"ds-chip\">Problem</span>",
+      "css": ".ds-chip { display:inline-flex; align-items:center; padding:6px 12px; background:rgba(51,51,58,0.08); color:#666666; font-family:-apple-system,system-ui,sans-serif; font-weight:600; font-size:13px; border-radius:8px; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Text field; border shifts toward coral on focus, no heavy glow.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search Scripture\" />",
+      "css": ".ds-input { width:100%; height:52px; padding:0 16px; background:#FFFFFF; color:#2D2D2D; font-family:-apple-system,system-ui,sans-serif; font-size:16px; border:1px solid #E5E5E5; border-radius:12px; transition:border-color .2s; } .ds-input::placeholder { color:#9A9A9C; } .ds-input:focus-visible { outline:none; border-color:#E94560; }"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Translucent, backdrop-blurred bottom navigation with a rounded pill behind the active tab (iPhone).",
+      "html": "<nav class=\"ds-tabbar\"><span class=\"ds-tab ds-tab-active\">Home</span><span class=\"ds-tab\">Bible</span><span class=\"ds-tab\">Memory</span><span class=\"ds-tab\">Profile</span></nav>",
+      "css": ".ds-tabbar { display:flex; gap:8px; align-items:center; padding:8px; background:rgba(250,248,245,0.92); backdrop-filter:blur(20px); border-radius:999px; box-shadow:0 6px 16px rgba(0,0,0,0.16); } .ds-tab { padding:8px 14px; font-family:-apple-system,system-ui,sans-serif; font-size:11px; font-weight:600; color:#9A9A9C; border-radius:999px; } .ds-tab-active { color:#333333; background:rgba(51,51,58,0.08); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Devotional Companion",
+    "overview": "Reforged is designed as a thoughtful friend who sits beside you while you read — warm, sincere, and quietly confident, never a marketer and never a teacher scolding from the front. Every surface is built to feel like a calm, unhurried place you want to return to each day: a warm paper-like off-white canvas, soft white cards, and generous quiet space, with the interface receding so Scripture and the reader's own progress can lead. The system is refined and restrained: typography, whitespace, and a single warm brand mark carry the identity, and color is used with discipline — a charcoal-and-cream foundation warmed by exactly two living accents, coral for action and gold for reward. Depth is layered and lifted: cards sit clearly above the paper on a consistent elevation ladder, though the shadows themselves stay warm and soft. Motion is minimal and purposeful. Reforged is honest and ad-free by design; the visual language must never feel like an engagement funnel.",
+    "keyCharacteristics": [
+      "Warm paper off-white canvas; soft white cards; charcoal logo mark.",
+      "Two-accent discipline: coral (action/streak/memory), gold (reward/level/Scripture).",
+      "Refined and restrained — type and whitespace lead; ornament stays out.",
+      "Layered, lifted depth on a soft warm shadow ladder; reward tiles float highest.",
+      "Scripture is sacred: serif, always referenced and translation-tagged, never paraphrased.",
+      "Calm, honest, ad-free — no gradients in chrome, no textures, no dark patterns."
+    ],
+    "rules": [
+      { "name": "The Two-Accent Rule", "body": "Coral and gold are the only expressive colors. Coral means 'act,' gold means 'earned/Scripture' — never blur them, and never introduce a third brand accent. Track hues are the sole exception and live only on track tiles.", "section": "colors" },
+      { "name": "The Charcoal-Not-Navy Rule", "body": "The tokens historically named reforgedNavy / reforgedDarkBlue are charcoal greys (#333333 / darker), not blue. Any icon or accent that 'should be navy' must resolve through adaptiveNavyText(colorScheme) so it flips to off-white on dark surfaces — a raw charcoal literal disappears on a dark card. Only gold, coral, and the track hues are safe as literals in both themes.", "section": "colors" },
+      { "name": "The Warm-Paper Rule", "body": "The canvas is warm off-white (#FAF8F5), never pure white and never cool gray. Cards are the white; the ground stays warm.", "section": "colors" },
+      { "name": "The Sacred-Serif Rule", "body": "Scripture is always serif, always carries its reference and translation tag (ESV/KJV/CSB/NKJV/NASB), and is never paraphrased. The serif face is reserved for Scripture and devotional copy — using it for chrome cheapens it.", "section": "typography" },
+      { "name": "The Sentence-Case Rule", "body": "UI and body copy are sentence case; Title Case is only for screen titles and named features; ALL-CAPS display is only for marketing. The voice is a friend's, not a headline's.", "section": "typography" },
+      { "name": "The Base-8 Rule", "body": "All spacing, padding, and gaps come from the 4/8-based scale. No arbitrary one-off margins.", "section": "elevation" },
+      { "name": "The Warm-Shadow Rule", "body": "Every shadow is warm-black, low-opacity, and diffuse — lift comes from a bigger, softer shadow, never a darker or tighter one. Harsh or high-contrast drop shadows are off-brand.", "section": "elevation" },
+      { "name": "The Elevation-Ladder Rule", "body": "Use exactly the ladder: 0.06 resting → 0.12 elevated → 0.16 floating. Reward tiles glow same-hue; they do not invent new depths.", "section": "elevation" },
+      { "name": "The No-Sharp-Corners Rule", "body": "Nothing ships with a 0px radius. The smallest allowed corner is 8px; the brand's warmth lives in its roundness.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the canvas warm off-white (#FAF8F5) and let white cards lift above it.",
+      "Do reserve coral for 'act' and gold for 'earned/Scripture,' and keep them to small, deliberate moments against large neutrals (the Two-Accent Rule).",
+      "Do set all Scripture in serif with its reference and translation tag; honor the reader's font and spacing settings.",
+      "Do route any 'navy' icon/accent through adaptiveNavyText(colorScheme) so it survives dark mode.",
+      "Do build depth from the soft warm ladder (0.06 → 0.12 → 0.16) and let reward tiles glow same-hue.",
+      "Do press with scale(0.97) and animate progress fills; keep motion minimal and purposeful.",
+      "Do design and test light, dark, and AMOLED, and large Dynamic Type sizes."
+    ],
+    "donts": [
+      "Don't introduce a third brand accent, gradients in app chrome, textures, or noise.",
+      "Don't use the serif for UI chrome, or the sans for Scripture.",
+      "Don't use pure white as the app background or pure black shadows; nothing sharp-cornered (8px floor).",
+      "Don't treat charcoal #333333 as navy or drop a raw charcoal literal onto a dark card.",
+      "Don't let the gamification read as pressure — no guilt, no dark patterns, no ad surfaces.",
+      "Don't paraphrase Scripture or drop its reference/translation tag."
+    ]
+  }
+}

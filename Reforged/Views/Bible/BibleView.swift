@@ -157,14 +157,23 @@ struct BibleView: View {
 
     // iPad/Mac: which study-tools-rail panel is expanded (nil = rail collapsed to icons)
     @State private var activeToolPanel: BibleToolPanelKind?
+    /// Binding to the NavigationSplitView column visibility (iPad/Mac only; nil on
+    /// iPhone). `setToolPanel` collapses this in the SAME action that opens a panel so
+    /// the nav-out and panel-in land in one frame — the reader shifts over, keeps its
+    /// width, and the whole-Bible spine never reflows.
+    var navColumnVisibility: Binding<NavigationSplitViewVisibility>? = nil
     /// Full-screen reading: hides the entire tools sidebar (rail + any panel) so the
     /// reader takes the whole width. Persisted so the choice sticks across launches.
     @AppStorage("bible.readerFullScreen") private var readerFullScreen = false
+    @State private var toolPanelTransitionID = UUID()
     /// When pinned, the panel stays put while the user works in the Bible —
     /// verse Study/Note actions fall back to sheets instead of replacing it.
     @State private var toolPanelPinned = false
     /// The verse a sidebar-hosted study / note panel is acting on.
     @State private var panelVerse: ParsedVerse?
+    /// Previous verse selection, so the study panel can follow the verse the user JUST
+    /// selected (selection is additive, so "first in book order" would otherwise win).
+    @State private var lastStudySelection: Set<String> = []
 
     // Reading streak tracking
     @StateObject private var streakManager = ReadingStreakManager.shared
@@ -369,6 +378,65 @@ struct BibleView: View {
         }
     }
 
+    /// Single choke point for changing the active tool panel. Sets `activeToolPanel`
+    /// AND collapses/restores the left nav sidebar in the SAME synchronous step, so
+    /// SwiftUI lays out the reader once with both the panel inset applied and the nav
+    /// gone — net-zero reading width, no intermediate squeeze, no spine reflow/jump.
+    /// The nav change is instant (its own animation would gradually resize the reader).
+    private func setToolPanel(_ kind: BibleToolPanelKind?) {
+        let transitionID = UUID()
+        toolPanelTransitionID = transitionID
+        // Freeze the reader at its CURRENT width across the transition. The nav collapse
+        // momentarily changes the available width, and a flexible reader would reflow the
+        // whole-Bible spine and jump the scroll; pinned, it can't. The width is held
+        // constant, so the panel-in / nav-out can ANIMATE smoothly and the reader just
+        // glides in place. It returns to flexible afterward, so rotation still resizes it.
+        // Hold the reader's measured width constant across the transition (the nav
+        // collapse changes the pane, and we must not let that reflow the spine).
+        suppressPaneMeasure = true
+        // Snap the panel + nav in ONE animation-disabled step. Animating the nav
+        // collapse re-lays-out the detail pane every frame, which the whole-Bible spine
+        // can't survive (the scroll drifts a chapter). Snapping avoids that.
+        var txn = Transaction()
+        txn.disablesAnimations = true
+        withTransaction(txn) {
+            activeToolPanel = kind
+            if isSidebarNavigation, let nav = navColumnVisibility {
+                nav.wrappedValue = navVisibility(forToolPanel: kind)
+            }
+        }
+        // Resume measuring once the layout has settled (so rotations resize the reader).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            guard toolPanelTransitionID == transitionID else { return }
+            suppressPaneMeasure = false
+            if let width = deferredPaneMeasureWidth {
+                deferredPaneMeasureWidth = nil
+                measurePane(width)
+            }
+        }
+    }
+
+    private func navVisibility(forToolPanel kind: BibleToolPanelKind?) -> NavigationSplitViewVisibility {
+        (kind != nil && usesToolSidebar && !readerFullScreen) ? .detailOnly : .doubleColumn
+    }
+
+    /// Clears Bible-only sidebar state when the system sidebar needs to come back.
+    private func resetToolPanelAndRestoreNavSidebar() {
+        toolPanelTransitionID = UUID()
+        suppressPaneMeasure = false
+        deferredPaneMeasureWidth = nil
+        var txn = Transaction()
+        txn.disablesAnimations = true
+        withTransaction(txn) {
+            activeToolPanel = nil
+            if let nav = navColumnVisibility {
+                nav.wrappedValue = .doubleColumn
+            }
+        }
+        toolPanelPinned = false
+        panelVerse = nil
+    }
+
     /// Opens a tools-sidebar panel, resetting transient state. Toggles closed if
     /// the same panel is already showing.
     private func openToolPanel(_ kind: BibleToolPanelKind) {
@@ -379,7 +447,7 @@ struct BibleView: View {
         panelVerse = nil
         toolPanelPinned = false
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-            activeToolPanel = kind
+            setToolPanel(kind)
         }
     }
 
@@ -398,7 +466,7 @@ struct BibleView: View {
         if usesToolSidebar {
             panelVerse = nil
             withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                activeToolPanel = .audio
+                setToolPanel(.audio)
             }
         } else {
             showNowPlaying = true
@@ -444,7 +512,7 @@ struct BibleView: View {
         panelVerse = firstSelectedVerse() ?? nearestVisibleVerse()
         toolPanelPinned = false
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-            activeToolPanel = .study
+            setToolPanel(.study)
         }
     }
 
@@ -461,7 +529,7 @@ struct BibleView: View {
         panelVerse = nil
         toolPanelPinned = false
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-            activeToolPanel = .notes
+            setToolPanel(.notes)
         }
     }
 
@@ -477,7 +545,7 @@ struct BibleView: View {
         readingState.selectedVerses = [verse.reference]
         panelVerse = verse
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-            activeToolPanel = .noteEditor
+            setToolPanel(.noteEditor)
         }
     }
 
@@ -607,44 +675,52 @@ struct BibleView: View {
     /// more for the player); widened caps at half the window so the reader keeps
     /// enough room. 0 when no panel is open.
     private var toolPanelWidth: CGFloat {
-        guard let panel = activeToolPanel else { return 0 }
-        return panel == .audio ? 320 : 340
+        guard activeToolPanel != nil else { return 0 }
+        // Uniform width so the nav-sidebar collapse (AdaptiveLayout.bibleNavSidebarWidth)
+        // frees exactly this footprint on the left — the reader keeps its width.
+        return AdaptiveLayout.bibleToolPanelWidth
     }
 
     /// The trailing study-tools region: a floating, rounded panel (when a tool is
     /// open) beside the floating icon rail. Sized by `safeAreaInset`, so the reader
     /// reflows to the space that's left.
+    /// The trailing RAIL column only (icons + optional audio pill), kept a CONSTANT
+    /// width — the sole thing the reader's `safeAreaInset` reserves, so opening a panel
+    /// never resizes the reader (which would re-lay-out the whole-Bible spine and jump
+    /// the scroll). The panel floats as `bibleToolPanelOverlay`.
     @ViewBuilder
     private var bibleToolsSidebar: some View {
-        // .center so the compact rail sits vertically centred against the reader /
-        // the full-height panel, rather than floating at the top with dead space below.
-        HStack(alignment: .center, spacing: 10) {
-            if let panel = activeToolPanel {
-                bibleToolPanel(panel)
-                    .frame(width: toolPanelWidth)
-                    .frame(maxHeight: .infinity)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.18), radius: 20, x: -4, y: 8)
+        VStack(spacing: 10) {
+            if !audioPlayer.currentBook.isEmpty && activeToolPanel != .audio {
+                bibleAudioPill
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
-
-            // Rail + (when audio is playing but its panel is collapsed) a control pill.
-            VStack(spacing: 10) {
-                if !audioPlayer.currentBook.isEmpty && activeToolPanel != .audio {
-                    bibleAudioPill
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
-                bibleToolsRail
-            }
+            bibleToolsRail
         }
         .frame(maxHeight: .infinity)
         .padding(.trailing, 12)
         .padding(.vertical, 12)
+    }
+
+    /// The docked study-tools panel, floated as a trailing overlay so opening/closing it
+    /// leaves the reader's frame untouched — no reflow, no scroll jump.
+    @ViewBuilder
+    private var bibleToolPanelOverlay: some View {
+        if let panel = activeToolPanel {
+            bibleToolPanel(panel)
+                .frame(width: toolPanelWidth)
+                .frame(maxHeight: .infinity)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                )
+                .shadow(color: Color.black.opacity(0.18), radius: 20, x: -4, y: 8)
+                .padding(.vertical, 12)
+                .padding(.trailing, 78)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+        }
     }
 
     /// Collapsed-audio control pill that sits above the rail while a chapter is
@@ -656,7 +732,7 @@ struct BibleView: View {
                 startAudioIfNeeded()
                 panelVerse = nil
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                    activeToolPanel = .audio
+                    setToolPanel(.audio)
                 }
             } label: {
                 ZStack {
@@ -753,7 +829,7 @@ struct BibleView: View {
                 startAudioIfNeeded()
                 panelVerse = nil
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                    activeToolPanel = .audio
+                    setToolPanel(.audio)
                 }
             }
         } label: {
@@ -793,7 +869,7 @@ struct BibleView: View {
         Button {
             HapticManager.shared.lightImpact()
             withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                activeToolPanel = nil
+                setToolPanel(nil)
                 readerFullScreen = true
             }
             toolPanelPinned = false
@@ -883,7 +959,7 @@ struct BibleView: View {
                 panelVerse = nil
                 toolPanelPinned = false
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                    activeToolPanel = tool
+                    setToolPanel(tool)
                 }
             }
         } label: {
@@ -903,7 +979,7 @@ struct BibleView: View {
     /// is a separate, persisted mode and is not touched here.
     private func closeToolPanel() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-            activeToolPanel = nil
+            setToolPanel(nil)
         }
         toolPanelPinned = false
         panelVerse = nil
@@ -932,6 +1008,11 @@ struct BibleView: View {
                     readingState: readingState,
                     onClose: { closeToolPanel() }
                 )
+                // Rebuild the study view when the selected verse changes so ALL of its
+                // data reloads — the async word study and study questions (loaded in
+                // `.task`) would otherwise stay on the previous verse while the
+                // computed cross-refs/topics updated, leaving the panel inconsistent.
+                .id(verse.reference)
             } else {
                 toolPanelChrome(title: kind.title) {
                     toolPanelEmptyState(icon: "sparkles.rectangle.stack",
@@ -1173,7 +1254,83 @@ struct BibleView: View {
         .padding(.top, 40)
     }
 
+    /// The reader is ALWAYS given an explicit fixed width (never switched between
+    /// flexible and fixed — that switch alone disturbs the whole-Bible spine and jumps
+    /// the scroll). The width is measured from the actual detail pane so it's correct in
+    /// Split View / Slide Over, and recomputed on rotation. It is held constant ONLY
+    /// across a panel open/close (`suppressPaneMeasure`), when the nav collapse
+    /// momentarily changes the pane, so the reader can't reflow during the toggle.
+    @State private var readerPaneWidth: CGFloat = 0
+    @State private var suppressPaneMeasure = false
+    @State private var deferredPaneMeasureWidth: CGFloat?
+
+    private var readerColumnWidth: CGFloat? {
+        guard usesToolSidebar, !readerFullScreen, readerPaneWidth > 0 else { return nil }
+        return readerPaneWidth
+    }
+
     var body: some View {
+        HStack(spacing: 0) {
+            // The docked panel takes the LEFT slot — the space the nav sidebar frees
+            // when it collapses (setToolPanel). The reader keeps its fixed measured
+            // width and screen position, so it never reflows: true side-by-side, no jump.
+            bibleToolPanelLeft
+            readerBody
+                .frame(width: readerColumnWidth, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { measurePane(geo.size.width) }
+                    .onChange(of: geo.size.width) { measurePane($0) }
+            }
+        )
+    }
+
+    /// Recompute the reader's fixed width from the CURRENT pane. With a panel open the
+    /// nav is collapsed, so the pane is the full width and the reader is that minus the
+    /// panel slot; with no panel the reader is the whole pane. Computing from the live
+    /// pane keeps it correct across rotations and multitasking resizes — even with a
+    /// panel open. Suppressed only during a panel open/close so the reader width stays
+    /// constant across that transition (no reflow/jump).
+    private func measurePane(_ width: CGFloat) {
+        guard width > 0 else { return }
+        guard !suppressPaneMeasure else {
+            deferredPaneMeasureWidth = width
+            return
+        }
+        let target = (activeToolPanel == nil)
+            ? width
+            : max(320, width - AdaptiveLayout.bibleNavSidebarWidth)
+        if abs(target - readerPaneWidth) > 0.5 {
+            readerPaneWidth = target
+        }
+    }
+
+    /// The docked study-tools panel in the left slot (iPad/Mac). It fills the slot
+    /// edge-to-edge — no floating-card rounding/shadow/inset — with a hairline trailing
+    /// divider, so it reads as PART of the sidebar (replacing the nav) rather than a
+    /// card overlaid on it. Its width equals the nav sidebar's, so opening it (with the
+    /// nav collapsing) leaves the reader put.
+    @ViewBuilder
+    private var bibleToolPanelLeft: some View {
+        if usesToolSidebar, !readerFullScreen, let panel = activeToolPanel {
+            bibleToolPanel(panel)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .overlay(alignment: .trailing) {
+                    Rectangle()
+                        .fill(Color.adaptiveBorder(colorScheme))
+                        .frame(width: 0.5)
+                        .ignoresSafeArea()
+                }
+                .frame(width: AdaptiveLayout.bibleNavSidebarWidth)
+                .transition(.move(edge: .leading).combined(with: .opacity))
+        }
+    }
+
+    private var readerBody: some View {
         ZStack {
             // Fill background so 3D rotation gaps don't show as pure black
             Color.adaptiveBackground(colorScheme).ignoresSafeArea()
@@ -1224,8 +1381,12 @@ struct BibleView: View {
                                 readingModeOverride = showing
                             }
                         }
-                        .frame(maxWidth: maxContentWidth)
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: maxContentWidth, alignment: .leading)
+                        // Leading-anchor the reading column: when a side panel docks
+                        // and narrows the reader, the text shrinks from the RIGHT only —
+                        // its left edge and every line's start stay put, so the column
+                        // never slides sideways ("jumps") the way a centered column does.
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.bottom, readingState.selectedVerses.isEmpty ? 60 : 140)
                         .background(
                             GeometryReader { geo in
@@ -1447,10 +1608,10 @@ struct BibleView: View {
                         onPrevious: { navigateToAdjacentChapter(offset: -1) },
                         onNext: { navigateToAdjacentChapter(offset: 1) }
                     )
-                    // Match the reading column so the prev/next buttons frame the text
-                    // and keep their position whether or not a side panel is open.
-                    .frame(maxWidth: maxContentWidth)
-                    .frame(maxWidth: .infinity)
+                    // Match the reading column (same leading anchor) so the prev/next
+                    // buttons frame the text and don't slide when a side panel opens.
+                    .frame(maxWidth: maxContentWidth, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, miniPlayerVisible ? 80 : 16)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -1551,9 +1712,10 @@ struct BibleView: View {
             }
 
         }
-        // iPad/Mac study-tools rail lives in the trailing margin. safeAreaInset (not
-        // an overlay) reserves the width so the centered reader reflows left instead
-        // of the rail/panel sitting on top of the text.
+        // iPad/Mac study-tools RAIL lives in the trailing margin, reserved (constant
+        // width) by safeAreaInset. Opening a panel does not change this inset — the
+        // panel floats over the reader via `.overlay` below — so the reader's frame,
+        // and the whole-Bible spine's scroll position, never change.
         .safeAreaInset(edge: .trailing, spacing: 0) {
             if isSidebarNavigation && settingsManager.showBibleToolsRail && barsVisible {
                 if readerFullScreen {
@@ -1575,11 +1737,17 @@ struct BibleView: View {
         // implicit animation is intentionally omitted so it can't animate the reader's
         // width — the reader opts out explicitly above.
         // Keep the study panel in step with the reader's selection — selecting a new
-        // verse pulls up its study info without reopening the panel.
+        // verse pulls up its study info without reopening the panel. Follow the verse
+        // the user JUST selected (the newly-added one), since selection is additive.
         .onChange(of: readingState.selectedVerses) { newSelection in
-            guard activeToolPanel == .study,
-                  let verse = allLoadedVerses.first(where: { newSelection.contains($0.reference) }) else { return }
-            panelVerse = verse
+            let added = newSelection.subtracting(lastStudySelection)
+            lastStudySelection = newSelection
+            guard activeToolPanel == .study else { return }
+            let targetRef = added.first(where: { ref in allLoadedVerses.contains { $0.reference == ref } })
+                ?? newSelection.first(where: { ref in allLoadedVerses.contains { $0.reference == ref } })
+            if let ref = targetRef, let verse = allLoadedVerses.first(where: { $0.reference == ref }) {
+                panelVerse = verse
+            }
         }
         .sheet(isPresented: $showNavigationSidebar) {
             makeNavigationView(usesSheetPresentation: true)
@@ -1727,6 +1895,14 @@ struct BibleView: View {
                 barsPinnedByTap = false
             }
         }
+        .onChange(of: settingsManager.showBibleToolsRail) { isEnabled in
+            guard isSidebarNavigation, !isEnabled else { return }
+            resetToolPanelAndRestoreNavSidebar()
+        }
+        .onChange(of: readerFullScreen) { isFullScreen in
+            guard isSidebarNavigation, isFullScreen else { return }
+            resetToolPanelAndRestoreNavSidebar()
+        }
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = settingsManager.keepScreenOn
             guard !hasAppeared else {
@@ -1753,8 +1929,9 @@ struct BibleView: View {
                 // All state mutations must happen on the main actor regardless of
                 // which thread the audio player fires this callback on.
                 Task { @MainActor in
-                    streakManager.recordChapterRead(book: book, chapter: chapter)
-                    _ = appState.markChapterRead(book: book, chapter: chapter)
+                    // Single funnel — see AppState.markChapterRead. Safe on the
+                    // re-reads that audio playback frequently produces.
+                    appState.markChapterRead(book: book, chapter: chapter)
                     // Brief delay so the audio player's currentBook/currentChapter
                     // have advanced to the next chapter before we read them.
                     try? await Task.sleep(for: .milliseconds(300))
@@ -1777,6 +1954,7 @@ struct BibleView: View {
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
+            resetToolPanelAndRestoreNavSidebar()
         }
         .onChange(of: settingsManager.keepScreenOn) { enabled in
             UIApplication.shared.isIdleTimerDisabled = enabled
@@ -2452,15 +2630,11 @@ struct BibleView: View {
     }
 
     func markChapterAsRead(book: String, chapter: Int) {
-        // Record in streak manager
-        streakManager.recordChapterRead(book: book, chapter: chapter)
-
-        // Auto-complete any reading plan day whose chapters are now all read
-        ReadingPlanService.shared.notifyChapterRead(bookName: book, chapter: chapter)
-
-        // Also record in app state for XP. The +15 XP, any badge, and any level-up
-        // now celebrate right here in the reader — ContentView hosts the overlay.
-        _ = appState.markChapterRead(book: book, chapter: chapter)
+        // One funnel: the streak, widget, reading-plan auto-complete, XP, progress,
+        // badges, and the synced streak mirror all update together inside
+        // AppState.markChapterRead. The +15 XP, any badge, and any level-up celebrate
+        // right here in the reader — ContentView hosts the overlay.
+        appState.markChapterRead(book: book, chapter: chapter)
 
         HapticManager.shared.success()
     }
@@ -2554,7 +2728,7 @@ struct BibleView: View {
                 if usesToolSidebar && !toolPanelPinned {
                     panelVerse = verse
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                        activeToolPanel = .noteEditor
+                        setToolPanel(.noteEditor)
                     }
                 } else {
                     selectedVerseForAction = verse
@@ -2612,7 +2786,7 @@ struct BibleView: View {
                 if usesToolSidebar && !toolPanelPinned {
                     panelVerse = verse
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                        activeToolPanel = .study
+                        setToolPanel(.study)
                     }
                 } else {
                     selectedVerseForStudy = verse

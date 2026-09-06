@@ -96,13 +96,13 @@ struct HomeView: View {
     private var homeScroll: some View {
         ScrollView {
             VStack(spacing: ReforgedTheme.spacingL) {
-                WelcomeHeader()
-
-                // iPad/Mac: an adaptive multi-column dashboard that fills the
-                // width. iPhone keeps the single-column stack.
+                // iPad/Mac: a command band (hero + key stats) over an adaptive
+                // multi-column dashboard that fills the width. iPhone keeps the
+                // single-column stack with the hero on top.
                 if horizontalSizeClass == .regular {
                     iPadDashboard
                 } else {
+                    WelcomeHeader()
                     DueTodaySection()
                     StatsSection()
                     DailyInsightCard()
@@ -136,36 +136,73 @@ struct HomeView: View {
         return 1
     }
 
-    /// The iPad/Mac home layout: a balanced multi-column dashboard.
+    /// The iPad/Mac home layout: a command band over a balanced card grid.
     ///
-    /// The two stat cards are broken out of `StatsSection` and placed as individual
-    /// dashboard tiles so every card in the grid shares one column width, rather than
-    /// the old two-column split that left the stat cards stretched. Assignment is
-    /// curated (not measured) — the actionable "Due Today" leads the primary column,
-    /// devotional and browse content fill the rest.
+    /// The band pairs the greeting/suggestion hero (primary, flexible width) with a
+    /// fixed-width stats rail (streak + level), so the hero no longer trails a wide
+    /// band of empty charcoal and the day's key numbers lead alongside the one thing
+    /// to do. Below, the remaining cards flow into 2–3 natural-height columns; the
+    /// actionable "Due Today" leads. Stat cards are kept out of the grid so their
+    /// equal-height behavior never stretches a tall column into a near-empty tile.
     @ViewBuilder
     private var iPadDashboard: some View {
         let spacing = ReforgedTheme.spacingL
+        VStack(spacing: spacing) {
+            commandBand(spacing: spacing)
+            dashboardGrid(spacing: spacing)
+        }
+    }
+
+    /// Hero + key-stats band: side by side when there is room, stacked when narrow.
+    /// The fixed 300pt rail is what reclaims the hero's former dead space on wide
+    /// screens; below two columns it folds under the hero instead.
+    @ViewBuilder
+    private func commandBand(spacing: CGFloat) -> some View {
+        if dashboardColumnCount >= 2 {
+            HStack(alignment: .top, spacing: spacing) {
+                WelcomeHeader()
+                    .frame(maxWidth: .infinity)
+
+                VStack(spacing: spacing) {
+                    StreakCard()
+                    LevelCard(xp: appState.user.xp)
+                }
+                .frame(width: 300)
+            }
+        } else {
+            VStack(spacing: spacing) {
+                WelcomeHeader()
+                HStack(spacing: spacing) {
+                    StreakCard()
+                    LevelCard(xp: appState.user.xp)
+                }
+            }
+        }
+    }
+
+    /// The remaining cards as a balanced, natural-height column grid. Assignment is
+    /// curated (not measured): "Due Today" leads, devotional and browse content fill
+    /// the rest, and columns are paired so their heights stay close.
+    @ViewBuilder
+    private func dashboardGrid(spacing: CGFloat) -> some View {
         switch dashboardColumnCount {
         case 3:
             HStack(alignment: .top, spacing: spacing) {
                 VStack(spacing: spacing) {
                     DueTodaySection()
-                    ContinueLearningSection()
-                }
-                .frame(maxWidth: .infinity)
-
-                VStack(spacing: spacing) {
-                    DailyInsightCard()
-                    QuickActionsSection()
                     BibleProgressCard()
                 }
                 .frame(maxWidth: .infinity)
 
                 VStack(spacing: spacing) {
-                    StreakCard()
-                    LevelCard(xp: appState.user.xp)
+                    DailyInsightCard()
                     ShareGospelCard()
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: spacing) {
+                    ContinueLearningSection()
+                    QuickActionsSection()
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -175,24 +212,19 @@ struct HomeView: View {
                     DueTodaySection()
                     DailyInsightCard()
                     BibleProgressCard()
-                    ShareGospelCard()
                 }
                 .frame(maxWidth: .infinity)
 
                 VStack(spacing: spacing) {
-                    HStack(spacing: spacing) {
-                        StreakCard()
-                        LevelCard(xp: appState.user.xp)
-                    }
                     ContinueLearningSection()
                     QuickActionsSection()
+                    ShareGospelCard()
                 }
                 .frame(maxWidth: .infinity)
             }
         default:
             VStack(spacing: spacing) {
                 DueTodaySection()
-                StatsSection()
                 DailyInsightCard()
                 ContinueLearningSection()
                 QuickActionsSection()

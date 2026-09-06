@@ -85,14 +85,14 @@ final class ReadingPlanService: ObservableObject {
         save()
 
         // Finishing a plan day is Bible reading, whether it happened via the Bible
-        // view or by ticking the checkmark in the plan. Routing it through the
-        // streak manager is also what writes the App Group and reloads the widget —
-        // this service's own `save()` only touches UserDefaults.standard, so the
-        // checkmark path used to leave both the streak and the widget untouched.
-        // recordActivity is idempotent within a day, so the Bible-view path (which
-        // already recorded) stays a no-op here.
+        // view or by ticking the checkmark in the plan. Route it through
+        // AppState.recordActivity — not the streak manager directly — so the plan
+        // checkmark gets the SAME treatment as every other read: pending freezes are
+        // applied, the App Group + widget update, AND the synced user.streak mirror
+        // stays in step. recordActivity is idempotent within a day, so the Bible-view
+        // path (which already recorded) stays a no-op here.
         if isNewlyComplete {
-            ReadingStreakManager.shared.recordActivity(.reading)
+            AppState.shared.recordActivity(.reading)
         }
     }
 

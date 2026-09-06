@@ -10,6 +10,7 @@ struct DiscipleshipView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var focusService = FocusBlockingService.shared
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showTemptedSOS = false
     @State private var showAccountability = false
     @State private var showStudyLibraryHub = false
@@ -21,17 +22,28 @@ struct DiscipleshipView: View {
                     headerSection
                     learningPathCard
 
-                    sectionLabel("Resources")
-                    resourcesGrid
-
-                    sectionLabel("Tools")
-                    ShareGospelCard()
-                    focusShieldCard
-                    temptedSOSCard
+                    // iPad / regular width: Resources and Tools sit side by side so the
+                    // wide canvas is used deliberately instead of one stretched column
+                    // trailing a tall band of empty space. iPhone keeps the single stack.
+                    if horizontalSizeClass == .regular {
+                        HStack(alignment: .top, spacing: 20) {
+                            resourcesSection
+                                .frame(maxWidth: .infinity, alignment: .top)
+                            toolsSection
+                                .frame(maxWidth: .infinity, alignment: .top)
+                        }
+                    } else {
+                        resourcesSection
+                        toolsSection
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
                 .padding(.bottom, 40)
+                // Cap the content on iPad/Mac so it stays a legible column block,
+                // centered, rather than spanning the full width of a large display.
+                .frame(maxWidth: horizontalSizeClass == .regular ? 1080 : .infinity)
+                .frame(maxWidth: .infinity)
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle("Discipleship")
@@ -56,6 +68,26 @@ struct DiscipleshipView: View {
             .onReceive(NotificationCenter.default.publisher(for: .openStudyLibrary)) { _ in
                 showStudyLibraryHub = true
             }
+        }
+    }
+
+    // MARK: - Grouped Sections
+    // Grouped so the regular-width layout can place Resources and Tools side by
+    // side while iPhone stacks them; the inner 16pt rhythm matches the old flat stack.
+
+    private var resourcesSection: some View {
+        VStack(spacing: 16) {
+            sectionLabel("Resources")
+            resourcesGrid
+        }
+    }
+
+    private var toolsSection: some View {
+        VStack(spacing: 16) {
+            sectionLabel("Tools")
+            ShareGospelCard()
+            focusShieldCard
+            temptedSOSCard
         }
     }
 

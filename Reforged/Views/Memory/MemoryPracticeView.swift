@@ -563,7 +563,11 @@ struct DraggableWord: Identifiable, Equatable {
 struct DragAndDropView: View {
     let verse: MemoryVerse
     let onComplete: (Int) -> Void
-    @State private var blanks: [(index: Int, word: String, filled: String?)] = []
+    // Each blank tracks the *identity* (UUID) of the tile placed in it, not its
+    // string. Tracking by string breaks whenever a verse repeats a word ("love"
+    // twice): two distinct tiles share the same text, so value-based bookkeeping
+    // would clear one blank when the other is filled and miscount the score.
+    @State private var blanks: [(index: Int, word: String, filledID: UUID?)] = []
     @State private var availableWords: [DraggableWord] = []
     @State private var displayWords: [String] = []
     @State private var showResult = false
@@ -596,14 +600,14 @@ struct DragAndDropView: View {
                             if let blankIdx = blanks.firstIndex(where: { $0.index == index }) {
                                 DropZone(
                                     correctWord: blanks[blankIdx].word,
-                                    filledWord: blanks[blankIdx].filled,
+                                    filledWord: filledWord(for: blanks[blankIdx]),
                                     showResult: showResult,
-                                    isHighlighted: (selectedWordForTap != nil && blanks[blankIdx].filled == nil) || hoveredBlankIndex == blankIdx,
+                                    isHighlighted: (selectedWordForTap != nil && blanks[blankIdx].filledID == nil) || hoveredBlankIndex == blankIdx,
                                     onTap: {
                                         if let selected = selectedWordForTap {
-                                            fillBlank(at: blankIdx, with: selected.word)
+                                            fillBlank(at: blankIdx, with: selected)
                                             selectedWordForTap = nil
-                                        } else if blanks[blankIdx].filled != nil {
+                                        } else if blanks[blankIdx].filledID != nil {
                                             // Tap filled blank to remove word
                                             unfillBlank(at: blankIdx)
                                         }
@@ -680,7 +684,7 @@ struct DragAndDropView: View {
                                                 )
 
                                                 if let blankIdx = blankIndexAt(point: dropPoint) {
-                                                    fillBlank(at: blankIdx, with: word.word)
+                                                    fillBlank(at: blankIdx, with: word)
                                                 }
 
                                                 withAnimation(.spring(response: 0.3)) {
@@ -762,7 +766,7 @@ struct DragAndDropView: View {
         for (idx, frame) in dropZoneFrames {
             // Expand hit area slightly for easier dropping
             let expanded = frame.insetBy(dx: -10, dy: -10)
-            if expanded.contains(point) && blanks[idx].filled == nil {
+            if expanded.contains(point) && blanks[idx].filledID == nil {
                 return idx
             }
         }
@@ -770,7 +774,14 @@ struct DragAndDropView: View {
     }
 
     var allBlanksFilled: Bool {
-        blanks.allSatisfy { $0.filled != nil }
+        blanks.allSatisfy { $0.filledID != nil }
+    }
+
+    /// The text currently shown in a blank, resolved from the placed tile's id so
+    /// repeated words stay distinct.
+    func filledWord(for blank: (index: Int, word: String, filledID: UUID?)) -> String? {
+        guard let id = blank.filledID else { return nil }
+        return availableWords.first(where: { $0.id == id })?.word
     }
 
     func setupBlanks() {
@@ -787,52 +798,52 @@ struct DragAndDropView: View {
         let selectedIndices = Array(significantIndices.shuffled().prefix(blankCount)).sorted()
 
         blanks = selectedIndices.map { index in
-            (index: index, word: words[index].trimmingCharacters(in: .punctuationCharacters), filled: nil)
+            (index: index, word: words[index].trimmingCharacters(in: .punctuationCharacters), filledID: nil)
         }
 
         // Shuffle words for word bank
         availableWords = blanks.map { DraggableWord(word: $0.word) }.shuffled()
     }
 
-    func fillBlank(at index: Int, with word: String) {
+    func fillBlank(at index: Int, with tile: DraggableWord) {
         HapticManager.shared.lightImpact()
 
-        // Return previously-placed word to bank if replacing an existing fill
-        if let oldWord = blanks[index].filled, oldWord != word {
-            if let oldIdx = availableWords.firstIndex(where: { $0.word == oldWord && $0.isUsed }) {
-                availableWords[oldIdx].isUsed = false
-            }
+        // If this exact tile already sits in another blank, clear it there first.
+        // Matched by id, so an identical-looking tile in a different blank is left
+        // alone.
+        for i in blanks.indices where blanks[i].filledID == tile.id {
+            blanks[i].filledID = nil
         }
 
-        // Remove word from previous blank if it was used
-        for i in blanks.indices {
-            if blanks[i].filled == word {
-                blanks[i].filled = nil
-            }
+        // Return this blank's previous tile (if any) to the bank.
+        if let oldID = blanks[index].filledID,
+           let oldIdx = availableWords.firstIndex(where: { $0.id == oldID }) {
+            availableWords[oldIdx].isUsed = false
         }
 
-        blanks[index].filled = word
-
-        // Mark word as used
-        if let wordIndex = availableWords.firstIndex(where: { $0.word == word && !$0.isUsed }) {
-            availableWords[wordIndex].isUsed = true
+        // Place this tile and mark exactly it as used.
+        blanks[index].filledID = tile.id
+        if let tileIdx = availableWords.firstIndex(where: { $0.id == tile.id }) {
+            availableWords[tileIdx].isUsed = true
         }
     }
 
     func unfillBlank(at index: Int) {
-        guard let filledWord = blanks[index].filled else { return }
+        guard let filledID = blanks[index].filledID else { return }
         HapticManager.shared.lightImpact()
 
-        blanks[index].filled = nil
+        blanks[index].filledID = nil
 
-        // Mark word as available again
-        if let wordIndex = availableWords.firstIndex(where: { $0.word == filledWord && $0.isUsed }) {
-            availableWords[wordIndex].isUsed = false
+        // Mark exactly that tile available again.
+        if let tileIdx = availableWords.firstIndex(where: { $0.id == filledID }) {
+            availableWords[tileIdx].isUsed = false
         }
     }
 
     func checkAnswers() {
-        score = blanks.filter { $0.filled?.lowercased() == $0.word.lowercased() }.count
+        // A blank is correct when the placed tile's text matches the blank's word;
+        // resolved by tile id so either "love" tile satisfies either "love" blank.
+        score = blanks.filter { filledWord(for: $0)?.lowercased() == $0.word.lowercased() }.count
 
         if score == blanks.count {
             HapticManager.shared.correctAnswer()

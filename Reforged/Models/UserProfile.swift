@@ -31,6 +31,14 @@ struct UserProfile: Codable {
     var activeTheme: String
     var profileImagePath: String?
 
+    /// Transient carrier for the synced streak/reading history (see StreakHistory).
+    /// It round-trips ONLY through the CloudKit profile record and is then imported
+    /// into ReadingStreakManager — it is intentionally excluded from CodingKeys so it
+    /// is never written to local storage (where it would drift from the manager's own
+    /// App Group persistence). The `= nil` default keeps both inits and Codable valid
+    /// without listing it.
+    var streakHistory: StreakHistory? = nil
+
     init(id: String, firstName: String, lastName: String, displayName: String, email: String?, avatar: String, goals: [String], xp: Int, level: Int, streak: Int, longestStreak: Int, lastActiveDate: String, badges: [Badge], completedLessons: [String], memoryVerses: [String], onboardingCompleted: Bool, loggedIn: Bool, streakFreezes: Int, freezeUsedDates: [String], lastFreezeReplenishMonth: String = "", activeDates: [String], chaptersRead: [String], weeklyActivity: WeeklyActivity, perks: [Perk] = [], activeProfileBorder: String = "", activeTheme: String = "", profileImagePath: String? = nil) {
         self.id = id
         self.firstName = firstName
