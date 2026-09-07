@@ -185,34 +185,34 @@ struct WhatsNewFeature {
 
     static let currentVersion: [WhatsNewFeature] = [
         WhatsNewFeature(
-            icon: "text.magnifyingglass",
+            icon: "books.vertical.fill",
             accent: .gold,
-            title: "Verse Study",
-            description: "Tap any verse and choose Study for cross references, a Greek and Hebrew word breakdown, and questions to journal through."
+            title: "Study Library",
+            description: "Open a verse alongside trusted commentaries, the Tyndale Open Study Notes, and a Bible dictionary — with the larger classics available to download for offline study."
         ),
         WhatsNewFeature(
-            icon: "tag",
+            icon: "sunrise.fill",
             accent: .navy,
-            title: "Topical Bible",
-            description: "Search a topic like anxiety or forgiveness and jump straight to the passages that speak to it, ranked by what readers found most helpful."
+            title: "Morning & Evening",
+            description: "Walk through Spurgeon's classic daily devotional right inside your reading plans, one reflection each morning and evening."
         ),
         WhatsNewFeature(
-            icon: "brain.head.profile",
+            icon: "magnifyingglass",
             accent: .purple,
-            title: "Sharper Memory Review",
-            description: "Reviews now open with a swipeable flashcard deck, then step each verse up through harder exercises as it sticks."
+            title: "Search From Home",
+            description: "Look up any word, verse, or passage from the Home screen and jump straight to it — no need to open the reader first."
         ),
         WhatsNewFeature(
-            icon: "shield.lefthalf.filled",
+            icon: "icloud.fill",
             accent: .coral,
-            title: "A Stronger Shield",
-            description: "Set blocking schedules, start a focus session on demand, reach for the SOS flow when tempted, and keep a partner in the loop."
+            title: "Synced Across Your Devices",
+            description: "Your streak, reading history, memory progress, and journal now stay perfectly in step across every device signed in to your iCloud."
         ),
         WhatsNewFeature(
-            icon: "headphones",
+            icon: "ipad.landscape",
             accent: .gold,
-            title: "KJV Audio, Offline",
-            description: "Listen to the KJV with a new public-domain recording, and download chapters to hear them without a connection."
+            title: "Rebuilt for iPad",
+            description: "Read with study tools open right beside the text, and enjoy Home and the discipleship tools laid out for the bigger screen."
         ),
     ]
 }
