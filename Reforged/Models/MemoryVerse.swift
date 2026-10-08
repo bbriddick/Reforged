@@ -33,7 +33,9 @@ struct MemoryVerse: Codable, Identifiable, Equatable {
         }
     }
 
-    var levelName: String {
+    var levelName: String { Self.levelName(for: level) }
+
+    static func levelName(for level: Int) -> String {
         switch level {
         case 5: return "Mastered"
         case 4: return "Well-Known"
@@ -69,7 +71,11 @@ struct MemoryVerse: Codable, Identifiable, Equatable {
         } else if newReviewCount == 1 {
             newInterval = 1
         } else if newReviewCount == 2 {
-            newInterval = 6
+            newInterval = 2
+        } else if newReviewCount == 3 {
+            newInterval = 4
+        } else if newReviewCount == 4 {
+            newInterval = 7
         } else {
             newInterval = Int(round(Double(interval) * newEaseFactor))
         }
@@ -94,6 +100,10 @@ struct MemoryVerseModeStats: Codable, Equatable {
 struct ModeAttemptStats: Codable, Equatable {
     var attempts: Int
     var accuracy: Double
+    /// Optional for backward compatibility with verses saved before per-key
+    /// results were tracked.
+    var correct: Int? = nil
+    var incorrect: Int? = nil
 }
 
 struct TypingStats: Codable, Equatable {

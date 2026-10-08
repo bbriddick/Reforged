@@ -30,6 +30,13 @@ struct UserProfile: Codable {
     var activeProfileBorder: String
     var activeTheme: String
     var profileImagePath: String?
+    /// XP spent on purchases (streak freezes). `xp` is the spendable balance;
+    /// level, badges and perks read `lifetimeXP` so spending never costs a level.
+    var xpSpent: Int = 0
+    /// Crowns, owned cosmetics and what's equipped — see CrownStore.swift.
+    var cosmetics = CosmeticsState()
+
+    var lifetimeXP: Int { xp + xpSpent }
 
     /// Transient carrier for the synced streak/reading history (see StreakHistory).
     /// It round-trips ONLY through the CloudKit profile record and is then imported
@@ -99,52 +106,15 @@ struct UserProfile: Codable {
         activeProfileBorder = (try? container.decode(String.self, forKey: .activeProfileBorder)) ?? ""
         activeTheme = (try? container.decode(String.self, forKey: .activeTheme)) ?? ""
         profileImagePath = try? container.decode(String.self, forKey: .profileImagePath)
+        xpSpent = (try? container.decode(Int.self, forKey: .xpSpent)) ?? 0
+        cosmetics = (try? container.decode(CosmeticsState.self, forKey: .cosmetics)) ?? CosmeticsState()
     }
 
-    /// Computed level based on XP thresholds
+    /// Level derived from lifetime XP — see `LevelProgression`.
     var currentLevel: Int {
-        // XP thresholds for each level
-        let thresholds = [
-            0,      // Level 1
-            100,    // Level 2
-            250,    // Level 3
-            500,    // Level 4
-            850,    // Level 5
-            1300,   // Level 6
-            1900,   // Level 7
-            2600,   // Level 8
-            3500,   // Level 9
-            4600,   // Level 10
-            5900,   // Level 11
-            7400,   // Level 12
-            9200,   // Level 13
-            11300,  // Level 14
-            13700,  // Level 15
-            16500,  // Level 16
-            19700,  // Level 17
-            23400,  // Level 18
-            27600,  // Level 19
-            32500,  // Level 20
-            38000,  // Level 21
-            44200,  // Level 22
-            51100,  // Level 23
-            58800,  // Level 24
-            67500,  // Level 25
-            77200,  // Level 26
-            88000,  // Level 27
-            100000, // Level 28
-            113200, // Level 29
-            127800, // Level 30
-        ]
-
-        for (index, threshold) in thresholds.enumerated().reversed() {
-            if xp >= threshold {
-                return index + 1
-            }
-        }
-        return 1
+        LevelProgression.level(forXP: lifetimeXP)
     }
-    
+
     static let empty = UserProfile(
         id: "",
         firstName: "",

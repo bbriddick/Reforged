@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>12</integer>
+	<key>logs</key>
+	<dict>
+		<key>E2F46F2B-2EA7-49E5-9EAB-5CC78E49E95B</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>E2F46F2B-2EA7-49E5-9EAB-5CC78E49E95B.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>E</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>1</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>2</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Reforged project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Reforged</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project Reforged with scheme Reforged and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>811704730.75819397</real>
+			<key>timeStoppedRecording</key>
+			<real>811704742.21203494</real>
+			<key>title</key>
+			<string>Building project Reforged with scheme Reforged and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>E2F46F2B-2EA7-49E5-9EAB-5CC78E49E95B</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

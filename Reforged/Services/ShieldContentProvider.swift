@@ -92,7 +92,7 @@ final class ShieldContentProvider {
 
     /// Always-available pairings (no AI required). Suggestions point back into the
     /// app's own habits; verses are the KJV/ESV-shared public-domain wording.
-    static let fallbackEncouragements: [ShieldEncouragement] = [
+    nonisolated static let fallbackEncouragements: [ShieldEncouragement] = [
         ShieldEncouragement(
             suggestion: "Open Reforged and review your memory verses",
             verseText: "I have stored up your word in my heart, that I might not sin against you.",

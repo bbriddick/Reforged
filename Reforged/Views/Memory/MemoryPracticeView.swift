@@ -150,13 +150,13 @@ struct SwipeableFlashcard: View {
         .rotationEffect(.degrees(Double(dragOffset.width / 22)))
         .offset(dragOffset)
         .onTapGesture {
-            HapticManager.shared.cardFlip()
-            withAnimation(.easeInOut(duration: 0.1)) { cardScale = 0.95 }
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            HapticManager.shared.cardFlipEdgeThud()
+            withAnimation(.easeInOut(duration: 0.12)) { cardScale = 0.94 }
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
                 rotation += 180
                 isFlipped.toggle()
             }
-            withAnimation(.easeOut(duration: 0.2).delay(0.1)) { cardScale = 1.0 }
+            withAnimation(.easeOut(duration: 0.2).delay(0.12)) { cardScale = 1.0 }
             onFlip?()
         }
         .gesture(onSwipe == nil ? nil : dragGesture)
@@ -578,7 +578,32 @@ struct DragAndDropView: View {
     @State private var dragOrigin: CGPoint = .zero
     @State private var dropZoneFrames: [Int: CGRect] = [:]
     @State private var hoveredBlankIndex: Int? = nil
+    @State private var currentSegment: Int = 0
     @Environment(\.colorScheme) var colorScheme
+
+    // Split multi-verse / long passages into sentence-sized sections (~18+ words
+    // each, breaking at clause punctuation) so a long passage becomes several
+    // smaller drag-and-drop rounds instead of one overwhelming blank+word-bank grid.
+    // Mirrors FillInBlankView.segments.
+    var segments: [[String]] {
+        let words = normalizedVerseWords(from: verse.text)
+        guard words.count > 25 else { return [words] }
+        var result: [[String]] = []
+        var current: [String] = []
+        for word in words {
+            current.append(word)
+            let endsClause = word.last == "." || word.last == ";" || word.last == "!" || word.last == "?"
+            if current.count >= 18 && endsClause {
+                result.append(current)
+                current = []
+            }
+        }
+        if !current.isEmpty { result.append(current) }
+        return result
+    }
+
+    var isLastSegment: Bool { currentSegment >= segments.count - 1 }
+    var hasMultipleSegments: Bool { segments.count > 1 }
 
     var body: some View {
         ZStack {
@@ -590,9 +615,23 @@ struct DragAndDropView: View {
                         .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                         .padding(.top)
 
-                    Text("Drag a word to a blank, or tap word then tap blank")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    if hasMultipleSegments {
+                        HStack(spacing: 4) {
+                            ForEach(0..<segments.count, id: \.self) { i in
+                                Capsule()
+                                    .fill(i < currentSegment ? Color.reforgedGold : (i == currentSegment ? Color.reforgedNavy : Color.adaptiveBorder(colorScheme)))
+                                    .frame(width: i == currentSegment ? 20 : 8, height: 8)
+                                    .animation(.spring(response: 0.3), value: currentSegment)
+                            }
+                            Text("Part \(currentSegment + 1) of \(segments.count)")
+                                .font(.caption)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                    } else {
+                        Text("Tap words to fill the blanks, or drag them into place")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
 
                     // Verse with blanks
                     FlowLayout(spacing: 6) {
@@ -653,11 +692,10 @@ struct DragAndDropView: View {
                                     )
                                     .opacity(draggingWord?.id == word.id ? 0.3 : 1.0)
                                     .onTapGesture {
-                                        HapticManager.shared.lightImpact()
-                                        if selectedWordForTap?.id == word.id {
-                                            selectedWordForTap = nil
-                                        } else {
-                                            selectedWordForTap = word
+                                        if let nextBlank = blanks.firstIndex(where: { $0.filledID == nil }) {
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.78)) {
+                                                fillBlank(at: nextBlank, with: word)
+                                            }
                                         }
                                     }
                                     .simultaneousGesture(
@@ -712,11 +750,27 @@ struct DragAndDropView: View {
                                     .font(.headline)
                             }
 
-                            HStack(spacing: 10) {
-                                RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
-                                RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
-                                RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
-                                RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
+                            if !isLastSegment {
+                                Button("Continue to Part \(currentSegment + 2)") {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                        currentSegment += 1
+                                        setupBlanks()
+                                    }
+                                }
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.reforgedNavy)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .padding(.horizontal)
+                            } else {
+                                HStack(spacing: 10) {
+                                    RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
+                                    RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
+                                    RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
+                                    RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
+                                }
                             }
                         }
                         .padding()
@@ -785,8 +839,18 @@ struct DragAndDropView: View {
     }
 
     func setupBlanks() {
-        let words = normalizedVerseWords(from: verse.text)
+        let words = segments[currentSegment]
         displayWords = words
+
+        // Drop-zone frames are keyed by blank index; clear stale frames from the
+        // previous segment so blankIndexAt never resolves against out-of-range blanks.
+        dropZoneFrames = [:]
+        selectedWordForTap = nil
+        draggingWord = nil
+        dragOffset = .zero
+        hoveredBlankIndex = nil
+        showResult = false
+        score = 0
 
         // Select significant words to blank (not short words like "the", "a", etc.)
         let significantIndices = words.indices.filter { index in
@@ -806,7 +870,7 @@ struct DragAndDropView: View {
     }
 
     func fillBlank(at index: Int, with tile: DraggableWord) {
-        HapticManager.shared.lightImpact()
+        HapticManager.shared.magneticSnapClick()
 
         // If this exact tile already sits in another blank, clear it there first.
         // Matched by id, so an identical-looking tile in a different blank is left
@@ -1148,18 +1212,25 @@ struct BlankField: View {
 
 // MARK: - First Letter View
 //
-// One-shot recall test: the user types the first letter of each word and the
-// WHOLE word reveals immediately — green if the letter matched, red if not.
-// There is no backspace, so the run is an honest measure of recall, and the
-// resulting accuracy is mapped straight onto the SM-2 quality scale (no manual
-// self-rating). Typing the last word's letter auto-grades the verse.
+// Guided recall: every first-letter attempt reveals the next word. Correct words
+// land green; incorrect words land red, so the verse rebuilds in order while
+// preserving an honest visual record of the run.
 
 struct FirstLetterView: View {
+    private enum InputFeedback: Equatable {
+        case neutral, correct, incorrect
+    }
+
     let verse: MemoryVerse
     let onComplete: (Int) -> Void
-    /// Append-only record of committed keystrokes. Never shrinks — backspace is
-    /// swallowed so mistakes stay locked in.
-    @State private var typed: [Character] = []
+    @EnvironmentObject private var appState: AppState
+    @State private var revealedCount = 0
+    @State private var attempts = 0
+    @State private var correctAttempts = 0
+    @State private var incorrectWordIndices: Set<Int> = []
+    @State private var incorrectPulse = 0
+    @State private var inputFeedback: InputFeedback = .neutral
+    @State private var feedbackGeneration = 0
     @State private var showResult = false
     @State private var accuracy: Double = 0
     @State private var fieldText = ""
@@ -1170,10 +1241,6 @@ struct FirstLetterView: View {
 
     private var expectedLetters: [Character] {
         words.compactMap { $0.first.map { Character(String($0).uppercased()) } }
-    }
-
-    private var correctCount: Int {
-        typed.indices.filter { $0 < expectedLetters.count && typed[$0] == expectedLetters[$0] }.count
     }
 
     private var quality: Int {
@@ -1217,13 +1284,13 @@ struct FirstLetterView: View {
                 if showResult {
                     resultSection
                 } else {
-                    Text("Type the first letter of each word. The word reveals as you go — no going back.")
+                    Text("Type the first letter of each word. Every letter reveals the next word.")
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .padding(.horizontal)
 
-                    Text("\(min(typed.count, words.count)) / \(words.count) words")
+                    Text("\(min(revealedCount, words.count)) / \(words.count) words")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
@@ -1248,6 +1315,11 @@ struct FirstLetterView: View {
 
                 if showResult {
                     Button("Continue") {
+                        appState.recordFirstLetterAttempt(
+                            verseId: verse.id,
+                            correct: correctAttempts,
+                            incorrect: attempts - correctAttempts
+                        )
                         onComplete(quality)
                     }
                     .font(.headline)
@@ -1258,27 +1330,55 @@ struct FirstLetterView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal)
                 } else {
-                    // Hidden capture field: drives the keyboard while the chips
-                    // above are the real display. Backspace is blocked below.
-                    TextField("", text: $fieldText)
-                        .focused($isFocused)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled(true)
-                        .keyboardType(.asciiCapable)
-                        .textContentType(.oneTimeCode)
-                        .opacity(0.02)
-                        .frame(height: 1)
-                        .onChange(of: fieldText) { newValue in handleInput(newValue) }
-                        .onAppear { isFocused = true }
+                    HStack(spacing: 12) {
+                        Image(systemName: "keyboard")
+                            .font(.headline)
+                            .foregroundStyle(Color.reforgedCoral)
 
-                    Text("Tap the words above and type — every letter counts.")
-                        .font(.caption2)
+                        TextField("Type the next first letter", text: $fieldText)
+                            .focused($isFocused)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled(true)
+                            .keyboardType(.asciiCapable)
+                            .submitLabel(.done)
+                            .onChange(of: fieldText) { newValue in handleInput(newValue) }
+
+                        if revealedCount < expectedLetters.count {
+                            Text(String(expectedLetters[revealedCount]))
+                                .font(.headline.monospaced())
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.35))
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 52)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(inputFeedbackColor, lineWidth: inputFeedback == .neutral ? 1 : 2)
+                    }
+                    .background(inputFeedbackColor.opacity(inputFeedback == .neutral ? 0 : 0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .rotationEffect(.degrees(inputFeedback == .incorrect ? (incorrectPulse.isMultiple(of: 2) ? -1.2 : 1.2) : 0))
+                    .padding(.horizontal)
+                    .onTapGesture { isFocused = true }
+                    .onAppear {
+                        DispatchQueue.main.async { isFocused = true }
+                    }
+
+                    Text("Correct words appear green. A wrong letter reveals the word in red.")
+                        .font(.caption)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
             }
             .padding(.bottom)
         }
-        .animation(.easeInOut(duration: 0.15), value: typed.count)
+        .animation(.spring(response: 0.3, dampingFraction: 0.75), value: revealedCount)
+        .animation(.spring(response: 0.18, dampingFraction: 0.45), value: incorrectPulse)
+        .animation(.easeOut(duration: 0.16), value: inputFeedback)
         .animation(.easeInOut(duration: 0.2), value: showResult)
     }
 
@@ -1293,7 +1393,7 @@ struct FirstLetterView: View {
                     .foregroundStyle(Color.adaptiveText(colorScheme))
             }
 
-            Text("\(correctCount) of \(words.count) first letters correct · \(Int(accuracy * 100))%")
+            Text("\(correctAttempts) correct in \(attempts) attempt\(attempts == 1 ? "" : "s") · \(Int(accuracy * 100))%")
                 .font(.subheadline)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
@@ -1310,52 +1410,62 @@ struct FirstLetterView: View {
     }
 
     private func chipState(at index: Int) -> WordRevealChip.State {
-        if index < typed.count {
-            return typed[index] == expectedLetters[index] ? .correct : .incorrect
+        if index < revealedCount {
+            return incorrectWordIndices.contains(index) ? .incorrect : .correct
         }
-        return index == typed.count ? .current : .upcoming
+        return index == revealedCount ? .current : .upcoming
     }
 
-    /// Accepts only forward-appended letters. Deletions revert the field, so the
-    /// committed sequence can never shrink. Each new letter reveals its word;
-    /// the final letter grades the run.
-    private func handleInput(_ raw: String) {
-        guard !showResult else { return }
-        let letters = raw.uppercased().filter { $0.isLetter }
+    private var inputFeedbackColor: Color {
+        switch inputFeedback {
+        case .neutral: return Color.adaptiveBorder(colorScheme)
+        case .correct: return Color.green
+        case .incorrect: return Color.reforgedCoral
+        }
+    }
 
-        // Block backspace / edits: never let the count drop below what's committed.
-        guard letters.count > typed.count else {
-            if fieldText != String(typed) { fieldText = String(typed) }
+    /// Treat the field as a one-key capture target. Correct letters reveal the
+    /// next word; incorrect letters leave the cursor in place for another try.
+    private func handleInput(_ raw: String) {
+        guard !showResult, revealedCount < expectedLetters.count else { return }
+        guard let letter = raw.uppercased().first(where: { $0.isLetter }) else {
+            if !raw.isEmpty { fieldText = "" }
             return
         }
 
-        // Commit newly appended letters, capped to the word count.
-        var next = typed
-        for ch in letters.dropFirst(typed.count) {
-            guard next.count < words.count else { break }
-            next.append(ch)
-        }
-        typed = next
+        // Clear immediately so every keyboard tap creates a fresh change event.
+        fieldText = ""
+        attempts += 1
 
-        let committed = String(typed)
-        if fieldText != committed { fieldText = committed }
-
-        // Feedback reflects whether the latest letter matched.
-        if let last = typed.indices.last, last < expectedLetters.count {
-            if typed[last] == expectedLetters[last] {
-                HapticManager.shared.correctAnswer()
-            } else {
-                HapticManager.shared.incorrectAnswer()
-            }
+        let wordIndex = revealedCount
+        if letter == expectedLetters[wordIndex] {
+            correctAttempts += 1
+            showFeedback(.correct)
+            HapticManager.shared.correctAnswer()
+        } else {
+            incorrectWordIndices.insert(wordIndex)
+            incorrectPulse += 1
+            showFeedback(.incorrect)
+            HapticManager.shared.incorrectAnswer()
         }
 
-        if typed.count >= words.count {
-            finish()
+        revealedCount += 1
+        if revealedCount >= words.count { finish() }
+    }
+
+    private func showFeedback(_ feedback: InputFeedback) {
+        feedbackGeneration += 1
+        let generation = feedbackGeneration
+        withAnimation(.easeOut(duration: 0.12)) { inputFeedback = feedback }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            guard generation == feedbackGeneration, !showResult else { return }
+            withAnimation(.easeOut(duration: 0.18)) { inputFeedback = .neutral }
         }
     }
 
     private func finish() {
-        accuracy = words.isEmpty ? 0 : Double(correctCount) / Double(words.count)
+        accuracy = attempts == 0 ? 0 : Double(correctAttempts) / Double(attempts)
         isFocused = false
         withAnimation { showResult = true }
     }
@@ -1602,6 +1712,7 @@ struct RatingButton: View {
 
 // FlowLayout is defined in Views/Components/FlowLayout.swift
 
+#if false
 #Preview {
     NavigationStack {
         MemoryPracticeView(verse: MemoryVerse(
@@ -1623,3 +1734,4 @@ struct RatingButton: View {
             .environmentObject(AppState.shared)
     }
 }
+#endif

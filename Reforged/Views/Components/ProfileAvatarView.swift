@@ -13,14 +13,9 @@ struct ProfileAvatarView: View {
         return ProfileImageService.shared.loadImage(named: path)
     }
 
-    private var profileBorderColor: Color {
-        switch appState.user.activeProfileBorder {
-        case "border-gold": return Color.reforgedGold
-        case "border-flame": return Color.reforgedCoral
-        case "border-crown": return Color.purple
-        case "border-diamond": return Color.cyan
-        default: return Color.reforgedGold
-        }
+    /// The equipped avatar frame (crown shop); "" draws the original thin gold ring.
+    private var frameRing: some View {
+        AvatarFrameRing(style: appState.user.activeProfileBorder, lineWidth: size > 60 ? 4 : 2.5)
     }
 
     var body: some View {
@@ -31,20 +26,14 @@ struct ProfileAvatarView: View {
                     .scaledToFill()
                     .frame(width: size, height: size)
                     .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .strokeBorder(profileBorderColor, lineWidth: size > 60 ? 4 : 2)
-                    )
+                    .overlay(frameRing)
             } else {
                 Text(appState.user.avatar.isEmpty ? "🦁" : appState.user.avatar)
                     .font(.system(size: size * 0.6))
                     .frame(width: size, height: size)
                     .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.white)
                     .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .strokeBorder(profileBorderColor, lineWidth: size > 60 ? 4 : 2)
-                    )
+                    .overlay(frameRing)
             }
 
             if showEditBadge {

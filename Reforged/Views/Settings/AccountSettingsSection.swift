@@ -361,6 +361,7 @@ struct AccountSettingsSection: View {
     }
 }
 
+#if false
 #Preview {
     ScrollView {
         AccountSettingsSection()
@@ -368,3 +369,4 @@ struct AccountSettingsSection: View {
     }
     .environmentObject(AppState.shared)
 }
+#endif

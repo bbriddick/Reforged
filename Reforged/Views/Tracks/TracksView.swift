@@ -319,7 +319,9 @@ struct LessonRow: View {
     }
 }
 
+#if false
 #Preview {
     TracksView()
         .environmentObject(AppState.shared)
 }
+#endif

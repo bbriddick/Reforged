@@ -24,10 +24,14 @@ struct ContentView: View {
             } else {
                 AdaptiveNavigationView(selectedTab: $selectedTab)
                     .preferredColorScheme(themeManager.colorScheme)
-                    .id(themeManager.currentMode) // Safe to reset main nav on theme change
+                    // Safe to reset main nav on a mode or palette change; the
+                    // palette key makes every theme-aware static color re-read.
+                    .id("\(themeManager.currentMode.rawValue)-\(themeManager.palette.id)")
                     // Outside the .id() on purpose: a theme change mid-celebration
                     // must not tear down an in-flight reward animation.
-                    .celebrationOverlay()
+                    // Tag 3 = Memory: the only tab with the arcade reward treatment.
+                    .celebrationOverlay(arcade: selectedTab == 3)
+                    .onAppear { focusHomeOnFirstOpenOfDay() }
             }
         }
         .environmentObject(appState)
@@ -111,20 +115,39 @@ struct ContentView: View {
                 .presentationDetents([.medium])
         }
         .sheet(isPresented: $showDonationPrompt) {
-            DonationPromptView(
+            TipJarView(
                 isPresented: $showDonationPrompt,
                 message: donationPromptMessage
             )
-            .presentationDetents([.medium])
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showWhatsNew) {
-            WhatsNewView(isPresented: $showWhatsNew)
+            if #available(iOS 18.0, *) {
+                // Page sizing gives the iPad a roomier sheet than the default form sheet.
+                WhatsNewView(isPresented: $showWhatsNew)
+                    .presentationSizing(.page)
+            } else {
+                WhatsNewView(isPresented: $showWhatsNew)
+            }
         }
+    }
+
+    /// On the first launch of each day, land on Home so the morning routine card is
+    /// the first thing seen. Keyed by the streak engine's local day key and stored so
+    /// it fires only once per day — later opens that day keep the user's place.
+    private func focusHomeOnFirstOpenOfDay() {
+        guard appState.user.onboardingCompleted else { return }
+        let today = ReadingStreakManager.shared.currentDayKey
+        let key = "lastMorningHomeFocusDay"
+        guard UserDefaults.standard.string(forKey: key) != today else { return }
+        UserDefaults.standard.set(today, forKey: key)
+        selectedTab = 0
     }
 
     private func checkFreezeEncouragement() {
         guard appState.user.onboardingCompleted else { return }
         guard appState.user.streakFreezes == 0 else { return }
+        guard !appState.pendingFreezePrompt else { return } // the Memory tab's streak sheet handles it
         guard appState.user.streak >= 3 else { return } // Only show if they have a streak worth protecting
 
         // Only show once per day. Uses the streak engine's local day key so the
@@ -338,101 +361,6 @@ struct FreezeEncouragementView: View {
             }
         } message: {
             Text("Your streak is now protected! You have \(appState.user.streakFreezes) streak freeze\(appState.user.streakFreezes == 1 ? "" : "s").")
-        }
-    }
-
-    private func dismissView() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-            isPresented = false
-        }
-    }
-}
-
-// MARK: - Donation Prompt View
-
-struct DonationPromptView: View {
-    @Binding var isPresented: Bool
-    let message: String
-    @Environment(\.colorScheme) var colorScheme
-    @Environment(\.openURL) var openURL
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Coffee icon
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.reforgedGold, Color.orange.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 90, height: 90)
-                        .shadow(color: Color.reforgedGold.opacity(0.5), radius: 20)
-
-                    Text("☕")
-                        .font(.system(size: 44))
-                }
-
-                VStack(spacing: 10) {
-                    Text("Enjoying Reforged?")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                        .multilineTextAlignment(.center)
-
-                    Text(message)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(3)
-                }
-
-                VStack(spacing: 10) {
-                    Button {
-                        if let url = URL(string: "https://buymeacoffee.com/reforgedapp") {
-                            openURL(url)
-                        }
-                        dismissView()
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text("☕")
-                                .font(.system(size: 18))
-                            Text("Support Reforged")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.reforgedGold, Color.orange.opacity(0.9)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-
-                    Button {
-                        dismissView()
-                    } label: {
-                        Text("Maybe Later")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            .padding(.vertical, 12)
-                    }
-                }
-            }
-            .padding(28)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .shadow(color: Color.black.opacity(0.2), radius: 30)
-            .padding(32)
         }
     }
 
@@ -679,6 +607,8 @@ struct MainTabView: View {
     }
 }
 
+#if false
 #Preview {
     ContentView()
 }
+#endif

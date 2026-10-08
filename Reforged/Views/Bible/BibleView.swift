@@ -65,6 +65,11 @@ struct BibleView: View {
     @StateObject private var audioPlayer = BibleAudioPlayer()
     @StateObject private var readingSettings = BibleReadingSettings.shared
     @StateObject private var settingsManager = SettingsManager.shared
+    /// Bounded-window TextKit 2 reader controller (used only when `useTextKitReader` is on).
+    /// Configured with the real location on appear via `reset` in `startOrReconfigureWindow`.
+    @StateObject private var windowController = BibleReaderWindowController(
+        centerChapterID: "John 3", translation: .kjv, verseByVerse: false, colorScheme: .light
+    )
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
@@ -112,6 +117,10 @@ struct BibleView: View {
     /// The chapter we last explicitly navigated to (cold-start restore, nav panel, search, prev/next).
     /// Drives the full-screen loading/error/incompatible overlay and the post-load scroll positioning.
     @State private var focusChapterID: String?
+    /// Monotonic token bumped by `loadChapter()` on every explicit navigation. The TextKit reader
+    /// observes this (not `focusChapterID`) so prev/next fires even when the destination equals the
+    /// last explicitly-focused chapter (scroll-tracking updates `selectedChapter`, not `focusChapterID`).
+    @State private var readerNavToken: Int = 0
     /// The scroll target ("Book Chapter" row id, or "Book Chapter:Verse") to jump to once the focused
     /// chapter's body finishes hydrating. Cleared after the jump fires.
     @State private var pendingScrollTarget: String?
@@ -331,6 +340,7 @@ struct BibleView: View {
             selectedBook: $selectedBook,
             selectedChapter: $selectedChapter,
             recentPassages: recentPassages,
+            bookmarks: readingState.allBookmarks,
             isPresented: .constant(true),
             onSelect: {
                 loadChapter()
@@ -353,6 +363,18 @@ struct BibleView: View {
                 pendingNavigationVerse = verseNum
                 loadChapter()
                 addToRecentPassages()
+            },
+            onSelectBookmark: { bookmark in
+                guard let book = BibleData.books.first(where: { $0.name == bookmark.book }) else { return }
+                close()
+                selectedBook = book
+                selectedChapter = bookmark.chapter
+                pendingNavigationVerse = bookmark.verse
+                loadChapter()
+                addToRecentPassages()
+            },
+            onDeleteBookmark: { bookmark in
+                readingState.removeBookmark(reference: bookmark.reference)
             },
             translation: currentTranslation,
             translationOrder: settingsManager.translationOrder,
@@ -1057,9 +1079,6 @@ struct BibleView: View {
             toolPanelChrome(title: kind.title) { bibleHighlightsPanelContent }
         case .info:
             toolPanelChrome(title: kind.title) { bibleInfoPanelContent }
-
-        default:
-            EmptyView()
         }
     }
 
@@ -1361,6 +1380,10 @@ struct BibleView: View {
                 }
 
                 // Chapter content
+                Group {
+                if readingSettings.useTextKitReader {
+                    windowedReaderBody
+                } else {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
@@ -1463,71 +1486,8 @@ struct BibleView: View {
                             firstVisibleVerseNumber = parsed.verse
                         }
                     }
-                    .simultaneousGesture(
-                        // Left-edge swipe reveals the navigation panel. A small state machine
-                        // (idle → deciding → revealingNav) only claims the drag when it clearly
-                        // starts at the left edge AND is primarily horizontal; until then the
-                        // vertical ScrollView keeps the pan. Chapter changes are handled by
-                        // vertical scrolling + the floating prev/next buttons.
-                        DragGesture(minimumDistance: 6)
-                            .onChanged { value in
-                                guard !isSidebarNavigation else { return }
-                                let h = value.translation.width
-                                let v = abs(value.translation.height)
-
-                                switch edgeDragPhase {
-                                case .idle:
-                                    // Begin deciding for any rightward gesture (anywhere on screen),
-                                    // as long as the panel isn't already open. The horizontal/vertical
-                                    // discrimination below still hands vertical scrolls back to the
-                                    // ScrollView, so reading isn't disrupted.
-                                    guard !navPanelVisible else { return }
-                                    edgeDragPhase = .deciding
-                                    fallthrough
-                                case .deciding:
-                                    // Abandon the moment the gesture reveals itself as a scroll
-                                    // (downward/upward movement out-pacing horizontal) — hand it
-                                    // back to the ScrollView for the rest of the touch.
-                                    if v > 10 && v >= h {
-                                        edgeDragPhase = .idle
-                                        return
-                                    }
-                                    // Claim the drag once it's clearly horizontal: rightward, past a
-                                    // threshold, and out-pacing vertical movement by 1.5×.
-                                    guard h > 12, h > v * 1.5 else { return }
-                                    edgeDragPhase = .revealingNav
-                                    navPanelVisible = true
-                                    navRevealProgress = 0
-                                    fallthrough
-                                case .revealingNav:
-                                    // Width tracks the finger directly, clamped to [0,1].
-                                    let screenW = AppWindow.width
-                                    let target = min(max(h / (screenW * 0.82), 0), 1)
-                                    // A slow swipe lets the ScrollView intermittently steal the touch;
-                                    // when it does, the DragGesture's translation snaps back toward 0
-                                    // for a frame, which used to yank the panel left then right again
-                                    // — the visible jitter. Advance immediately on forward motion, but
-                                    // ignore small backward blips via a deadband, so only a deliberate
-                                    // pull-back (past ~6%) actually retreats the panel.
-                                    if target >= navRevealProgress || navRevealProgress - target > 0.06 {
-                                        navRevealProgress = target
-                                    }
-                                }
-                            }
-                            .onEnded { value in
-                                defer { edgeDragPhase = .idle }
-                                guard edgeDragPhase == .revealingNav else { return }
-                                // Open on a short flick: a quick rightward gesture (high predicted
-                                // travel from finger velocity) OR any modest deliberate drag. No
-                                // need to drag most of the way across the screen anymore.
-                                let flick = value.predictedEndTranslation.width > 80
-                                if flick || navRevealProgress > 0.15 {
-                                    openNav()
-                                } else {
-                                    closeNav()
-                                }
-                            }
-                    )
+                    // Left-edge swipe reveals the navigation panel (shared with the TextKit reader).
+                    .simultaneousGesture(navEdgeRevealGesture)
                     .simultaneousGesture(
                         MagnificationGesture()
                             .onChanged { value in
@@ -1583,10 +1543,20 @@ struct BibleView: View {
                     // never glimpses the spine resting at its natural top (Genesis 1) before the jump lands.
                     .overlay { focusOverlay }
                 }
+                }
+                }
+                // Soft blurred fade where the text meets the bottom bar — the scripture dissolves
+                // toward the chrome instead of ending on a hard edge. Non-interactive so bar/verse
+                // taps pass through. (Top fade removed per request; the top bar is in flow.)
+                .overlay(alignment: .bottom) { readerEdgeFade(top: false) }
 
                 Spacer(minLength: 0)
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            // Extend the reading column behind the bottom tab bar so the text scrolls under it
+            // (the bottom fade softens the transition). The top bar stays in normal flow, so its
+            // taps are unaffected and the text does NOT go behind the toolbar.
+            .ignoresSafeArea(.container, edges: .bottom)
 
             // Floating chapter navigation buttons.
             // Hide the mini player when the full audio panel is docked in the
@@ -1598,21 +1568,31 @@ struct BibleView: View {
                 && activeToolPanel != .audio
                 && (!usesToolSidebar || readerFullScreen)
             if barsVisible && readingState.selectedVerses.isEmpty {
-                VStack {
+                VStack(spacing: 10) {
                     Spacer()
-                    FloatingChapterNav(
-                        hasPrevious: selectedChapter > 1
-                            || (BibleData.books.firstIndex(where: { $0.name == selectedBook.name }) ?? 0) > 0,
-                        hasNext: selectedChapter < selectedBook.chapters
-                            || (BibleData.books.firstIndex(where: { $0.name == selectedBook.name }) ?? BibleData.books.count - 1) < BibleData.books.count - 1,
-                        onPrevious: { navigateToAdjacentChapter(offset: -1) },
-                        onNext: { navigateToAdjacentChapter(offset: 1) }
-                    )
-                    // Match the reading column (same leading anchor) so the prev/next
-                    // buttons frame the text and don't slide when a side panel opens.
-                    .frame(maxWidth: maxContentWidth, alignment: .leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, miniPlayerVisible ? 80 : 16)
+                    ZStack {
+                        FloatingChapterNav(
+                            hasPrevious: selectedChapter > 1
+                                || (BibleData.books.firstIndex(where: { $0.name == selectedBook.name }) ?? 0) > 0,
+                            hasNext: selectedChapter < selectedBook.chapters
+                                || (BibleData.books.firstIndex(where: { $0.name == selectedBook.name }) ?? BibleData.books.count - 1) < BibleData.books.count - 1,
+                            onPrevious: { navigateToAdjacentChapter(offset: -1) },
+                            onNext: { navigateToAdjacentChapter(offset: 1) }
+                        )
+                        // Match the reading column (same leading anchor) so the prev/next
+                        // buttons frame the text and don't slide when a side panel opens.
+                        .frame(maxWidth: maxContentWidth, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        // "Mark as read" sits centered, level with the prev/next buttons.
+                        // (The TextKit reader has no inline per-chapter footer.)
+                        if readingSettings.useTextKitReader {
+                            floatingMarkAsReadPill
+                        }
+                    }
+                    // The controls sit just above the floating tab bar. The row already
+                    // respects the bottom safe area (the tab bar), so this is only a small gap.
+                    .padding(.bottom, miniPlayerVisible ? 78 : 14)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -1677,7 +1657,7 @@ struct BibleView: View {
             // a slow swipe. iPhone only — iPad/Mac use a sheet.
             .overlay(
                 Color.black
-                    .opacity(navRevealProgress * 0.25)
+                    .opacity(navRevealProgress * 0.38)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
             )
@@ -1693,10 +1673,12 @@ struct BibleView: View {
                     .frame(width: panelW)
                     .frame(maxHeight: .infinity)
                     // Minimal: a hairline trailing edge stroke instead of a heavy drop shadow.
+                    // Tinted from the foreground (not the light border token) so it still
+                    // reads against the dimmed reader.
                     .overlay(alignment: .trailing) {
                         Rectangle()
-                            .fill(Color.adaptiveBorder(colorScheme))
-                            .frame(width: 0.5)
+                            .fill(Color.primary.opacity(colorScheme == .dark ? 0.22 : 0.14))
+                            .frame(width: 1 / UIScreen.main.scale)
                             .ignoresSafeArea()
                     }
                     // Flat slide-in: a single horizontal translate tracking the drag.
@@ -1707,7 +1689,9 @@ struct BibleView: View {
                         .onTapGesture { closeNav() }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .ignoresSafeArea()
+                // Container only: the keyboard safe area still applies, so the drawer's
+                // bottom search dock rides up above the keyboard.
+                .ignoresSafeArea(.container)
                 .transition(.identity)
             }
 
@@ -1886,7 +1870,9 @@ struct BibleView: View {
         .toolbarBackground(Color.adaptiveBackground(colorScheme), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar(barsVisible ? .visible : .hidden, for: .navigationBar)
-        .toolbar(barsVisible ? .visible : .hidden, for: .tabBar)
+        // The iPhone nav drawer is modal (reader dimmed + non-interactive), so global
+        // navigation steps aside while it's up instead of floating over the drawer.
+        .toolbar(barsVisible && !navPanelVisible ? .visible : .hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: settingsManager.readingMode) { isOn in
             if !isOn {
@@ -1905,6 +1891,9 @@ struct BibleView: View {
         }
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = settingsManager.keepScreenOn
+            // Ambient reading sound (crown shop Reader Extras) plays only here.
+            AmbientSoundPlayer.shared.readerActive = true
+            AmbientSoundPlayer.shared.syncWithEquipped()
             guard !hasAppeared else {
                 // Tab switch back — do NOT reload; scroll position is already preserved
                 audioPlayer.updateFromSettings()
@@ -1955,6 +1944,8 @@ struct BibleView: View {
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
             resetToolPanelAndRestoreNavSidebar()
+            AmbientSoundPlayer.shared.readerActive = false
+            AmbientSoundPlayer.shared.stop()
         }
         .onChange(of: settingsManager.keepScreenOn) { enabled in
             UIApplication.shared.isIdleTimerDisabled = enabled
@@ -2037,6 +2028,276 @@ struct BibleView: View {
     }
 
     // MARK: - Chapter Content View
+
+    /// Left-edge swipe that reveals the navigation panel. Shared by both readers (the FlowLayout
+    /// ScrollView and the TextKit windowed reader) so the gesture works regardless of engine.
+    private var navEdgeRevealGesture: some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { value in
+                guard !isSidebarNavigation else { return }
+                let h = value.translation.width
+                let v = abs(value.translation.height)
+
+                switch edgeDragPhase {
+                case .idle:
+                    guard !navPanelVisible else { return }
+                    edgeDragPhase = .deciding
+                    fallthrough
+                case .deciding:
+                    if v > 10 && v >= h {
+                        edgeDragPhase = .idle
+                        return
+                    }
+                    guard h > 12, h > v * 1.5 else { return }
+                    edgeDragPhase = .revealingNav
+                    navPanelVisible = true
+                    navRevealProgress = 0
+                    fallthrough
+                case .revealingNav:
+                    let screenW = AppWindow.width
+                    let target = min(max(h / (screenW * 0.82), 0), 1)
+                    if target >= navRevealProgress || navRevealProgress - target > 0.06 {
+                        navRevealProgress = target
+                    }
+                }
+            }
+            .onEnded { value in
+                defer { edgeDragPhase = .idle }
+                guard edgeDragPhase == .revealingNav else { return }
+                let flick = value.predictedEndTranslation.width > 80
+                if flick || navRevealProgress > 0.15 {
+                    openNav()
+                } else {
+                    closeNav()
+                }
+            }
+    }
+
+    // MARK: - TextKit 2 Bounded-Window Reader Body (useTextKitReader flag)
+
+    /// The TextKit 2 bounded-window reader shown in place of the LazyVStack spine when
+    /// `useTextKitReader` is on. It owns its own scrolling; navigation, translation,
+    /// presentation, and interactive state are pushed into `windowController`.
+    @ViewBuilder
+    private var windowedReaderBody: some View {
+        BibleWindowedReader(
+            controller: windowController,
+            onVerseTap: { hit in
+                guard let reference = hit.reference else { return }
+                withAnimation(.easeInOut(duration: 0.15)) { readingState.toggleSelection(reference) }
+            },
+            onWordLookup: { hit in
+                guard let word = hit.word, let reference = hit.reference,
+                      let verse = windowController.verse(forReference: reference) else { return }
+                HapticManager.shared.mediumImpact()
+                performWordLookup(word: word, verse: verse)
+            },
+            onNoteTap: { hit in
+                guard let reference = hit.reference,
+                      let verse = windowController.verse(forReference: reference) else { return }
+                readingState.selectedVerses = [reference]
+                selectedVerseForAction = verse
+            },
+            onBackgroundTap: {
+                // Tapping empty space / a heading toggles the reading-mode chrome (parity with
+                // the FlowLayout reader, and a reliable way back from full-screen reading).
+                guard settingsManager.readingMode else { return }
+                readingModeHideTask?.cancel()
+                readingModeHideTask = nil
+                let showing = !readingModeOverride
+                barsPinnedByTap = showing
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                    readingModeOverride = showing
+                }
+            },
+            onEdgeSwipe: {
+                guard !isSidebarNavigation, !navPanelVisible else { return }
+                openNav()
+            },
+            onScroll: { dy, atTop in
+                // Full-screen reading: reveal the UI when pulling back up (or at the top),
+                // hide it again when reading forward. Tap-pinned bars stay until tapped away.
+                guard settingsManager.readingMode, focusPositioned else { return }
+                if atTop || dy < -4 {
+                    readingModeHideTask?.cancel()
+                    readingModeHideTask = nil
+                    if !readingModeOverride {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                            readingModeOverride = true
+                        }
+                    }
+                } else if dy > 4, !barsPinnedByTap {
+                    if readingModeOverride {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                            readingModeOverride = false
+                        }
+                    }
+                }
+            },
+            // Small reading gutter at the top; the bottom inset keeps the last line clear of the
+            // floating chapter-nav / tab bar.
+            topInset: 12,
+            bottomInset: 100,
+            colorScheme: colorScheme
+        )
+        .frame(maxWidth: maxContentWidth, alignment: .center)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .overlay { windowedReaderOverlay }
+        // Left-edge swipe to open the nav panel is handled inside the reader via a UIKit
+        // screen-edge pan (see BibleWindowedReader.onEdgeSwipe) — SwiftUI gestures don't fire
+        // reliably over the text view's scroll view.
+        .onAppear { wireWindowTopReferenceHandler() }
+        .onChange(of: readerNavToken) { _ in
+            guard readingSettings.useTextKitReader, let id = focusChapterID else { return }
+            let target = (pendingScrollTarget?.contains(":") == true) ? pendingScrollTarget! : id
+            Task {
+                if windowController.document.length == 0 {
+                    windowController.reset(
+                        centerChapterID: id,
+                        translation: currentTranslation,
+                        verseByVerse: readingSettings.verseByVerse,
+                        colorScheme: colorScheme
+                    )
+                    windowController.updateRenderState(scriptureRenderState)
+                    await windowController.start(scrollTo: target)
+                } else {
+                    await windowController.navigate(toChapterID: id, reference: target)
+                }
+            }
+        }
+        .onChange(of: scriptureRenderStateSignature) { _ in
+            windowController.updateRenderState(scriptureRenderState)
+        }
+        .onChange(of: currentTranslation) { newValue in
+            guard readingSettings.useTextKitReader else { return }
+            Task { await windowController.setTranslation(newValue, keepingTopReference: readerTopReference) }
+        }
+        .onChange(of: readerPresentationKey) { _ in
+            guard readingSettings.useTextKitReader, windowController.document.length > 0 else { return }
+            windowController.applyPresentation(
+                verseByVerse: readingSettings.verseByVerse,
+                colorScheme: colorScheme,
+                keepingTopReference: readerTopReference
+            )
+        }
+    }
+
+    /// A blurred, fading band at the top or bottom of the reading column. The scripture text
+    /// scrolling beneath it frosts and dissolves into the background as it nears the chrome,
+    /// rather than clipping on a hard edge. `allowsHitTesting(false)` keeps taps flowing to the
+    /// text and the bars underneath/over it.
+    @ViewBuilder
+    private func readerEdgeFade(top: Bool) -> some View {
+        let bg = Color.adaptiveBackground(colorScheme)
+        ZStack {
+            Rectangle().fill(.ultraThinMaterial)
+            LinearGradient(
+                colors: [bg, bg.opacity(0)],
+                startPoint: top ? .top : .bottom,
+                endPoint: top ? .bottom : .top
+            )
+        }
+        .mask(
+            LinearGradient(
+                stops: [
+                    .init(color: .black, location: 0),
+                    .init(color: .black.opacity(0), location: 1)
+                ],
+                startPoint: top ? .top : .bottom,
+                endPoint: top ? .bottom : .top
+            )
+        )
+        .frame(height: top ? 64 : 96)
+        .frame(maxWidth: .infinity)
+        .allowsHitTesting(false)
+    }
+
+    /// Floating "Mark as read" / "Read" pill for the current chapter — the TextKit reader's
+    /// replacement for the FlowLayout reader's inline per-chapter footer.
+    private var floatingMarkAsReadPill: some View {
+        let isRead = streakManager.wasChapterRead(book: selectedBook.name, chapter: selectedChapter, on: Date())
+        // On-brand (reforged-design) but understated: a frosted pill, not a bold coral fill.
+        // Coral appears only as the text + a hairline tint on the actionable state; once read it
+        // recedes to quiet neutral. Pill radius, tactile scale(0.97) press.
+        let accent = isRead ? Color.adaptiveTextSecondary(colorScheme) : Color.reforgedCoral
+        return Button {
+            guard !isRead else { return }
+            markChapterAsRead(book: selectedBook.name, chapter: selectedChapter)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: isRead ? "checkmark.circle.fill" : "checkmark")
+                    .font(.footnote.weight(.semibold))
+                Text(isRead ? "Read" : "Mark as read")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(accent)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().stroke(accent.opacity(0.35), lineWidth: 1))
+        }
+        .buttonStyle(ReaderPressButtonStyle())
+        .disabled(isRead)
+    }
+
+    /// Loading / error states for the windowed reader (its own overlay, replacing `focusOverlay`).
+    @ViewBuilder
+    private var windowedReaderOverlay: some View {
+        if windowController.isLoading && windowController.document.length == 0 {
+            LoadingView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.adaptiveBackground(colorScheme))
+        } else if let message = windowController.loadingError {
+            ErrorView(message: message) { windowController.retryLoading() }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.adaptiveBackground(colorScheme))
+        }
+    }
+
+    /// The top-visible reference the reflow/translation calls re-anchor to.
+    private var readerTopReference: String {
+        "\(selectedBook.name) \(selectedChapter):\(max(firstVisibleVerseNumber, 1))"
+    }
+
+    /// Change-signature for presentation typography/mode — a change reflows the TextKit document
+    /// in place, keeping the same verse at the top. (Light/dark is handled separately by the
+    /// reader itself, since a color change doesn't move the layout.)
+    private var readerPresentationKey: String {
+        "\(readingSettings.verseByVerse)|\(readingSettings.fontType.rawValue)|\(readingSettings.fontSize.rawValue)|\(readingSettings.lineSpacing.rawValue)"
+    }
+
+    /// Cheap change-signature for the interactive overlay, so the reader re-renders only when
+    /// selection / highlights / notes / word-lookup actually change.
+    private var scriptureRenderStateSignature: String {
+        let selection = readingState.selectedVerses.sorted().joined(separator: ",")
+        let lookup = highlightedWord.map { "\($0.verseID):\($0.word)" } ?? ""
+        return "\(selection)|\(readingState.highlights.count)|\(readingState.notes.count)|\(readingState.bookmarks.count)|\(lookup)"
+    }
+
+    /// Snapshot of the interaction overlay the TextKit reader bakes into its attributed string.
+    /// (Per-verse audio-follow highlighting is omitted — the iOS audio player has no per-verse
+    /// tracking — so `audioReference` stays nil, matching the FlowLayout reader.)
+    private var scriptureRenderState: ScriptureRenderState {
+        ScriptureRenderState(
+            selectedReferences: readingState.selectedVerses,
+            highlightsByReference: readingState.highlights,
+            notedReferences: Set(readingState.notes.keys),
+            bookmarkedReferences: Set(readingState.bookmarks.keys),
+            wordLookup: highlightedWord,
+            audioReference: nil
+        )
+    }
+
+    /// Routes the reader's top-visible reference into the toolbar + reading-progress persistence.
+    private func wireWindowTopReferenceHandler() {
+        windowController.onTopReferenceChanged = { reference in
+            guard let reference, let parsed = BibleData.parseReference(reference) else { return }
+            updateCurrentChapter(book: parsed.book, chapter: parsed.chapter)
+            firstVisibleVerseNumber = parsed.verseStart
+            readingSettings.lastVerse = parsed.verseStart
+        }
+    }
 
     /// Top-level scroll content: the STABLE chapter spine. The LazyVStack iterates `coordinator.refs`
     /// (every chapter in the Bible, in canonical order) and these rows are NEVER inserted, removed, or
@@ -2589,6 +2850,15 @@ struct BibleView: View {
             ? "\(focusID):\(savedVerse)"
             : chapterAnchorID(book, chapter)
 
+        // TextKit 2 reader: the bounded-window controller owns fetch/scroll. It repositions off
+        // the `focusChapterID` change (see `windowedReaderBody`), so skip the spine's hydration +
+        // scroll machinery entirely — it would fetch chapters nothing displays and spin the retry.
+        if readingSettings.useTextKitReader {
+            focusPositioned = true
+            readerNavToken &+= 1   // fires the windowed reader's navigation observer
+            return
+        }
+
         // Hydrate around the focus immediately (both paths) so the loaded band always stays ahead of the
         // reader — this is what keeps rapid prev/next taps from outrunning the band into a loading state.
         // The instant (non-animated) jump plus the `.scrollPosition` anchor absorb any neighbour height
@@ -2744,6 +3014,28 @@ struct BibleView: View {
                     chapter: selectedChapter
                 )
             }
+
+        case .bookmark:
+            for reference in readingState.selectedVerses {
+                guard let parsed = parseReference(reference) else { continue }
+                let preview = allLoadedVerses.first { $0.reference == reference }?.text ?? ""
+                readingState.addBookmark(
+                    reference: reference,
+                    book: parsed.book,
+                    chapter: parsed.chapter,
+                    verse: parsed.verse,
+                    previewText: preview
+                )
+            }
+            HapticManager.shared.lightImpact()
+            withAnimation { readingState.clearSelection() }
+
+        case .removeBookmark:
+            for reference in readingState.selectedVerses {
+                readingState.removeBookmark(reference: reference)
+            }
+            HapticManager.shared.lightImpact()
+            withAnimation { readingState.clearSelection() }
 
         case .copy:
             let selected = allLoadedVerses
@@ -3579,6 +3871,16 @@ struct BibleAudioSidebarPanel: View {
     }
 }
 
+/// Tactile press for reader pills — the brand's `scale(0.97)` spring (reforged-design).
+private struct ReaderPressButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
 struct FloatingChapterNav: View {
     let hasPrevious: Bool
     let hasNext: Bool
@@ -3802,6 +4104,12 @@ private struct FormattingPanelScrollContent: View {
                 // Theme
                 FormattingCard {
                     FormattingThemeSection(themeManager: themeManager)
+                }
+
+                // Crown-shop extras the reader owns: theme, highlighters,
+                // illuminated capitals, ambient sound + volume.
+                FormattingCard {
+                    ReaderCrownExtrasSection()
                 }
 
                 // Reading mode — affects the reader chrome, not the text
@@ -4684,8 +4992,10 @@ struct AddToMemorySheet: View {
     }
 }
 
+#if false
 #Preview {
     BibleView()
         .environmentObject(AppState.shared)
         .environmentObject(ThemeManager.shared)
 }
+#endif

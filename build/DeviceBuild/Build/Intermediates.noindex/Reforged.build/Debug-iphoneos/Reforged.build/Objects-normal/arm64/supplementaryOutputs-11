@@ -1,0 +1,107 @@
+{
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Models/GroupModels.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupModels.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupModels.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupModels.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupModels.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupModels.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Models/LearnModels.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnModels.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnModels.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnModels.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnModels.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnModels.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/AgeGateManager.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AgeGateManager.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AgeGateManager.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AgeGateManager.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AgeGateManager.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AgeGateManager.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/ExportService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ExportService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ExportService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ExportService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ExportService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ExportService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/GroupsService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/TracksRepository.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/TracksRepository.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/TracksRepository.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/TracksRepository.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/TracksRepository.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/TracksRepository.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/ViewModels/GroupsHubViewModel.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsHubViewModel.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsHubViewModel.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsHubViewModel.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsHubViewModel.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsHubViewModel.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Components/ProfileAvatarView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ProfileAvatarView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ProfileAvatarView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ProfileAvatarView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ProfileAvatarView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ProfileAvatarView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Components/RichTextEditorView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/RichTextEditorView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/RichTextEditorView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/RichTextEditorView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/RichTextEditorView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/RichTextEditorView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Groups/GroupPrayerReviewView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupPrayerReviewView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupPrayerReviewView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupPrayerReviewView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupPrayerReviewView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupPrayerReviewView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Groups/GroupsView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GroupsView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Groups/HandoutViews.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HandoutViews.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HandoutViews.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HandoutViews.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HandoutViews.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HandoutViews.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Learn/LearnViews.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnViews.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnViews.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnViews.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnViews.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/LearnViews.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/WhatsNewView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WhatsNewView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WhatsNewView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WhatsNewView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WhatsNewView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WhatsNewView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps"
+  }
+}

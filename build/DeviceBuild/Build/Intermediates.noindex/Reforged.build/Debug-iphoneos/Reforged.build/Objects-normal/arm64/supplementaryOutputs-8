@@ -1,0 +1,107 @@
+{
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Models/SettingsModels.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsModels.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsModels.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsModels.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsModels.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsModels.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Models/StrongsModels.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsModels.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsModels.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsModels.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsModels.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsModels.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/BiblePlaceService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BiblePlaceService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BiblePlaceService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BiblePlaceService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BiblePlaceService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BiblePlaceService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/BibleReferenceScanner.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReferenceScanner.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReferenceScanner.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReferenceScanner.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReferenceScanner.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReferenceScanner.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/CrossReferenceService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CrossReferenceService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CrossReferenceService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CrossReferenceService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CrossReferenceService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CrossReferenceService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/StrongsLexiconService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsLexiconService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsLexiconService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsLexiconService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsLexiconService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/StrongsLexiconService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/WordLocatorService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WordLocatorService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WordLocatorService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WordLocatorService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WordLocatorService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WordLocatorService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Settings/AboutSection.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AboutSection.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AboutSection.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AboutSection.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AboutSection.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AboutSection.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Settings/AccountSettingsSection.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountSettingsSection.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountSettingsSection.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountSettingsSection.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountSettingsSection.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountSettingsSection.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Settings/AudioSettingsSection.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AudioSettingsSection.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AudioSettingsSection.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AudioSettingsSection.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AudioSettingsSection.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AudioSettingsSection.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Settings/BibleReadingSettingsSection.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReadingSettingsSection.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReadingSettingsSection.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReadingSettingsSection.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReadingSettingsSection.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/BibleReadingSettingsSection.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Settings/DisplaySettingsSection.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/DisplaySettingsSection.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/DisplaySettingsSection.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/DisplaySettingsSection.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/DisplaySettingsSection.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/DisplaySettingsSection.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Settings/MemorySettingsSection.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemorySettingsSection.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemorySettingsSection.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemorySettingsSection.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemorySettingsSection.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/MemorySettingsSection.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Settings/NotificationSettingsSection.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationSettingsSection.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationSettingsSection.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationSettingsSection.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationSettingsSection.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/NotificationSettingsSection.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Settings/SettingsView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  }
+}

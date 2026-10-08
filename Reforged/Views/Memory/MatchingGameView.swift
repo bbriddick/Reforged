@@ -36,7 +36,11 @@ struct MatchingGameView: View {
 
     // MARK: - XP
 
-    var baseXP: Int { 50 + pairCount * 25 }
+    /// Pairs actually dealt. Can be fewer than `pairCount` in collection mode,
+    /// so progress, completion and XP must all key off this, not `pairCount`.
+    private var dealtPairs: Int { referenceCards.count }
+
+    var baseXP: Int { 50 + dealtPairs * 25 }
 
     var streakMultiplier: Double {
         if appState.user.streak >= 30 { return 2.0 }
@@ -117,7 +121,7 @@ struct MatchingGameView: View {
     private var progressBar: some View {
         VStack(spacing: 6) {
             HStack {
-                Text("\(matchedIDs.count / 2) / \(pairCount) matched")
+                Text("\(matchedIDs.count) / \(dealtPairs) matched")
                     .font(Font.custom("Roboto", size: 13))
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 Spacer()
@@ -133,7 +137,7 @@ struct MatchingGameView: View {
                         .frame(height: 6)
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Color.reforgedGold)
-                        .frame(width: geo.size.width * CGFloat(matchedIDs.count / 2) / CGFloat(pairCount), height: 6)
+                        .frame(width: geo.size.width * CGFloat(matchedIDs.count) / CGFloat(max(dealtPairs, 1)), height: 6)
                         .animation(.spring(response: 0.4), value: matchedIDs.count)
                 }
             }
@@ -230,7 +234,7 @@ struct MatchingGameView: View {
                     .font(Font.custom("LibreBaskerville-Regular", size: 28).bold())
                     .foregroundStyle(Color.adaptiveText(colorScheme))
 
-                Text("\(pairCount) pairs · \(pairCount == 4 ? "150" : pairCount == 5 ? "175" : "200") base XP")
+                Text("\(dealtPairs) pairs · \(baseXP) base XP")
                     .font(Font.custom("Roboto", size: 14))
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
             }
@@ -280,7 +284,7 @@ struct MatchingGameView: View {
 
             Spacer()
         }
-        .confetti(isActive: $showConfetti, intensity: .high)
+        .arcadeConfetti(isActive: $showConfetti, intensity: .high)
         .onAppear {
             HapticManager.shared.achievementUnlocked()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -317,7 +321,7 @@ struct MatchingGameView: View {
             selectedReference = nil
             selectedVerse = nil
 
-            if matchedIDs.count == pairCount {
+            if matchedIDs.count >= dealtPairs {
                 finalizeGame()
             }
         } else {
@@ -343,7 +347,7 @@ struct MatchingGameView: View {
     }
 
     private func finalizeGame() {
-        let raw = 50 + pairCount * 25
+        let raw = baseXP
         xpEarned = Int(Double(raw) * streakMultiplier)
         appState.addXP(raw, source: "matching_game")
         withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.3)) {
@@ -359,7 +363,9 @@ struct MatchingGameView: View {
         selectedReference = nil
         selectedVerse = nil
 
-        let pool = buildVersePool()
+        // Pairs are keyed by reference, so a verse saved twice must only be dealt once.
+        var seenRefs = Set<String>()
+        let pool = buildVersePool().filter { seenRefs.insert($0.id).inserted }
         // In collection mode the pool isn't padded, so never request more pairs than exist.
         let effectivePairs = collectionVerses != nil ? min(pairCount, pool.count) : pairCount
         let selected = Array(pool.shuffled().prefix(effectivePairs))

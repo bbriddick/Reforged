@@ -190,23 +190,11 @@ struct PanicWidget: Widget {
 
 // MARK: - Previews
 
-@available(iOS 17.0, *)
-#Preview("Small", as: .systemSmall) {
-    PanicWidget()
-} timeline: {
-    PanicEntry(date: Date())
+#if DEBUG
+struct PanicWidget_Previews: PreviewProvider {
+    static var previews: some View {
+        PanicWidgetEntryView(entry: PanicEntry(date: Date()))
+            .previewContext(WidgetPreviewContext(family: .systemSmall))
+    }
 }
-
-@available(iOS 17.0, *)
-#Preview("Medium", as: .systemMedium) {
-    PanicWidget()
-} timeline: {
-    PanicEntry(date: Date())
-}
-
-@available(iOS 17.0, *)
-#Preview("Circular", as: .accessoryCircular) {
-    PanicWidget()
-} timeline: {
-    PanicEntry(date: Date())
-}
+#endif

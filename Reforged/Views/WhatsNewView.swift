@@ -1,116 +1,163 @@
 import SwiftUI
 
 // MARK: - What's New View
+// Presented as a sheet on update. Laid out as a full page (not a floating card
+// over a scrim) so it fills the sheet cleanly on iPhone and the iPad form sheet.
+// Content is width-capped and the feature list switches to a grid when there's room.
 
 struct WhatsNewView: View {
     @Binding var isPresented: Bool
     @Environment(\.colorScheme) var colorScheme
 
+    private let maxContentWidth: CGFloat = 640
+
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.55)
-                .ignoresSafeArea()
-
-            ScrollView {
-                VStack(spacing: 0) {
-                    Spacer().frame(height: 60)
-
-                    cardContent
-
-                    Spacer().frame(height: 60)
-                }
-                .padding(.horizontal, 24)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                headerSection
+                spotlightCard
+                featureSection
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 36)
+            .padding(.bottom, 24)
+            .frame(maxWidth: maxContentWidth)
+            .frame(maxWidth: .infinity)
         }
-    }
-
-    // MARK: - Card
-
-    private var cardContent: some View {
-        VStack(spacing: 0) {
-            // Header
-            headerSection
-
-            Divider()
-                .padding(.horizontal, 24)
-
-            // Feature list
-            VStack(spacing: 0) {
-                ForEach(WhatsNewFeature.currentVersion, id: \.title) { feature in
-                    featureRow(feature)
-
-                    if feature.title != WhatsNewFeature.currentVersion.last?.title {
-                        Divider()
-                            .padding(.leading, 68)
-                            .padding(.trailing, 24)
-                    }
-                }
-            }
-
-            Divider()
-                .padding(.horizontal, 24)
-
-            // CTA button
-            ctaButton
-        }
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Color.black.opacity(0.25), radius: 40)
+        .scrollIndicators(.hidden)
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .safeAreaInset(edge: .bottom) { ctaBar }
+        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.reforgedNavy, Color.reforgedNavy.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                    .shadow(color: Color.reforgedNavy.opacity(0.35), radius: 16)
-
-                Image(systemName: "sparkles")
-                    .font(.system(size: 36, weight: .medium))
-                    .foregroundStyle(.white)
-            }
-            .padding(.top, 28)
+        VStack(alignment: .leading, spacing: 10) {
+            Text("VERSION \(AppVersionTracker.currentVersion)")
+                .font(.caption2)
+                .fontWeight(.heavy)
+                .tracking(1.4)
+                .foregroundStyle(Color.reforgedCoral)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.reforgedCoral.opacity(0.12), in: Capsule())
 
             Text("What's New")
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.system(size: 34, weight: .bold, design: .serif))
                 .foregroundStyle(Color.adaptiveText(colorScheme))
 
-            Text("Here's what's new in this update")
+            Text("Memorizing Scripture just got a lot more fun, plus more to help you read, study, and walk with God each day.")
                 .font(.subheadline)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.bottom, 20)
-        .padding(.horizontal, 24)
     }
 
-    // MARK: - Feature Row
+    // MARK: - Spotlight
 
-    private func featureRow(_ feature: WhatsNewFeature) -> some View {
-        let accent = feature.accent.color(colorScheme)
+    private var spotlightCard: some View {
+        let spotlight = WhatsNewSpotlight.current
 
-        return HStack(alignment: .top, spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(accent.opacity(0.15))
-                    .frame(width: 44, height: 44)
+        return VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 8) {
+                Label(spotlight.eyebrow.uppercased(), systemImage: "sparkles")
+                    .font(.caption2)
+                    .fontWeight(.heavy)
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.9))
 
-                Image(systemName: feature.icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(accent)
+                Text(spotlight.title)
+                    .font(.system(size: 26, weight: .bold, design: .serif))
+                    .foregroundStyle(.white)
+
+                Text(spotlight.description)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.92))
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            VStack(alignment: .leading, spacing: 3) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 240), spacing: 10, alignment: .top)],
+                alignment: .leading,
+                spacing: 10
+            ) {
+                ForEach(spotlight.highlights, id: \.text) { highlight in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: highlight.icon)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color.reforgedCoral)
+                            .frame(width: 28, height: 28)
+                            .background(.white, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                        Text(highlight.text)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .background(.white.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topTrailing) {
+            ZStack(alignment: .topTrailing) {
+                LinearGradient(
+                    colors: [Color.reforgedCoral, Color.reforgedGold],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                // Oversized watermark glyph for a bit of texture.
+                Image(systemName: spotlight.icon)
+                    .font(.system(size: 110, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.12))
+                    .rotationEffect(.degrees(-12))
+                    .offset(x: 18, y: -14)
+                    .accessibilityHidden(true)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    // MARK: - Features
+
+    private var featureSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Also in this update")
+                .font(.headline)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 280), spacing: 12, alignment: .top)],
+                alignment: .leading,
+                spacing: 12
+            ) {
+                ForEach(WhatsNewFeature.currentVersion, id: \.title) { feature in
+                    featureTile(feature)
+                }
+            }
+        }
+    }
+
+    private func featureTile(_ feature: WhatsNewFeature) -> some View {
+        let accent = feature.accent.color(colorScheme)
+
+        return HStack(alignment: .top, spacing: 14) {
+            Image(systemName: feature.icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(accent)
+                .frame(width: 40, height: 40)
+                .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 4) {
                 Text(feature.title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -122,38 +169,35 @@ struct WhatsNewView: View {
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.adaptiveCardBackground(colorScheme), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
     }
 
     // MARK: - CTA
 
-    private var ctaButton: some View {
+    private var ctaBar: some View {
         Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                isPresented = false
-            }
+            isPresented = false
         } label: {
-            Text("Continue")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    LinearGradient(
-                        colors: [Color.reforgedNavy, Color.reforgedNavy.opacity(0.85)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+            Text("Let's Go")
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 20)
+        .buttonStyle(Chunky3DButtonStyle(
+            backgroundColor: .reforgedCoral,
+            bevelColor: Color(red: 0.72, green: 0.18, blue: 0.28)
+        ))
+        .frame(maxWidth: 420)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
     }
 }
 
@@ -185,16 +229,34 @@ struct WhatsNewFeature {
 
     static let currentVersion: [WhatsNewFeature] = [
         WhatsNewFeature(
-            icon: "books.vertical.fill",
+            icon: "sun.max.fill",
             accent: .gold,
+            title: "Morning Routine",
+            description: "A guided start to your day from Home — Scripture, prayer, gratitude, and a quick memory review, saved to your journal."
+        ),
+        WhatsNewFeature(
+            icon: "books.vertical.fill",
+            accent: .coral,
             title: "Study Library",
             description: "Open a verse alongside trusted commentaries, the Tyndale Open Study Notes, and a Bible dictionary — with the larger classics available to download for offline study."
         ),
         WhatsNewFeature(
-            icon: "sunrise.fill",
+            icon: "checklist",
+            accent: .purple,
+            title: "My Rhythm",
+            description: "Build your own daily rule of life: habits to keep, temptations to avoid, custom reading plans, and real reminders."
+        ),
+        WhatsNewFeature(
+            icon: "moon.stars.fill",
             accent: .navy,
             title: "Morning & Evening",
             description: "Walk through Spurgeon's classic daily devotional right inside your reading plans, one reflection each morning and evening."
+        ),
+        WhatsNewFeature(
+            icon: "note.text",
+            accent: .gold,
+            title: "A Richer Notes Library",
+            description: "Your journal and Bible notes now live together in folders, with checklists, highlights, colors, and pinning."
         ),
         WhatsNewFeature(
             icon: "magnifyingglass",
@@ -210,11 +272,38 @@ struct WhatsNewFeature {
         ),
         WhatsNewFeature(
             icon: "ipad.landscape",
-            accent: .gold,
+            accent: .navy,
             title: "Rebuilt for iPad",
             description: "Read with study tools open right beside the text, and enjoy Home and the discipleship tools laid out for the bigger screen."
         ),
     ]
+}
+
+/// The headline feature of a release, shown as a large card above the feature list.
+struct WhatsNewSpotlight {
+    struct Highlight {
+        let icon: String
+        let text: String
+    }
+
+    let icon: String
+    let eyebrow: String
+    let title: String
+    let description: String
+    let highlights: [Highlight]
+
+    static let current = WhatsNewSpotlight(
+        icon: "book.closed.fill",
+        eyebrow: "All-new Scripture Memory",
+        title: "Hide His Word in Your Heart",
+        description: "The Memory tab is now a fun, guided journey through 150 verses in 15 themes, from the foundations of faith to peace, hope, and prayer. Tap the next step on the path and start learning.",
+        highlights: [
+            Highlight(icon: "map.fill", text: "Follow a winding path of verse lessons, quick recall checkpoints, and unit reviews"),
+            Highlight(icon: "puzzlepiece.fill", text: "Bite-sized daily lessons: listen, tap phrases in order, drag and drop words, and fill in the blanks"),
+            Highlight(icon: "mic.fill", text: "Say It Back: recite the verse out loud and watch each word light up as you get it right"),
+            Highlight(icon: "star.fill", text: "Swipe through flashcards, earn XP, level up, and celebrate every verse you memorize"),
+        ]
+    )
 }
 
 // MARK: - Version Tracking

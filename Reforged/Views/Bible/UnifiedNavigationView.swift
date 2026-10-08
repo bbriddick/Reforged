@@ -6,9 +6,14 @@ struct UnifiedNavigationView: View {
     @Binding var selectedBook: BibleBook
     @Binding var selectedChapter: Int
     var recentPassages: [(book: String, chapter: Int)]
+    var bookmarks: [VerseBookmark] = []
     @Binding var isPresented: Bool
     let onSelect: () -> Void
     var onSelectVerse: ((Int) -> Void)? = nil
+    /// Jump to a bookmarked verse. The host sets book/chapter/verse and positions the reader.
+    var onSelectBookmark: ((VerseBookmark) -> Void)? = nil
+    /// Remove a bookmark from the list.
+    var onDeleteBookmark: ((VerseBookmark) -> Void)? = nil
     var translation: BibleTranslation = .esv
     var translationOrder: [BibleTranslation] = BibleTranslation.allCases
     var focusSearch: Bool = false
@@ -25,8 +30,20 @@ struct UnifiedNavigationView: View {
     @State private var searchText = ""
     @State private var selectedTestament: BibleBook.Testament? = nil
     @State private var expandedBookID: String? = nil
+    /// False until the book list has been positioned on the current book, so the
+    /// list opens already in place instead of visibly scrolling there.
+    @State private var hasPositionedBookList = false
     @State private var sortOrder: SortOrder = .traditional
     @State private var showVersePicker = false
+    /// Software keyboard on screen. Tracked from notifications rather than inferred
+    /// from focus — with a hardware keyboard the field is focused but nothing rises.
+    @State private var keyboardVisible = false
+    /// The chapter being previewed in the verse picker. Kept separate from the reader's
+    /// `selectedBook`/`selectedChapter` bindings so merely opening the picker doesn't retarget the
+    /// reader (and a scroll-driven chapter update can't clobber the pick before "Go"). Committed to
+    /// the bindings only when the user actually navigates.
+    @State private var pickerBook: BibleBook = BibleData.books[0]
+    @State private var pickerChapter: Int = 1
     @State private var chapterVerses: [ParsedVerse] = []
     @State private var isLoadingVerses = false
 
@@ -45,6 +62,12 @@ struct UnifiedNavigationView: View {
     @State private var navSelectedBook: String? = nil
     @State private var navCachedBookCounts: [String: Int] = [:]
     @ObservedObject private var settingsMgr = SettingsManager.shared
+
+    /// Writes the verse picker's chapter into the reader bindings — only at the moment of navigation.
+    private func commitPickerSelection() {
+        selectedBook = pickerBook
+        selectedChapter = pickerChapter
+    }
 
     private func dismiss() {
         if let d = onDismiss { d() } else { isPresented = false }
@@ -202,54 +225,89 @@ struct UnifiedNavigationView: View {
             .first?.statusBarManager?.statusBarFrame.height ?? 54
     }
 
-    /// The iPhone overlay ignores the safe area, so it doesn't inherit the floating
-    /// tab bar's bottom inset the way regular tab content does. Reserve the home-indicator
-    /// inset plus the tab bar height so the last list rows clear the tab bar.
-    private var bottomListInset: CGFloat {
-        guard !usesSheetPresentation else { return 0 }
-        let safeBottom = UIApplication.shared.connectedScenes
+    /// iPhone drawer: controls live in a bottom dock, inside the one-handed thumb zone.
+    /// iPad/Mac (sheet or tools rail) keep them at the top, where a pointer or two
+    /// hands reach them just as easily and a top search field is the platform norm.
+    private var controlsAtBottom: Bool {
+        UIDevice.current.userInterfaceIdiom == .phone && !usesSheetPresentation
+    }
+
+    private var safeBottom: CGFloat {
+        UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first?.windows.first(where: { $0.isKeyWindow })?.safeAreaInsets.bottom ?? 34
-        return safeBottom + 56
+    }
+
+    /// Bottom padding for the dock: clear the home indicator, or sit just above the
+    /// keyboard while typing (the host lets the keyboard safe area through).
+    private var dockBottomPadding: CGFloat {
+        keyboardVisible ? 8 : max(safeBottom, 12)
+    }
+
+    /// Scroll content's trailing room. With the bottom dock, the dock already clears
+    /// the home indicator; the top-controls layout ignores the safe area itself.
+    private var bottomListInset: CGFloat {
+        if controlsAtBottom { return 12 }
+        guard !usesSheetPresentation else { return 16 }
+        return safeBottom + 16
+    }
+
+    private var showsRecentSearches: Bool {
+        searchFieldFocused && searchText.isEmpty && navSearchResults.isEmpty && !navSearchHistory.isEmpty
+    }
+
+    private var showsSearchResults: Bool {
+        navIsSearching || !navSearchResults.isEmpty || navSmartLoading || navSmartResult != nil
+    }
+
+    /// Search is live (focused, querying, or showing results) — the header's trailing
+    /// slot swaps the close glyph for Cancel.
+    private var isSearchActive: Bool {
+        searchFieldFocused || !navSearchResults.isEmpty || navIsSearching
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            VStack(spacing: 0) {
-                // iPhone overlay ignores the safe area, so reserve the status-bar height
-                // ourselves. The sheet presentation (iPad/Mac) gets this from the system.
-                if !usesSheetPresentation {
-                    Color.adaptiveCardBackground(colorScheme)
-                        .frame(height: statusBarHeight)
+        VStack(spacing: 0) {
+            // iPhone overlay ignores the safe area, so reserve the status-bar height
+            // ourselves. The sheet presentation (iPad/Mac) gets this from the system.
+            if !usesSheetPresentation {
+                Color.adaptiveCardBackground(colorScheme)
+                    .frame(height: statusBarHeight)
+            }
+
+            ZStack {
+                // Books + search stay in the tree under the verse step so the list keeps
+                // its scroll position and expanded book when the user comes back.
+                VStack(spacing: 0) {
+                    if controlsAtBottom {
+                        mainContent
+                        bottomDock
+                    } else {
+                        // ── Search + close: the panel's entry point ─────────
+                        searchRow
+                        jumpBackRow
+                        searchActionRows
+                        if !showsSearchResults && !showsRecentSearches {
+                            listControlsRow
+                        }
+                        mainContent
+                    }
                 }
+                .offset(x: showVersePicker ? -48 : 0)
+                .opacity(showVersePicker ? 0 : 1)
+                .allowsHitTesting(!showVersePicker)
+                .accessibilityHidden(showVersePicker)
 
-                // ── Minimal floating close — replaces the former title bar ──
-                closeButtonRow
-
-                // ── Search bar + recents + reference jump ───────────────
-                searchSection
-
-                // ── Content ─────────────────────────────────────────────
-                if navIsSearching || !navSearchResults.isEmpty || navSmartLoading || navSmartResult != nil {
-                    navSearchResultsView
-                } else {
-                    booksView
-                        .simultaneousGesture(
-                            TapGesture().onEnded {
-                                if searchFieldFocused { searchFieldFocused = false }
-                            }
-                        )
+                // ── Verse step: pushed in place over the book list ──────────
+                if showVersePicker {
+                    versePickerView
+                        .transition(.move(edge: .trailing))
+                        .zIndex(1)
                 }
             }
-            .background(Color.adaptiveCardBackground(colorScheme))
-
-            // ── Verse picker bottom sheet ────────────────────────────────
-            if showVersePicker {
-                versePickerSheet
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .zIndex(10)
-            }
+            .clipped()
         }
+        .background(Color.adaptiveCardBackground(colorScheme))
         .onAppear {
             navSearchHistory = AppState.shared.loadBibleSearchHistory()
             navSelectedVersion = translation.isTextSearchable ? translation : nil
@@ -259,6 +317,12 @@ struct UnifiedNavigationView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardVisible = false
+        }
         .onChange(of: navSearchResults) { _ in rebuildNavCaches() }
         .onChange(of: navSelectedCategory) { _ in navSelectedBook = nil; rebuildNavCaches() }
         .onChange(of: navSelectedVersion) { _ in navSelectedBook = nil; navSelectedCategory = nil; rebuildNavCaches() }
@@ -267,86 +331,180 @@ struct UnifiedNavigationView: View {
 
     // MARK: - Close Button
 
-    /// A small, unobtrusive close affordance that replaces the old title bar.
-    /// No background fill or divider — just a hairline-stroked glyph.
-    private var closeButtonRow: some View {
-        HStack {
-            Spacer()
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    .frame(width: 30, height: 30)
-                    .overlay(
-                        Circle().stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
-                    )
-            }
-            .buttonStyle(.plain)
+    /// Close glyph for the header's trailing slot: a small hairline circle with a
+    /// full 44pt hit area.
+    private var closeButton: some View {
+        Button {
+            dismiss()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .frame(width: 30, height: 30)
+                .overlay(
+                    Circle().stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                )
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
-        .padding(.horizontal, 16)
-        .padding(.top, usesSheetPresentation ? 4 : 8)
-        .padding(.bottom, 2)
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close")
+    }
+
+    // MARK: - Jump Back In
+
+    /// Recent passages, minus the one already on screen.
+    private var jumpBackPassages: [(book: String, chapter: Int)] {
+        recentPassages
+            .filter { !($0.book == selectedBook.name && $0.chapter == selectedChapter) }
+            .prefix(5)
+            .map { $0 }
+    }
+
+    /// One scroller for every "take me back" shortcut: bookmarks, then recent chapters.
+    /// Outlined rather than filled so these read as shortcuts, distinct from the grey
+    /// search well and chapter tiles.
+    @ViewBuilder
+    private var jumpBackRow: some View {
+        let passages = jumpBackPassages
+        if !(passages.isEmpty && bookmarks.isEmpty) && searchText.isEmpty && navSearchResults.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    // Bookmarks lead: they're deliberate saves, so they never hide
+                    // behind automatic history off the trailing edge.
+                    ForEach(bookmarks) { bookmark in
+                        Button {
+                            dismiss()
+                            onSelectBookmark?(bookmark)
+                        } label: {
+                            jumpChip(icon: "bookmark.fill", iconColor: Color.reforgedCoral, title: bookmark.reference)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Bookmark: \(bookmark.reference)")
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                onDeleteBookmark?(bookmark)
+                            } label: {
+                                Label("Remove Bookmark", systemImage: "bookmark.slash")
+                            }
+                        }
+                    }
+
+                    if !bookmarks.isEmpty && !passages.isEmpty {
+                        Rectangle()
+                            .fill(Color.adaptiveBorder(colorScheme))
+                            .frame(width: 1, height: 20)
+                            .padding(.horizontal, 2)
+                            .accessibilityHidden(true)
+                    }
+
+                    ForEach(Array(passages.enumerated()), id: \.offset) { _, passage in
+                        Button {
+                            if let book = BibleData.books.first(where: { $0.name == passage.book }) {
+                                selectedBook = book
+                                selectedChapter = passage.chapter
+                                dismiss()
+                                onSelect()
+                            }
+                        } label: {
+                            jumpChip(icon: "clock.arrow.circlepath", iconColor: Color.adaptiveTextSecondary(colorScheme),
+                                     title: "\(passage.book) \(passage.chapter)")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Recent: \(passage.book) \(passage.chapter)")
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            // Soft trailing fade so a clipped chip reads as "more to scroll", not a cut.
+            .mask(
+                HStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .black.opacity(0)], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: 28)
+                }
+            )
+            .opacity(searchFieldFocused ? 0 : 1)
+            .frame(height: searchFieldFocused ? 0 : nil)
+            .clipped()
+            .animation(.spring(response: 0.3), value: searchFieldFocused)
+        }
+    }
+
+    private func jumpChip(icon: String, iconColor: Color, title: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(iconColor)
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 34)
+        .overlay(Capsule().stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
+        // Visible pill stays compact; the hit area meets the 44pt minimum.
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Main Content
+
+    @ViewBuilder
+    private var mainContent: some View {
+        if showsSearchResults {
+            navSearchResultsView
+        } else if showsRecentSearches {
+            recentSearchesView
+        } else {
+            booksView
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        if searchFieldFocused { searchFieldFocused = false }
+                    }
+                )
+        }
+    }
+
+    // MARK: - Bottom Dock (iPhone)
+
+    /// Everything the thumb needs, stacked by distance from the list: list controls
+    /// nearest the list, then shortcuts, then search + close on the bottom edge.
+    private var bottomDock: some View {
+        VStack(spacing: 0) {
+            searchActionRows
+                .padding(.top, 6)
+            if !showsSearchResults && !searchFieldFocused {
+                listControlsRow
+                    .transition(.opacity)
+            }
+            jumpBackRow
+            searchRow
+        }
+        .padding(.bottom, dockBottomPadding)
+        .background(Color.adaptiveCardBackground(colorScheme).ignoresSafeArea())
+        .overlay(alignment: .top) { Divider() }
+        .animation(.spring(response: 0.3), value: searchFieldFocused)
+        .animation(.spring(response: 0.3), value: searchText.isEmpty)
     }
 
     // MARK: - Search Section
 
-    @ViewBuilder
-    private var searchSection: some View {
-        VStack(spacing: 0) {
-            // Recent passages — collapses when search is focused
-            if !recentPassages.isEmpty && searchText.isEmpty && navSearchResults.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Recent")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .padding(.horizontal, 16)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(Array(recentPassages.prefix(5).enumerated()), id: \.offset) { _, passage in
-                                Button {
-                                    if let book = BibleData.books.first(where: { $0.name == passage.book }) {
-                                        selectedBook = book
-                                        selectedChapter = passage.chapter
-                                        dismiss()
-                                        onSelect()
-                                    }
-                                } label: {
-                                    Text("\(passage.book) \(passage.chapter)")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.adaptiveChipBackground(colorScheme))
-                                        .clipShape(Capsule())
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                    }
-                }
-                .padding(.vertical, 10)
-                .opacity(searchFieldFocused ? 0 : 1)
-                .frame(height: searchFieldFocused ? 0 : nil)
-                .clipped()
-                .animation(.spring(response: 0.3), value: searchFieldFocused)
-            }
-
-            // Search bar
-            let showAI = settingsMgr.aiEnabled && isConceptualQuery(searchText)
-            HStack(spacing: 8) {
+    private var searchRow: some View {
+        // Search bar + trailing close/Cancel — one row.
+        let showAI = settingsMgr.aiEnabled && isConceptualQuery(searchText)
+        return HStack(spacing: 4) {
                 HStack(spacing: 10) {
                     Image(systemName: showAI ? "sparkles" : "magnifyingglass")
                         .foregroundStyle(showAI ? Color.reforgedGold : Color.adaptiveTextSecondary(colorScheme))
                         .animation(.easeInOut(duration: 0.2), value: showAI)
 
-                    TextField("Search verses, books, or references…", text: $searchText)
+                    TextField("Book, chapter, or word", text: $searchText)
                         .font(.subheadline)
                         .focused($searchFieldFocused)
+                        .submitLabel(.search)
                         .onSubmit {
                             searchFieldFocused = false
                             navPerformSearch()
@@ -362,14 +520,15 @@ struct UnifiedNavigationView: View {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         }
+                        .accessibilityLabel("Clear search")
                     }
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .frame(height: 44)
                 .background(Color.adaptiveTertiaryBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                if searchFieldFocused || !navSearchResults.isEmpty || navIsSearching {
+                if isSearchActive {
                     Button("Cancel") {
                         searchText = ""
                         navSearchResults = []
@@ -380,14 +539,27 @@ struct UnifiedNavigationView: View {
                     }
                     .font(.subheadline)
                     .foregroundStyle(Color.reforgedGold)
+                    .frame(minHeight: 44)
+                    .padding(.leading, 6)
+                    .padding(.trailing, 6)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
+                } else {
+                    closeButton
+                        .transition(.opacity)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 6)
-            .animation(.spring(response: 0.3), value: searchFieldFocused)
+            .padding(.leading, 16)
+            .padding(.trailing, 10)
+            .padding(.top, controlsAtBottom ? 4 : (usesSheetPresentation ? 12 : 8))
+            .padding(.bottom, controlsAtBottom ? 0 : 8)
+            .animation(.spring(response: 0.3), value: isSearchActive)
+    }
 
+    /// "Go to <reference>" and full-text search — appear while typing, next to the field.
+    @ViewBuilder
+    private var searchActionRows: some View {
+        let showAI = settingsMgr.aiEnabled && isConceptualQuery(searchText)
+        VStack(spacing: 0) {
             // Reference jump row
             if let ref = parsedReference {
                 Button {
@@ -454,50 +626,61 @@ struct UnifiedNavigationView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            // Recent searches — when field focused and empty
-            if searchFieldFocused && searchText.isEmpty && navSearchResults.isEmpty && !navSearchHistory.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Recent Searches")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .padding(.horizontal, 16)
-                        .padding(.top, 14)
-                        .padding(.bottom, 4)
-
-                    ForEach(navSearchHistory.prefix(5)) { entry in
-                        Button {
-                            searchText = entry.query
-                            navSelectedVersion = entry.scope == .textVersion ? entry.translation : nil
-                            navPerformSearch()
-                        } label: {
-                            HStack(alignment: .center, spacing: 10) {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(entry.query).font(.subheadline)
-                                    Text(entry.subtitle)
-                                        .font(.caption2)
-                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                }
-                                Spacer()
-                                Image(systemName: "arrow.up.left")
-                                    .font(.caption2)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                            }
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 9)
-                        }
-                    }
-
-                    Divider().padding(.top, 6)
-                }
-                .transition(.opacity)
-            }
         }
         .animation(.spring(response: 0.3), value: searchText.isEmpty)
+    }
+
+    /// Recent searches while the field is focused and empty. With the bottom dock,
+    /// they gather at the bottom of the content area — next to the field, most
+    /// recent nearest the thumb.
+    private var recentSearchesView: some View {
+        let entries = Array(navSearchHistory.prefix(5))
+        let ordered = controlsAtBottom ? Array(entries.reversed()) : entries
+        return VStack(alignment: .leading, spacing: 0) {
+            if controlsAtBottom { Spacer(minLength: 0) }
+
+            Text("Recent Searches")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 4)
+
+            ForEach(ordered) { entry in
+                Button {
+                    searchText = entry.query
+                    navSelectedVersion = entry.scope == .textVersion ? entry.translation : nil
+                    navPerformSearch()
+                } label: {
+                    HStack(alignment: .center, spacing: 10) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.query).font(.subheadline)
+                            Text(entry.subtitle)
+                                .font(.caption2)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.up.left")
+                            .font(.caption2)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 48)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            if !controlsAtBottom { Spacer(minLength: 0) }
+        }
+        .padding(.bottom, controlsAtBottom ? 8 : 0)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .transition(.opacity)
     }
 
     // MARK: - Search Results
@@ -775,48 +958,58 @@ struct UnifiedNavigationView: View {
 
     // MARK: - Books View
 
+    /// Testament filter + sort — quiet controls, so the current book (gold)
+    /// stays the strongest mark in the list.
+    private var listControlsRow: some View {
+        HStack(spacing: 8) {
+            Picker("Testament", selection: $selectedTestament) {
+                Text("All").tag(BibleBook.Testament?.none)
+                Text("OT").tag(BibleBook.Testament?.some(.old))
+                Text("NT").tag(BibleBook.Testament?.some(.new))
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 156)
+
+            Spacer()
+
+            Menu {
+                Picker("Sort order", selection: $sortOrder) {
+                    Text("Traditional").tag(SortOrder.traditional)
+                    Text("A–Z").tag(SortOrder.alphabetical)
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.footnote.weight(.medium))
+                    if sortOrder == .alphabetical {
+                        Text("A–Z")
+                            .font(.footnote.weight(.medium))
+                    }
+                }
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Sort books")
+            .accessibilityValue(sortOrder == .alphabetical ? "A to Z" : "Traditional")
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 10)
+        .padding(.top, controlsAtBottom ? 4 : 12)
+        .padding(.bottom, controlsAtBottom ? 0 : 4)
+
+    }
+
     @ViewBuilder
     private var booksView: some View {
         VStack(spacing: 0) {
-            // Testament filter + sort — compact inline row
-            HStack(spacing: 8) {
-                FilterChip(title: "All", isSelected: selectedTestament == nil) {
-                    selectedTestament = nil
-                }
-                FilterChip(title: "OT", isSelected: selectedTestament == .old) {
-                    selectedTestament = .old
-                }
-                FilterChip(title: "NT", isSelected: selectedTestament == .new) {
-                    selectedTestament = .new
-                }
-                Spacer()
-                Menu {
-                    Picker("Sort order", selection: $sortOrder) {
-                        Text("Traditional").tag(SortOrder.traditional)
-                        Text("A–Z").tag(SortOrder.alphabetical)
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.arrow.down")
-                            .font(.caption)
-                        Text(sortOrder == .alphabetical ? "A–Z" : "Order")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                    }
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.adaptiveChipBackground(colorScheme))
-                    .clipShape(Capsule())
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
             // Book list
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    // Plain VStack (66 cheap rows): every row height is known up front, so the
+                    // initial scrollTo lands exactly on the current book instead of drifting as a
+                    // LazyVStack re-measures estimated rows above it.
+                    VStack(spacing: 0) {
                         ForEach(filteredBooks) { book in
                             VStack(spacing: 0) {
                                 // Book row
@@ -832,12 +1025,6 @@ struct UnifiedNavigationView: View {
                                             .foregroundStyle(book.id == selectedBook.id ? Color.reforgedGold : Color.adaptiveText(colorScheme))
 
                                         Spacer()
-
-                                        if translation == .esv {
-                                            Image(systemName: "speaker.wave.2.fill")
-                                                .font(.subheadline)
-                                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                        }
 
                                         Image(systemName: "chevron.down")
                                             .font(.caption)
@@ -858,17 +1045,18 @@ struct UnifiedNavigationView: View {
                                     LazyVGrid(columns: columns, spacing: 8) {
                                         ForEach(1...book.chapters, id: \.self) { chapter in
                                             Button {
-                                                selectedBook = book
-                                                selectedChapter = chapter
+                                                pickerBook = book
+                                                pickerChapter = chapter
                                                 let incompatible =
                                                     ((translation == .tr || translation == .sblgnt) && book.testament == .old) ||
                                                     (translation == .wlc && book.testament == .new)
                                                 if incompatible {
+                                                    commitPickerSelection()
                                                     dismiss()
                                                     onSelect()
                                                 } else {
                                                     loadVersesForChapter()
-                                                    withAnimation(.spring(response: 0.3)) {
+                                                    withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
                                                         showVersePicker = true
                                                     }
                                                 }
@@ -905,16 +1093,40 @@ struct UnifiedNavigationView: View {
                     }
                 }
                 .scrollDismissesKeyboard(.immediately)
+                // List edge — overlaid so it lands on a row divider instead of
+                // stacking a second line beside it.
+                .overlay(alignment: .top) { Divider() }
+                .opacity(hasPositionedBookList ? 1 : 0)
                 .onAppear {
                     let bookID = selectedBook.id
-                    expandedBookID = bookID
-                    // Jump straight to the current book — no scroll animation.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        proxy.scrollTo(bookID, anchor: .center)
+                    // Expand + position the current book with animations off, and keep
+                    // the list hidden until it's in place, so it opens directly there.
+                    var noAnimation = Transaction()
+                    noAnimation.disablesAnimations = true
+                    withTransaction(noAnimation) {
+                        expandedBookID = bookID
+                        proxy.scrollTo(bookID, anchor: .top)
+                    }
+                    DispatchQueue.main.async {
+                        withTransaction(noAnimation) {
+                            proxy.scrollTo(bookID, anchor: .top)
+                            hasPositionedBookList = true
+                        }
+                    }
+                }
+                // Switching testament jumps to its first book (Genesis / Matthew);
+                // back to All returns to the book being read.
+                .onChange(of: selectedTestament) { testament in
+                    guard hasPositionedBookList else { return }
+                    let targetID = testament == nil ? selectedBook.id : filteredBooks.first?.id
+                    guard let targetID else { return }
+                    DispatchQueue.main.async {
+                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(targetID, anchor: .top) }
                     }
                 }
                 .onChange(of: expandedBookID) { newID in
-                    if let newID {
+                    // Only follow user taps; the initial expansion is positioned in onAppear.
+                    if let newID, hasPositionedBookList {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             withAnimation { proxy.scrollTo(newID, anchor: .top) }
                         }
@@ -924,60 +1136,93 @@ struct UnifiedNavigationView: View {
         }
     }
 
-    // MARK: - Verse Picker (bottom sheet overlay inside sidebar)
+    // MARK: - Verse Picker (pushed in place over the book list)
+
+    private func closeVersePicker() {
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+            showVersePicker = false
+        }
+    }
+
+    private var versePickerBackButton: some View {
+        Button {
+            closeVersePicker()
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "chevron.left")
+                    .font(.body.weight(.semibold))
+                Text(pickerBook.name)
+                    .font(.body)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(Color.reforgedGold)
+            .frame(maxWidth: controlsAtBottom ? 140 : 88, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Back to books")
+    }
+
+    /// Go to the chapter start.
+    private func versePickerGoButton(label: String) -> some View {
+        Button {
+            commitPickerSelection()
+            dismiss()
+            onSelect()
+        } label: {
+            Text(label)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 16)
+                .frame(height: controlsAtBottom ? 40 : 32)
+                .background(Color.reforgedGold)
+                .clipShape(Capsule())
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .layoutPriority(1)
+        .accessibilityLabel("Go to \(pickerBook.name) \(pickerChapter)")
+    }
 
     @ViewBuilder
-    private var versePickerSheet: some View {
+    private var versePickerView: some View {
         VStack(spacing: 0) {
-            // Drag handle + back button
-            HStack {
-                Button {
-                    withAnimation(.spring(response: 0.3)) {
-                        showVersePicker = false
+            if !controlsAtBottom {
+                // Nav-style header: back (named for where it returns), centred title, Go.
+                ZStack {
+                    Text("\(pickerBook.name) \(pickerChapter)")
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
+                        .padding(.horizontal, 96)
+
+                    HStack {
+                        versePickerBackButton
+                        Spacer()
+                        versePickerGoButton(label: "Go")
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.down")
-                            .font(.subheadline)
-                        Text("Back")
-                            .font(.subheadline)
-                    }
-                    .foregroundStyle(Color.reforgedGold)
                 }
+                .padding(.horizontal, 12)
+                .padding(.top, usesSheetPresentation ? 12 : 8)
+                .padding(.bottom, 4)
 
-                Spacer()
-
-                Text("\(selectedBook.name) \(selectedChapter)")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                Spacer()
-
-                // Go to chapter start
-                Button {
-                    dismiss()
-                    onSelect()
-                } label: {
-                    Text("Go")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(Color.reforgedGold)
-                        .clipShape(Capsule())
-                }
+                Text("Choose a verse")
+                    .font(.footnote)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 10)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-
-            Divider()
 
             // Verse grid
-            let waitingForOL = (translation == .tr     && !olService.trReady  && selectedBook.testament == .new)
-                            || (translation == .sblgnt && !olService.sblReady && selectedBook.testament == .new)
-                            || (translation == .wlc    && !olService.wlcReady && selectedBook.testament == .old)
+            let waitingForOL = (translation == .tr     && !olService.trReady  && pickerBook.testament == .new)
+                            || (translation == .sblgnt && !olService.sblReady && pickerBook.testament == .new)
+                            || (translation == .wlc    && !olService.wlcReady && pickerBook.testament == .old)
 
             if isLoadingVerses || waitingForOL {
                 Spacer()
@@ -993,55 +1238,95 @@ struct UnifiedNavigationView: View {
                         if isReady && translation == .wlc { loadVersesForChapter() }
                     }
             } else {
+                // Short chapters settle just above the dock (thumb zone), with the title
+                // riding on top; long ones fill the height and scroll from verse 1.
                 let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 8) {
-                        ForEach(chapterVerses) { verse in
-                            Button {
-                                dismiss()
-                                // Verse handler alone — it focuses the chapter and scrolls after hydration.
-                                // onSelect() would fire a competing chapter-top loadChapter().
-                                if let selectVerse = onSelectVerse {
-                                    selectVerse(verse.number)
-                                } else {
-                                    onSelect()
+                GeometryReader { geo in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            if controlsAtBottom {
+                                Spacer(minLength: 0)
+                                VStack(spacing: 2) {
+                                    Text("\(pickerBook.name) \(pickerChapter)")
+                                        .font(.headline)
+                                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                                    Text("Choose a verse")
+                                        .font(.footnote)
+                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                                 }
-                            } label: {
-                                Text("\(verse.number)")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 48)
-                                    .background(Color.adaptiveTertiaryBackground(colorScheme))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(colorScheme == .dark ? Color.white.opacity(0.07) : Color.clear, lineWidth: 0.5)
-                                    )
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 12)
+                                .padding(.bottom, 14)
                             }
+                            LazyVGrid(columns: columns, spacing: 8) {
+                                ForEach(chapterVerses) { verse in
+                                    Button {
+                                        commitPickerSelection()
+                                        dismiss()
+                                        // Verse handler alone — it focuses the chapter and scrolls after hydration.
+                                        // onSelect() would fire a competing chapter-top loadChapter().
+                                        if let selectVerse = onSelectVerse {
+                                            selectVerse(verse.number)
+                                        } else {
+                                            onSelect()
+                                        }
+                                    } label: {
+                                        Text("\(verse.number)")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 44)
+                                            .background(Color.adaptiveTertiaryBackground(colorScheme))
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(colorScheme == .dark ? Color.white.opacity(0.07) : Color.clear, lineWidth: 0.5)
+                                            )
+                                    }
+                                    .accessibilityLabel("Verse \(verse.number)")
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, bottomListInset)
                         }
+                        .frame(minHeight: controlsAtBottom ? geo.size.height : 0, alignment: .bottom)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
                 }
             }
         }
-        .frame(maxHeight: AppWindow.height * 0.55)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if controlsAtBottom {
+                HStack {
+                    versePickerBackButton
+                    Spacer()
+                    versePickerGoButton(label: "Go to chapter \(pickerChapter)")
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+                .padding(.bottom, max(safeBottom, 12))
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .overlay(alignment: .top) { Divider() }
+            }
+        }
         .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
+        // Edge swipe back, like a navigation push.
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { value in
+                    if value.translation.width > 80 && abs(value.translation.height) < 60 {
+                        closeVersePicker()
+                    }
+                }
         )
-        // Soft elevation shadow cast upward, matching the app's bottom-sheet style
-        // (see TakeNoteView). Opacity adapts so it stays visible in dark mode.
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15), radius: 20, y: -5)
     }
 
     // MARK: - Load Verses
 
     func loadVersesForChapter() {
+        let book = pickerBook
+        let chapter = pickerChapter
         isLoadingVerses = true
         chapterVerses = []
         Task {
@@ -1049,54 +1334,59 @@ struct UnifiedNavigationView: View {
                 var fetchedVerses: [ParsedVerse] = []
                 switch translation {
                 case .esv:
-                    let result = try await ESVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
+                    let result = try await ESVService.shared.fetchChapterParsed(book: book.name, chapter: chapter)
                     fetchedVerses = result.verses
                 case .kjv:
-                    let result = try await KJVService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
+                    let result = try await KJVService.shared.fetchChapterParsed(book: book.name, chapter: chapter)
                     fetchedVerses = result.verses
                 case .net:
-                    let result = try await NETService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter)
+                    let result = try await NETService.shared.fetchChapterParsed(book: book.name, chapter: chapter)
                     fetchedVerses = result.verses
                 case .csb, .nkjv, .nasb, .rvr1960, .nlt:
-                    let result = try await ApiBibleService.shared.fetchChapterParsed(book: selectedBook.name, chapter: selectedChapter, translation: translation)
+                    let result = try await ApiBibleService.shared.fetchChapterParsed(book: book.name, chapter: chapter, translation: translation)
                     fetchedVerses = result.verses
                 case .tr:
-                    if selectedBook.testament == .new {
+                    if book.testament == .new {
                         OriginalLanguageService.shared.preloadTR()
-                        let bookNum = OriginalLanguageService.bookNumber(for: selectedBook.name) ?? 0
-                        let trVerses = OriginalLanguageService.shared.trChapter(bookNumber: bookNum, chapter: selectedChapter)
+                        let bookNum = OriginalLanguageService.bookNumber(for: book.name) ?? 0
+                        let trVerses = OriginalLanguageService.shared.trChapter(bookNumber: bookNum, chapter: chapter)
                         fetchedVerses = trVerses.map { v in
-                            let ref = "\(selectedBook.name) \(selectedChapter):\(v.verse)"
+                            let ref = "\(book.name) \(chapter):\(v.verse)"
                             return ParsedVerse(id: ref, number: v.verse, text: "", reference: ref)
                         }
                     }
                 case .sblgnt:
-                    if selectedBook.testament == .new {
+                    if book.testament == .new {
                         OriginalLanguageService.shared.preloadSBLGNT()
-                        let bookNum = OriginalLanguageService.bookNumber(for: selectedBook.name) ?? 0
-                        let sblVerses = OriginalLanguageService.shared.sblChapter(bookNumber: bookNum, chapter: selectedChapter)
+                        let bookNum = OriginalLanguageService.bookNumber(for: book.name) ?? 0
+                        let sblVerses = OriginalLanguageService.shared.sblChapter(bookNumber: bookNum, chapter: chapter)
                         fetchedVerses = sblVerses.map { v in
-                            let ref = "\(selectedBook.name) \(selectedChapter):\(v.verse)"
+                            let ref = "\(book.name) \(chapter):\(v.verse)"
                             return ParsedVerse(id: ref, number: v.verse, text: v.text, reference: ref)
                         }
                     }
                 case .wlc:
-                    if selectedBook.testament == .old {
+                    if book.testament == .old {
                         OriginalLanguageService.shared.preloadWLC()
-                        let bookNum = OriginalLanguageService.bookNumber(for: selectedBook.name) ?? 0
-                        let wlcVerses = OriginalLanguageService.shared.wlcChapter(bookNumber: bookNum, chapter: selectedChapter)
+                        let bookNum = OriginalLanguageService.bookNumber(for: book.name) ?? 0
+                        let wlcVerses = OriginalLanguageService.shared.wlcChapter(bookNumber: bookNum, chapter: chapter)
                         fetchedVerses = wlcVerses.map { v in
-                            let ref = "\(selectedBook.name) \(selectedChapter):\(v.verse)"
+                            let ref = "\(book.name) \(chapter):\(v.verse)"
                             return ParsedVerse(id: ref, number: v.verse, text: "", reference: ref)
                         }
                     }
                 }
                 await MainActor.run {
+                    // Drop a stale result if the user tapped a different chapter meanwhile.
+                    guard pickerBook.id == book.id, pickerChapter == chapter else { return }
                     chapterVerses = fetchedVerses
                     isLoadingVerses = false
                 }
             } catch {
-                await MainActor.run { isLoadingVerses = false }
+                await MainActor.run {
+                    guard pickerBook.id == book.id, pickerChapter == chapter else { return }
+                    isLoadingVerses = false
+                }
             }
         }
     }

@@ -27,6 +27,10 @@
 	<string>Reforged uses your camera so you can set a profile photo and scan group invite QR codes.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Reforged saves your verse images to your photo library so you can share them.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Reforged uses speech recognition to verify your verse recitation in 'Say It Back' memory practice.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Reforged uses your microphone so you can speak memory verses aloud in 'Say It Back' practice.</string>
 	<key>SupabaseAnonKey</key>
 	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0a2xoZ2hnbnBtbWp0em5waGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczODgyMTcsImV4cCI6MjA4Mjk2NDIxN30._zL6VW5SJzJnXKG8cPIsPS75697dfvUMk0pSjrN7UZo</string>
 	<key>SupabaseGeminiFunctionName</key>

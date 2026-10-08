@@ -1119,9 +1119,11 @@ struct PodcastArtworkView: View {
     }
 }
 
+#if false
 #Preview {
     NavigationStack {
         PodcastView()
     }
     .environmentObject(AppState.shared)
 }
+#endif

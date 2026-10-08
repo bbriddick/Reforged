@@ -4,12 +4,15 @@ import SwiftUI
 
 struct ReadingPlansView: View {
     @StateObject private var service = ReadingPlanService.shared
+    @StateObject private var customStore = CustomReadingPlanStore.shared
     @Environment(\.colorScheme) var colorScheme
+    @State private var showPlanBuilder = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 16) {
-                ForEach(BibleReadingPlans.all) { plan in
+                // Built-ins plus any the member built themselves.
+                ForEach(BibleReadingPlans.everything) { plan in
                     NavigationLink {
                         if plan.isDevotional {
                             SpurgeonDevotionalView(plan: plan)
@@ -21,6 +24,23 @@ struct ReadingPlansView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                Button {
+                    HapticManager.shared.buttonTap()
+                    showPlanBuilder = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Create your own plan").fontWeight(.semibold)
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -28,6 +48,9 @@ struct ReadingPlansView: View {
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
         .navigationTitle("Reading Plans")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showPlanBuilder) {
+            CustomReadingPlanBuilderView()
+        }
     }
 }
 
@@ -371,9 +394,11 @@ private struct PlanDayRow: View {
 
 // MARK: - Preview
 
+#if false
 #Preview {
     NavigationStack {
         ReadingPlansView()
             .environmentObject(AppState.shared)
     }
 }
+#endif

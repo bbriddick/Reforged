@@ -524,6 +524,7 @@ struct LessonCompleteView: View {
     }
 }
 
+#if false
 #Preview {
     NavigationStack {
         LessonView(lesson: LearningTracks.allTracks[0].lessons[0])
@@ -531,3 +532,4 @@ struct LessonCompleteView: View {
             .environmentObject(SettingsManager.shared)
     }
 }
+#endif

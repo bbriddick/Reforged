@@ -77,7 +77,7 @@ class NotificationManager: NSObject, ObservableObject {
     /// Includes legacy IDs (`daily-reading-reminder`, `daily-review-reminder`) so
     /// reminders scheduled by older app versions get cleaned up too.
     private var allManagedIdentifiers: [String] {
-        var ids: [String] = ["daily-reading-reminder", "daily-review-reminder", "partner-report-reminder"]
+        var ids: [String] = ["daily-reading-reminder", "daily-review-reminder", "partner-report-reminder", "streak-freeze-reminder"]
         for weekday in 1...7 {
             ids.append("reading-reminder-\(weekday)")
             ids.append("review-reminder-\(weekday)")
@@ -190,6 +190,47 @@ class NotificationManager: NSObject, ObservableObject {
         // Weekly accountability-report reminder — its own day/time, independent of
         // the daily reminder slots. Only fires once a partner actually exists.
         scheduleWeeklyPartnerReportReminder(center: center)
+
+        if settings.streakFreezeReminders {
+            scheduleStreakFreezeReminder(base: Self.offset(base, byMinutes: 15), center: center)
+        }
+    }
+
+    private let freezeReminderLastFireKey = "notification_freeze_reminder_last_fire"
+
+    /// One-shot nudge when a streak has no freeze protecting it. Rebuilt with every
+    /// `scheduleDailyReminder()` call (which AppState makes whenever the freeze
+    /// count changes), so it disappears the moment a freeze is earned or bought.
+    /// Throttled to at most once every three days so it never nags.
+    @MainActor private func scheduleStreakFreezeReminder(base: DateComponents, center: UNUserNotificationCenter) {
+        let user = AppState.shared.user
+        let streak = ReadingStreakManager.shared.currentStreak
+        guard user.onboardingCompleted, user.streakFreezes == 0, streak >= 2 else { return }
+
+        let defaults = UserDefaults.standard
+        let now = Date()
+        var earliest = now
+        if let lastFire = defaults.object(forKey: freezeReminderLastFireKey) as? Date {
+            // A future lastFire is the still-pending one we are rebuilding — keep it.
+            earliest = lastFire > now ? max(now, lastFire.addingTimeInterval(-60))
+                                      : max(now, lastFire.addingTimeInterval(3 * 86_400))
+        }
+        guard let fireDate = Calendar.current.nextDate(after: earliest, matching: base,
+                                                       matchingPolicy: .nextTime) else { return }
+        defaults.set(fireDate, forKey: freezeReminderLastFireKey)
+
+        let content = UNMutableNotificationContent()
+        content.title = "Your \(streak)-day streak is unprotected"
+        content.body = user.xp >= AppState.shared.freezePurchaseCost
+            ? "Pick up a streak freeze for \(AppState.shared.freezePurchaseCost) XP so one busy day can't break it."
+            : "You're out of streak freezes. Level up or finish lessons to earn another."
+        content.sound = .default
+        content.userInfo = ["action": "get-freeze"]
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate),
+            repeats: false
+        )
+        center.add(UNNotificationRequest(identifier: "streak-freeze-reminder", content: content, trigger: trigger))
     }
 
     /// Weekly nudge to send the accountability report. Opt-in (defaults off) and
@@ -376,5 +417,51 @@ class NotificationManager: NSObject, ObservableObject {
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let req = UNNotificationRequest(identifier: "checkin-weekly", content: content, trigger: trigger)
         try? await center.add(req)
+    }
+
+    // MARK: - Rhythm (rule-of-life) reminders
+
+    /// Rebuilds the per-item reminders for the member's daily rhythm checklist.
+    ///
+    /// These live under a dedicated `"rhythm-<itemId>-<weekday>"` namespace,
+    /// separate from the managed daily reminders, so `scheduleDailyReminder()`
+    /// never removes them and vice-versa. This method owns clearing its own stale
+    /// requests before re-adding, so it stays the single source of truth for
+    /// rhythm reminders. iOS silently drops adds when notifications aren't
+    /// authorized, so callers should have requested authorization when the user
+    /// turned a reminder on.
+    func scheduleRhythmReminders(_ items: [RhythmItem]) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let stale = requests.map(\.identifier).filter { $0.hasPrefix("rhythm-") }
+            if !stale.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: stale)
+            }
+
+            for item in items where item.reminderEnabled {
+                let content = UNMutableNotificationContent()
+                content.title = item.kind == .avoid ? "Stay faithful" : "Reforged"
+                content.body = item.kind == .avoid
+                    ? "Hold to your commitment: \(item.title)"
+                    : item.title
+                content.sound = .default
+                content.userInfo = ["action": "openRhythm"]
+
+                let days = item.weekdays.isEmpty ? Set(1...7) : item.weekdays
+                for weekday in days.sorted() {
+                    var comps = DateComponents()
+                    comps.weekday = weekday
+                    comps.hour = item.reminderHour
+                    comps.minute = item.reminderMinute
+                    let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
+                    let req = UNNotificationRequest(
+                        identifier: "rhythm-\(item.id)-\(weekday)",
+                        content: content,
+                        trigger: trigger
+                    )
+                    center.add(req)
+                }
+            }
+        }
     }
 }

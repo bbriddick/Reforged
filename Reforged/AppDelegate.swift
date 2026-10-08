@@ -150,6 +150,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                     object: nil,
                     userInfo: [AppNotificationUserInfoKey.tab: 3]
                 )
+            case "get-freeze":
+                // Tapped the "streak unprotected" reminder → Memory tab, which opens
+                // the streak sheet with the freeze section highlighted. A flag (not
+                // a one-shot post) so it survives a cold launch before views exist.
+                NotificationCenter.default.post(
+                    name: .switchTab,
+                    object: nil,
+                    userInfo: [AppNotificationUserInfoKey.tab: 3]
+                )
+                Task { @MainActor in AppState.shared.pendingFreezePrompt = true }
             case "open-lessons":
                 NotificationCenter.default.post(
                     name: .switchTab,

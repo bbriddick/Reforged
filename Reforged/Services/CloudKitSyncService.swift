@@ -67,6 +67,11 @@ class CloudKitSyncService: ObservableObject {
         record["avatar"] = profile.avatar as CKRecordValue
         record["goals"] = profile.goals as CKRecordValue
         record["xp"] = profile.xp as CKRecordValue
+        record["xpSpent"] = profile.xpSpent as CKRecordValue
+        if let data = try? JSONEncoder().encode(profile.cosmetics),
+           let json = String(data: data, encoding: .utf8) {
+            record["cosmeticsJSON"] = json as CKRecordValue
+        }
         record["level"] = profile.currentLevel as CKRecordValue
         record["streak"] = profile.streak as CKRecordValue
         record["longestStreak"] = profile.longestStreak as CKRecordValue
@@ -185,6 +190,11 @@ class CloudKitSyncService: ObservableObject {
             profileImagePath: profileImagePath
         )
         profile.streakHistory = streakHistory
+        profile.xpSpent = record["xpSpent"] as? Int ?? 0
+        if let json = record["cosmeticsJSON"] as? String, let data = json.data(using: .utf8),
+           let cosmetics = try? JSONDecoder().decode(CosmeticsState.self, from: data) {
+            profile.cosmetics = cosmetics
+        }
         return profile
     }
 

@@ -1,15 +1,120 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Paragraph Styles
+
+/// Named block styles offered by the editor (Apple Notes-like).
+enum NoteParagraphStyle: String, CaseIterable, Identifiable {
+    case title
+    case heading
+    case subheading
+    case body
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .title:      return "Title"
+        case .heading:    return "Heading"
+        case .subheading: return "Subheading"
+        case .body:       return "Body"
+        }
+    }
+
+    var pointSize: CGFloat {
+        switch self {
+        case .title:      return 26
+        case .heading:    return 21
+        case .subheading: return 18
+        case .body:       return 17
+        }
+    }
+
+    var weight: UIFont.Weight {
+        switch self {
+        case .title:      return .bold
+        case .heading:    return .semibold
+        case .subheading: return .semibold
+        case .body:       return .regular
+        }
+    }
+
+    var font: UIFont {
+        UIFont.systemFont(ofSize: pointSize, weight: weight)
+    }
+
+    /// Best-effort classification of an existing font back into a style.
+    static func from(font: UIFont?) -> NoteParagraphStyle {
+        guard let font else { return .body }
+        let size = font.pointSize
+        let isBoldish = font.fontDescriptor.symbolicTraits.contains(.traitBold)
+        if size >= 24 { return .title }
+        if size >= 20 && isBoldish { return .heading }
+        if size >= 18 && isBoldish { return .subheading }
+        return .body
+    }
+}
+
+/// Text colors offered by the editor's color menu.
+enum NoteTextColor: String, CaseIterable, Identifiable {
+    case standard
+    case coral
+    case gold
+    case blue
+    case green
+    case purple
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .standard: return "Default"
+        case .coral:    return "Coral"
+        case .gold:     return "Gold"
+        case .blue:     return "Blue"
+        case .green:    return "Green"
+        case .purple:   return "Purple"
+        }
+    }
+
+    var uiColor: UIColor {
+        switch self {
+        case .standard: return .label
+        case .coral:    return UIColor(red: 0.914, green: 0.271, blue: 0.376, alpha: 1)
+        case .gold:     return UIColor(red: 0.72, green: 0.53, blue: 0.30, alpha: 1)
+        case .blue:     return UIColor(red: 0.20, green: 0.48, blue: 0.86, alpha: 1)
+        case .green:    return UIColor(red: 0.16, green: 0.60, blue: 0.36, alpha: 1)
+        case .purple:   return UIColor(red: 0.52, green: 0.36, blue: 0.80, alpha: 1)
+        }
+    }
+
+    var swatch: Color { Color(uiColor) }
+}
+
+// MARK: - Checklist glyphs
+
+private enum Checklist {
+    static let unchecked = "☐ "
+    static let checked = "☑ "
+    static func isPrefix(_ line: String) -> Bool {
+        line.hasPrefix(unchecked) || line.hasPrefix(checked)
+    }
+}
+
 // MARK: - Formatting Coordinator
 
-final class FormattingCoordinator: NSObject, ObservableObject, UITextViewDelegate {
+final class FormattingCoordinator: NSObject, ObservableObject, UITextViewDelegate, UIGestureRecognizerDelegate {
     weak var textView: UITextView?
     var attributedTextBinding: Binding<NSAttributedString>?
 
     @Published var isBold = false
     @Published var isItalic = false
     @Published var isUnderline = false
+    @Published var isStrikethrough = false
+    @Published var isHighlighted = false
+    @Published var paragraphStyle: NoteParagraphStyle = .body
+
+    static let highlightColor = UIColor.systemYellow.withAlphaComponent(0.35)
 
     // MARK: UITextViewDelegate
 
@@ -31,7 +136,7 @@ final class FormattingCoordinator: NSObject, ObservableObject, UITextViewDelegat
             attrs = tv.typingAttributes
         } else {
             let loc = range.length > 0 ? range.location : max(0, range.location - 1)
-            guard loc < text.length else { attrs = tv.typingAttributes; return evaluateAttrs(attrs) }
+            guard loc < text.length else { evaluateAttrs(tv.typingAttributes); return }
             attrs = text.attributes(at: loc, effectiveRange: nil)
         }
         evaluateAttrs(attrs)
@@ -41,16 +146,21 @@ final class FormattingCoordinator: NSObject, ObservableObject, UITextViewDelegat
         if let font = attrs[.font] as? UIFont {
             isBold   = font.fontDescriptor.symbolicTraits.contains(.traitBold)
             isItalic = font.fontDescriptor.symbolicTraits.contains(.traitItalic)
+            paragraphStyle = NoteParagraphStyle.from(font: font)
         }
         isUnderline = (attrs[.underlineStyle] as? Int ?? 0) != 0
+        isStrikethrough = (attrs[.strikethroughStyle] as? Int ?? 0) != 0
+        isHighlighted = (attrs[.backgroundColor] as? UIColor) != nil
     }
 
     // MARK: Format Actions
 
     func applyBold()      { toggleTrait(.traitBold) }
     func applyItalic()    { toggleTrait(.traitItalic) }
-    func applyUnderline() { toggleUnderlineStyle() }
+    func applyUnderline() { toggleAttribute(.underlineStyle) }
+    func applyStrikethrough() { toggleAttribute(.strikethroughStyle) }
     func insertBullet()   { insertListPrefix("• ") }
+    func insertChecklist() { insertListPrefix(Checklist.unchecked) }
 
     func insertNumbered() {
         guard let tv = textView else { return }
@@ -71,6 +181,99 @@ final class FormattingCoordinator: NSObject, ObservableObject, UITextViewDelegat
             pos = found.location + 1
         }
         insertListPrefix("\(num). ")
+    }
+
+    /// Applies a block/paragraph style to every paragraph touched by the selection.
+    func applyParagraphStyle(_ style: NoteParagraphStyle) {
+        guard let tv = textView else { return }
+        let font = style.font
+
+        if (tv.attributedText?.length ?? 0) == 0 || tv.selectedRange.length == 0 {
+            // No selection: set typing attributes so new text uses the style, and
+            // also restyle the current line if it has content.
+            var typing = tv.typingAttributes
+            typing[.font] = font
+            tv.typingAttributes = typing
+            let lineRange = currentParagraphRange(in: tv)
+            if lineRange.length > 0 {
+                applyFont(font, to: lineRange, on: tv)
+            } else {
+                paragraphStyle = style
+            }
+            HapticManager.shared.selectionChanged()
+            return
+        }
+
+        let text = tv.attributedText ?? NSAttributedString()
+        let ns = text.string as NSString
+        let paraRange = ns.paragraphRange(for: tv.selectedRange)
+        applyFont(font, to: paraRange, on: tv)
+        HapticManager.shared.selectionChanged()
+    }
+
+    func applyTextColor(_ color: NoteTextColor) {
+        guard let tv = textView else { return }
+        let range = tv.selectedRange
+        if range.length == 0 {
+            var typing = tv.typingAttributes
+            typing[.foregroundColor] = color.uiColor
+            tv.typingAttributes = typing
+            return
+        }
+        let mutable = NSMutableAttributedString(attributedString: tv.attributedText ?? NSAttributedString())
+        guard range.location + range.length <= mutable.length else { return }
+        mutable.addAttribute(.foregroundColor, value: color.uiColor, range: range)
+        tv.attributedText = mutable
+        tv.selectedRange = range
+        attributedTextBinding?.wrappedValue = mutable
+    }
+
+    func toggleHighlight() {
+        guard let tv = textView else { return }
+        let range = tv.selectedRange
+        if range.length == 0 {
+            var typing = tv.typingAttributes
+            if typing[.backgroundColor] != nil {
+                typing.removeValue(forKey: .backgroundColor)
+                isHighlighted = false
+            } else {
+                typing[.backgroundColor] = Self.highlightColor
+                isHighlighted = true
+            }
+            tv.typingAttributes = typing
+            return
+        }
+        guard range.location + range.length <= (tv.attributedText?.length ?? 0) else { return }
+        var allHave = true
+        tv.attributedText.enumerateAttribute(.backgroundColor, in: range, options: []) { val, _, _ in
+            if val == nil { allHave = false }
+        }
+        let mutable = NSMutableAttributedString(attributedString: tv.attributedText ?? NSAttributedString())
+        if allHave { mutable.removeAttribute(.backgroundColor, range: range) }
+        else       { mutable.addAttribute(.backgroundColor, value: Self.highlightColor, range: range) }
+        tv.attributedText = mutable
+        tv.selectedRange = range
+        attributedTextBinding?.wrappedValue = mutable
+        updateActiveStates(in: tv)
+    }
+
+    // MARK: Helpers
+
+    private func applyFont(_ font: UIFont, to range: NSRange, on tv: UITextView) {
+        let mutable = NSMutableAttributedString(attributedString: tv.attributedText ?? NSAttributedString())
+        guard range.location + range.length <= mutable.length else { return }
+        // Preserve bold/italic emphasis already present on runs where possible,
+        // but base the size/weight on the chosen style.
+        mutable.addAttribute(.font, value: font, range: range)
+        tv.attributedText = mutable
+        tv.selectedRange = range
+        attributedTextBinding?.wrappedValue = mutable
+        updateActiveStates(in: tv)
+    }
+
+    private func currentParagraphRange(in tv: UITextView) -> NSRange {
+        let ns = (tv.text ?? "") as NSString
+        return ns.paragraphRange(for: tv.selectedRange)
     }
 
     private func insertListPrefix(_ prefix: String) {
@@ -134,35 +337,78 @@ final class FormattingCoordinator: NSObject, ObservableObject, UITextViewDelegat
         updateActiveStates(in: tv)
     }
 
-    private func toggleUnderlineStyle() {
+    /// Toggles a simple integer-valued attribute (underline / strikethrough).
+    private func toggleAttribute(_ attribute: NSAttributedString.Key) {
         guard let tv = textView else { return }
         let range = tv.selectedRange
         let text  = tv.attributedText ?? NSAttributedString()
+        let onValue = NSUnderlineStyle.single.rawValue
 
         if range.length == 0 {
             var attrs = tv.typingAttributes
-            let current = attrs[.underlineStyle] as? Int ?? 0
-            if current != 0 { attrs.removeValue(forKey: .underlineStyle) }
-            else            { attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue }
+            let current = attrs[attribute] as? Int ?? 0
+            if current != 0 { attrs.removeValue(forKey: attribute) }
+            else            { attrs[attribute] = onValue }
             tv.typingAttributes = attrs
-            isUnderline = !isUnderline
+            updateActiveStates(in: tv)
             return
         }
 
         guard range.location + range.length <= text.length else { return }
 
         var allHave = true
-        text.enumerateAttribute(.underlineStyle, in: range, options: []) { val, _, _ in
+        text.enumerateAttribute(attribute, in: range, options: []) { val, _, _ in
             if (val as? Int ?? 0) == 0 { allHave = false }
         }
 
         let mutable = NSMutableAttributedString(attributedString: text)
-        if allHave { mutable.removeAttribute(.underlineStyle, range: range) }
-        else       { mutable.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range) }
+        if allHave { mutable.removeAttribute(attribute, range: range) }
+        else       { mutable.addAttribute(attribute, value: onValue, range: range) }
         tv.attributedText = mutable
         tv.selectedRange  = range
         attributedTextBinding?.wrappedValue = mutable
         updateActiveStates(in: tv)
+    }
+
+    // MARK: Checklist tap-to-toggle
+
+    @objc func handleCheckboxTap(_ recognizer: UITapGestureRecognizer) {
+        guard let tv = textView, let attr = tv.attributedText else { return }
+        let point = recognizer.location(in: tv)
+        let layout = tv.layoutManager
+        let container = tv.textContainer
+        let adjusted = CGPoint(x: point.x - tv.textContainerInset.left,
+                               y: point.y - tv.textContainerInset.top)
+        var fraction: CGFloat = 0
+        let index = layout.characterIndex(for: adjusted, in: container, fractionOfDistanceBetweenInsertionPoints: &fraction)
+        guard index < attr.length else { return }
+
+        let ns = attr.string as NSString
+        let lineRange = ns.lineRange(for: NSRange(location: index, length: 0))
+        let line = ns.substring(with: lineRange)
+
+        // Only toggle when the tap lands on the checkbox glyph at the line start.
+        guard Checklist.isPrefix(line), index <= lineRange.location + 1 else { return }
+
+        let mutable = NSMutableAttributedString(attributedString: attr)
+        let isChecked = line.hasPrefix(Checklist.checked)
+        let replacement = isChecked ? Checklist.unchecked : Checklist.checked
+        let font = (tv.font ?? UIFont.systemFont(ofSize: 17))
+        let glyphRange = NSRange(location: lineRange.location, length: 2) // glyph + space
+        mutable.replaceCharacters(in: glyphRange,
+                                  with: NSAttributedString(string: replacement,
+                                                           attributes: [.font: font, .foregroundColor: UIColor.label]))
+        let caret = tv.selectedRange
+        tv.attributedText = mutable
+        tv.selectedRange = caret
+        attributedTextBinding?.wrappedValue = mutable
+        HapticManager.shared.selectionChanged()
+    }
+
+    // Let the tap gesture coexist with the text view's own gestures.
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        true
     }
 }
 
@@ -190,6 +436,12 @@ struct RichTextEditorUIKitView: UIViewRepresentable {
         tv.font = baseFont
         tv.typingAttributes = [.font: baseFont, .foregroundColor: UIColor.label]
         if attributedText.length > 0 { tv.attributedText = attributedText }
+
+        // Tap-to-toggle checkboxes.
+        let tap = UITapGestureRecognizer(target: coordinator, action: #selector(FormattingCoordinator.handleCheckboxTap(_:)))
+        tap.cancelsTouchesInView = false
+        tap.delegate = coordinator
+        tv.addGestureRecognizer(tap)
         return tv
     }
 
@@ -213,23 +465,70 @@ struct FormattingToolbar: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        HStack(spacing: 2) {
-            FormatButton(icon: "bold",      isActive: coordinator.isBold,      action: coordinator.applyBold)
-            FormatButton(icon: "italic",    isActive: coordinator.isItalic,    action: coordinator.applyItalic)
-            FormatButton(icon: "underline", isActive: coordinator.isUnderline, action: coordinator.applyUnderline)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 2) {
+                // Paragraph style menu
+                Menu {
+                    ForEach(NoteParagraphStyle.allCases) { style in
+                        Button {
+                            coordinator.applyParagraphStyle(style)
+                        } label: {
+                            Label(style.displayName,
+                                  systemImage: coordinator.paragraphStyle == style ? "checkmark" : "textformat.size")
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "textformat")
+                            .font(.system(size: 14, weight: .medium))
+                        Text(coordinator.paragraphStyle.displayName)
+                            .font(.caption.weight(.medium))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .padding(.horizontal, 10)
+                    .frame(height: 34)
+                    .background(Color.reforgedNavy.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
 
-            Rectangle()
-                .fill(Color.adaptiveBorder(colorScheme))
-                .frame(width: 1, height: 20)
-                .padding(.horizontal, 4)
+                toolbarDivider
 
-            FormatButton(icon: "list.bullet", isActive: false, action: coordinator.insertBullet)
-            FormatButton(icon: "list.number", isActive: false, action: coordinator.insertNumbered)
+                FormatButton(icon: "bold",          isActive: coordinator.isBold,          action: coordinator.applyBold)
+                FormatButton(icon: "italic",        isActive: coordinator.isItalic,        action: coordinator.applyItalic)
+                FormatButton(icon: "underline",     isActive: coordinator.isUnderline,     action: coordinator.applyUnderline)
+                FormatButton(icon: "strikethrough", isActive: coordinator.isStrikethrough, action: coordinator.applyStrikethrough)
 
-            Spacer()
+                toolbarDivider
+
+                FormatButton(icon: "highlighter", isActive: coordinator.isHighlighted, action: coordinator.toggleHighlight)
+
+                // Text color menu
+                Menu {
+                    ForEach(NoteTextColor.allCases) { color in
+                        Button {
+                            coordinator.applyTextColor(color)
+                        } label: {
+                            Label(color.displayName, systemImage: "circle.fill")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "paintpalette")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .frame(width: 34, height: 34)
+                }
+
+                toolbarDivider
+
+                FormatButton(icon: "list.bullet",       isActive: false, action: coordinator.insertBullet)
+                FormatButton(icon: "list.number",       isActive: false, action: coordinator.insertNumbered)
+                FormatButton(icon: "checklist",         isActive: false, action: coordinator.insertChecklist)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
         .background(Color.adaptiveBackground(colorScheme))
         .overlay(
             Rectangle()
@@ -237,6 +536,13 @@ struct FormattingToolbar: View {
                 .frame(height: 1),
             alignment: .bottom
         )
+    }
+
+    private var toolbarDivider: some View {
+        Rectangle()
+            .fill(Color.adaptiveBorder(colorScheme))
+            .frame(width: 1, height: 20)
+            .padding(.horizontal, 4)
     }
 }
 

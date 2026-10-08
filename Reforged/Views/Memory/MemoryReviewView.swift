@@ -5,6 +5,10 @@ struct MemoryReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
 
+    /// When set, the session reviews only these references (a themed unit
+    /// checkpoint) instead of the global due queue.
+    var restrictReferences: Set<String>? = nil
+
     /// The session ramps difficulty in phases: an easy flashcard swipe deck first,
     /// then graduated single-card exercises that get harder as verses mature.
     private enum Phase { case loading, deck, graded, complete, empty }
@@ -162,7 +166,13 @@ struct MemoryReviewView: View {
 
     private func startSessionIfNeeded() {
         guard phase == .loading else { return }
-        let due = appState.getVersesForReview()
+        let due: [MemoryVerse]
+        if let refs = restrictReferences {
+            // Unit checkpoint: review every started verse in the unit, due or not.
+            due = appState.memoryVerses.filter { refs.contains($0.reference) }
+        } else {
+            due = appState.getVersesForReview()
+        }
         flashcardVerses = due.filter { MemoryMode.isFlashcardStage($0) }
         // Graded exercises are ordered easiest → hardest so the session keeps ramping up.
         gradedVerses = due.filter { !MemoryMode.isFlashcardStage($0) }
@@ -337,88 +347,33 @@ struct FlashcardDeckView: View {
 struct ReviewCompleteView: View {
     let reviewedCount: Int
     let onDismiss: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-    @State private var showConfetti = false
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            // Celebration icon
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.reforgedGold.opacity(0.3), Color.reforgedGold.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-                    .scaleEffect(showConfetti ? 1.1 : 1.0)
-                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: showConfetti)
-
-                Image(systemName: "star.fill")
-                    .font(.system(size: 50))
-                    .foregroundStyle(Color.reforgedGold)
-                    .rotationEffect(.degrees(showConfetti ? 10 : -10))
-                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: showConfetti)
-            }
-
-            Text("Review Complete!")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
-
-            Text("You reviewed \(reviewedCount) verse\(reviewedCount == 1 ? "" : "s")")
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-            // XP earned card
-            HStack(spacing: 16) {
-                VStack(spacing: 4) {
-                    Text("+\(reviewedCount * 10)")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.reforgedGold)
-
-                    Text("XP Earned")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                }
-            }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 20)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.reforgedGold.opacity(0.2), radius: 12, y: 6)
-
-            Spacer()
-
-            Button(action: onDismiss) {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Done")
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
-                .background(Color.reforgedNavy)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-            .padding(.horizontal)
-        }
-        .padding()
-        .onAppear {
-            showConfetti = true
-        }
+        JackpotStage(
+            config: JackpotConfig(
+                hero: .symbol("brain.head.profile"),
+                headline: "Review complete",
+                title: "Those verses are going deeper.",
+                accent: .gold,
+                reels: [
+                    JackpotReel(icon: "book.closed.fill", label: "Verses reviewed", value: reviewedCount, prefix: "", tint: .reforgedCoral),
+                    JackpotReel(icon: "star.fill", label: "Completion bonus", value: 25, suffix: " XP", tint: .reforgedGold),
+                ],
+                cta: "Done",
+                intensity: .max
+            ),
+            onDismiss: onDismiss
+        )
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
     }
 }
 
+#if false
 #Preview {
     NavigationStack {
         MemoryReviewView()
             .environmentObject(AppState.shared)
     }
 }
+#endif

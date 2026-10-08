@@ -376,9 +376,11 @@ struct BibleProgressRing: View {
     }
 }
 
+#if false
 #Preview {
     NavigationStack {
         BibleProgressView()
             .environmentObject(AppState.shared)
     }
 }
+#endif

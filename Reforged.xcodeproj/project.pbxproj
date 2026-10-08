@@ -37,6 +37,9 @@
 		A1000026279B9E0000000001 /* JournalEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000027279B9E0000000001 /* JournalEntry.swift */; };
 		A1000028279B9E0000000001 /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000029279B9E0000000001 /* SampleData.swift */; };
 		A1000030279B9E0000000001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000031279B9E0000000001 /* AppState.swift */; };
+		SHSV0001279B9E0000000001 /* ShopService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHSV0002279B9E0000000001 /* ShopService.swift */; };
+		AMBS0001279B9E0000000001 /* AmbientSoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMBS0002279B9E0000000001 /* AmbientSoundPlayer.swift */; };
+		CRWN0001279B9E0000000001 /* CrownStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRWN0002279B9E0000000001 /* CrownStore.swift */; };
 		A1000032279B9E0000000001 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000033279B9E0000000001 /* HomeView.swift */; };
 		A1000034279B9E0000000001 /* TracksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000035279B9E0000000001 /* TracksView.swift */; };
 		A1000034279B9E0000000101 /* HomeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000035279B9E0000000101 /* HomeSearchView.swift */; };
@@ -46,6 +49,8 @@
 		A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003D279B9E0000000001 /* MemoryPracticeView.swift */; };
 		A100003E279B9E0000000001 /* BibleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003F279B9E0000000001 /* BibleView.swift */; };
 		A1000040279B9E0000000001 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000041279B9E0000000001 /* ProfileView.swift */; };
+		SHVW0001279B9E0000000001 /* ShopViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHVW0002279B9E0000000001 /* ShopViews.swift */; };
+		SHOP0001279B9E0000000001 /* CrownShopView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHOP0002279B9E0000000001 /* CrownShopView.swift */; };
 		A1000042279B9E0000000001 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000043279B9E0000000001 /* JournalView.swift */; };
 		A1000044279B9E0000000001 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000045279B9E0000000001 /* OnboardingFlowView.swift */; };
 		A1000046279B9E0000000001 /* ESVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000047279B9E0000000001 /* ESVService.swift */; };
@@ -81,18 +86,23 @@
 		B1A0000E279B9E0000000001 /* StrongGreekDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */; };
 		B1A00012279B9E0000000001 /* ConcordanceSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */; };
 		B1A0001C279B9E0000000001 /* kjvpce.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0001B279B9E0000000001 /* kjvpce.json */; };
+		B1A0AA0100000000000000A2 /* TextKit/ScriptureAttributedText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0AA0100000000000000A1 /* TextKit/ScriptureAttributedText.swift */; };
+		B1A0AA0100000000000000A4 /* TextKit/BibleAttributedTextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0AA0100000000000000A3 /* TextKit/BibleAttributedTextBuilder.swift */; };
+		B1A0AA0100000000000000A6 /* TextKit/BibleTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0AA0100000000000000A5 /* TextKit/BibleTextView.swift */; };
+		B1A0AA0100000000000000A8 /* TextKit/BibleWindowedReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0AA0100000000000000A7 /* TextKit/BibleWindowedReader.swift */; };
 		B9C1AFBE4511D3A9F150099E /* HandoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA13B4D8EC53510341B412A1 /* HandoutViews.swift */; };
 		BAFBE3AE35B043D9E9425DA0 /* GroupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326981E4627DA0FA59373737 /* GroupModels.swift */; };
+		BAV00001279B9E0000000001 /* BibleAtlasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAV00002279B9E0000000001 /* BibleAtlasView.swift */; };
 		BDD100000000000000000001 /* BibleDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD100000000000000000002 /* BibleDownloadManager.swift */; };
 		BDD100000000000000000005 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD100000000000000000006 /* NowPlayingView.swift */; };
 		BDD100000000000000000009 /* NetworkRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD10000000000000000000A /* NetworkRetry.swift */; };
+		BPJ00001279B9E0000000001 /* BiblePlaces.json in Resources */ = {isa = PBXBuildFile; fileRef = BPJ00002279B9E0000000001 /* BiblePlaces.json */; };
+		BPS00001279B9E0000000001 /* BiblePlaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BPS00002279B9E0000000001 /* BiblePlaceService.swift */; };
 		BRP00002279B9E0000000001 /* BibleReadingPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00001279B9E0000000001 /* BibleReadingPlan.swift */; };
 		BRP00004279B9E0000000001 /* BibleReadingPlanData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */; };
 		BRP00006279B9E0000000001 /* ReadingPlanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00005279B9E0000000001 /* ReadingPlanService.swift */; };
 		BRP00008279B9E0000000001 /* ReadingPlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00007279B9E0000000001 /* ReadingPlansView.swift */; };
-		SPDV00002279B9E0000000001 /* SpurgeonDevotionalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */; };
-		SPDS00002279B9E0000000001 /* SpurgeonDevotionalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */; };
-		SPDJ00002279B9E0000000001 /* SpurgeonMorningEvening.json in Resources */ = {isa = PBXBuildFile; fileRef = SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */; };
+		BRS00001279B9E0000000001 /* BibleReferenceScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */; };
 		C00F4DA8BD650DA93C8F05F9 /* GroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C1225C9A7896DA8A5F2603 /* GroupsView.swift */; };
 		C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */; };
 		C1A00096279B9E0000000001 /* SuggestedVerses.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A00097279B9E0000000001 /* SuggestedVerses.swift */; };
@@ -101,25 +111,17 @@
 		CC000003279B9E0000000001 /* CollectionBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000004279B9E0000000001 /* CollectionBuilderView.swift */; };
 		CC000005279B9E0000000001 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000006279B9E0000000001 /* CollectionDetailView.swift */; };
 		CC000090279B9E0000000001 /* ReflectionTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000091279B9E0000000001 /* ReflectionTemplate.swift */; };
-		CEL00002279B9E0000000001 /* CelebrationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEL00001279B9E0000000001 /* CelebrationOverlay.swift */; };
-		CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */; };
-		CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */ = {isa = PBXBuildFile; fileRef = CRJ00002279B9E0000000001 /* CrossReferences.json */; };
-		BPJ00001279B9E0000000001 /* BiblePlaces.json in Resources */ = {isa = PBXBuildFile; fileRef = BPJ00002279B9E0000000001 /* BiblePlaces.json */; };
-		SWJ00011279B9E0000000001 /* Scofield.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00021279B9E0000000001 /* Scofield.json */; };
-		SWJ00012279B9E0000000001 /* Easton.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00022279B9E0000000001 /* Easton.json */; };
-		SWJ00013279B9E0000000001 /* AbbottSmith.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00023279B9E0000000001 /* AbbottSmith.json */; };
-		SWJ00014279B9E0000000001 /* Nave.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00024279B9E0000000001 /* Nave.json */; };
-		SWJ00015279B9E0000000001 /* TCR.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00025279B9E0000000001 /* TCR.json */; };
-		CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRS00002279B9E0000000001 /* CrossReferenceService.swift */; };
-		BRS00001279B9E0000000001 /* BibleReferenceScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */; };
-		WLS00001279B9E0000000001 /* WordLocatorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WLS00002279B9E0000000001 /* WordLocatorService.swift */; };
-		BPS00001279B9E0000000001 /* BiblePlaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BPS00002279B9E0000000001 /* BiblePlaceService.swift */; };
-		CMS00001279B9E0000000001 /* CommentaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMS00002279B9E0000000001 /* CommentaryService.swift */; };
 		CDM00001279B9E0000000001 /* CommentaryDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDM00002279B9E0000000001 /* CommentaryDownloadManager.swift */; };
-		MZP00001279B9E0000000001 /* MinimalZip.swift in Sources */ = {isa = PBXBuildFile; fileRef = MZP00002279B9E0000000001 /* MinimalZip.swift */; };
-		RWS00001279B9E0000000001 /* ReferenceWorkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RWS00002279B9E0000000001 /* ReferenceWorkService.swift */; };
-		BAV00001279B9E0000000001 /* BibleAtlasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAV00002279B9E0000000001 /* BibleAtlasView.swift */; };
-		WLV00001279B9E0000000001 /* WordLocatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WLV00002279B9E0000000001 /* WordLocatorView.swift */; };
+		CEL00002279B9E0000000001 /* CelebrationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEL00001279B9E0000000001 /* CelebrationOverlay.swift */; };
+		CSMV0001279B9E0000000001 /* CosmeticViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CSMV0002279B9E0000000001 /* CosmeticViews.swift */; };
+		CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */; };
+		WSET0001279B9E0000000001 /* WidgetSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSET0002279B9E0000000001 /* WidgetSettingsSection.swift */; };
+		CMDLVW2279B9E0000000001 /* CommentaryDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */; };
+		CMRD00002279B9E0000000001 /* CommentaryReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */; };
+		CMS00001279B9E0000000001 /* CommentaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMS00002279B9E0000000001 /* CommentaryService.swift */; };
+		CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */ = {isa = PBXBuildFile; fileRef = CRJ00002279B9E0000000001 /* CrossReferences.json */; };
+		CRM00001279B9E0000000001 /* CrossReferenceMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */; };
+		CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRS00002279B9E0000000001 /* CrossReferenceService.swift */; };
 		D1A00005279B9E0000000001 /* LearningTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00001279B9E0000000001 /* LearningTracks.swift */; };
 		D1A00006279B9E0000000001 /* DevotionalTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00002279B9E0000000001 /* DevotionalTracks.swift */; };
 		D1A00007279B9E0000000001 /* DoctrineTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00003279B9E0000000001 /* DoctrineTracks.swift */; };
@@ -135,8 +137,15 @@
 		DC9594E35E6746C572ABE7A5 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11826B8D31CD2DF20F878856 /* SettingsManager.swift */; };
 		DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 667642CA8ACE4CCE82FCC6E8 /* BibleProgressView.swift */; };
 		DD45E35B78B676B857D11FD7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDAFE317A9066691D3A47C88 /* SettingsView.swift */; };
+		DLRV0001279B9E0000000001 /* DailyLessonRunnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DLRV0002279B9E0000000001 /* DailyLessonRunnerView.swift */; };
+		DPBV00002279B9E0000000001 /* RhythmItemEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPBV00001279B9E0000000001 /* RhythmItemEditorView.swift */; };
+		DPCP00002279B9E0000000001 /* CustomReadingPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPCP00001279B9E0000000001 /* CustomReadingPlanStore.swift */; };
+		DPDV00002279B9E0000000001 /* CustomReadingPlanBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPDV00001279B9E0000000001 /* CustomReadingPlanBuilderView.swift */; };
+		DPLV00002279B9E0000000001 /* RhythmHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPLV00001279B9E0000000001 /* RhythmHubView.swift */; };
+		DPMD00002279B9E0000000001 /* RhythmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPMD00001279B9E0000000001 /* RhythmModels.swift */; };
+		DPSM00002279B9E0000000001 /* RhythmStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPSM00001279B9E0000000001 /* RhythmStorageManager.swift */; };
 		DS000002279B9E0000000001 /* DiscipleshipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS000001279B9E0000000001 /* DiscipleshipView.swift */; };
-		SLHB00002279B9E0000000001 /* StudyLibraryHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */; };
+		DWSS0001279B9E0000000001 /* DailyWorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = DWSS0002279B9E0000000001 /* DailyWorkoutSession.swift */; };
 		E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00001279B9E0000000001 /* ProfileImageService.swift */; };
 		E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00003279B9E0000000001 /* ProfileAvatarView.swift */; };
 		E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000002279B9E0000000001 /* BibleSearchService.swift */; };
@@ -153,35 +162,43 @@
 		FSS00002279B9E0000000001 /* FocusSessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FSS00001279B9E0000000001 /* FocusSessionService.swift */; };
 		GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = GEM0000B279B9E0000000001 /* GeminiService.swift */; };
 		HSG00002279B9E0000000001 /* HomeSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = HSG00001279B9E0000000001 /* HomeSuggestion.swift */; };
+		TPS00002279B9E0000000001 /* TipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TPS00001279B9E0000000001 /* TipsView.swift */; };
 		KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJV0000A279B9E0000000001 /* KJVAudioService.swift */; };
 		KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */; };
 		KJVDLMG2279B9E0000000001 /* KJVAudioDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */; };
 		KJVDLVW2279B9E0000000001 /* KJVAudioDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */; };
-		CMDLVW2279B9E0000000001 /* CommentaryDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */; };
-		STLB00002279B9E0000000001 /* StudyLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = STLB00001279B9E0000000001 /* StudyLibraryView.swift */; };
+		MCUR00002279B9E0000000001 /* MemoryCurriculum.swift in Sources */ = {isa = PBXBuildFile; fileRef = MCUR00001279B9E0000000001 /* MemoryCurriculum.swift */; };
 		MCV00002279B9E0000000001 /* MessageComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MCV00001279B9E0000000001 /* MessageComposeView.swift */; };
+		MJVW0001279B9E0000000001 /* MemoryJourneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MJVW0002279B9E0000000001 /* MemoryJourneyView.swift */; };
+		PRGS0001279B9E0000000001 /* ProgressSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRGS0002279B9E0000000001 /* ProgressSheets.swift */; };
+		SFSV0001279B9E0000000001 /* StreakFreezeSavedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SFSV0002279B9E0000000001 /* StreakFreezeSavedView.swift */; };
+		MRNE00002279B9E0000000001 /* MorningRoutineEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MRNE00001279B9E0000000001 /* MorningRoutineEntry.swift */; };
+		MRNV00002279B9E0000000001 /* MorningRoutineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MRNV00001279B9E0000000001 /* MorningRoutineView.swift */; };
+		MRSM00002279B9E0000000001 /* MorningRoutineStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = MRSM00001279B9E0000000001 /* MorningRoutineStorageManager.swift */; };
 		MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		MZP00001279B9E0000000001 /* MinimalZip.swift in Sources */ = {isa = PBXBuildFile; fileRef = MZP00002279B9E0000000001 /* MinimalZip.swift */; };
 		NET0000A279B9E0000000001 /* NETService.swift in Sources */ = {isa = PBXBuildFile; fileRef = NET0000B279B9E0000000001 /* NETService.swift */; };
 		PC000002279B9E0000000001 /* PodcastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000001279B9E0000000001 /* PodcastModels.swift */; };
 		PC000004279B9E0000000001 /* PodcastService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000003279B9E0000000001 /* PodcastService.swift */; };
 		PC000006279B9E0000000001 /* PodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000005279B9E0000000001 /* PodcastView.swift */; };
 		PPS00002279B9E0000000001 /* PrayerPromptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = PPS00001279B9E0000000001 /* PrayerPromptSheet.swift */; };
-		PW000002279B9E0000000001 /* PanicWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = PW000001279B9E0000000001 /* PanicWidget.swift */; };
 		RF0000A1279B9E0000000001 /* ReflectionNoteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */; };
 		RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RF0000A4279B9E0000000001 /* DeepDrillView.swift */; };
-		RG000001279B9E0000000001 /* LibreBaskerville.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000002279B9E0000000001 /* LibreBaskerville.ttf */; };
-		RG000003279B9E0000000001 /* Roboto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000004279B9E0000000001 /* Roboto.ttf */; };
+		RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */; };
+		RG000003279B9E0000000001 /* Fonts/Roboto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000004279B9E0000000001 /* Fonts/Roboto.ttf */; };
 		RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000006279B9E0000000001 /* MatchingGameView.swift */; };
 		RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000008279B9E0000000001 /* CompleteTheVerseView.swift */; };
 		RG000009279B9E0000000001 /* trparsed.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000A279B9E0000000001 /* trparsed.json */; };
 		RG00000B279B9E0000000001 /* wlc.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000C279B9E0000000001 /* wlc.json */; };
 		RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000001 /* OriginalLanguageService.swift */; };
 		RG00000D279B9E0000000099 /* sblgnt.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000099 /* sblgnt.json */; };
-		RG00000F279B9E0000000001 /* SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* SILEOT.ttf */; };
-		RG000011279B9E0000000001 /* Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Roboto-Italic.ttf */; };
-		RG000013279B9E0000000001 /* LibreBaskerville-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */; };
+		RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */; };
+		RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */; };
+		RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */; };
 		RS000002279B9E0000000001 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */; };
 		RTE00002279B9E0000000001 /* RichTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTE00001279B9E0000000001 /* RichTextEditorView.swift */; };
+		RWJ00002279B9E0000000001 /* RewardJackpot.swift in Sources */ = {isa = PBXBuildFile; fileRef = RWJ00001279B9E0000000001 /* RewardJackpot.swift */; };
+		RWS00001279B9E0000000001 /* ReferenceWorkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RWS00002279B9E0000000001 /* ReferenceWorkService.swift */; };
 		SA000002279B9E0000000001 /* ShieldActionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = SA000001279B9E0000000001 /* ShieldActionExtension.swift */; };
 		SA00000C279B9E0000000001 /* ReforgedShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = SA000003279B9E0000000001 /* ReforgedShieldAction.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		SAMS0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
@@ -192,24 +209,38 @@
 		SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */; };
 		SEV00002279B9E0000000001 /* ScheduleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEV00001279B9E0000000001 /* ScheduleEditorView.swift */; };
 		SHC00002279B9E0000000001 /* ShieldComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHC00001279B9E0000000001 /* ShieldComponents.swift */; };
+		SIBV0001279B9E0000000001 /* SayItBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SIBV0002279B9E0000000001 /* SayItBackView.swift */; };
 		SIV00002279B9E0000000001 /* ShieldInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SIV00001279B9E0000000001 /* ShieldInsightsView.swift */; };
 		SL000002279B9E0000000001 /* SocialLimitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SL000001279B9E0000000001 /* SocialLimitService.swift */; };
+		SLHB00002279B9E0000000001 /* StudyLibraryHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */; };
 		SMV00002279B9E0000000001 /* SocialMediaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SMV00001279B9E0000000001 /* SocialMediaView.swift */; };
 		SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SO000001279B9E0000000001 /* ShieldOnboardingView.swift */; };
+		SPDJ00002279B9E0000000001 /* SpurgeonMorningEvening.json in Resources */ = {isa = PBXBuildFile; fileRef = SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */; };
+		SPDS00002279B9E0000000001 /* SpurgeonDevotionalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */; };
+		SPDV00002279B9E0000000001 /* SpurgeonDevotionalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */; };
 		SR000002279B9E0000000001 /* ReforgedReportExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = SR000001279B9E0000000001 /* ReforgedReportExtension.swift */; };
 		SR00000C279B9E0000000001 /* ReforgedReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = SR000003279B9E0000000001 /* ReforgedReport.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		SRFW0001279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
 		SRFW0002279B9E0000000001 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B3C67BF2F3302EB008165D9 /* SwiftUI.framework */; };
+		SRSV0001279B9E0000000001 /* SpeechRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRSV0002279B9E0000000001 /* SpeechRecognitionService.swift */; };
 		SSS00002279B9E0000000001 /* ShieldStreakService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSS00001279B9E0000000001 /* ShieldStreakService.swift */; };
+		STLB00002279B9E0000000001 /* StudyLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = STLB00001279B9E0000000001 /* StudyLibraryView.swift */; };
+		SWJ00011279B9E0000000001 /* Scofield.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00021279B9E0000000001 /* Scofield.json */; };
+		SWJ00012279B9E0000000001 /* Easton.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00022279B9E0000000001 /* Easton.json */; };
+		SWJ00013279B9E0000000001 /* AbbottSmith.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00023279B9E0000000001 /* AbbottSmith.json */; };
+		SWJ00014279B9E0000000001 /* Nave.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00024279B9E0000000001 /* Nave.json */; };
+		SWJ00015279B9E0000000001 /* TCR.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00025279B9E0000000001 /* TCR.json */; };
 		TBJ00001279B9E0000000001 /* TopicalVerses.json in Resources */ = {isa = PBXBuildFile; fileRef = TBJ00002279B9E0000000001 /* TopicalVerses.json */; };
 		TBS00001279B9E0000000001 /* TopicalBibleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TBS00002279B9E0000000001 /* TopicalBibleService.swift */; };
+		TJMG00002279B9E0000000001 /* TipJarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TJMG00001279B9E0000000001 /* TipJarManager.swift */; };
+		TJVW00002279B9E0000000001 /* TipJarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TJVW00001279B9E0000000001 /* TipJarView.swift */; };
 		TSV00002279B9E0000000001 /* TemptedSOSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TSV00001279B9E0000000001 /* TemptedSOSView.swift */; };
 		TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TTS0000B279B9E0000000001 /* TTSVoiceService.swift */; };
 		UGS00002279B9E0000000001 /* UnlockGateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = UGS00001279B9E0000000001 /* UnlockGateService.swift */; };
 		VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = VSS00002279B9E0000000001 /* VerseStudySheet.swift */; };
-		CRM00001279B9E0000000001 /* CrossReferenceMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */; };
-		CMRD00002279B9E0000000001 /* CommentaryReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */; };
 		WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WC000002279B9E0000000001 /* WeeklyCheckinService.swift */; };
+		WLS00001279B9E0000000001 /* WordLocatorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WLS00002279B9E0000000001 /* WordLocatorService.swift */; };
+		WLV00001279B9E0000000001 /* WordLocatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WLV00002279B9E0000000001 /* WordLocatorView.swift */; };
 		WNV0000B279B9E0000000001 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WNV0000A279B9E0000000001 /* WhatsNewView.swift */; };
 		WOC00002279B9E0000000001 /* WordsOfChristData.swift in Sources */ = {isa = PBXBuildFile; fileRef = WOC00001279B9E0000000001 /* WordsOfChristData.swift */; };
 		WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */ = {isa = PBXBuildFile; fileRef = WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */; };
@@ -290,6 +321,7 @@
 		326981E4627DA0FA59373737 /* GroupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupModels.swift; sourceTree = "<group>"; };
 		3AD4BCA6620AB550441B62CA /* SettingsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsModels.swift; path = Reforged/Models/SettingsModels.swift; sourceTree = "<group>"; };
 		43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationSettingsSection.swift; path = Reforged/Views/Settings/NotificationSettingsSection.swift; sourceTree = "<group>"; };
+		WSET0002279B9E0000000001 /* WidgetSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WidgetSettingsSection.swift; path = Reforged/Views/Settings/WidgetSettingsSection.swift; sourceTree = "<group>"; };
 		5190404405A017340CF7CDD3 /* AboutSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AboutSection.swift; path = Reforged/Views/Settings/AboutSection.swift; sourceTree = "<group>"; };
 		5478BBF8FE099EB550B4A8B3 /* GroupPrayerReviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupPrayerReviewView.swift; sourceTree = "<group>"; };
 		667642CA8ACE4CCE82FCC6E8 /* BibleProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleProgressView.swift; sourceTree = "<group>"; };
@@ -324,6 +356,9 @@
 		A1000027279B9E0000000001 /* JournalEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEntry.swift; sourceTree = "<group>"; };
 		A1000029279B9E0000000001 /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
 		A1000031279B9E0000000001 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		SHSV0002279B9E0000000001 /* ShopService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopService.swift; sourceTree = "<group>"; };
+		AMBS0002279B9E0000000001 /* AmbientSoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientSoundPlayer.swift; sourceTree = "<group>"; };
+		CRWN0002279B9E0000000001 /* CrownStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrownStore.swift; sourceTree = "<group>"; };
 		A1000033279B9E0000000001 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		A1000035279B9E0000000001 /* TracksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TracksView.swift; sourceTree = "<group>"; };
 		A1000035279B9E0000000101 /* HomeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSearchView.swift; sourceTree = "<group>"; };
@@ -333,6 +368,8 @@
 		A100003D279B9E0000000001 /* MemoryPracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPracticeView.swift; sourceTree = "<group>"; };
 		A100003F279B9E0000000001 /* BibleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleView.swift; sourceTree = "<group>"; };
 		A1000041279B9E0000000001 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		SHVW0002279B9E0000000001 /* ShopViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopViews.swift; sourceTree = "<group>"; };
+		SHOP0002279B9E0000000001 /* CrownShopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrownShopView.swift; sourceTree = "<group>"; };
 		A1000043279B9E0000000001 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		A1000045279B9E0000000001 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		A1000047279B9E0000000001 /* ESVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESVService.swift; sourceTree = "<group>"; };
@@ -371,16 +408,21 @@
 		B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = StrongGreekDictionary.json; sourceTree = "<group>"; };
 		B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcordanceSearchView.swift; sourceTree = "<group>"; };
 		B1A0001B279B9E0000000001 /* kjvpce.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjvpce.json; sourceTree = "<group>"; };
+		B1A0AA0100000000000000A1 /* TextKit/ScriptureAttributedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextKit/ScriptureAttributedText.swift; sourceTree = "<group>"; };
+		B1A0AA0100000000000000A3 /* TextKit/BibleAttributedTextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextKit/BibleAttributedTextBuilder.swift; sourceTree = "<group>"; };
+		B1A0AA0100000000000000A5 /* TextKit/BibleTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextKit/BibleTextView.swift; sourceTree = "<group>"; };
+		B1A0AA0100000000000000A7 /* TextKit/BibleWindowedReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextKit/BibleWindowedReader.swift; sourceTree = "<group>"; };
+		BAV00002279B9E0000000001 /* BibleAtlasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAtlasView.swift; sourceTree = "<group>"; };
 		BDD100000000000000000002 /* BibleDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleDownloadManager.swift; sourceTree = "<group>"; };
 		BDD100000000000000000006 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		BDD10000000000000000000A /* NetworkRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkRetry.swift; sourceTree = "<group>"; };
+		BPJ00002279B9E0000000001 /* BiblePlaces.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BiblePlaces.json; sourceTree = "<group>"; };
+		BPS00002279B9E0000000001 /* BiblePlaceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiblePlaceService.swift; sourceTree = "<group>"; };
 		BRP00001279B9E0000000001 /* BibleReadingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReadingPlan.swift; sourceTree = "<group>"; };
 		BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReadingPlanData.swift; sourceTree = "<group>"; };
 		BRP00005279B9E0000000001 /* ReadingPlanService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlanService.swift; sourceTree = "<group>"; };
 		BRP00007279B9E0000000001 /* ReadingPlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlansView.swift; sourceTree = "<group>"; };
-		SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpurgeonDevotionalView.swift; sourceTree = "<group>"; };
-		SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpurgeonDevotionalService.swift; sourceTree = "<group>"; };
-		SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SpurgeonMorningEvening.json; sourceTree = "<group>"; };
+		BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReferenceScanner.swift; sourceTree = "<group>"; };
 		C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterScrollCoordinator.swift; sourceTree = "<group>"; };
 		C1A00097279B9E0000000001 /* SuggestedVerses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedVerses.swift; sourceTree = "<group>"; };
 		C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AudioSettingsSection.swift; path = Reforged/Views/Settings/AudioSettingsSection.swift; sourceTree = "<group>"; };
@@ -389,24 +431,15 @@
 		CC000004279B9E0000000001 /* CollectionBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionBuilderView.swift; sourceTree = "<group>"; };
 		CC000006279B9E0000000001 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
 		CC000091279B9E0000000001 /* ReflectionTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionTemplate.swift; sourceTree = "<group>"; };
-		CEL00001279B9E0000000001 /* CelebrationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationOverlay.swift; sourceTree = "<group>"; };
-		CRJ00002279B9E0000000001 /* CrossReferences.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = CrossReferences.json; sourceTree = "<group>"; };
-		BPJ00002279B9E0000000001 /* BiblePlaces.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BiblePlaces.json; sourceTree = "<group>"; };
-		SWJ00021279B9E0000000001 /* Scofield.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Scofield.json; sourceTree = "<group>"; };
-		SWJ00022279B9E0000000001 /* Easton.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Easton.json; sourceTree = "<group>"; };
-		SWJ00023279B9E0000000001 /* AbbottSmith.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AbbottSmith.json; sourceTree = "<group>"; };
-		SWJ00024279B9E0000000001 /* Nave.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Nave.json; sourceTree = "<group>"; };
-		SWJ00025279B9E0000000001 /* TCR.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = TCR.json; sourceTree = "<group>"; };
-		CRS00002279B9E0000000001 /* CrossReferenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceService.swift; sourceTree = "<group>"; };
-		BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReferenceScanner.swift; sourceTree = "<group>"; };
-		WLS00002279B9E0000000001 /* WordLocatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordLocatorService.swift; sourceTree = "<group>"; };
-		BPS00002279B9E0000000001 /* BiblePlaceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiblePlaceService.swift; sourceTree = "<group>"; };
-		CMS00002279B9E0000000001 /* CommentaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryService.swift; sourceTree = "<group>"; };
 		CDM00002279B9E0000000001 /* CommentaryDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryDownloadManager.swift; sourceTree = "<group>"; };
-		MZP00002279B9E0000000001 /* MinimalZip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimalZip.swift; sourceTree = "<group>"; };
-		RWS00002279B9E0000000001 /* ReferenceWorkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferenceWorkService.swift; sourceTree = "<group>"; };
-		BAV00002279B9E0000000001 /* BibleAtlasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAtlasView.swift; sourceTree = "<group>"; };
-		WLV00002279B9E0000000001 /* WordLocatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordLocatorView.swift; sourceTree = "<group>"; };
+		CEL00001279B9E0000000001 /* CelebrationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationOverlay.swift; sourceTree = "<group>"; };
+		CSMV0002279B9E0000000001 /* CosmeticViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticViews.swift; sourceTree = "<group>"; };
+		CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CommentaryDownloadsView.swift; path = Reforged/Views/Settings/CommentaryDownloadsView.swift; sourceTree = "<group>"; };
+		CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryReaderView.swift; sourceTree = "<group>"; };
+		CMS00002279B9E0000000001 /* CommentaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryService.swift; sourceTree = "<group>"; };
+		CRJ00002279B9E0000000001 /* CrossReferences.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = CrossReferences.json; sourceTree = "<group>"; };
+		CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceMapView.swift; sourceTree = "<group>"; };
+		CRS00002279B9E0000000001 /* CrossReferenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceService.swift; sourceTree = "<group>"; };
 		D1A00001279B9E0000000001 /* LearningTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningTracks.swift; sourceTree = "<group>"; };
 		D1A00002279B9E0000000001 /* DevotionalTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevotionalTracks.swift; sourceTree = "<group>"; };
 		D1A00003279B9E0000000001 /* DoctrineTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracks.swift; sourceTree = "<group>"; };
@@ -417,8 +450,15 @@
 		DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedActivityMonitor.entitlements; sourceTree = "<group>"; };
 		DA000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DA00DA01279B9E0000000001 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		DLRV0002279B9E0000000001 /* DailyLessonRunnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyLessonRunnerView.swift; sourceTree = "<group>"; };
+		DPBV00001279B9E0000000001 /* RhythmItemEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RhythmItemEditorView.swift; sourceTree = "<group>"; };
+		DPCP00001279B9E0000000001 /* CustomReadingPlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomReadingPlanStore.swift; sourceTree = "<group>"; };
+		DPDV00001279B9E0000000001 /* CustomReadingPlanBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomReadingPlanBuilderView.swift; sourceTree = "<group>"; };
+		DPLV00001279B9E0000000001 /* RhythmHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RhythmHubView.swift; sourceTree = "<group>"; };
+		DPMD00001279B9E0000000001 /* RhythmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RhythmModels.swift; sourceTree = "<group>"; };
+		DPSM00001279B9E0000000001 /* RhythmStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RhythmStorageManager.swift; sourceTree = "<group>"; };
 		DS000001279B9E0000000001 /* DiscipleshipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscipleshipView.swift; sourceTree = "<group>"; };
-		SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyLibraryHubView.swift; sourceTree = "<group>"; };
+		DWSS0002279B9E0000000001 /* DailyWorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWorkoutSession.swift; sourceTree = "<group>"; };
 		E1A00001279B9E0000000001 /* ProfileImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageService.swift; sourceTree = "<group>"; };
 		E1A00003279B9E0000000001 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
 		E2000002279B9E0000000001 /* BibleSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleSearchService.swift; sourceTree = "<group>"; };
@@ -435,14 +475,21 @@
 		FSS00001279B9E0000000001 /* FocusSessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSessionService.swift; sourceTree = "<group>"; };
 		GEM0000B279B9E0000000001 /* GeminiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiService.swift; sourceTree = "<group>"; };
 		HSG00001279B9E0000000001 /* HomeSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSuggestion.swift; sourceTree = "<group>"; };
+		TPS00001279B9E0000000001 /* TipsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipsView.swift; sourceTree = "<group>"; };
 		KJV0000A279B9E0000000001 /* KJVAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioService.swift; sourceTree = "<group>"; };
 		KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_audio_manifest.json; sourceTree = "<group>"; };
 		KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioDownloadManager.swift; sourceTree = "<group>"; };
 		KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KJVAudioDownloadsView.swift; path = Reforged/Views/Settings/KJVAudioDownloadsView.swift; sourceTree = "<group>"; };
-		CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CommentaryDownloadsView.swift; path = Reforged/Views/Settings/CommentaryDownloadsView.swift; sourceTree = "<group>"; };
-		STLB00001279B9E0000000001 /* StudyLibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StudyLibraryView.swift; path = Reforged/Views/Settings/StudyLibraryView.swift; sourceTree = "<group>"; };
 		MAN00001279B9E0000000001 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		MCUR00001279B9E0000000001 /* MemoryCurriculum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryCurriculum.swift; sourceTree = "<group>"; };
 		MCV00001279B9E0000000001 /* MessageComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposeView.swift; sourceTree = "<group>"; };
+		MJVW0002279B9E0000000001 /* MemoryJourneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryJourneyView.swift; sourceTree = "<group>"; };
+		PRGS0002279B9E0000000001 /* ProgressSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressSheets.swift; sourceTree = "<group>"; };
+		SFSV0002279B9E0000000001 /* StreakFreezeSavedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakFreezeSavedView.swift; sourceTree = "<group>"; };
+		MRNE00001279B9E0000000001 /* MorningRoutineEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningRoutineEntry.swift; sourceTree = "<group>"; };
+		MRNV00001279B9E0000000001 /* MorningRoutineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningRoutineView.swift; sourceTree = "<group>"; };
+		MRSM00001279B9E0000000001 /* MorningRoutineStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningRoutineStorageManager.swift; sourceTree = "<group>"; };
+		MZP00002279B9E0000000001 /* MinimalZip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimalZip.swift; sourceTree = "<group>"; };
 		NET0000B279B9E0000000001 /* NETService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NETService.swift; sourceTree = "<group>"; };
 		PC000001279B9E0000000001 /* PodcastModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastModels.swift; sourceTree = "<group>"; };
 		PC000003279B9E0000000001 /* PodcastService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastService.swift; sourceTree = "<group>"; };
@@ -451,21 +498,24 @@
 		PW000001279B9E0000000001 /* PanicWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanicWidget.swift; sourceTree = "<group>"; };
 		RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionNoteSheet.swift; sourceTree = "<group>"; };
 		RF0000A4279B9E0000000001 /* DeepDrillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepDrillView.swift; sourceTree = "<group>"; };
-		RG000002279B9E0000000001 /* LibreBaskerville.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/LibreBaskerville.ttf; sourceTree = "<group>"; };
-		RG000004279B9E0000000001 /* Roboto.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/Roboto.ttf; sourceTree = "<group>"; };
+		RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/LibreBaskerville.ttf; sourceTree = "<group>"; };
+		RG000004279B9E0000000001 /* Fonts/Roboto.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/Roboto.ttf; sourceTree = "<group>"; };
 		RG000006279B9E0000000001 /* MatchingGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingGameView.swift; sourceTree = "<group>"; };
 		RG000008279B9E0000000001 /* CompleteTheVerseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTheVerseView.swift; sourceTree = "<group>"; };
 		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trparsed.json; sourceTree = "<group>"; };
 		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wlc.json; sourceTree = "<group>"; };
 		RG00000E279B9E0000000001 /* OriginalLanguageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLanguageService.swift; sourceTree = "<group>"; };
 		RG00000E279B9E0000000099 /* sblgnt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sblgnt.json; sourceTree = "<group>"; };
-		RG000010279B9E0000000001 /* SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/SILEOT.ttf; sourceTree = "<group>"; };
-		RG000012279B9E0000000001 /* Roboto-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto-Italic.ttf"; sourceTree = "<group>"; };
-		RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/LibreBaskerville-Italic.ttf"; sourceTree = "<group>"; };
+		RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/SILEOT.ttf; sourceTree = "<group>"; };
+		RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto-Italic.ttf"; sourceTree = "<group>"; };
+		RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/LibreBaskerville-Italic.ttf"; sourceTree = "<group>"; };
 		RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldConfigurationExtension.swift; sourceTree = "<group>"; };
 		RS000003279B9E0000000001 /* ReforgedShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		RS000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		RSKF00001279B9E0000000001 /* Reforged.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Reforged.storekit; sourceTree = "<group>"; };
 		RTE00001279B9E0000000001 /* RichTextEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextEditorView.swift; sourceTree = "<group>"; };
+		RWJ00001279B9E0000000001 /* RewardJackpot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardJackpot.swift; sourceTree = "<group>"; };
+		RWS00002279B9E0000000001 /* ReferenceWorkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferenceWorkService.swift; sourceTree = "<group>"; };
 		SA000001279B9E0000000001 /* ShieldActionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldActionExtension.swift; sourceTree = "<group>"; };
 		SA000003279B9E0000000001 /* ReforgedShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		SA00000A279B9E0000000001 /* ReforgedShieldAction.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedShieldAction.entitlements; sourceTree = "<group>"; };
@@ -476,24 +526,38 @@
 		SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		SEV00001279B9E0000000001 /* ScheduleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleEditorView.swift; sourceTree = "<group>"; };
 		SHC00001279B9E0000000001 /* ShieldComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldComponents.swift; sourceTree = "<group>"; };
+		SIBV0002279B9E0000000001 /* SayItBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SayItBackView.swift; sourceTree = "<group>"; };
 		SIV00001279B9E0000000001 /* ShieldInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldInsightsView.swift; sourceTree = "<group>"; };
 		SL000001279B9E0000000001 /* SocialLimitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialLimitService.swift; sourceTree = "<group>"; };
+		SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyLibraryHubView.swift; sourceTree = "<group>"; };
 		SMV00001279B9E0000000001 /* SocialMediaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialMediaView.swift; sourceTree = "<group>"; };
 		SO000001279B9E0000000001 /* ShieldOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldOnboardingView.swift; sourceTree = "<group>"; };
+		SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SpurgeonMorningEvening.json; sourceTree = "<group>"; };
+		SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpurgeonDevotionalService.swift; sourceTree = "<group>"; };
+		SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpurgeonDevotionalView.swift; sourceTree = "<group>"; };
 		SR000001279B9E0000000001 /* ReforgedReportExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReforgedReportExtension.swift; sourceTree = "<group>"; };
 		SR000003279B9E0000000001 /* ReforgedReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		SR00000A279B9E0000000001 /* ReforgedReport.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedReport.entitlements; sourceTree = "<group>"; };
 		SR00000B279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		SRSV0002279B9E0000000001 /* SpeechRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionService.swift; sourceTree = "<group>"; };
 		SSS00001279B9E0000000001 /* ShieldStreakService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldStreakService.swift; sourceTree = "<group>"; };
+		STLB00001279B9E0000000001 /* StudyLibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StudyLibraryView.swift; path = Reforged/Views/Settings/StudyLibraryView.swift; sourceTree = "<group>"; };
+		SWJ00021279B9E0000000001 /* Scofield.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Scofield.json; sourceTree = "<group>"; };
+		SWJ00022279B9E0000000001 /* Easton.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Easton.json; sourceTree = "<group>"; };
+		SWJ00023279B9E0000000001 /* AbbottSmith.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AbbottSmith.json; sourceTree = "<group>"; };
+		SWJ00024279B9E0000000001 /* Nave.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Nave.json; sourceTree = "<group>"; };
+		SWJ00025279B9E0000000001 /* TCR.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = TCR.json; sourceTree = "<group>"; };
 		TBJ00002279B9E0000000001 /* TopicalVerses.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = TopicalVerses.json; sourceTree = "<group>"; };
 		TBS00002279B9E0000000001 /* TopicalBibleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicalBibleService.swift; sourceTree = "<group>"; };
+		TJMG00001279B9E0000000001 /* TipJarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarManager.swift; sourceTree = "<group>"; };
+		TJVW00001279B9E0000000001 /* TipJarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarView.swift; sourceTree = "<group>"; };
 		TSV00001279B9E0000000001 /* TemptedSOSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemptedSOSView.swift; sourceTree = "<group>"; };
 		TTS0000B279B9E0000000001 /* TTSVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSVoiceService.swift; sourceTree = "<group>"; };
 		UGS00001279B9E0000000001 /* UnlockGateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockGateService.swift; sourceTree = "<group>"; };
 		VSS00002279B9E0000000001 /* VerseStudySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseStudySheet.swift; sourceTree = "<group>"; };
-		CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceMapView.swift; sourceTree = "<group>"; };
-		CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryReaderView.swift; sourceTree = "<group>"; };
 		WC000002279B9E0000000001 /* WeeklyCheckinService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyCheckinService.swift; sourceTree = "<group>"; };
+		WLS00002279B9E0000000001 /* WordLocatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordLocatorService.swift; sourceTree = "<group>"; };
+		WLV00002279B9E0000000001 /* WordLocatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordLocatorView.swift; sourceTree = "<group>"; };
 		WNV0000A279B9E0000000001 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
 		WOC00001279B9E0000000001 /* WordsOfChristData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordsOfChristData.swift; sourceTree = "<group>"; };
 		WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_words_of_christ_red_markup.json; sourceTree = "<group>"; };
@@ -565,7 +629,6 @@
 				5478BBF8FE099EB550B4A8B3 /* GroupPrayerReviewView.swift */,
 				CA13B4D8EC53510341B412A1 /* HandoutViews.swift */,
 			);
-			name = Groups;
 			path = Groups;
 			sourceTree = "<group>";
 		};
@@ -574,7 +637,6 @@
 			children = (
 				7F811E54E5FD3F7856A5DBC2 /* LearnViews.swift */,
 			);
-			name = Learn;
 			path = Learn;
 			sourceTree = "<group>";
 		};
@@ -583,7 +645,6 @@
 			children = (
 				AF048A10273B9C0FD63E00B3 /* GroupsHubViewModel.swift */,
 			);
-			name = ViewModels;
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
@@ -647,6 +708,7 @@
 				150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */,
 				6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */,
 				43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */,
+				WSET0002279B9E0000000001 /* WidgetSettingsSection.swift */,
 				6B1AD23B3001DE8200754446 /* Recovered References */,
 			);
 			sourceTree = "<group>";
@@ -655,6 +717,7 @@
 			isa = PBXGroup;
 			children = (
 				6BC809812FE721A2004233EC /* ReforgedDebug.entitlements */,
+				RSKF00001279B9E0000000001 /* Reforged.storekit */,
 				A1000002279B9E0000000001 /* ReforgedApp.swift */,
 				A100001A279B9E0000000001 /* AppDelegate.swift */,
 				A1000004279B9E0000000001 /* ContentView.swift */,
@@ -695,6 +758,9 @@
 				CC000002279B9E0000000001 /* VerseCollection.swift */,
 				A1000025279B9E0000000001 /* UserProfile.swift */,
 				A1000027279B9E0000000001 /* JournalEntry.swift */,
+				MRNE00001279B9E0000000001 /* MorningRoutineEntry.swift */,
+				DPMD00001279B9E0000000001 /* RhythmModels.swift */,
+				MCUR00001279B9E0000000001 /* MemoryCurriculum.swift */,
 				CC000091279B9E0000000001 /* ReflectionTemplate.swift */,
 				A1000061279B9E0000000001 /* BibleModels.swift */,
 				A1000071279B9E0000000001 /* SettingsModels.swift */,
@@ -704,6 +770,7 @@
 				PC000001279B9E0000000001 /* PodcastModels.swift */,
 				326981E4627DA0FA59373737 /* GroupModels.swift */,
 				2B85E73BE6B79BBFC71BA1C8 /* LearnModels.swift */,
+				DWSS0002279B9E0000000001 /* DailyWorkoutSession.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -726,6 +793,9 @@
 			isa = PBXGroup;
 			children = (
 				A1000031279B9E0000000001 /* AppState.swift */,
+				SHSV0002279B9E0000000001 /* ShopService.swift */,
+				AMBS0002279B9E0000000001 /* AmbientSoundPlayer.swift */,
+				CRWN0002279B9E0000000001 /* CrownStore.swift */,
 				A1000047279B9E0000000001 /* ESVService.swift */,
 				A1000081279B9E0000000001 /* KJVService.swift */,
 				NET0000B279B9E0000000001 /* NETService.swift */,
@@ -741,6 +811,9 @@
 				TTS0000B279B9E0000000001 /* TTSVoiceService.swift */,
 				A1000073279B9E0000000001 /* SettingsManager.swift */,
 				A1000083279B9E0000000001 /* JournalStorageManager.swift */,
+				MRSM00001279B9E0000000001 /* MorningRoutineStorageManager.swift */,
+				DPSM00001279B9E0000000001 /* RhythmStorageManager.swift */,
+				DPCP00001279B9E0000000001 /* CustomReadingPlanStore.swift */,
 				A1000085279B9E0000000001 /* ReadingStreakManager.swift */,
 				A1000087279B9E0000000001 /* KnowledgeBase.swift */,
 				A1000091279B9E0000000001 /* iCloudSyncService.swift */,
@@ -777,6 +850,8 @@
 				7A02714018A04BEFD68CAD92 /* GroupsService.swift */,
 				08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */,
 				22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */,
+				TJMG00001279B9E0000000001 /* TipJarManager.swift */,
+				SRSV0002279B9E0000000001 /* SpeechRecognitionService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -785,6 +860,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000054279B9E0000000001 /* Home */,
+				MRNG00001279B9E0000000001 /* MorningRoutine */,
 				DS000003279B9E0000000001 /* Discipleship */,
 				BRP00009279B9E0000000001 /* ReadingPlans */,
 				A1000055279B9E0000000001 /* Tracks */,
@@ -798,6 +874,7 @@
 				WNV0000A279B9E0000000001 /* WhatsNewView.swift */,
 				0D25205077E81A17B7F863AE /* Groups */,
 				1D0773BF52EC137008448331 /* Learn */,
+				TJSG00001279B9E0000000001 /* Support */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -807,6 +884,7 @@
 			children = (
 				A1000033279B9E0000000001 /* HomeView.swift */,
 				HSG00001279B9E0000000001 /* HomeSuggestion.swift */,
+				TPS00001279B9E0000000001 /* TipsView.swift */,
 				A1000035279B9E0000000101 /* HomeSearchView.swift */,
 			);
 			path = Home;
@@ -835,6 +913,10 @@
 				RG000008279B9E0000000001 /* CompleteTheVerseView.swift */,
 				CC000004279B9E0000000001 /* CollectionBuilderView.swift */,
 				CC000006279B9E0000000001 /* CollectionDetailView.swift */,
+				DLRV0002279B9E0000000001 /* DailyLessonRunnerView.swift */,
+				MJVW0002279B9E0000000001 /* MemoryJourneyView.swift */,
+				PRGS0002279B9E0000000001 /* ProgressSheets.swift */,
+				SIBV0002279B9E0000000001 /* SayItBackView.swift */,
 			);
 			path = Memory;
 			sourceTree = "<group>";
@@ -856,6 +938,10 @@
 				BDD100000000000000000006 /* NowPlayingView.swift */,
 				A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */,
 				B1A00005279B9E0000000001 /* WordTappableVerseText.swift */,
+				B1A0AA0100000000000000A1 /* TextKit/ScriptureAttributedText.swift */,
+				B1A0AA0100000000000000A3 /* TextKit/BibleAttributedTextBuilder.swift */,
+				B1A0AA0100000000000000A5 /* TextKit/BibleTextView.swift */,
+				B1A0AA0100000000000000A7 /* TextKit/BibleWindowedReader.swift */,
 				B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */,
 				B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */,
 				A10000C1279B9E0000000001 /* VerseShareCardView.swift */,
@@ -867,6 +953,8 @@
 			isa = PBXGroup;
 			children = (
 				A1000041279B9E0000000001 /* ProfileView.swift */,
+				SHVW0002279B9E0000000001 /* ShopViews.swift */,
+				SHOP0002279B9E0000000001 /* CrownShopView.swift */,
 				A1000043279B9E0000000001 /* JournalView.swift */,
 				A10000B1279B9E0000000001 /* StreakShareCardView.swift */,
 			);
@@ -888,11 +976,11 @@
 				B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */,
 				B1A0001B279B9E0000000001 /* kjvpce.json */,
 				KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */,
-				RG000002279B9E0000000001 /* LibreBaskerville.ttf */,
-				RG000014279B9E0000000001 /* LibreBaskerville-Italic.ttf */,
-				RG000004279B9E0000000001 /* Roboto.ttf */,
-				RG000012279B9E0000000001 /* Roboto-Italic.ttf */,
-				RG000010279B9E0000000001 /* SILEOT.ttf */,
+				RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */,
+				RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */,
+				RG000004279B9E0000000001 /* Fonts/Roboto.ttf */,
+				RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */,
+				RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */,
 				RG00000A279B9E0000000001 /* trparsed.json */,
 				RG00000C279B9E0000000001 /* wlc.json */,
 				RG00000E279B9E0000000099 /* sblgnt.json */,
@@ -951,6 +1039,9 @@
 			isa = PBXGroup;
 			children = (
 				DS000001279B9E0000000001 /* DiscipleshipView.swift */,
+				DPLV00001279B9E0000000001 /* RhythmHubView.swift */,
+				DPBV00001279B9E0000000001 /* RhythmItemEditorView.swift */,
+				DPDV00001279B9E0000000001 /* CustomReadingPlanBuilderView.swift */,
 				SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */,
 				FB000001279B9E0000000001 /* FocusBlockingView.swift */,
 				SEV00001279B9E0000000001 /* ScheduleEditorView.swift */,
@@ -965,6 +1056,14 @@
 				PC000005279B9E0000000001 /* PodcastView.swift */,
 			);
 			path = Discipleship;
+			sourceTree = "<group>";
+		};
+		MRNG00001279B9E0000000001 /* MorningRoutine */ = {
+			isa = PBXGroup;
+			children = (
+				MRNV00001279B9E0000000001 /* MorningRoutineView.swift */,
+			);
+			path = MorningRoutine;
 			sourceTree = "<group>";
 		};
 		RS000006279B9E0000000001 /* ReforgedShield */ = {
@@ -992,6 +1091,9 @@
 			children = (
 				MCV00001279B9E0000000001 /* MessageComposeView.swift */,
 				CEL00001279B9E0000000001 /* CelebrationOverlay.swift */,
+				CSMV0002279B9E0000000001 /* CosmeticViews.swift */,
+				SFSV0002279B9E0000000001 /* StreakFreezeSavedView.swift */,
+				RWJ00001279B9E0000000001 /* RewardJackpot.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -1004,6 +1106,14 @@
 				SR00000B279B9E0000000001 /* Info.plist */,
 			);
 			path = ReforgedReport;
+			sourceTree = "<group>";
+		};
+		TJSG00001279B9E0000000001 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				TJVW00001279B9E0000000001 /* TipJarView.swift */,
+			);
+			path = Support;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1122,7 +1232,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					6B3C67BA2F3302EB008165D9 = {
 						CreatedOnToolsVersion = 26.2;
@@ -1179,11 +1289,11 @@
 				B1A0001C279B9E0000000001 /* kjvpce.json in Resources */,
 				KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */,
 				WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */,
-				RG000001279B9E0000000001 /* LibreBaskerville.ttf in Resources */,
-				RG000013279B9E0000000001 /* LibreBaskerville-Italic.ttf in Resources */,
-				RG000003279B9E0000000001 /* Roboto.ttf in Resources */,
-				RG000011279B9E0000000001 /* Roboto-Italic.ttf in Resources */,
-				RG00000F279B9E0000000001 /* SILEOT.ttf in Resources */,
+				RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */,
+				RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */,
+				RG000003279B9E0000000001 /* Fonts/Roboto.ttf in Resources */,
+				RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */,
+				RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */,
 				RG000009279B9E0000000001 /* trparsed.json in Resources */,
 				RG00000B279B9E0000000001 /* wlc.json in Resources */,
 				RG00000D279B9E0000000099 /* sblgnt.json in Resources */,
@@ -1208,7 +1318,6 @@
 			files = (
 				6B3C67E02F3303EB008165D9 /* ReforgedWidget.swift in Sources */,
 				6B3C67F12F3303EB008165D9 /* PanicWidget.swift in Sources */,
-				PW000002279B9E0000000001 /* PanicWidget.swift in Sources */,
 				9A7E0011279B9E0000000001 /* VerseOfTheDayWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1228,6 +1337,9 @@
 				CC000090279B9E0000000001 /* ReflectionTemplate.swift in Sources */,
 				A1000028279B9E0000000001 /* SampleData.swift in Sources */,
 				A1000030279B9E0000000001 /* AppState.swift in Sources */,
+				SHSV0001279B9E0000000001 /* ShopService.swift in Sources */,
+				AMBS0001279B9E0000000001 /* AmbientSoundPlayer.swift in Sources */,
+				CRWN0001279B9E0000000001 /* CrownStore.swift in Sources */,
 				A1000032279B9E0000000001 /* HomeView.swift in Sources */,
 				A1000034279B9E0000000101 /* HomeSearchView.swift in Sources */,
 				A1000034279B9E0000000001 /* TracksView.swift in Sources */,
@@ -1255,6 +1367,8 @@
 				BDD100000000000000000005 /* NowPlayingView.swift in Sources */,
 				DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */,
 				A1000040279B9E0000000001 /* ProfileView.swift in Sources */,
+				SHVW0001279B9E0000000001 /* ShopViews.swift in Sources */,
+				SHOP0001279B9E0000000001 /* CrownShopView.swift in Sources */,
 				A1000042279B9E0000000001 /* JournalView.swift in Sources */,
 				A10000B0279B9E0000000001 /* StreakShareCardView.swift in Sources */,
 				A10000C0279B9E0000000001 /* VerseShareCardView.swift in Sources */,
@@ -1272,6 +1386,18 @@
 				STLB00002279B9E0000000001 /* StudyLibraryView.swift in Sources */,
 				A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */,
 				A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */,
+				MRNE00002279B9E0000000001 /* MorningRoutineEntry.swift in Sources */,
+				MRSM00002279B9E0000000001 /* MorningRoutineStorageManager.swift in Sources */,
+				DPMD00002279B9E0000000001 /* RhythmModels.swift in Sources */,
+				MCUR00002279B9E0000000001 /* MemoryCurriculum.swift in Sources */,
+				DPSM00002279B9E0000000001 /* RhythmStorageManager.swift in Sources */,
+				DPLV00002279B9E0000000001 /* RhythmHubView.swift in Sources */,
+				DPBV00002279B9E0000000001 /* RhythmItemEditorView.swift in Sources */,
+				DPDV00002279B9E0000000001 /* CustomReadingPlanBuilderView.swift in Sources */,
+				DPCP00002279B9E0000000001 /* CustomReadingPlanStore.swift in Sources */,
+				TJMG00002279B9E0000000001 /* TipJarManager.swift in Sources */,
+				TJVW00002279B9E0000000001 /* TipJarView.swift in Sources */,
+				MRNV00002279B9E0000000001 /* MorningRoutineView.swift in Sources */,
 				A1000084279B9E0000000001 /* ReadingStreakManager.swift in Sources */,
 				A1000086279B9E0000000001 /* KnowledgeBase.swift in Sources */,
 				A1000048279B9E0000000001 /* Theme.swift in Sources */,
@@ -1295,6 +1421,7 @@
 				FSS00002279B9E0000000001 /* FocusSessionService.swift in Sources */,
 				UGS00002279B9E0000000001 /* UnlockGateService.swift in Sources */,
 				HSG00002279B9E0000000001 /* HomeSuggestion.swift in Sources */,
+				TPS00002279B9E0000000001 /* TipsView.swift in Sources */,
 				SEV00002279B9E0000000001 /* ScheduleEditorView.swift in Sources */,
 				FSC00002279B9E0000000001 /* FocusSessionCard.swift in Sources */,
 				SMV00002279B9E0000000001 /* SocialMediaView.swift in Sources */,
@@ -1304,6 +1431,8 @@
 				APV00002279B9E0000000001 /* AccountabilityPartnerView.swift in Sources */,
 				MCV00002279B9E0000000001 /* MessageComposeView.swift in Sources */,
 				CEL00002279B9E0000000001 /* CelebrationOverlay.swift in Sources */,
+				CSMV0001279B9E0000000001 /* CosmeticViews.swift in Sources */,
+				RWJ00002279B9E0000000001 /* RewardJackpot.swift in Sources */,
 				PPS00002279B9E0000000001 /* PrayerPromptSheet.swift in Sources */,
 				TSV00002279B9E0000000001 /* TemptedSOSView.swift in Sources */,
 				SIV00002279B9E0000000001 /* ShieldInsightsView.swift in Sources */,
@@ -1325,6 +1454,7 @@
 				9F25489E7841AF60EE0BEF00 /* DisplaySettingsSection.swift in Sources */,
 				EE277622B31DCD276294A429 /* MemorySettingsSection.swift in Sources */,
 				CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */,
+				WSET0001279B9E0000000001 /* WidgetSettingsSection.swift in Sources */,
 				B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */,
 				B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */,
 				CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */,
@@ -1342,6 +1472,10 @@
 				TBS00001279B9E0000000001 /* TopicalBibleService.swift in Sources */,
 				RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */,
 				B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */,
+				B1A0AA0100000000000000A2 /* TextKit/ScriptureAttributedText.swift in Sources */,
+				B1A0AA0100000000000000A4 /* TextKit/BibleAttributedTextBuilder.swift in Sources */,
+				B1A0AA0100000000000000A6 /* TextKit/BibleTextView.swift in Sources */,
+				B1A0AA0100000000000000A8 /* TextKit/BibleWindowedReader.swift in Sources */,
 				B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */,
 				B1A0000A279B9E0000000001 /* FlowLayout.swift in Sources */,
 				C1A00096279B9E0000000001 /* SuggestedVerses.swift in Sources */,
@@ -1371,6 +1505,13 @@
 				54B4AA75BF152C7102BC424E /* LearnModels.swift in Sources */,
 				0AD119BA881D3D4DCA6BABB0 /* TracksRepository.swift in Sources */,
 				9A4D9885AAA3F662E0376A57 /* LearnViews.swift in Sources */,
+				DLRV0001279B9E0000000001 /* DailyLessonRunnerView.swift in Sources */,
+				MJVW0001279B9E0000000001 /* MemoryJourneyView.swift in Sources */,
+				PRGS0001279B9E0000000001 /* ProgressSheets.swift in Sources */,
+				SFSV0001279B9E0000000001 /* StreakFreezeSavedView.swift in Sources */,
+				SIBV0001279B9E0000000001 /* SayItBackView.swift in Sources */,
+				SRSV0001279B9E0000000001 /* SpeechRecognitionService.swift in Sources */,
+				DWSS0001279B9E0000000001 /* DailyWorkoutSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1450,7 +1591,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1462,7 +1603,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1485,7 +1626,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1497,7 +1638,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1644,7 +1785,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/ReforgedDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1654,7 +1795,7 @@
 				INFOPLIST_FILE = Reforged/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Reforged Bible";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Reforged uses your camera to take a profile photo.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Reforged needs access to save your streak card to your photo library.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1667,7 +1808,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1691,14 +1832,14 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Reforged/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Reforged Bible";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Reforged uses your camera to take a profile photo.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Reforged needs access to save your streak card to your photo library.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1711,7 +1852,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1731,7 +1872,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1740,7 +1881,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1757,7 +1898,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1766,7 +1907,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1783,7 +1924,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1792,7 +1933,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1809,7 +1950,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1818,7 +1959,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1835,7 +1976,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShieldAction/ReforgedShieldAction.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShieldAction/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1844,7 +1985,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shieldaction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1861,7 +2002,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShieldAction/ReforgedShieldAction.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShieldAction/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1870,7 +2011,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shieldaction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1887,7 +2028,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedReport/ReforgedReport.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1896,7 +2037,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.report;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1913,7 +2054,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedReport/ReforgedReport.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1922,7 +2063,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.report;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

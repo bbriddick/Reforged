@@ -1,0 +1,107 @@
+{
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/AccountabilityPartnerService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountabilityPartnerService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountabilityPartnerService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountabilityPartnerService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountabilityPartnerService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/AccountabilityPartnerService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/CloudKitSyncService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/CloudKitSyncService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/FocusBlockingService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusBlockingService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusBlockingService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusBlockingService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusBlockingService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusBlockingService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/FocusSessionService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/ScheduledBlockingService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduledBlockingService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduledBlockingService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduledBlockingService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduledBlockingService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduledBlockingService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/ShieldContentProvider.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldContentProvider.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldContentProvider.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldContentProvider.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldContentProvider.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldContentProvider.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/ShieldStreakService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldStreakService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldStreakService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldStreakService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldStreakService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldStreakService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/SocialLimitService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialLimitService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialLimitService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialLimitService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialLimitService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialLimitService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/UnlockGateService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnlockGateService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnlockGateService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnlockGateService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnlockGateService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/UnlockGateService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Services/WeeklyCheckinService.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WeeklyCheckinService.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WeeklyCheckinService.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WeeklyCheckinService.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WeeklyCheckinService.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/WeeklyCheckinService.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Discipleship/FocusSessionCard.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionCard.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionCard.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionCard.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionCard.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/FocusSessionCard.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Discipleship/ScheduleEditorView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduleEditorView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduleEditorView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduleEditorView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduleEditorView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ScheduleEditorView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Discipleship/ShieldComponents.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldComponents.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldComponents.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldComponents.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldComponents.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/ShieldComponents.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Discipleship/SocialMediaView.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialMediaView.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialMediaView.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialMediaView.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialMediaView.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/SocialMediaView.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/Reforged/Views/Home/HomeSuggestion.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HomeSuggestion.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HomeSuggestion.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HomeSuggestion.dia",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HomeSuggestion.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/Reforged.build/Objects-normal/arm64/HomeSuggestion.swiftdeps"
+  }
+}

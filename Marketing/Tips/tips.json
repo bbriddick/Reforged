@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "brand": {"charcoal":"#333333","cream":"#E8E4DC","paper":"#FAF8F5","coral":"#E94560","gold":"#D4A574","goldDeep":"#B07F4E","green":"#339966","indigo":"#4D4D99","purple":"#804D99"},
+  "categories": [
+    {"id":"memory","title":"Scripture Memory","icon":"brain.head.profile","color":"#E94560","broll":"broll/memory.mp4"},
+    {"id":"reader","title":"Bible Reader","icon":"text.book.closed.fill","color":"#B07F4E","broll":"broll/reader.mp4"},
+    {"id":"habits","title":"Habits & Streaks","icon":"flame.fill","color":"#339966","broll":"broll/habits.mp4"},
+    {"id":"study","title":"Study & Focus","icon":"books.vertical.fill","color":"#4D4D99","broll":"broll/study.mp4"}
+  ],
+  "tips": [
+    {"id":"memory-spaced","category":"memory","number":1,"title":"Let spaced repetition do the remembering","hook":"Read a verse today, forget it by Friday? Not anymore.","screens":["screens/memory-add.mov","screens/memory-due.mov"],
+     "steps":["Tap any verse in the reader, then tap Memory to add it.","Open the Memory tab each day and clear your Verses Due.","Reforged schedules each review right before you'd forget, moving verses up five mastery levels."],
+     "vo":"Most Bible apps help you read a verse. Reforged helps you keep it. Tap any verse in the reader and choose Memory. Then just clear your Verses Due each day. Reforged brings each verse back right before you'd forget it, so a few minutes a day moves it into long-term memory."},
+    {"id":"memory-modes","category":"memory","number":2,"title":"Climb the six practice modes","hook":"Flashcards are just the first rung.","screens":["screens/memory-modes.mov","screens/memory-journey.mov"],
+     "steps":["Start with Flashcard and Tap to Reveal while a verse is new.","Step up to Drag & Drop, Fill in Blank, and First Letter.","Prove it with Typing, then follow the Memory journey through 150 verses in 15 themes."],
+     "vo":"Reforged has six ways to practice, and each one asks a little more of you. Start with Flashcard and Tap to Reveal. Step up to Drag and Drop, Fill in the Blank, and First Letter. Then prove it with Typing. Want a path to follow? The Memory journey walks you through 150 verses in 15 themes."},
+    {"id":"reader-strongs","category":"reader","number":3,"title":"Press a word to open the original","hook":"There's Greek and Hebrew under every English word.","screens":["screens/reader-strongs.mov","screens/reader-study.mov"],
+     "steps":["Press and hold any word to see its Strong's Hebrew or Greek definition.","Tap a verse, then Study for word study, cross references, and commentary.","Jump to Places to see where the passage happened on the atlas."],
+     "vo":"Every English word in your Bible has Hebrew or Greek underneath it. Press and hold any word to open its Strong's definition. Tap a verse and choose Study for key words, cross references, study questions, commentary, and even the places on a map."},
+    {"id":"reader-yours","category":"reader","number":4,"title":"Make every verse your own","hook":"Highlight it. Hear it. Share it.","screens":["screens/reader-actions.mov","screens/reader-audio.mov"],
+     "steps":["Tap a verse to Highlight, add a Note, or Bookmark it.","Tap Share to turn a verse into a beautiful image card.","Hit play to listen, with speed and skip controls."],
+     "vo":"Tap any verse to highlight it, jot a note, or bookmark it. Your notes live in your journal, organized in folders. Tap Share to turn a verse into a beautiful card for a friend. And when your eyes are tired, hit play and listen, at whatever speed you like."},
+    {"id":"habits-streak","category":"habits","number":5,"title":"Protect your streak","hook":"Missed a day? Your streak can survive it.","screens":["screens/habits-streak.mov","screens/habits-freeze.mov"],
+     "steps":["Reading a chapter, reviewing a verse, or finishing a lesson all keep your streak alive.","You get 4 free streak freezes every month to cover a missed day.","Need more? Tap your streak card and trade XP for an extra freeze."],
+     "vo":"Your streak counts any time with God's Word: read a chapter, review a verse, or finish a lesson. Life happens, so Reforged gives you four free streak freezes every month. Need one more? Tap your streak card and trade some XP for an extra freeze."},
+    {"id":"habits-widgets","category":"habits","number":6,"title":"Start your day before you open the app","hook":"Your Home Screen can point you to Scripture.","screens":["screens/habits-widgets.mov","screens/habits-morning.mov"],
+     "steps":["Add the Verse of the Day or Reading Streak widget to your Home Screen.","Tap Morning Routine on Home for Scripture, prayer, gratitude, and a quick review.","Pick a reading plan, including Spurgeon's Morning and Evening."],
+     "vo":"Put Reforged on your Home Screen with the Verse of the Day or Reading Streak widget. Then start your morning with Morning Routine: Scripture, prayer, gratitude, and a quick memory review, saved right to your journal. Want structure? Pick a reading plan, including Spurgeon's Morning and Evening."},
+    {"id":"study-library","category":"study","number":7,"title":"Study with the classics","hook":"Centuries of wisdom, one tap from the text.","screens":["screens/study-library.mov","screens/study-offline.mov"],
+     "steps":["Open the Study Library for commentaries, the Tyndale Open Study Notes, a Bible dictionary, and an atlas.","Read Calvin, Matthew Henry, and Barnes right beside the verse.","Download the larger classics for offline study."],
+     "vo":"The Study Library puts centuries of wisdom beside your Bible: classic commentaries like Calvin, Matthew Henry, and Barnes, the Tyndale Open Study Notes, a Bible dictionary, and an atlas. Download the bigger ones once, and study anywhere, even offline."},
+    {"id":"study-focus","category":"study","number":8,"title":"Guard your focus","hook":"Build a rhythm, and a way out when you're tempted.","screens":["screens/study-shield.mov","screens/study-sos.mov"],
+     "steps":["In Discipleship, turn on the Focus & Purity Shield and set focus sessions.","Build My Rhythm: habits to keep, temptations to avoid, and real reminders.","Add the I'm Being Tempted widget and invite an accountability partner."],
+     "vo":"Discipleship is more than reading. In the Discipleship tab, turn on the Focus and Purity Shield and schedule focus sessions. Build your own rhythm of habits and reminders. And add the I'm Being Tempted widget: one tap to pause, breathe, take hold of God's Word, and text your accountability partner."}
+  ]
+}

@@ -8,6 +8,7 @@ struct HelpAndSupportView: View {
     @State private var showWhatsNew = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfUse = false
+    @State private var showTipJar = false
 
     var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -74,8 +75,8 @@ struct HelpAndSupportView: View {
                     openSupportEmail()
                 }
                 Divider().padding(.leading, 58)
-                externalRow(icon: "cup.and.saucer.fill", iconColor: Color.reforgedGold, title: "Support Reforged", subtitle: "Buy the developer a coffee") {
-                    if let url = URL(string: "https://buymeacoffee.com/reforgedapp") { openURL(url) }
+                actionRow(icon: "cup.and.saucer.fill", iconColor: Color.reforgedGold, title: "Support Reforged", subtitle: "Leave a tip to support development") {
+                    showTipJar = true
                 }
             }
             .background(Color.adaptiveCardBackground(colorScheme))
@@ -244,6 +245,10 @@ struct HelpAndSupportView: View {
         }
         .sheet(isPresented: $showTermsOfUse) {
             PolicyView(title: "Terms of Use", content: termsOfUseContent)
+        }
+        .sheet(isPresented: $showTipJar) {
+            TipJarView(isPresented: $showTipJar)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -500,6 +505,7 @@ struct PolicyView: View {
     }
 }
 
+#if false
 #Preview {
     NavigationStack {
         ScrollView {
@@ -510,3 +516,4 @@ struct PolicyView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+#endif

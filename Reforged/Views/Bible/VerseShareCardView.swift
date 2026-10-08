@@ -51,6 +51,8 @@ struct VerseShareCard: View {
     let backgroundImage: UIImage?
     let photographerName: String?
     var noteText: String? = nil
+    /// Crown-shop card style for photo cards ("classic" = the original look).
+    var style: String = "classic"
 
     static let classicSize = CGSize(width: 1080, height: 1350)
     static let photoSize = CGSize(width: 1080, height: 1080)
@@ -220,6 +222,15 @@ struct VerseShareCard: View {
             VStack(spacing: 0) {
                 Spacer()
 
+                if style != "classic" {
+                    // Crown-shop style: one shared treatment, scaled up to the
+                    // 1080pt canvas from its 21pt design size.
+                    VerseCardStyledText(style: style, text: verseText,
+                                        reference: "\(reference) (\(translation))",
+                                        scale: verseFontSize / 21)
+                        .padding(.horizontal, 80)
+                        .frame(maxHeight: style == "minimal" ? 760 : nil, alignment: .bottom)
+                } else {
                 // Decorative top accent
                 Rectangle()
                     .fill(Color.reforgedGold.opacity(0.6))
@@ -244,6 +255,7 @@ struct VerseShareCard: View {
                     .font(.system(size: 28, weight: .semibold, design: .serif))
                     .foregroundStyle(Color.reforgedGold)
                     .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+                }
 
                 // Note section — shown when a note is attached
                 if let note = noteText, !note.isEmpty {
@@ -344,8 +356,16 @@ struct VerseShareSheet: View {
             translation: selection.translation,
             backgroundImage: selectedImage,
             photographerName: currentAttribution?.name,
-            noteText: noteText
+            noteText: noteText,
+            style: cardStyle
         )
+    }
+
+    /// Starts on the equipped style; the picker offers every owned style.
+    @State private var cardStyle: String = VerseCardStyle.current
+
+    private var ownedCardStyles: [CosmeticItem] {
+        CrownCatalog.items(in: .verseCard).filter { AppState.shared.isOwned($0) }
     }
 
     private var isClassicSelected: Bool {
@@ -400,6 +420,37 @@ struct VerseShareSheet: View {
                                         .font(.caption2)
                                         .fontWeight(.medium)
                                         .foregroundStyle(Color.adaptiveText(colorScheme))
+                                }
+                            }
+                        }
+
+                        // MARK: - Card styles (crown shop) — photo cards only
+                        if !isClassicSelected && ownedCardStyles.count > 1 {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Style")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                                    .padding(.horizontal, 24)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(ownedCardStyles) { item in
+                                            let isOn = item.value == cardStyle
+                                            Button {
+                                                cardStyle = item.value
+                                                renderedImage = nil
+                                            } label: {
+                                                Text(item.name)
+                                                    .font(.subheadline.weight(isOn ? .semibold : .regular))
+                                                    .foregroundStyle(isOn ? Color.adaptiveCardBackground(colorScheme) : Color.adaptiveText(colorScheme))
+                                                    .padding(.horizontal, 14)
+                                                    .frame(height: 34)
+                                                    .background(Capsule().fill(isOn ? Color.adaptiveNavyText(colorScheme) : Color.adaptiveChipBackground(colorScheme)))
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                    .padding(.horizontal, 24)
                                 }
                             }
                         }

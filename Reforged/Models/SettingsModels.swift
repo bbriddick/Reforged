@@ -307,6 +307,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case notifications = "Notifications"
     case account = "Account & Data"
     case ai = "AI Features"
+    case widgets = "Widgets"
     case about = "Help & Support"
 
     var id: String { rawValue }
@@ -320,6 +321,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .notifications: return "bell.fill"
         case .account:       return "person.circle.fill"
         case .ai:            return "sparkles"
+        case .widgets:       return "square.grid.2x2.fill"
         case .about:         return "info.circle.fill"
         }
     }
@@ -333,6 +335,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .notifications: return .reforgedCoral
         case .account:       return .teal
         case .ai:            return .indigo
+        case .widgets:       return .green
         case .about:         return .gray
         }
     }
@@ -346,6 +349,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .notifications: return "Reminders & alerts"
         case .account:       return "Sync, storage & account"
         case .ai:            return "Journal prompts & smart search"
+        case .widgets:       return "Home Screen widget style"
         case .about:         return "Help, legal & credits"
         }
     }

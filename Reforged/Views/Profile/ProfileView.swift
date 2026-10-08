@@ -14,7 +14,7 @@ struct ProfileView: View {
     @State private var showLogoutAlert = false
 
     var levelInfo: LevelInfo {
-        SampleData.getLevelInfo(xp: appState.user.xp)
+        SampleData.getLevelInfo(xp: appState.user.lifetimeXP)
     }
 
     var body: some View {
@@ -80,6 +80,8 @@ struct ProfileView: View {
                     VStack(spacing: 24) {
                         StatsGrid(user: appState.user)
                         BadgesSection(badges: appState.user.badges)
+                        CrownShopEntryCard()
+                        ShopEntryCard()
                         PerksSection(perks: $appState.user.perks)
                     }
                     .frame(maxWidth: .infinity)
@@ -94,6 +96,8 @@ struct ProfileView: View {
                     ProfileHeader(user: appState.user, levelInfo: levelInfo)
                     StatsGrid(user: appState.user)
                     BadgesSection(badges: appState.user.badges)
+                    CrownShopEntryCard()
+                    ShopEntryCard()
                     PerksSection(perks: $appState.user.perks)
                     ProfileSettingsSection(showLogoutAlert: $showLogoutAlert)
                 }
@@ -124,12 +128,23 @@ struct ProfileHeader: View {
     var body: some View {
         VStack(spacing: 14) {
             ProfileAvatarView(size: 90)
-                .shadow(color: profileBorderColor.opacity(0.35), radius: user.activeProfileBorder.isEmpty ? 0 : 10)
+                .shadow(color: (AvatarFrameRing.glow(for: user.activeProfileBorder) ?? .clear).opacity(0.35),
+                        radius: user.activeProfileBorder.isEmpty ? 0 : 10)
 
             VStack(spacing: 8) {
-                Text(user.displayName.isEmpty ? "Friend" : user.displayName)
-                    .font(.title2)
-                    .fontWeight(.bold)
+                HStack(spacing: 8) {
+                    Text(user.displayName.isEmpty ? "Friend" : user.displayName)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    // Equipped emblem (crown shop) beside the name.
+                    if let emblem = user.cosmetics.equipped[CosmeticCategory.emblem.rawValue]
+                        .flatMap(CrownCatalog.item), !emblem.value.isEmpty {
+                        Image(systemName: emblem.value)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.reforgedGold)
+                            .accessibilityLabel(emblem.name)
+                    }
+                }
 
                 // Level badge pill
                 HStack(spacing: 5) {
@@ -401,12 +416,19 @@ struct PerksSection: View {
 
         perks[index].isActive.toggle()
 
-        // Apply profile border
+        // Borders and themes are cosmetics now: equip through the crown store so
+        // Profile, the shop and the theme engine stay in agreement.
         if perk.type == .profileBorder {
-            appState.user.activeProfileBorder = perks[index].isActive ? perk.id : ""
+            let item = perks[index].isActive ? CrownCatalog.item(perk.id) : CrownCatalog.defaultItem(for: .frame)
+            if let item { appState.equip(item) }
         }
         if perk.type == .themeUnlock {
-            appState.user.activeTheme = perks[index].isActive ? perk.id : ""
+            let themeID = "theme." + perk.id.replacingOccurrences(of: "theme-", with: "")
+            let item = perks[index].isActive ? CrownCatalog.item(themeID) : CrownCatalog.defaultItem(for: .theme)
+            if let item {
+                appState.equip(item)
+                appState.applyEquippedTheme()
+            }
         }
     }
 }
@@ -741,7 +763,9 @@ struct EditProfileSheet: View {
     }
 }
 
+#if false
 #Preview {
     ProfileView()
         .environmentObject(AppState.shared)
 }
+#endif

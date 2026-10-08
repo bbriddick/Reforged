@@ -36,6 +36,21 @@ class AppState: ObservableObject {
     /// their streak was saved and how many freezes it cost.
     @Published var showFreezeUsedNotice = false
     @Published var lastFreezesSpent: Int = 0
+    /// The day keys the last freeze covered, for the freeze-saved animation.
+    @Published var lastFrozenDays: [String] = []
+    /// Freezes granted by the most recent level-up (0 if none / at cap).
+    @Published var lastLevelUpFreezes: Int = 0
+    /// Set when the "streak unprotected" notification is tapped; the Memory tab
+    /// consumes it by opening the streak sheet with the freeze section highlighted.
+    @Published var pendingFreezePrompt = false
+    /// Crown award toast (see CrownStore.swift).
+    @Published var showCrownGain = false
+    @Published var lastCrownGain: Int = 0
+    @Published var lastCrownReason: String = ""
+
+    /// Persisted so a freeze spent at launch still gets its animation if the app
+    /// is closed before the overlay could play. Cleared once it has been seen.
+    private let pendingFreezeCelebrationKey = "pendingFreezeCelebrationDays"
     @Published var showBadgeEarned = false
     @Published var earnedBadge: Badge? = nil
     @Published var showStreakMilestone = false
@@ -160,6 +175,10 @@ class AppState: ObservableObject {
         // app was closed, then mirror the engine's streak onto the profile so every
         // screen agrees on launch.
         migrateLegacyStreakIfNeeded()
+        backfillCrownsIfNeeded()
+        applyCosmetics()
+        applyEquippedTheme()
+        restorePendingFreezeCelebration()
         applyPendingStreakFreezes()
         syncStreakFromManager()
 
@@ -179,7 +198,7 @@ class AppState: ObservableObject {
     private static let encoder = JSONEncoder()
     private static let decoder = JSONDecoder()
 
-    private func saveToLocalStorage() {
+    func saveToLocalStorage() {
         let enc = Self.encoder
         if let data = try? enc.encode(user) {
             UserDefaults.standard.set(data, forKey: "reforged_user")
@@ -425,7 +444,16 @@ class AppState: ObservableObject {
                 if !cloudProfile.avatar.isEmpty { user.avatar = cloudProfile.avatar }
                 if !cloudProfile.goals.isEmpty { user.goals = cloudProfile.goals }
                 // XP/level is a running counter, not a set: keep the higher total.
-                if cloudProfile.xp > 0 { user.xp = max(user.xp, cloudProfile.xp) }
+                // Merge lifetime earned and spent separately; the spendable balance is
+                // their difference. (Taking max of the balance alone let a purchase
+                // made on one device be undone by the other device's higher balance.)
+                user.cosmetics.merge(cloudProfile.cosmetics)
+                applyEquippedTheme()
+                if cloudProfile.lifetimeXP > 0 {
+                    let lifetime = max(user.lifetimeXP, cloudProfile.lifetimeXP)
+                    user.xpSpent = max(user.xpSpent, cloudProfile.xpSpent)
+                    user.xp = max(0, lifetime - user.xpSpent)
+                }
                 user.longestStreak = max(user.longestStreak, cloudProfile.longestStreak)
                 if !cloudProfile.lastActiveDate.isEmpty { user.lastActiveDate = cloudProfile.lastActiveDate }
 
@@ -768,8 +796,16 @@ class AppState: ObservableObject {
 
         // Check for level up
         let newLevelValue = user.currentLevel
+        user.level = newLevelValue   // keep the stored mirror (synced to Supabase) honest
         if newLevelValue > oldLevel {
             newLevel = newLevelValue
+            // Every level-up grants streak freezes (more for a new armor piece),
+            // up to the holding cap.
+            let earned = ((oldLevel + 1)...newLevelValue).reduce(0) { $0 + Self.freezeReward(forLevel: $1) }
+            let granted = max(0, min(earned, maxStreakFreezes - user.streakFreezes))
+            user.streakFreezes += granted
+            lastLevelUpFreezes = granted
+            if granted > 0 { freezeCountChanged() }
             // Slight delay to let XP animation show first
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.showLevelUp = true
@@ -779,6 +815,10 @@ class AppState: ObservableObject {
         // Check badges and perks after XP change
         checkAndAwardBadges()
         checkAndUnlockPerks()
+
+        if source == "review-complete" {
+            awardCrowns(1, reason: "Review session complete")
+        }
     }
 
     func completeLesson(_ lessonId: String) {
@@ -818,6 +858,7 @@ class AppState: ObservableObject {
         syncStreakFromManager()
         touchActiveDate()
         checkAndAwardBadges()
+        checkDailyCrowns()
     }
 
     /// Marks the user present today without touching the streak. For XP sources
@@ -882,17 +923,51 @@ class AppState: ObservableObject {
             user.freezeUsedDates.append(day)
             manager.noteFreezeUsed(on: day)
         }
-        lastFreezesSpent = missed.count
+        // Accumulate with any not-yet-seen celebration so two gaps repaired before
+        // the user looks both appear in one animation.
+        let pending = (UserDefaults.standard.stringArray(forKey: pendingFreezeCelebrationKey) ?? []) + missed
+        UserDefaults.standard.set(pending, forKey: pendingFreezeCelebrationKey)
+        lastFrozenDays = pending
+        lastFreezesSpent = pending.count
         showFreezeUsedNotice = true
         syncStreakFromManager()
         saveToLocalStorage()
+        freezeCountChanged()
         return missed.count
+    }
+
+    private func restorePendingFreezeCelebration() {
+        guard let pending = UserDefaults.standard.stringArray(forKey: pendingFreezeCelebrationKey),
+              !pending.isEmpty else { return }
+        lastFrozenDays = pending
+        lastFreezesSpent = pending.count
+        showFreezeUsedNotice = true
+    }
+
+    /// Called by the celebration layer once the freeze animation is dismissed.
+    func freezeCelebrationSeen() {
+        UserDefaults.standard.removeObject(forKey: pendingFreezeCelebrationKey)
+    }
+
+    /// Rebuilds reminders so the "streak unprotected" nudge appears or vanishes
+    /// with the freeze count. `scheduleDailyReminder()` is idempotent.
+    private func freezeCountChanged() {
+        // Deferred: this can run inside AppState.init (launch freeze repair), and
+        // the reminder builder reads AppState.shared — re-entering the singleton
+        // initializer would deadlock.
+        DispatchQueue.main.async {
+            NotificationManager.shared.scheduleDailyReminder()
+        }
     }
 
     // MARK: - Streak Freezes
 
-    /// Maximum streak freezes a user can hold
-    private let maxStreakFreezes = 8
+    /// Maximum streak freezes a user can hold: 5, or 8 once the level-10
+    /// "Freeze Stockpile" perk unlocks (it used to promise 8 while everyone had 8).
+    /// Freezes already held above the cap are kept; the cap only limits earning/buying.
+    var maxStreakFreezes: Int {
+        user.perks.contains { $0.id == "freeze-bonus" && $0.isUnlocked } ? 8 : 5
+    }
     /// Monthly free freezes
     private let monthlyFreezeAllowance = 4
     /// XP cost per purchased freeze
@@ -908,18 +983,28 @@ class AppState: ObservableObject {
         ReadingStreakManager.shared.noteFreezeUsed(on: today)
         syncStreakFromManager()
         saveToLocalStorage()
+        freezeCountChanged()
         return true
     }
 
     func earnStreakFreeze() {
         user.streakFreezes = min(user.streakFreezes + 1, maxStreakFreezes)
+        freezeCountChanged()
+    }
+
+    /// Freezes granted for reaching `level`: 2 when it starts a new piece of
+    /// armor (6, 11, 16…), otherwise 1.
+    static func freezeReward(forLevel level: Int) -> Int {
+        LevelProgression.isNewPiece(level) ? 2 : 1
     }
 
     func purchaseStreakFreeze() -> Bool {
         guard user.xp >= freezePurchaseCost, user.streakFreezes < maxStreakFreezes else { return false }
         user.xp -= freezePurchaseCost
+        user.xpSpent += freezePurchaseCost
         user.streakFreezes += 1
         saveToLocalStorage()
+        freezeCountChanged()
         return true
     }
 
@@ -954,7 +1039,108 @@ class AppState: ObservableObject {
         let today = AppDateFormatters.utcDayString()
         user.weeklyActivity.versesReviewed.append(VerseActivity(verseId: verseId, date: today))
 
+        let levelBefore = memoryVerses[index].level
         memoryVerses[index].updateReview(quality: quality)
+        let verse = memoryVerses[index]
+        if verse.level > levelBefore {
+            for level in (levelBefore + 1)...verse.level {
+                if let crowns = Self.crownsForVerseLevel[level] {
+                    awardCrowns(crowns, reason: "\(verse.reference) is now \(MemoryVerse.levelName(for: level))",
+                                key: "tier:\(verse.reference):\(level)")
+                }
+            }
+            checkUnitCrown(for: verse.reference)
+        }
+    }
+
+    /// 5 crowns the first time every verse in a learning-path unit reaches Familiar.
+    private func checkUnitCrown(for reference: String) {
+        guard let unit = MemoryCurriculum.unit(for: reference) else { return }
+        let familiar = Set(memoryVerses.filter { $0.level >= 2 }.map(\.reference))
+        guard unit.verses.allSatisfy({ familiar.contains($0.reference) }) else { return }
+        awardCrowns(5, reason: "Unit complete: \(unit.title)", key: "unit:\(unit.id)")
+    }
+
+    /// 3 crowns the first time every chapter of a book has been read.
+    private func checkBookCrown(for book: String) {
+        guard let info = BibleData.books.first(where: { $0.name == book }) else { return }
+        let read = Set(user.chaptersRead)
+        guard (1...info.chapters).allSatisfy({ read.contains("\(book) \($0)") }) else { return }
+        awardCrowns(3, reason: "You finished \(book)", key: "book:\(book)")
+    }
+
+    /// 1 crown when the day's two-discipline goal is first met; 5 more for a
+    /// perfect week. Called wherever activity is recorded.
+    func checkDailyCrowns() {
+        let manager = ReadingStreakManager.shared
+        let today = manager.currentDayKey
+        if manager.isDailyGoalMet, user.cosmetics.lastDailyGoalDay != today {
+            user.cosmetics.lastDailyGoalDay = today
+            awardCrowns(1, reason: "Daily goal met")
+        }
+        if manager.daysActiveThisWeek() == 7, let start = manager.currentWeekDates().first {
+            let weekKey = AppDateFormatters.iso8601.string(from: start)
+            if user.cosmetics.lastPerfectWeek != weekKey {
+                user.cosmetics.lastPerfectWeek = weekKey
+                awardCrowns(5, reason: "A perfect week")
+            }
+        }
+    }
+
+    /// One-time grant for progress made before crowns existed, so long-time
+    /// readers open the shop with crowns they've already earned.
+    private func backfillCrownsIfNeeded() {
+        let flag = "backfill.v1"
+        guard !user.cosmetics.awardedKeys.contains(flag) else { return }
+        user.cosmetics.awardedKeys.append(flag)
+        var total = 0
+        for verse in memoryVerses where verse.level >= 2 {
+            for level in 2...verse.level {
+                let key = "tier:\(verse.reference):\(level)"
+                guard let crowns = Self.crownsForVerseLevel[level], !user.cosmetics.awardedKeys.contains(key) else { continue }
+                user.cosmetics.awardedKeys.append(key)
+                total += crowns
+            }
+        }
+        let read = Set(user.chaptersRead)
+        for book in BibleData.books where (1...book.chapters).allSatisfy({ read.contains("\(book.name) \($0)") }) {
+            user.cosmetics.awardedKeys.append("book:\(book.name)")
+            total += 3
+        }
+        guard total > 0 else { return }
+        user.cosmetics.crownsEarned += total
+        lastCrownGain = total
+        lastCrownReason = "For the progress you've already made"
+        showCrownGain = true
+    }
+
+    /// Persists the detailed result of a First Letter run. The caller also sends
+    /// the derived SM-2 quality through `updateVerseReview`, which uses this same
+    /// accuracy to schedule the verse's next review.
+    func recordFirstLetterAttempt(verseId: String, correct: Int, incorrect: Int) {
+        guard let index = memoryVerses.firstIndex(where: { $0.id == verseId }) else { return }
+
+        let total = correct + incorrect
+        let runAccuracy = total == 0 ? 0 : Double(correct) / Double(total)
+        var stats = memoryVerses[index].modeStats ?? MemoryVerseModeStats(
+            fillInBlank: ModeAttemptStats(attempts: 0, accuracy: 0),
+            firstLetter: ModeAttemptStats(attempts: 0, accuracy: 0),
+            typing: TypingStats(attempts: 0, accuracy: 0, bestWpm: nil),
+            flashcard: FlashcardStats(attempts: 0, confidence: 0),
+            tapToReveal: ModeAttemptStats(attempts: 0, accuracy: 0),
+            dragAndDrop: ModeAttemptStats(attempts: 0, accuracy: 0)
+        )
+
+        let previousAttempts = stats.firstLetter.attempts
+        let cumulativeAccuracy = ((stats.firstLetter.accuracy * Double(previousAttempts)) + runAccuracy)
+            / Double(previousAttempts + 1)
+        stats.firstLetter.attempts = previousAttempts + 1
+        stats.firstLetter.accuracy = cumulativeAccuracy
+        stats.firstLetter.correct = (stats.firstLetter.correct ?? 0) + correct
+        stats.firstLetter.incorrect = (stats.firstLetter.incorrect ?? 0) + incorrect
+
+        memoryVerses[index].accuracy = runAccuracy
+        memoryVerses[index].modeStats = stats
     }
 
     func addMemoryVerse(_ verse: MemoryVerse) {
@@ -1011,6 +1197,7 @@ class AppState: ObservableObject {
         ReadingStreakManager.shared.recordChapterRead(book: book, chapter: chapter)
         syncStreakFromManager()
         touchActiveDate()
+        checkDailyCrowns()
         UnlockGateService.shared.clear(with: .chapterRead)
         // Auto-complete any reading-plan day whose chapters are now all read.
         ReadingPlanService.shared.notifyChapterRead(bookName: book, chapter: chapter)
@@ -1023,6 +1210,7 @@ class AppState: ObservableObject {
             user.weeklyActivity.chaptersRead.append(ChapterActivity(chapter: chapterKey, date: today))
             // addXP idempotently re-touches the streak; harmless after the sync above.
             addXP(15, source: "chapter")
+            checkBookCrown(for: book)
         } else {
             // Streak just advanced on a re-read — re-check streak-based badges.
             checkAndAwardBadges()
@@ -1056,7 +1244,7 @@ class AppState: ObservableObject {
         let chaptersCount = user.chaptersRead.count
         let verseCount = memoryVerses.count
         let streak = user.streak
-        let xp = user.xp
+        let xp = user.lifetimeXP
         let lessonsCount = user.completedLessons.count
         let journalCount = user.weeklyActivity.reflectionsWritten.count
 
@@ -1143,7 +1331,7 @@ class AppState: ObservableObject {
     func checkAndUnlockPerks() {
         let level = user.currentLevel
         let streak = user.streak
-        let xp = user.xp
+        let xp = user.lifetimeXP
         let earnedBadgeIds = Set(user.badges.filter { $0.isEarned }.map { $0.id })
 
         for i in user.perks.indices where !user.perks[i].isUnlocked {

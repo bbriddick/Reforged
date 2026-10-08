@@ -181,6 +181,15 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    /// Nudge when the user has a streak but no freeze left. Opt-in like every
+    /// other reminder type.
+    @Published var streakFreezeReminders: Bool {
+        didSet {
+            save(streakFreezeReminders, forKey: Keys.streakFreezeReminders)
+            NotificationManager.shared.scheduleDailyReminder()
+        }
+    }
+
     @Published var notificationsEnabled: Bool {
         didSet {
             save(notificationsEnabled, forKey: Keys.notificationsEnabled)
@@ -328,6 +337,7 @@ class SettingsManager: ObservableObject {
         static let memoryReviewReminders = "settings.memoryReviewReminders"
         static let memoryReminderDays = "settings.memoryReminderDays"
         static let lessonReminders = "settings.lessonReminders"
+        static let streakFreezeReminders = "settings.streakFreezeReminders"
         static let notificationsEnabled = "settings.notificationsEnabled"
         static let podcastNewEpisodeNotifications = "settings.podcastNewEpisodeNotifications"
         static let podcastNotificationHour = "settings.podcastNotificationHour"
@@ -404,6 +414,7 @@ class SettingsManager: ObservableObject {
         let savedMemoryDays = UserDefaults.standard.array(forKey: Keys.memoryReminderDays) as? [Int]
         self.memoryReminderDays = savedMemoryDays.map { Set($0) } ?? Set(1...7)
         self.lessonReminders = UserDefaults.standard.object(forKey: Keys.lessonReminders) as? Bool ?? false
+        self.streakFreezeReminders = UserDefaults.standard.object(forKey: Keys.streakFreezeReminders) as? Bool ?? false
         self.notificationsEnabled = UserDefaults.standard.object(forKey: Keys.notificationsEnabled) as? Bool ?? true
         self.podcastNewEpisodeNotifications = UserDefaults.standard.object(forKey: Keys.podcastNewEpisodeNotifications) as? Bool ?? false
         let podcastHour = UserDefaults.standard.object(forKey: Keys.podcastNotificationHour) as? Int ?? 9
@@ -559,6 +570,7 @@ class SettingsManager: ObservableObject {
         memoryReviewReminders = false
         memoryReminderDays = Set(1...7)
         lessonReminders = false
+        streakFreezeReminders = false
         notificationsEnabled = true
         podcastNewEpisodeNotifications = false
         weeklyCheckinEnabled = false

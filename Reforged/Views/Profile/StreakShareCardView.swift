@@ -183,7 +183,7 @@ struct StreakShareSheet: View {
     @State private var showSaveConfirmation = false
 
     private var levelInfo: LevelInfo {
-        SampleData.getLevelInfo(xp: appState.user.xp)
+        SampleData.getLevelInfo(xp: appState.user.lifetimeXP)
     }
 
     private var shareCard: some View {

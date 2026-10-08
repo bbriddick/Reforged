@@ -228,9 +228,11 @@ struct SkipIntervalButton: View {
     }
 }
 
+#if false
 #Preview {
     ScrollView {
         AudioSettingsSection()
             .padding()
     }
 }
+#endif

@@ -30,7 +30,8 @@ class ShieldActionExtension: ShieldActionDelegate {
                 defaults.set(Date(), forKey: cycleRequestedAtKey)
             }
             completionHandler(.defer)
-        @unknown default:
+        default:
+            // Any other/new action (the SDK has added cases): dismiss the shield.
             completionHandler(.close)
         }
     }

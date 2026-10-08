@@ -125,16 +125,10 @@ struct VerseHighlight: Codable, Identifiable {
     let createdAt: String
 
     /// Returns the base color for this highlight
+    /// The stored slot ("yellow"…"purple") drawn in the equipped highlighter
+    /// palette (crown shop); Classic is the original bright marker set.
     var baseColor: Color {
-        switch color {
-        case "yellow": return Color(red: 1.0, green: 0.95, blue: 0.0) // Bright highlighter yellow
-        case "green": return Color(red: 0.0, green: 0.9, blue: 0.4) // Bright highlighter green
-        case "blue": return Color(red: 0.4, green: 0.8, blue: 1.0) // Light highlighter blue
-        case "pink": return Color(red: 1.0, green: 0.6, blue: 0.8) // Soft highlighter pink
-        case "orange": return Color(red: 1.0, green: 0.7, blue: 0.2) // Bright highlighter orange
-        case "purple": return Color(red: 0.8, green: 0.6, blue: 1.0) // Soft highlighter purple
-        default: return Color(red: 1.0, green: 0.95, blue: 0.0)
-        }
+        (HighlightColor(rawValue: color) ?? .yellow).color
     }
 
     /// Deprecated - use baseColor with HighlighterBackground view instead
@@ -200,16 +194,11 @@ enum HighlightColor: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// The solid color for color picker display
+    /// The solid color for color picker display, from the equipped highlighter
+    /// palette (crown shop). Classic is the original marker set.
     var color: Color {
-        switch self {
-        case .yellow: return Color(red: 1.0, green: 0.95, blue: 0.0)
-        case .green: return Color(red: 0.0, green: 0.9, blue: 0.4)
-        case .blue: return Color(red: 0.4, green: 0.8, blue: 1.0)
-        case .pink: return Color(red: 1.0, green: 0.6, blue: 0.8)
-        case .orange: return Color(red: 1.0, green: 0.7, blue: 0.2)
-        case .purple: return Color(red: 0.8, green: 0.6, blue: 1.0)
-        }
+        let index = Self.allCases.firstIndex(of: self) ?? 0
+        return HighlightPalette.colors(for: HighlightPalette.current)[index]
     }
 
     /// The semi-transparent highlighter color for backgrounds
@@ -501,12 +490,43 @@ extension Notification.Name {
 
 // MARK: - Bible Reading State
 
+// MARK: - Verse Bookmark
+
+/// A saved location the reader can jump back to. Keyed by verse reference like notes and
+/// highlights; `previewText` is a short snippet shown in the bookmarks list.
+struct VerseBookmark: Codable, Identifiable {
+    let id: String
+    let reference: String // e.g., "John 3:16"
+    let book: String
+    let chapter: Int
+    let verse: Int
+    let createdAt: String
+    var previewText: String
+
+    init(id: String = UUID().uuidString,
+         reference: String,
+         book: String,
+         chapter: Int,
+         verse: Int,
+         createdAt: String,
+         previewText: String = "") {
+        self.id = id
+        self.reference = reference
+        self.book = book
+        self.chapter = chapter
+        self.verse = verse
+        self.createdAt = createdAt
+        self.previewText = previewText
+    }
+}
+
 class BibleReadingState: ObservableObject {
     // Shared singleton instance for syncing across views
     static let shared = BibleReadingState()
 
     @Published var highlights: [String: VerseHighlight] = [:] // keyed by reference
     @Published var notes: [String: VerseNote] = [:] // keyed by reference
+    @Published var bookmarks: [String: VerseBookmark] = [:] // keyed by reference
     @Published var selectedVerses: Set<String> = []
     @Published var currentBook: String = "John"
     @Published var currentChapter: Int = 1
@@ -516,6 +536,7 @@ class BibleReadingState: ObservableObject {
 
     private let highlightsKey = "bible_highlights"
     private let notesKey = "bible_notes"
+    private let bookmarksKey = "bible_bookmarks"
 
     init() {
         loadFromStorage()
@@ -600,6 +621,45 @@ class BibleReadingState: ObservableObject {
         }
     }
 
+    // MARK: - Bookmarks
+
+    func addBookmark(reference: String, book: String, chapter: Int, verse: Int, previewText: String = "") {
+        let bookmark = VerseBookmark(
+            reference: reference,
+            book: book,
+            chapter: chapter,
+            verse: verse,
+            createdAt: AppDateFormatters.iso8601.string(from: Date()),
+            previewText: previewText
+        )
+        bookmarks[reference] = bookmark
+        saveToStorage()
+    }
+
+    func removeBookmark(reference: String) {
+        bookmarks.removeValue(forKey: reference)
+        saveToStorage()
+    }
+
+    func isBookmarked(_ reference: String) -> Bool {
+        bookmarks[reference] != nil
+    }
+
+    func getBookmark(for reference: String) -> VerseBookmark? {
+        bookmarks[reference]
+    }
+
+    /// All bookmarks in canonical order (book order, then chapter, then verse).
+    var allBookmarks: [VerseBookmark] {
+        bookmarks.values.sorted { a, b in
+            let ai = BibleData.books.firstIndex { $0.name == a.book } ?? Int.max
+            let bi = BibleData.books.firstIndex { $0.name == b.book } ?? Int.max
+            if ai != bi { return ai < bi }
+            if a.chapter != b.chapter { return a.chapter < b.chapter }
+            return a.verse < b.verse
+        }
+    }
+
     // MARK: - Selection
 
     func toggleSelection(_ reference: String) {
@@ -627,6 +687,9 @@ class BibleReadingState: ObservableObject {
         if let notesData = try? JSONEncoder().encode(Array(notes.values)) {
             UserDefaults.standard.set(notesData, forKey: notesKey)
         }
+        if let bookmarksData = try? JSONEncoder().encode(Array(bookmarks.values)) {
+            UserDefaults.standard.set(bookmarksData, forKey: bookmarksKey)
+        }
         // Notify AppState to trigger cloud sync (skip if loading from cloud to avoid loop)
         if !isSyncingFromCloud {
             NotificationCenter.default.post(name: .bibleDataDidChange, object: nil)
@@ -642,6 +705,10 @@ class BibleReadingState: ObservableObject {
            let notesArray = try? JSONDecoder().decode([VerseNote].self, from: notesData) {
             notes = Dictionary(uniqueKeysWithValues: notesArray.map { ($0.reference, $0) })
         }
+        if let bookmarksData = UserDefaults.standard.data(forKey: bookmarksKey),
+           let bookmarksArray = try? JSONDecoder().decode([VerseBookmark].self, from: bookmarksData) {
+            bookmarks = Dictionary(uniqueKeysWithValues: bookmarksArray.map { ($0.reference, $0) })
+        }
     }
 
     /// Writes the current in-memory highlights and notes to UserDefaults without posting
@@ -653,6 +720,9 @@ class BibleReadingState: ObservableObject {
         }
         if let data = try? JSONEncoder().encode(Array(notes.values)) {
             UserDefaults.standard.set(data, forKey: notesKey)
+        }
+        if let data = try? JSONEncoder().encode(Array(bookmarks.values)) {
+            UserDefaults.standard.set(data, forKey: bookmarksKey)
         }
     }
 }

@@ -151,57 +151,15 @@ struct SampleData {
     // MARK: - Level Info
 
     static func getLevelInfo(xp: Int) -> LevelInfo {
-        let levels: [(level: Int, minXp: Int, title: String)] = [
-            (1, 0, "Seeker"),
-            (2, 100, "Listener"),
-            (3, 250, "Learner"),
-            (4, 500, "Reader"),
-            (5, 850, "Student"),
-            (6, 1300, "Disciple"),
-            (7, 1900, "Follower"),
-            (8, 2600, "Devotee"),
-            (9, 3500, "Scholar"),
-            (10, 4600, "Teacher"),
-            (11, 5900, "Guide"),
-            (12, 7400, "Mentor"),
-            (13, 9200, "Theologian"),
-            (14, 11300, "Sage"),
-            (15, 13700, "Shepherd"),
-            (16, 16500, "Elder"),
-            (17, 19700, "Watchman"),
-            (18, 23400, "Steward"),
-            (19, 27600, "Herald"),
-            (20, 32500, "Apostle"),
-            (21, 38000, "Prophet"),
-            (22, 44200, "Guardian"),
-            (23, 51100, "Warrior"),
-            (24, 58800, "Champion"),
-            (25, 67500, "Conqueror"),
-            (26, 77200, "Defender"),
-            (27, 88000, "Overcomer"),
-            (28, 100000, "Patriarch"),
-            (29, 113200, "Pillar"),
-            (30, 127800, "Legend"),
-        ]
-
-        var currentLevel = levels[0]
-        var nextLevel = levels[1]
-
-        for i in (0..<levels.count).reversed() {
-            if xp >= levels[i].minXp {
-                currentLevel = levels[i]
-                nextLevel = i + 1 < levels.count ? levels[i + 1] : levels[i]
-                break
-            }
-        }
-
-        let xpInLevel = xp - currentLevel.minXp
-        let xpForNextLevel = nextLevel.minXp - currentLevel.minXp
+        let level = LevelProgression.level(forXP: xp)
+        let floor = LevelProgression.minXP(for: level)
+        let next = level < LevelProgression.maxLevel ? LevelProgression.minXP(for: level + 1) : floor
+        let xpInLevel = xp - floor
+        let xpForNextLevel = next - floor
         let progress = xpForNextLevel > 0 ? Double(xpInLevel) / Double(xpForNextLevel) : 1.0
-
         return LevelInfo(
-            level: currentLevel.level,
-            title: currentLevel.title,
+            level: level,
+            title: LevelProgression.title(for: level),
             xpInLevel: xpInLevel,
             xpForNextLevel: xpForNextLevel,
             progress: min(progress, 1.0)
@@ -209,16 +167,114 @@ struct SampleData {
     }
 
     static func getLevelInfo(level: Int) -> LevelInfo {
-        let titles = [
-            "Seeker", "Listener", "Learner", "Reader", "Student",
-            "Disciple", "Follower", "Devotee", "Scholar", "Teacher",
-            "Guide", "Mentor", "Theologian", "Sage", "Shepherd",
-            "Elder", "Watchman", "Steward", "Herald", "Apostle",
-            "Prophet", "Guardian", "Warrior", "Champion", "Conqueror",
-            "Defender", "Overcomer", "Patriarch", "Pillar", "Legend",
-        ]
-        let index = max(0, min(level - 1, titles.count - 1))
-        return LevelInfo(level: level, title: titles[index], xpInLevel: 0, xpForNextLevel: 0, progress: 0)
+        LevelInfo(level: level, title: LevelProgression.title(for: level), xpInLevel: 0, xpForNextLevel: 0, progress: 0)
+    }
+}
+
+// MARK: - Level Progression (Armor of God)
+
+/// The single source of truth for levels. 30 levels = the six pieces of the
+/// armor of God (Ephesians 6:14–17) × five ranks each. Level is always derived
+/// from LIFETIME XP (`UserProfile.lifetimeXP`), so spending XP never costs a level.
+enum LevelProgression {
+    struct ArmorPiece {
+        let name: String          // "Shield of Faith"
+        let shortName: String     // "Shield"
+        let phrase: String        // mid-sentence form: "shield of faith", "sword of the Spirit"
+        let icon: String          // SF Symbol, iOS 16-safe
+        let reference: String
+        let verseText: String     // KJV, public domain — the full verse, never trimmed
+    }
+
+    static let ranksPerPiece = 5
+
+    static let pieces: [ArmorPiece] = [
+        ArmorPiece(name: "Belt of Truth", shortName: "Belt", phrase: "belt of truth",
+                   icon: "link",
+                   reference: "Ephesians 6:14",
+                   verseText: "Stand therefore, having your loins girt about with truth, and having on the breastplate of righteousness;"),
+        ArmorPiece(name: "Breastplate of Righteousness", shortName: "Breastplate", phrase: "breastplate of righteousness",
+                   icon: "shield.lefthalf.filled",
+                   reference: "Ephesians 6:14",
+                   verseText: "Stand therefore, having your loins girt about with truth, and having on the breastplate of righteousness;"),
+        ArmorPiece(name: "Shoes of Peace", shortName: "Shoes", phrase: "shoes of peace",
+                   icon: "figure.walk",
+                   reference: "Ephesians 6:15",
+                   verseText: "And your feet shod with the preparation of the gospel of peace;"),
+        ArmorPiece(name: "Shield of Faith", shortName: "Shield", phrase: "shield of faith",
+                   icon: "shield.fill",
+                   reference: "Ephesians 6:16",
+                   verseText: "Above all, taking the shield of faith, wherewith ye shall be able to quench all the fiery darts of the wicked."),
+        ArmorPiece(name: "Helmet of Salvation", shortName: "Helmet", phrase: "helmet of salvation",
+                   icon: "brain.head.profile",
+                   reference: "Ephesians 6:17",
+                   verseText: "And take the helmet of salvation, and the sword of the Spirit, which is the word of God:"),
+        ArmorPiece(name: "Sword of the Spirit", shortName: "Sword", phrase: "sword of the Spirit",
+                   icon: "book.closed.fill",
+                   reference: "Ephesians 6:17",
+                   verseText: "And take the helmet of salvation, and the sword of the Spirit, which is the word of God:"),
+    ]
+
+    /// Minimum lifetime XP for each level (index 0 = level 1). A smooth curve:
+    /// level 2 on day one, level 5 in about a week, level 30 after years of daily use.
+    static let thresholds: [Int] = [
+        0, 100, 250, 500, 850,
+        1300, 1900, 2600, 3500, 4600,
+        5900, 7400, 9200, 11300, 13700,
+        16500, 19700, 23400, 27600, 32500,
+        38000, 44200, 51100, 58800, 67500,
+        77200, 88000, 100000, 113200, 127800,
+    ]
+
+    static var maxLevel: Int { thresholds.count }
+
+    static func level(forXP xp: Int) -> Int {
+        (thresholds.lastIndex { xp >= $0 } ?? 0) + 1
+    }
+
+    static func minXP(for level: Int) -> Int {
+        thresholds[max(0, min(level - 1, thresholds.count - 1))]
+    }
+
+    static func piece(for level: Int) -> ArmorPiece {
+        pieces[pieceIndex(for: level)]
+    }
+
+    static func pieceIndex(for level: Int) -> Int {
+        max(0, min((level - 1) / ranksPerPiece, pieces.count - 1))
+    }
+
+    /// 1...5 within the current piece.
+    static func rank(for level: Int) -> Int {
+        (max(level, 1) - 1) % ranksPerPiece + 1
+    }
+
+    /// True on the first level of a new piece (6, 11, 16…) — the "you took up
+    /// the shield of faith" moment rather than an ordinary rank-up.
+    static func isNewPiece(_ level: Int) -> Bool {
+        level > 1 && rank(for: level) == 1
+    }
+
+    static func romanRank(_ rank: Int) -> String {
+        ["I", "II", "III", "IV", "V"][max(0, min(rank - 1, 4))]
+    }
+
+    /// Level-up headline: a new piece is "taken up"; a rank-up strengthens it.
+    static func levelUpLine(for level: Int) -> String {
+        let piece = piece(for: level)
+        if level == 1 || isNewPiece(level) {
+            return "You took up the \(piece.phrase)"
+        }
+        return "\(piece.name) · rank \(romanRank(rank(for: level)))"
+    }
+
+    static func freezeRewardLine(_ freezes: Int) -> String? {
+        guard freezes > 0 else { return nil }
+        return freezes == 1 ? "+1 streak freeze" : "+\(freezes) streak freezes"
+    }
+
+    static func title(for level: Int) -> String {
+        "\(piece(for: level).name) \(romanRank(rank(for: level)))"
     }
 }
 
@@ -229,3 +285,4 @@ struct LevelInfo {
     let xpForNextLevel: Int
     let progress: Double
 }
+

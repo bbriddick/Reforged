@@ -114,6 +114,14 @@ struct NotificationSettingsSection: View {
 
                 SettingsDivider()
 
+                SettingsToggleRow(
+                    title: "Streak Freeze Reminders",
+                    subtitle: "A heads-up when your streak has no freeze to protect it",
+                    isOn: $settings.streakFreezeReminders
+                )
+
+                SettingsDivider()
+
                 // Weekly Check-in
                 SettingsToggleRow(
                     title: "Weekly Check-in",
@@ -427,9 +435,11 @@ struct NotificationPermissionStatus: View {
     }
 }
 
+#if false
 #Preview {
     ScrollView {
         NotificationSettingsSection()
             .padding()
     }
 }
+#endif

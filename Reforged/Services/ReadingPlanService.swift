@@ -34,13 +34,13 @@ final class ReadingPlanService: ObservableObject {
     func currentDay(for planId: String) -> Int {
         let completed = completedDaysMap[planId] ?? []
         guard !completed.isEmpty else { return 1 }
-        let total = BibleReadingPlans.all.first(where: { $0.id == planId })?.totalDays ?? Int.max
+        let total = BibleReadingPlans.everything.first(where: { $0.id == planId })?.totalDays ?? Int.max
         return min((completed.max() ?? 0) + 1, total)
     }
 
     /// 0.0 … 1.0 completion ratio.
     func progress(for planId: String) -> Double {
-        guard let plan = BibleReadingPlans.all.first(where: { $0.id == planId }),
+        guard let plan = BibleReadingPlans.everything.first(where: { $0.id == planId }),
               plan.totalDays > 0 else { return 0 }
         return Double(completedDaysMap[planId]?.count ?? 0) / Double(plan.totalDays)
     }
@@ -50,7 +50,7 @@ final class ReadingPlanService: ObservableObject {
     }
 
     func isComplete(_ planId: String) -> Bool {
-        guard let plan = BibleReadingPlans.all.first(where: { $0.id == planId }) else { return false }
+        guard let plan = BibleReadingPlans.everything.first(where: { $0.id == planId }) else { return false }
         return (completedDaysMap[planId]?.count ?? 0) >= plan.totalDays
     }
 
@@ -62,7 +62,7 @@ final class ReadingPlanService: ObservableObject {
 
     /// First plan that has been started but not yet finished.
     var activePlan: BibleReadingPlan? {
-        BibleReadingPlans.all.first { hasStarted($0.id) && !isComplete($0.id) }
+        BibleReadingPlans.everything.first { hasStarted($0.id) && !isComplete($0.id) }
     }
 
     /// The entry the active plan is currently on. Note this is the next UNREAD day
@@ -124,7 +124,7 @@ final class ReadingPlanService: ObservableObject {
         let key = "\(bookName) \(chapter)"
         readChapters.insert(key)
 
-        for plan in BibleReadingPlans.all {
+        for plan in BibleReadingPlans.everything {
             guard !isComplete(plan.id) else { continue }
             let completed = completedDaysMap[plan.id] ?? []
 

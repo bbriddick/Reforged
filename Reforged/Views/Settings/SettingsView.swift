@@ -45,6 +45,7 @@ struct SettingsView: View {
             Section("Personalization") {
                 sectionNavRow(.notifications, hint: settings.notificationsEnabled ? "On" : "Off")
                 sectionNavRow(.ai,            hint: settings.aiEnabled ? "On" : "Off")
+                sectionNavRow(.widgets,       hint: AppState.shared.equippedItem(.widget)?.name)
             }
 
             Section {
@@ -155,6 +156,7 @@ struct SettingsView: View {
         case .notifications: NotificationSettingsSection()
         case .account:      AccountSettingsSection()
         case .ai:           AISettingsSection()
+        case .widgets:      WidgetSettingsSection()
         case .about:        HelpAndSupportView()
         }
     }
@@ -353,7 +355,9 @@ struct SettingsDivider: View {
     }
 }
 
+#if false
 #Preview {
     SettingsView()
         .environmentObject(AppState.shared)
 }
+#endif

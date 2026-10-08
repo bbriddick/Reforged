@@ -308,6 +308,7 @@ struct MemoryVerseRow: View {
     }
 }
 
+#if false
 #Preview {
     ScrollView {
         MemorySettingsSection()
@@ -315,3 +316,4 @@ struct MemoryVerseRow: View {
     }
     .environmentObject(AppState.shared)
 }
+#endif

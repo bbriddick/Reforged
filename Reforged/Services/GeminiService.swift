@@ -99,6 +99,7 @@ final class GeminiService {
     // In-memory caches (keyed by Strong's number / verse reference)
     private var wordStudyCache: [String: String] = [:]
     private var journalPromptCache: [String: [String]] = [:]
+    private var gratitudePromptCache: [String: [String]] = [:]
     private var keyWordCache: [String: [VerseWordTag]] = [:]
     private var placeInsightCache: [String: PlaceInsight] = [:]
 
@@ -329,6 +330,41 @@ final class GeminiService {
 
         journalPromptCache[reference] = prompts
         return prompts
+    }
+
+    // MARK: - Feature 2b: Gratitude Prompts (Morning Routine)
+
+    /// A short, static fallback used when AI is disabled/offline so the morning
+    /// routine's Gratitude step always has questions to show.
+    static let fallbackGratitudePrompts: [String] = [
+        "What is one gift from God you can thank Him for this morning?",
+        "Who in your life are you grateful for today, and why?",
+        "Where did you see God's faithfulness recently?"
+    ]
+
+    /// Generates three gratitude questions grounded in today's verse, so the
+    /// reflection connects to what the reader just read. Cached per reference and
+    /// falls back to `fallbackGratitudePrompts` on any failure — the caller should
+    /// treat a throw as "use the fallback", never as a hard error.
+    func generateGratitudePrompts(reference: String, verseText: String) async throws -> [String] {
+        try await checkEnabled()
+
+        if let cached = gratitudePromptCache[reference] { return cached }
+
+        let prompt = """
+        Generate exactly 3 short gratitude questions for a Christian reflecting on \(reference): "\(verseText)". \
+        Each question should invite the reader to name something they are thankful to God for, drawn from the theme of this verse. \
+        Each question must be under 90 characters and end with a question mark. \
+        Return only a valid JSON array of 3 strings with no markdown or extra text. Example: ["Question 1","Question 2","Question 3"]
+        """
+
+        let raw = try await generate(prompt: prompt, maxTokens: 200)
+        let prompts = parseJSONStringArray(from: raw)
+        guard prompts.count >= 3 else { throw GeminiError.decodingError("Not enough gratitude prompts returned") }
+
+        let trimmed = Array(prompts.prefix(3))
+        gratitudePromptCache[reference] = trimmed
+        return trimmed
     }
 
     // MARK: - Feature 7: Verse Study Key Words (Old Testament)

@@ -1,0 +1,49 @@
+{
+  "" : {
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidgetExtension-primary.dia",
+    "emit-module-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidgetExtension-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidgetExtension-primary-emit-module.dia",
+    "pch" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidgetExtension-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidgetExtension-primary.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/ReforgedWidget/PanicWidget.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/PanicWidget-1b258b87d93d995f90ab1556b687fe59.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/PanicWidget-1b258b87d93d995f90ab1556b687fe59.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/PanicWidget-1b258b87d93d995f90ab1556b687fe59.dia",
+    "index-unit-output-path" : "/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/PanicWidget-1b258b87d93d995f90ab1556b687fe59.o",
+    "llvm-bc" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/PanicWidget-1b258b87d93d995f90ab1556b687fe59.bc",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/PanicWidget-1b258b87d93d995f90ab1556b687fe59.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/PanicWidget-1b258b87d93d995f90ab1556b687fe59.swiftdeps",
+    "swiftmodule" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/PanicWidget-1b258b87d93d995f90ab1556b687fe59~partial.swiftmodule"
+  },
+  "/Users/boazbriddick/Documents/Reforged/ReforgedWidget/ReforgedWidget.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidget.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidget.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidget.dia",
+    "index-unit-output-path" : "/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidget.o",
+    "llvm-bc" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidget.bc",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidget.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidget.swiftdeps",
+    "swiftmodule" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/ReforgedWidget~partial.swiftmodule"
+  },
+  "/Users/boazbriddick/Documents/Reforged/ReforgedWidget/VerseOfTheDayWidget.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/VerseOfTheDayWidget.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/VerseOfTheDayWidget.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/VerseOfTheDayWidget.dia",
+    "index-unit-output-path" : "/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/VerseOfTheDayWidget.o",
+    "llvm-bc" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/VerseOfTheDayWidget.bc",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/VerseOfTheDayWidget.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/VerseOfTheDayWidget.swiftdeps",
+    "swiftmodule" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/VerseOfTheDayWidget~partial.swiftmodule"
+  },
+  "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

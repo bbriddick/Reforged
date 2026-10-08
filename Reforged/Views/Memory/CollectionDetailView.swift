@@ -352,7 +352,7 @@ struct CollectionPracticeSessionView: View {
             }
         }
         .padding(ReforgedTheme.spacingXL)
-        .confetti(isActive: $showConfetti, intensity: .high)
+        .arcadeConfetti(isActive: $showConfetti, intensity: .high)
         .onAppear {
             HapticManager.shared.achievementUnlocked()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {

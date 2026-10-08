@@ -7,6 +7,8 @@ enum SelectionAction {
     case removeHighlight
     case addNote
     case addToMemory
+    case bookmark
+    case removeBookmark
     case copy
     case share
     case verseStudy
@@ -22,6 +24,12 @@ struct SelectionActionBar: View {
     private var verseCountLabel: String {
         let n = readingState.selectedVerses.count
         return n == 1 ? "1 verse selected" : "\(n) verses selected"
+    }
+
+    /// True when every selected verse is already bookmarked — drives the toggle's filled state.
+    private var allBookmarked: Bool {
+        !readingState.selectedVerses.isEmpty
+            && readingState.selectedVerses.allSatisfy { readingState.isBookmarked($0) }
     }
 
     var body: some View {
@@ -86,38 +94,48 @@ struct SelectionActionBar: View {
                     .transition(.scale.combined(with: .opacity))
                 }
 
-                // Action buttons
-                HStack(spacing: 12) {
-                    ActionBarButton(icon: "highlighter", label: "Highlight") {
-                        withAnimation(.spring(response: 0.3)) {
-                            showColorPicker.toggle()
+                // Action buttons — horizontally scrollable so the row never overflows on
+                // narrow phones (it holds up to 7 actions when a single verse is selected).
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ActionBarButton(icon: "highlighter", label: "Highlight") {
+                            withAnimation(.spring(response: 0.3)) {
+                                showColorPicker.toggle()
+                            }
+                        }
+
+                        ActionBarButton(icon: "note.text", label: "Note") {
+                            onAction(.addNote)
+                        }
+
+                        ActionBarButton(icon: allBookmarked ? "bookmark.fill" : "bookmark",
+                                        label: "Bookmark",
+                                        isActive: allBookmarked) {
+                            onAction(allBookmarked ? .removeBookmark : .bookmark)
+                        }
+
+                        ActionBarButton(icon: "brain.head.profile", label: "Memory") {
+                            onAction(.addToMemory)
+                        }
+
+                        if readingState.selectedVerses.count == 1 {
+                            ActionBarButton(icon: "text.magnifyingglass", label: "Study") {
+                                onAction(.verseStudy)
+                            }
+                        }
+
+                        ActionBarButton(icon: "doc.on.doc", label: "Copy") {
+                            onAction(.copy)
+                        }
+
+                        ActionBarButton(icon: "square.and.arrow.up", label: "Share") {
+                            onAction(.share)
                         }
                     }
-
-                    ActionBarButton(icon: "note.text", label: "Note") {
-                        onAction(.addNote)
-                    }
-
-                    ActionBarButton(icon: "brain.head.profile", label: "Memory") {
-                        onAction(.addToMemory)
-                    }
-
-                    if readingState.selectedVerses.count == 1 {
-                        ActionBarButton(icon: "text.magnifyingglass", label: "Study") {
-                            onAction(.verseStudy)
-                        }
-                    }
-
-                    ActionBarButton(icon: "doc.on.doc", label: "Copy") {
-                        onAction(.copy)
-                    }
-
-                    ActionBarButton(icon: "square.and.arrow.up", label: "Share") {
-                        onAction(.share)
-                    }
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 18)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.vertical, 16)
-                .padding(.horizontal, 18)
                 .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .shadow(color: Color.black.opacity(0.15), radius: 20, y: -5)

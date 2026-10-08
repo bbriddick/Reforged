@@ -1,0 +1,48 @@
+{
+  "source": "/Users/boazbriddick/Documents/Reforged/ReforgedReport/ReforgedReportExtension.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Turn on the Daily Social Limit to see time reclaimed against your allowance.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld min of your %lld-min allowance reclaimed for what matters.",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "You've used your full %lld-min allowance today.",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "min on social today",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 70
+        }
+      }
+    ]
+  },
+  "version": 1
+}

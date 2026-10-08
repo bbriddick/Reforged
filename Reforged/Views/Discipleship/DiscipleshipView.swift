@@ -9,6 +9,7 @@ private extension Color {
 struct DiscipleshipView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var focusService = FocusBlockingService.shared
+    @StateObject private var rhythmStore = RhythmStorageManager.shared
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showTemptedSOS = false
@@ -21,6 +22,7 @@ struct DiscipleshipView: View {
                 VStack(spacing: 16) {
                     headerSection
                     learningPathCard
+                    rhythmCard
 
                     // iPad / regular width: Resources and Tools sit side by side so the
                     // wide canvas is used deliberately instead of one stretched column
@@ -234,6 +236,53 @@ struct DiscipleshipView: View {
         }
         .buttonStyle(.plain)
         .shadow(color: Color.black.opacity(0.22), radius: 12, y: 5)
+    }
+
+    // MARK: - My Rhythm Card
+
+    /// The member's self-built rule of life: a daily checklist (habits to keep,
+    /// temptations to avoid), custom reading plans, and social-media time-off.
+    /// Sits under the learning path as the "how I'm walking day to day" surface.
+    private var rhythmCard: some View {
+        NavigationLink(destination: RhythmHubView()) {
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.reforgedGold.opacity(0.15))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("My Disciplines")
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text(rhythmSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(16)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var rhythmSubtitle: String {
+        let due = rhythmStore.todayDueCount
+        guard due > 0 else { return "Build your daily checklist, reminders & plans" }
+        return "Today: \(rhythmStore.todayCompletedCount) of \(due) done"
     }
 
     // MARK: - Resources Grid
@@ -562,7 +611,9 @@ struct DiscipleshipView: View {
     }
 }
 
+#if false
 #Preview {
     DiscipleshipView()
         .environmentObject(AppState.shared)
 }
+#endif

@@ -1,0 +1,72 @@
+{
+  "source": "/Users/boazbriddick/Documents/Reforged/ReforgedWidget/VerseOfTheDayWidget.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "“%@”",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 151
+        }
+      },
+      {
+        "comment": "",
+        "key": "REFORGED",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 172
+        }
+      },
+      {
+        "comment": "",
+        "key": "“%@”",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 194
+        }
+      },
+      {
+        "comment": "",
+        "key": "VERSE OF THE DAY",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 270
+        }
+      },
+      {
+        "comment": "",
+        "key": "REFORGED",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap to open in Bible view",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 285
+        }
+      },
+      {
+        "comment": "",
+        "key": "Verse of the Day",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 348
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shows today's daily insight verse with a nature background.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 349
+        }
+      }
+    ]
+  },
+  "version": 1
+}

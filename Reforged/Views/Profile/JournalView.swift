@@ -1,5 +1,39 @@
 import SwiftUI
 
+// MARK: - Note Accent → Color
+
+extension NoteAccent {
+    /// Solid accent color (adaptive for navy so it stays visible in dark mode).
+    func color(_ scheme: ColorScheme?) -> Color {
+        switch self {
+        case .gold:   return .reforgedGold
+        case .coral:  return .reforgedCoral
+        case .navy:   return Color.adaptiveNavyText(scheme)
+        case .blue:   return Color(red: 0.20, green: 0.48, blue: 0.86)
+        case .green:  return Color(red: 0.16, green: 0.62, blue: 0.38)
+        case .purple: return Color(red: 0.52, green: 0.36, blue: 0.80)
+        case .orange: return Color(red: 0.95, green: 0.55, blue: 0.20)
+        case .pink:   return Color(red: 0.93, green: 0.42, blue: 0.63)
+        }
+    }
+
+    /// Literal tint used for translucent backgrounds (never adapts).
+    var tint: Color {
+        switch self {
+        case .gold:   return .reforgedGold
+        case .coral:  return .reforgedCoral
+        case .navy:   return .reforgedNavy
+        case .blue:   return Color(red: 0.20, green: 0.48, blue: 0.86)
+        case .green:  return Color(red: 0.16, green: 0.62, blue: 0.38)
+        case .purple: return Color(red: 0.52, green: 0.36, blue: 0.80)
+        case .orange: return Color(red: 0.95, green: 0.55, blue: 0.20)
+        case .pink:   return Color(red: 0.93, green: 0.42, blue: 0.63)
+        }
+    }
+}
+
+// MARK: - Notes Library
+
 struct JournalView: View {
     @State private var entries: [JournalEntry] = []
     @State private var showNewEntry = false
@@ -10,14 +44,19 @@ struct JournalView: View {
     @State private var showPrivacyInfo = false
     @State private var showExport = false
     @State private var entryToEdit: JournalEntry? = nil
+    @State private var showFolderEditor = false
+    @State private var folderToEdit: NoteFolder? = nil
+    @State private var itemToMove: MovableItem? = nil
     @ObservedObject private var readingState = BibleReadingState.shared
+    @ObservedObject private var org = NoteOrganizationStore.shared
     @Environment(\.colorScheme) var colorScheme
 
     var filteredEntries: [JournalEntry] {
-        if searchText.isEmpty {
-            return entries
+        let base = searchText.isEmpty ? entries : entries.filter {
+            $0.content.localizedCaseInsensitiveContains(searchText) ||
+            $0.displayTitle.localizedCaseInsensitiveContains(searchText)
         }
-        return entries.filter { $0.content.localizedCaseInsensitiveContains(searchText) }
+        return base.sorted { $0.updatedAt > $1.updatedAt }
     }
 
     var filteredBibleNotes: [VerseNote] {
@@ -30,158 +69,31 @@ struct JournalView: View {
         }
     }
 
+    /// Pinned items across both note types (only shown on the "All" tab, no search).
+    private var pinnedEntries: [JournalEntry] { filteredEntries.filter(\.isPinned) }
+    private var pinnedBibleNotes: [VerseNote] { filteredBibleNotes.filter { org.isBibleNotePinned($0.id) } }
+    private var hasPinned: Bool { !pinnedEntries.isEmpty || !pinnedBibleNotes.isEmpty }
+
+    private func noteCount(for folder: NoteFolder) -> Int {
+        entries.filter { $0.folderId == folder.id }.count +
+        readingState.allNotes.filter { org.folderId(forBibleNote: $0.id) == folder.id }.count
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: ReforgedTheme.spacingL) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Journal")
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                            Spacer()
-
-                            // Export button
-                            Button(action: { showExport = true }) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.callout)
-                                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                                    .frame(width: 36, height: 36)
-                                    .background(Color.adaptiveCardBackground(colorScheme))
-                                    .clipShape(Circle())
-                            }
-
-                            // Privacy indicator button
-                            Button(action: { showPrivacyInfo = true }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "lock.fill")
-                                        .font(.caption)
-                                    Text("Private")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundStyle(Color.green)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color.green.opacity(0.12))
-                                .clipShape(Capsule())
-                            }
-                        }
-
-                        Text("Reflect on your journey with God's Word")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    // Privacy notice banner
+                    header
                     PrivacyNoticeBanner()
+                    searchBar
+                    entryTypeButtons
+                    foldersSection
 
-                    // Search bar
-                    HStack(spacing: 12) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                            TextField("Search entries...", text: $searchText)
-                                .font(.subheadline)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                        )
+                    if selectedTab == 0 && hasPinned && searchText.isEmpty {
+                        pinnedSection
                     }
 
-                    // Entry type buttons
-                    HStack(spacing: 12) {
-                        JournalEntryTypeCard(
-                            icon: "pencil.line",
-                            title: "Free Write",
-                            tint: .reforgedNavy,
-                            adaptiveIcon: true
-                        ) {
-                            showNewEntry = true
-                        }
-
-                        JournalEntryTypeCard(
-                            icon: "lightbulb.fill",
-                            title: "With Prompt",
-                            tint: .reforgedGold
-                        ) {
-                            showPromptEntry = true
-                        }
-
-                        JournalEntryTypeCard(
-                            icon: "list.bullet.clipboard.fill",
-                            title: "Guided Method",
-                            tint: .reforgedCoral
-                        ) {
-                            showTemplateEntry = true
-                        }
-                    }
-
-                    // Entries section
-                    VStack(alignment: .leading, spacing: 14) {
-                        // Always show tabs (include Bible Notes tab)
-                        HStack(spacing: 0) {
-                            JournalTab(title: "All", isSelected: selectedTab == 0) {
-                                HapticManager.shared.selectionChanged()
-                                selectedTab = 0
-                            }
-                            JournalTab(title: "Reflections", isSelected: selectedTab == 1) {
-                                HapticManager.shared.selectionChanged()
-                                selectedTab = 1
-                            }
-                            JournalTab(title: "Bible Notes", isSelected: selectedTab == 2) {
-                                HapticManager.shared.selectionChanged()
-                                selectedTab = 2
-                            }
-                        }
-                        .padding(4)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-                        .shadow(color: Color.black.opacity(0.04), radius: 4, y: 2)
-
-                        // Content based on selected tab
-                        if selectedTab == 2 {
-                            // Bible Notes tab
-                            if filteredBibleNotes.isEmpty {
-                                EmptyBibleNotesView()
-                            } else {
-                                ForEach(filteredBibleNotes) { note in
-                                    SwipeToDeleteContainer(
-                                        confirmTitle: "Delete Note",
-                                        confirmMessage: "This note will be permanently deleted.",
-                                        onDelete: { readingState.removeNote(reference: note.reference) }
-                                    ) {
-                                        BibleNoteRow(note: note)
-                                    }
-                                }
-                            }
-                        } else {
-                            // Journal entries tabs
-                            if entries.isEmpty {
-                                EmptyJournalView(onAdd: { showNewEntry = true })
-                            } else {
-                                ForEach(filteredEntries) { entry in
-                                    SwipeToDeleteContainer(
-                                        confirmTitle: "Delete Entry",
-                                        confirmMessage: "This journal entry will be permanently deleted from your device.",
-                                        onDelete: { deleteEntry(entry) }
-                                    ) {
-                                        JournalEntryRow(entry: entry, onEdit: { entryToEdit = entry })
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    notesSection
                 }
                 .padding()
             }
@@ -211,10 +123,255 @@ struct JournalView: View {
                     onSave: saveEntries
                 )
             }
-            .onAppear {
-                loadEntries()
+            .sheet(isPresented: $showFolderEditor) {
+                FolderEditorSheet(folder: nil)
+            }
+            .sheet(item: $folderToEdit) { folder in
+                FolderEditorSheet(folder: folder)
+            }
+            .sheet(item: $itemToMove) { item in
+                MoveToFolderSheet(item: item) { folderId in
+                    move(item, to: folderId)
+                }
+            }
+            .onAppear { loadEntries() }
+        }
+    }
+
+    // MARK: Sections
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Notes")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                Spacer()
+
+                Button(action: { showFolderEditor = true }) {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.callout)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .frame(width: 36, height: 36)
+                        .background(Color.adaptiveCardBackground(colorScheme))
+                        .clipShape(Circle())
+                }
+
+                Button(action: { showExport = true }) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.callout)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .frame(width: 36, height: 36)
+                        .background(Color.adaptiveCardBackground(colorScheme))
+                        .clipShape(Circle())
+                }
+
+                Button(action: { showPrivacyInfo = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                        Text("Private")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundStyle(Color.green)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.green.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+            }
+
+            Text("Reflect on your journey with God's Word")
+                .font(.subheadline)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            TextField("Search notes...", text: $searchText)
+                .font(.subheadline)
+            if !searchText.isEmpty {
+                Button { searchText = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
             }
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+        .overlay(
+            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
+    }
+
+    private var entryTypeButtons: some View {
+        HStack(spacing: 12) {
+            JournalEntryTypeCard(icon: "pencil.line", title: "Free Write",
+                                 tint: .reforgedNavy, adaptiveIcon: true) { showNewEntry = true }
+            JournalEntryTypeCard(icon: "lightbulb.fill", title: "With Prompt",
+                                 tint: .reforgedGold) { showPromptEntry = true }
+            JournalEntryTypeCard(icon: "list.bullet.clipboard.fill", title: "Guided Method",
+                                 tint: .reforgedCoral) { showTemplateEntry = true }
+        }
+    }
+
+    @ViewBuilder
+    private var foldersSection: some View {
+        if !org.folders.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Folders")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                    Text("\(org.folders.count)")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+
+                let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(org.folders) { folder in
+                        NavigationLink {
+                            FolderDetailView(folder: folder, entries: $entries, onSave: saveEntries)
+                        } label: {
+                            FolderCard(folder: folder, count: noteCount(for: folder))
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button { folderToEdit = folder } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) { deleteFolder(folder) } label: {
+                                Label("Delete Folder", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var pinnedSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "pin.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color.reforgedGold)
+                Text("Pinned")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+            }
+
+            ForEach(pinnedEntries) { entry in journalRow(entry) }
+            ForEach(pinnedBibleNotes) { note in bibleRow(note) }
+        }
+    }
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 0) {
+                JournalTab(title: "All", isSelected: selectedTab == 0) { selectTab(0) }
+                JournalTab(title: "Reflections", isSelected: selectedTab == 1) { selectTab(1) }
+                JournalTab(title: "Bible Notes", isSelected: selectedTab == 2) { selectTab(2) }
+            }
+            .padding(4)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+            .shadow(color: Color.black.opacity(0.04), radius: 4, y: 2)
+
+            if selectedTab == 2 {
+                if filteredBibleNotes.isEmpty {
+                    EmptyBibleNotesView()
+                } else {
+                    ForEach(filteredBibleNotes) { note in bibleRow(note) }
+                }
+            } else {
+                // Reflections tab (1) and All tab (0) show journal entries.
+                // On "All", pinned entries already appear above.
+                let items = selectedTab == 0 && searchText.isEmpty
+                    ? filteredEntries.filter { !$0.isPinned }
+                    : filteredEntries
+                if entries.isEmpty {
+                    EmptyJournalView(onAdd: { showNewEntry = true })
+                } else if items.isEmpty && !hasPinned {
+                    EmptyJournalView(onAdd: { showNewEntry = true })
+                } else {
+                    ForEach(items) { entry in journalRow(entry) }
+                }
+            }
+        }
+    }
+
+    // MARK: Rows (with swipe + context menu)
+
+    private func journalRow(_ entry: JournalEntry) -> some View {
+        SwipeToDeleteContainer(
+            confirmTitle: "Delete Note",
+            confirmMessage: "This note will be permanently deleted from your device.",
+            onDelete: { deleteEntry(entry) }
+        ) {
+            JournalEntryRow(
+                entry: entry,
+                folderName: org.folder(id: entry.folderId)?.name,
+                onEdit: { entryToEdit = entry }
+            )
+            .contextMenu {
+                Button { togglePin(entry) } label: {
+                    Label(entry.isPinned ? "Unpin" : "Pin", systemImage: entry.isPinned ? "pin.slash" : "pin")
+                }
+                Button { itemToMove = .journal(entry) } label: {
+                    Label("Move to Folder", systemImage: "folder")
+                }
+                Button { entryToEdit = entry } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                Button(role: .destructive) { deleteEntry(entry) } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+    }
+
+    private func bibleRow(_ note: VerseNote) -> some View {
+        SwipeToDeleteContainer(
+            confirmTitle: "Delete Note",
+            confirmMessage: "This note will be permanently deleted.",
+            onDelete: { readingState.removeNote(reference: note.reference) }
+        ) {
+            BibleNoteRow(note: note, folderName: org.folder(id: org.folderId(forBibleNote: note.id))?.name)
+                .contextMenu {
+                    Button { org.toggleBibleNotePinned(note.id) } label: {
+                        Label(org.isBibleNotePinned(note.id) ? "Unpin" : "Pin",
+                              systemImage: org.isBibleNotePinned(note.id) ? "pin.slash" : "pin")
+                    }
+                    Button { itemToMove = .bible(note) } label: {
+                        Label("Move to Folder", systemImage: "folder")
+                    }
+                    Button(role: .destructive) { readingState.removeNote(reference: note.reference) } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+        }
+    }
+
+    // MARK: Actions
+
+    private func selectTab(_ tab: Int) {
+        HapticManager.shared.selectionChanged()
+        selectedTab = tab
     }
 
     private func loadEntries() {
@@ -228,6 +385,515 @@ struct JournalView: View {
     private func deleteEntry(_ entry: JournalEntry) {
         entries.removeAll { $0.id == entry.id }
         JournalStorageManager.shared.deleteEntry(id: entry.id)
+    }
+
+    private func togglePin(_ entry: JournalEntry) {
+        guard let idx = entries.firstIndex(where: { $0.id == entry.id }) else { return }
+        entries[idx].isPinned.toggle()
+        HapticManager.shared.selectionChanged()
+        saveEntries()
+    }
+
+    private func move(_ item: MovableItem, to folderId: String?) {
+        switch item {
+        case .journal(let entry):
+            guard let idx = entries.firstIndex(where: { $0.id == entry.id }) else { return }
+            entries[idx].folderId = folderId
+            saveEntries()
+        case .bible(let note):
+            org.setFolder(folderId, forBibleNote: note.id)
+        }
+        HapticManager.shared.success()
+    }
+
+    private func deleteFolder(_ folder: NoteFolder) {
+        // Detach any journal entries that lived in this folder.
+        for idx in entries.indices where entries[idx].folderId == folder.id {
+            entries[idx].folderId = nil
+        }
+        saveEntries()
+        org.deleteFolder(id: folder.id)
+    }
+}
+
+// MARK: - Movable Item
+
+/// A note being moved between folders (unifies both note kinds for the sheet).
+enum MovableItem: Identifiable {
+    case journal(JournalEntry)
+    case bible(VerseNote)
+
+    var id: String {
+        switch self {
+        case .journal(let e): return "journal-\(e.id)"
+        case .bible(let n):   return "bible-\(n.id)"
+        }
+    }
+}
+
+// MARK: - Folder Card
+
+struct FolderCard: View {
+    let folder: NoteFolder
+    let count: Int
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(folder.accent.tint.opacity(0.14))
+                    .frame(width: 44, height: 44)
+                Image(systemName: folder.icon)
+                    .font(.title3)
+                    .foregroundStyle(folder.accent.color(colorScheme))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(folder.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .lineLimit(1)
+                Text("\(count) \(count == 1 ? "note" : "notes")")
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "chevron.right")
+                .font(.caption2)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        }
+        .padding(ReforgedTheme.spacingM)
+        .reforgedCard()
+    }
+}
+
+// MARK: - Folder Detail
+
+struct FolderDetailView: View {
+    let folder: NoteFolder
+    @Binding var entries: [JournalEntry]
+    var onSave: () -> Void
+
+    @ObservedObject private var readingState = BibleReadingState.shared
+    @ObservedObject private var org = NoteOrganizationStore.shared
+    @Environment(\.colorScheme) var colorScheme
+    @State private var entryToEdit: JournalEntry? = nil
+    @State private var itemToMove: MovableItem? = nil
+
+    private var folderEntries: [JournalEntry] {
+        entries.filter { $0.folderId == folder.id }.sorted { $0.updatedAt > $1.updatedAt }
+    }
+    private var folderBibleNotes: [VerseNote] {
+        readingState.allNotes.filter { org.folderId(forBibleNote: $0.id) == folder.id }
+    }
+    private var isEmpty: Bool { folderEntries.isEmpty && folderBibleNotes.isEmpty }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: ReforgedTheme.spacingL) {
+                if isEmpty {
+                    emptyState
+                } else {
+                    ForEach(folderEntries) { entry in
+                        SwipeToDeleteContainer(
+                            confirmTitle: "Delete Note",
+                            confirmMessage: "This note will be permanently deleted.",
+                            onDelete: { deleteEntry(entry) }
+                        ) {
+                            JournalEntryRow(entry: entry, folderName: nil, onEdit: { entryToEdit = entry })
+                                .contextMenu {
+                                    Button { itemToMove = .journal(entry) } label: {
+                                        Label("Move to Folder", systemImage: "folder")
+                                    }
+                                    Button { removeFromFolder(entry) } label: {
+                                        Label("Remove from Folder", systemImage: "folder.badge.minus")
+                                    }
+                                    Button(role: .destructive) { deleteEntry(entry) } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                        }
+                    }
+                    ForEach(folderBibleNotes) { note in
+                        SwipeToDeleteContainer(
+                            confirmTitle: "Delete Note",
+                            confirmMessage: "This note will be permanently deleted.",
+                            onDelete: { readingState.removeNote(reference: note.reference) }
+                        ) {
+                            BibleNoteRow(note: note, folderName: nil)
+                                .contextMenu {
+                                    Button { itemToMove = .bible(note) } label: {
+                                        Label("Move to Folder", systemImage: "folder")
+                                    }
+                                    Button { org.setFolder(nil, forBibleNote: note.id) } label: {
+                                        Label("Remove from Folder", systemImage: "folder.badge.minus")
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .navigationTitle(folder.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $entryToEdit) { entry in
+            NewJournalEntrySheet(
+                entries: $entries,
+                usePrompt: entry.prompt != nil,
+                templateMode: entry.reflectionMethod != nil,
+                entryToEdit: entry,
+                onSave: onSave
+            )
+        }
+        .sheet(item: $itemToMove) { item in
+            MoveToFolderSheet(item: item) { folderId in
+                move(item, to: folderId)
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle().fill(folder.accent.tint.opacity(0.12)).frame(width: 90, height: 90)
+                Image(systemName: folder.icon)
+                    .font(.system(size: 34))
+                    .foregroundStyle(folder.accent.color(colorScheme))
+            }
+            Text("This folder is empty")
+                .font(.title3).fontWeight(.bold)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+            Text("Move notes here from the Notes list to keep them organized.")
+                .font(.subheadline)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .multilineTextAlignment(.center)
+        }
+        .padding(ReforgedTheme.spacingXL)
+        .frame(maxWidth: .infinity)
+        .reforgedCard(elevated: true)
+    }
+
+    private func deleteEntry(_ entry: JournalEntry) {
+        entries.removeAll { $0.id == entry.id }
+        JournalStorageManager.shared.deleteEntry(id: entry.id)
+    }
+
+    private func removeFromFolder(_ entry: JournalEntry) {
+        guard let idx = entries.firstIndex(where: { $0.id == entry.id }) else { return }
+        entries[idx].folderId = nil
+        onSave()
+    }
+
+    private func move(_ item: MovableItem, to folderId: String?) {
+        switch item {
+        case .journal(let entry):
+            guard let idx = entries.firstIndex(where: { $0.id == entry.id }) else { return }
+            entries[idx].folderId = folderId
+            onSave()
+        case .bible(let note):
+            org.setFolder(folderId, forBibleNote: note.id)
+        }
+        HapticManager.shared.success()
+    }
+}
+
+// MARK: - Folder Editor
+
+struct FolderEditorSheet: View {
+    let folder: NoteFolder?
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    @ObservedObject private var org = NoteOrganizationStore.shared
+
+    @State private var name = ""
+    @State private var icon = "folder.fill"
+    @State private var accent: NoteAccent = .navy
+
+    private let iconChoices = ["folder.fill", "book.closed.fill", "heart.fill", "star.fill",
+                               "sparkles", "hands.sparkles.fill", "sun.max.fill", "leaf.fill",
+                               "flame.fill", "cross.fill", "bookmark.fill", "quote.bubble.fill"]
+
+    private var isEditing: Bool { folder != nil }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Preview
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 10) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(accent.tint.opacity(0.14))
+                                    .frame(width: 76, height: 76)
+                                Image(systemName: icon)
+                                    .font(.system(size: 34))
+                                    .foregroundStyle(accent.color(colorScheme))
+                            }
+                            Text(name.isEmpty ? "New Folder" : name)
+                                .font(.headline)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                        }
+                        Spacer()
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Name").font(.subheadline).fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        TextField("Folder name", text: $name)
+                            .padding(.horizontal, 14).padding(.vertical, 12)
+                            .background(Color.adaptiveCardBackground(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                            )
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Icon").font(.subheadline).fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        let cols = [GridItem(.adaptive(minimum: 52), spacing: 10)]
+                        LazyVGrid(columns: cols, spacing: 10) {
+                            ForEach(iconChoices, id: \.self) { symbol in
+                                Button { icon = symbol } label: {
+                                    Image(systemName: symbol)
+                                        .font(.title3)
+                                        .foregroundStyle(icon == symbol ? .white : accent.color(colorScheme))
+                                        .frame(width: 52, height: 52)
+                                        .background(icon == symbol ? accent.tint : Color.adaptiveCardBackground(colorScheme))
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Color").font(.subheadline).fontWeight(.semibold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        HStack(spacing: 12) {
+                            ForEach(NoteAccent.allCases) { option in
+                                Button { accent = option } label: {
+                                    Circle()
+                                        .fill(option.tint)
+                                        .frame(width: 34, height: 34)
+                                        .overlay(
+                                            Circle().stroke(Color.adaptiveText(colorScheme),
+                                                            lineWidth: accent == option ? 2.5 : 0)
+                                                .padding(-3)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    if isEditing {
+                        Button(role: .destructive) {
+                            if let folder { org.deleteFolder(id: folder.id) }
+                            dismiss()
+                        } label: {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Delete Folder")
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.red.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                        }
+                    }
+                }
+                .padding()
+            }
+            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            .navigationTitle(isEditing ? "Edit Folder" : "New Folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isEditing ? "Save" : "Create") { save() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                if let folder {
+                    name = folder.name
+                    icon = folder.icon
+                    accent = folder.accent
+                }
+            }
+        }
+    }
+
+    private func save() {
+        if var folder {
+            folder.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            folder.icon = icon
+            folder.accent = accent
+            org.updateFolder(folder)
+        } else {
+            _ = org.addFolder(name: name, icon: icon, accent: accent)
+        }
+        HapticManager.shared.success()
+        dismiss()
+    }
+}
+
+// MARK: - Move To Folder
+
+struct MoveToFolderSheet: View {
+    let item: MovableItem
+    var onMove: (String?) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    @ObservedObject private var org = NoteOrganizationStore.shared
+    @State private var showFolderEditor = false
+
+    private var currentFolderId: String? {
+        switch item {
+        case .journal(let e): return e.folderId
+        case .bible(let n):   return org.folderId(forBibleNote: n.id)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 10) {
+                    folderRow(id: nil, name: "None (All Notes)", icon: "tray.full",
+                              accent: .navy, isSelected: currentFolderId == nil)
+
+                    ForEach(org.folders) { folder in
+                        folderRow(id: folder.id, name: folder.name, icon: folder.icon,
+                                  accent: folder.accent, isSelected: currentFolderId == folder.id)
+                    }
+
+                    Button { showFolderEditor = true } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "folder.badge.plus")
+                                .font(.title3)
+                                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                                .frame(width: 44, height: 44)
+                                .background(Color.reforgedNavy.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            Text("New Folder…")
+                                .font(.subheadline).fontWeight(.semibold)
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                            Spacer()
+                        }
+                        .padding(ReforgedTheme.spacingM)
+                        .reforgedCard()
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding()
+            }
+            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            .navigationTitle("Move to Folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                }
+            }
+            .sheet(isPresented: $showFolderEditor) {
+                FolderEditorSheet(folder: nil)
+            }
+        }
+    }
+
+    private func folderRow(id: String?, name: String, icon: String,
+                           accent: NoteAccent, isSelected: Bool) -> some View {
+        Button {
+            onMove(id)
+            dismiss()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(accent.color(colorScheme))
+                    .frame(width: 44, height: 44)
+                    .background(accent.tint.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                Text(name)
+                    .font(.subheadline).fontWeight(.medium)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.reforgedGold)
+                }
+            }
+            .padding(ReforgedTheme.spacingM)
+            .reforgedCard()
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Category Chip
+
+struct NoteCategoryChip: View {
+    let category: NoteCategory
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: category.icon)
+                .font(.system(size: 10))
+            Text(category.title)
+                .font(.caption2)
+                .fontWeight(.semibold)
+        }
+        .foregroundStyle(category.accent.color(colorScheme))
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(category.accent.tint.opacity(0.12))
+        .clipShape(Capsule())
+    }
+}
+
+/// Selectable category chip used in the new-entry sheet.
+struct CategorySelectChip: View {
+    let category: NoteCategory
+    let isSelected: Bool
+    let action: () -> Void
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: category.icon)
+                    .font(.system(size: 12))
+                Text(category.title)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+            }
+            .foregroundStyle(isSelected ? .white : category.accent.color(colorScheme))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(isSelected ? category.accent.tint : category.accent.tint.opacity(0.12))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -605,21 +1271,27 @@ struct SwipeToDeleteContainer<Content: View>: View {
 
             content()
                 .offset(x: offset)
-                .gesture(
-                    DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                // Use a *simultaneous* gesture with a larger activation distance so a
+                // vertical drag scrolls the enclosing ScrollView normally; only a clearly
+                // horizontal drag claims the swipe and reveals the Delete action.
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 18, coordinateSpace: .local)
                         .onChanged { value in
                             if !dragStarted {
-                                guard abs(value.translation.width) > abs(value.translation.height) * 1.3 else { return }
+                                // Ignore vertical drags entirely — let the ScrollView have them.
+                                guard abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
                                 dragStarted = true
                                 startOffset = offset
                             }
+                            guard dragStarted else { return }
                             let newOffset = startOffset + value.translation.width
                             withAnimation(.interactiveSpring()) {
                                 offset = max(min(newOffset, 0), -actionWidth)
                             }
                         }
                         .onEnded { _ in
-                            dragStarted = false
+                            defer { dragStarted = false }
+                            guard dragStarted else { return }
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 offset = -offset > revealThreshold ? -actionWidth : 0
                             }
@@ -658,6 +1330,8 @@ private let journalRowDateFormatter: DateFormatter = {
 
 struct BibleNoteRow: View {
     let note: VerseNote
+    var folderName: String? = nil
+    @ObservedObject private var org = NoteOrganizationStore.shared
     @Environment(\.colorScheme) var colorScheme
 
     var formattedDate: String {
@@ -693,6 +1367,12 @@ struct BibleNoteRow: View {
                 }
 
                 Spacer()
+
+                if org.isBibleNotePinned(note.id) {
+                    Image(systemName: "pin.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.reforgedGold)
+                }
             }
 
             // Note content
@@ -701,22 +1381,51 @@ struct BibleNoteRow: View {
                 .foregroundStyle(Color.adaptiveText(colorScheme))
                 .lineLimit(4)
 
-            // Bible note badge
+            // Badges
             HStack(spacing: 6) {
-                Image(systemName: "note.text")
-                    .font(.system(size: 10))
-                Text("Bible Note")
-                    .font(.caption2)
-                    .fontWeight(.medium)
+                HStack(spacing: 6) {
+                    Image(systemName: "note.text")
+                        .font(.system(size: 10))
+                    Text("Bible Note")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.reforgedNavy.opacity(0.1))
+                .clipShape(Capsule())
+
+                if let folderName {
+                    NoteFolderBadge(name: folderName)
+                }
             }
-            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Color.reforgedNavy.opacity(0.1))
-            .clipShape(Capsule())
         }
         .padding(ReforgedTheme.spacingM)
         .reforgedCard()
+    }
+}
+
+// MARK: - Folder Badge
+
+struct NoteFolderBadge: View {
+    let name: String
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "folder.fill")
+                .font(.system(size: 9))
+            Text(name)
+                .font(.caption2)
+                .fontWeight(.medium)
+                .lineLimit(1)
+        }
+        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(Color.adaptiveChipBackground(colorScheme))
+        .clipShape(Capsule())
     }
 }
 
@@ -724,10 +1433,14 @@ struct BibleNoteRow: View {
 
 struct JournalEntryRow: View {
     let entry: JournalEntry
+    var folderName: String? = nil
     var onEdit: (() -> Void)?
     @Environment(\.colorScheme) var colorScheme
 
     var formattedDate: String {
+        if let date = AppDateFormatters.iso8601.date(from: entry.updatedAt) {
+            return journalRowDateFormatter.string(from: date)
+        }
         if let date = AppDateFormatters.iso8601.date(from: entry.date) {
             return journalRowDateFormatter.string(from: date)
         }
@@ -741,23 +1454,27 @@ struct JournalEntryRow: View {
     var entryIcon: String {
         if let template { return template.icon }
         if entry.prompt != nil { return "lightbulb.fill" }
-        return "pencil.line"
+        return entry.resolvedCategory.icon
     }
 
     var iconColor: Color {
         if let template { return template.accent.color(colorScheme) }
         if entry.prompt != nil { return .reforgedGold }
-        return Color.adaptiveNavyText(colorScheme)
+        return entry.resolvedCategory.accent.color(colorScheme)
     }
 
     var iconTint: Color {
         if let template { return template.accent.tint }
         if entry.prompt != nil { return .reforgedGold }
-        return .reforgedNavy
+        return entry.resolvedCategory.accent.tint
+    }
+
+    private var preview: String {
+        entry.previewBody
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             // Header
             HStack(spacing: 10) {
                 ZStack {
@@ -770,29 +1487,26 @@ struct JournalEntryRow: View {
                         .foregroundStyle(iconColor)
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(formattedDate)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.displayTitle)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineLimit(1)
 
-                    let verses = entry.allLinkedVerses
-                    if !verses.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "book.fill")
-                                .font(.system(size: 9))
-                                .foregroundStyle(Color.reforgedGold)
-                            Text(verses.joined(separator: " · "))
-                                .font(.caption)
-                                .foregroundStyle(Color.reforgedGold)
-                                .lineLimit(1)
-                        }
-                    }
+                    Text(formattedDate)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
 
                 Spacer()
 
-                // Edit button
+                if entry.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.reforgedGold)
+                }
+
                 if onEdit != nil {
                     Button(action: { onEdit?() }) {
                         Image(systemName: "pencil")
@@ -803,45 +1517,71 @@ struct JournalEntryRow: View {
             }
 
             // Content preview
-            Text(entry.renderedContentText)
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                .lineLimit(3)
-
-            // Reflection method badge
-            if let template {
-                HStack(spacing: 6) {
-                    Image(systemName: template.icon)
-                        .font(.system(size: 10))
-                    Text("\(template.name) Method")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                }
-                .foregroundStyle(template.accent.color(colorScheme))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(template.accent.tint.opacity(0.1))
-                .clipShape(Capsule())
+            if !preview.isEmpty {
+                Text(preview)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .lineLimit(3)
             }
 
-            // Tags
-            if !entry.tags.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(entry.tags, id: \.self) { tag in
-                        Text(tag)
+            // Linked verses
+            let verses = entry.allLinkedVerses
+            if !verses.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "book.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.reforgedGold)
+                    Text(verses.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(Color.reforgedGold)
+                        .lineLimit(1)
+                }
+            }
+
+            // Metadata chips: category, method, folder, tags
+            FlexibleChips {
+                if entry.resolvedCategory != .general {
+                    NoteCategoryChip(category: entry.resolvedCategory)
+                }
+                if let template {
+                    HStack(spacing: 6) {
+                        Image(systemName: template.icon)
+                            .font(.system(size: 10))
+                        Text("\(template.name) Method")
                             .font(.caption2)
                             .fontWeight(.medium)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color.reforgedNavy.opacity(0.1))
-                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                            .clipShape(Capsule())
                     }
+                    .foregroundStyle(template.accent.color(colorScheme))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(template.accent.tint.opacity(0.1))
+                    .clipShape(Capsule())
+                }
+                if let folderName {
+                    NoteFolderBadge(name: folderName)
+                }
+                ForEach(entry.tags, id: \.self) { tag in
+                    Text(tag)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.reforgedNavy.opacity(0.1))
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .clipShape(Capsule())
                 }
             }
         }
         .padding(ReforgedTheme.spacingM)
         .reforgedCard()
+    }
+}
+
+/// A simple wrapping HStack for metadata chips.
+struct FlexibleChips<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        HStack(spacing: 6) { content() }
     }
 }
 
@@ -859,8 +1599,12 @@ struct NewJournalEntrySheet: View {
     var entryToEdit: JournalEntry? = nil
     var onSave: (() -> Void)?
     @State private var contentAttributedText = NSAttributedString()
+    @State private var titleText: String = ""
+    @State private var selectedCategory: NoteCategory = .general
+    @State private var selectedFolderId: String? = nil
     @State private var linkedVerses: [String] = []
     @State private var selectedPrompt: String?
+    @ObservedObject private var org = NoteOrganizationStore.shared
     @State private var displayedPrompts: [String] = randomJournalPrompts()
     @State private var isLoadingPrompts = false
     @State private var promptsFailed = false
@@ -972,6 +1716,45 @@ struct NewJournalEntrySheet: View {
                         reflectionMethodSection
                     }
 
+                    // Title
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Title")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        TextField("Optional — uses first line if blank", text: $titleText)
+                            .font(.body)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(Color.adaptiveCardBackground(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                            )
+                    }
+
+                    // Category
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Category")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(NoteCategory.selectable) { category in
+                                    CategorySelectChip(
+                                        category: category,
+                                        isSelected: selectedCategory == category
+                                    ) {
+                                        selectedCategory = category
+                                        HapticManager.shared.selectionChanged()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Content
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Your Reflection")
@@ -984,6 +1767,48 @@ struct NewJournalEntrySheet: View {
                             placeholder: "Write your reflection…",
                             minHeight: 220
                         )
+                    }
+
+                    // Folder
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Folder")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Menu {
+                            Button {
+                                selectedFolderId = nil
+                            } label: {
+                                Label("None (All Notes)", systemImage: selectedFolderId == nil ? "checkmark" : "tray.full")
+                            }
+                            ForEach(org.folders) { folder in
+                                Button {
+                                    selectedFolderId = folder.id
+                                } label: {
+                                    Label(folder.name, systemImage: selectedFolderId == folder.id ? "checkmark" : folder.icon)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: org.folder(id: selectedFolderId)?.icon ?? "tray.full")
+                                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                                Text(org.folder(id: selectedFolderId)?.name ?? "None (All Notes)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                                Spacer()
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(Color.adaptiveCardBackground(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
+                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                            )
+                        }
                     }
 
                     // Linked Verses
@@ -1144,6 +1969,9 @@ struct NewJournalEntrySheet: View {
                     linkedVerses = existing.allLinkedVerses
                     selectedPrompt = existing.prompt
                     selectedTemplate = ReflectionTemplate.named(existing.reflectionMethod)
+                    titleText = existing.title ?? ""
+                    selectedCategory = existing.resolvedCategory
+                    selectedFolderId = existing.folderId
                 } else if let ref = verseReference, !linkedVerses.contains(ref) {
                     linkedVerses.append(ref)
                 }
@@ -1237,6 +2065,9 @@ struct NewJournalEntrySheet: View {
 
         let plainText      = contentAttributedText.string
         let richContent    = RichTextNoteContent(attributedString: contentAttributedText)
+        let now            = AppDateFormatters.iso8601.string(from: Date())
+        let trimmedTitle   = titleText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let categoryValue  = selectedCategory == .general ? nil : selectedCategory.rawValue
 
         if let existing = entryToEdit {
             // Update in-place
@@ -1251,7 +2082,12 @@ struct NewJournalEntrySheet: View {
                 linkedLesson: existing.linkedLesson,
                 linkedInsight: existing.linkedInsight,
                 prompt: selectedPrompt,
-                reflectionMethod: selectedTemplate?.acronym ?? existing.reflectionMethod
+                reflectionMethod: selectedTemplate?.acronym ?? existing.reflectionMethod,
+                title: trimmedTitle.isEmpty ? nil : trimmedTitle,
+                folderId: selectedFolderId,
+                category: categoryValue,
+                isPinned: existing.isPinned,
+                updatedAt: now
             )
             if let idx = entries.firstIndex(where: { $0.id == existing.id }) {
                 entries[idx] = updated
@@ -1260,13 +2096,18 @@ struct NewJournalEntrySheet: View {
         } else {
             let entry = JournalEntry(
                 id: UUID().uuidString,
-                date: AppDateFormatters.iso8601.string(from: Date()),
+                date: now,
                 content: plainText,
                 tags: [],
                 formattedContent: richContent,
                 linkedVerses: linkedVerses,
                 prompt: selectedPrompt,
-                reflectionMethod: selectedTemplate?.acronym
+                reflectionMethod: selectedTemplate?.acronym,
+                title: trimmedTitle.isEmpty ? nil : trimmedTitle,
+                folderId: selectedFolderId,
+                category: categoryValue,
+                isPinned: false,
+                updatedAt: now
             )
             entries.insert(entry, at: 0)
             JournalStorageManager.shared.addEntry(entry)
@@ -1616,7 +2457,9 @@ struct ExportFormatRow: View {
     }
 }
 
+#if false
 #Preview {
     JournalView()
         .environmentObject(AppState.shared)
 }
+#endif

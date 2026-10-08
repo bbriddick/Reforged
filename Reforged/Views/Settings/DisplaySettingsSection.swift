@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DisplaySettingsSection: View {
     @StateObject private var settings = SettingsManager.shared
+    @StateObject private var readingSettings = BibleReadingSettings.shared
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
@@ -196,6 +197,15 @@ struct DisplaySettingsSection: View {
                 title: "Red Letter Text",
                 subtitle: "Display the words of Christ in red.",
                 isOn: $settings.showRedLetterText
+            )
+
+            SettingsDivider()
+
+            // Reader Engine — TextKit 2 vs. the legacy per-word layout
+            SettingsToggleRow(
+                title: "Fast Text Rendering",
+                subtitle: "Render scripture with the TextKit 2 layout engine for smoother scrolling and selection. Turn off to use the classic reader.",
+                isOn: $readingSettings.useTextKitReader
             )
 
             SettingsDivider()
@@ -402,9 +412,11 @@ struct ScripturePreviewCard: View {
     }
 }
 
+#if false
 #Preview {
     ScrollView {
         DisplaySettingsSection()
             .padding()
     }
 }
+#endif

@@ -1,0 +1,12 @@
+Target dependency graph (6 targets)
+Target 'Reforged' in project 'Reforged'
+➜ Explicit dependency on target 'ReforgedWidgetExtension' in project 'Reforged'
+➜ Explicit dependency on target 'ReforgedShield' in project 'Reforged'
+➜ Explicit dependency on target 'ReforgedShieldAction' in project 'Reforged'
+➜ Explicit dependency on target 'ReforgedReport' in project 'Reforged'
+➜ Explicit dependency on target 'ReforgedActivityMonitor' in project 'Reforged'
+Target 'ReforgedActivityMonitor' in project 'Reforged' (no dependencies)
+Target 'ReforgedReport' in project 'Reforged' (no dependencies)
+Target 'ReforgedShieldAction' in project 'Reforged' (no dependencies)
+Target 'ReforgedShield' in project 'Reforged' (no dependencies)
+Target 'ReforgedWidgetExtension' in project 'Reforged' (no dependencies)

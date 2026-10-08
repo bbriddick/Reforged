@@ -582,49 +582,27 @@ struct ReadingStreakWidget: Widget {
 @main
 struct ReforgedWidgetBundle: WidgetBundle {
     var body: some Widget {
+        VerseOfTheDayWidget()
         ReadingStreakWidget()
         PanicWidget()
-        // VerseOfTheDayWidget()
     }
 }
 
 // MARK: - Previews
 
-@available(iOS 17.0, *)
-#Preview("Small", as: .systemSmall) {
-    ReadingStreakWidget()
-} timeline: {
-    ReadingStreakEntry(
-        date: Date(),
-        currentStreak: 7,
-        hasReadToday: true,
-        readingDates: sampleDates()
-    )
+#if DEBUG
+struct ReadingStreakWidget_Previews: PreviewProvider {
+    static var previews: some View {
+        ReadingStreakWidgetEntryView(entry: ReadingStreakEntry(
+            date: Date(),
+            currentStreak: 7,
+            hasReadToday: true,
+            readingDates: sampleDates()
+        ))
+        .previewContext(WidgetPreviewContext(family: .systemSmall))
+    }
 }
-
-@available(iOS 17.0, *)
-#Preview("Medium", as: .systemMedium) {
-    ReadingStreakWidget()
-} timeline: {
-    ReadingStreakEntry(
-        date: Date(),
-        currentStreak: 14,
-        hasReadToday: false,
-        readingDates: sampleDates()
-    )
-}
-
-@available(iOS 17.0, *)
-#Preview("Large", as: .systemLarge) {
-    ReadingStreakWidget()
-} timeline: {
-    ReadingStreakEntry(
-        date: Date(),
-        currentStreak: 21,
-        hasReadToday: true,
-        readingDates: sampleDates()
-    )
-}
+#endif
 
 private func sampleDates() -> Set<String> {
     let calendar = Calendar.current

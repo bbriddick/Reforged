@@ -1,0 +1,19 @@
+{
+  "" : {
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReport-primary.dia",
+    "emit-module-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReport-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReport-primary-emit-module.dia",
+    "pch" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReport-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReport-primary.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/ReforgedReport/ReforgedReportExtension.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReportExtension.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReportExtension.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReportExtension.dia",
+    "index-unit-output-path" : "/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReportExtension.o",
+    "llvm-bc" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReportExtension.bc",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReportExtension.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReportExtension.swiftdeps",
+    "swiftmodule" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedReport.build/Objects-normal/arm64/ReforgedReportExtension~partial.swiftmodule"
+  }
+}

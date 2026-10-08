@@ -84,6 +84,18 @@ struct JournalEntry: Codable, Identifiable {
     var prompt: String?
     var reflectionMethod: String?   // structured method acronym, e.g. "SOAP" (see ReflectionTemplate)
 
+    // MARK: Organization (Notes library)
+    /// Optional user-given title. When nil the first line of content is used.
+    var title: String?
+    /// ID of the folder this note belongs to (nil = "All Notes" / no folder).
+    var folderId: String?
+    /// Category classification (see `NoteCategory`); nil = general.
+    var category: String?
+    /// Pinned notes float to the top of the library.
+    var isPinned: Bool
+    /// Last modified timestamp (ISO-8601). Falls back to `date` for legacy entries.
+    var updatedAt: String
+
     /// All linked verses, merging legacy `linkedVerse` with `linkedVerses`.
     var allLinkedVerses: [String] {
         var result = linkedVerses
@@ -101,11 +113,46 @@ struct JournalEntry: Codable, Identifiable {
         return content
     }
 
+    /// The category, resolved to the enum (general when unset/unknown).
+    var resolvedCategory: NoteCategory {
+        NoteCategory(rawValue: category ?? "") ?? .general
+    }
+
+    /// Title shown in lists: explicit title, else the first non-empty line of the body.
+    var displayTitle: String {
+        if let title = title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+            return title
+        }
+        let firstLine = renderedContentText
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .first
+            .map(String.init)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let firstLine, !firstLine.isEmpty { return firstLine }
+        return "New Note"
+    }
+
+    /// Body preview with the title line removed when the title is implicit.
+    var previewBody: String {
+        let full = renderedContentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        // If no explicit title, drop the first line (it's used as the title).
+        if title?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+            let parts = full.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+            if parts.count == 2 {
+                return parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            return ""
+        }
+        return full
+    }
+
     init(id: String, date: String, content: String, tags: [String],
          formattedContent: RichTextNoteContent? = nil,
          linkedVerse: String? = nil, linkedVerses: [String] = [],
          linkedLesson: String? = nil, linkedInsight: String? = nil,
-         prompt: String? = nil, reflectionMethod: String? = nil) {
+         prompt: String? = nil, reflectionMethod: String? = nil,
+         title: String? = nil, folderId: String? = nil, category: String? = nil,
+         isPinned: Bool = false, updatedAt: String? = nil) {
         self.id = id
         self.date = date
         self.content = content
@@ -117,6 +164,11 @@ struct JournalEntry: Codable, Identifiable {
         self.linkedInsight = linkedInsight
         self.prompt = prompt
         self.reflectionMethod = reflectionMethod
+        self.title = title
+        self.folderId = folderId
+        self.category = category
+        self.isPinned = isPinned
+        self.updatedAt = updatedAt ?? date
     }
 
     init(from decoder: Decoder) throws {
@@ -132,10 +184,106 @@ struct JournalEntry: Codable, Identifiable {
         linkedInsight = try c.decodeIfPresent(String.self,   forKey: .linkedInsight)
         prompt        = try c.decodeIfPresent(String.self,   forKey: .prompt)
         reflectionMethod = try c.decodeIfPresent(String.self, forKey: .reflectionMethod)
+        title         = try c.decodeIfPresent(String.self,   forKey: .title)
+        folderId      = try c.decodeIfPresent(String.self,   forKey: .folderId)
+        category      = try c.decodeIfPresent(String.self,   forKey: .category)
+        isPinned      = (try c.decodeIfPresent(Bool.self,    forKey: .isPinned)) ?? false
+        updatedAt     = (try c.decodeIfPresent(String.self,  forKey: .updatedAt)) ?? date
         if formattedContent == nil {
             formattedContent = RichTextNoteContent.fromPlainText(content)
         }
     }
+}
+
+// MARK: - Note Organization Models
+
+/// A fixed palette of accent colors used by folders and categories.
+/// Stored as a raw string so the color mapping (which needs SwiftUI) can live
+/// in the view layer.
+enum NoteAccent: String, Codable, CaseIterable, Identifiable {
+    case gold, coral, navy, blue, green, purple, orange, pink
+
+    var id: String { rawValue }
+}
+
+/// A user-created folder that can hold both journal reflections and Bible notes.
+struct NoteFolder: Codable, Identifiable, Equatable {
+    let id: String
+    var name: String
+    var icon: String          // SF Symbol name
+    var accent: NoteAccent
+    var sortIndex: Int
+    let createdAt: String
+
+    init(id: String = UUID().uuidString,
+         name: String,
+         icon: String = "folder.fill",
+         accent: NoteAccent = .navy,
+         sortIndex: Int = 0,
+         createdAt: String? = nil) {
+        self.id = id
+        self.name = name
+        self.icon = icon
+        self.accent = accent
+        self.sortIndex = sortIndex
+        self.createdAt = createdAt ?? AppDateFormatters.iso8601.string(from: Date())
+    }
+}
+
+/// A lightweight classification applied to a note, orthogonal to folders.
+enum NoteCategory: String, Codable, CaseIterable, Identifiable {
+    case general
+    case reflection
+    case sermon
+    case prayer
+    case study
+    case gratitude
+    case devotion
+    case question
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general:    return "Note"
+        case .reflection: return "Reflection"
+        case .sermon:     return "Sermon"
+        case .prayer:     return "Prayer"
+        case .study:      return "Study"
+        case .gratitude:  return "Gratitude"
+        case .devotion:   return "Devotion"
+        case .question:   return "Question"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general:    return "note.text"
+        case .reflection: return "pencil.line"
+        case .sermon:     return "person.wave.2.fill"
+        case .prayer:     return "hands.sparkles.fill"
+        case .study:      return "books.vertical.fill"
+        case .gratitude:  return "heart.fill"
+        case .devotion:   return "sun.max.fill"
+        case .question:   return "questionmark.circle.fill"
+        }
+    }
+
+    var accent: NoteAccent {
+        switch self {
+        case .general:    return .navy
+        case .reflection: return .navy
+        case .sermon:     return .blue
+        case .prayer:     return .purple
+        case .study:      return .gold
+        case .gratitude:  return .coral
+        case .devotion:   return .orange
+        case .question:   return .green
+        }
+    }
+
+    /// Categories offered in pickers (general first as the default).
+    static var selectable: [NoteCategory] { allCases }
 }
 
 struct DailyInsight: Codable, Identifiable {

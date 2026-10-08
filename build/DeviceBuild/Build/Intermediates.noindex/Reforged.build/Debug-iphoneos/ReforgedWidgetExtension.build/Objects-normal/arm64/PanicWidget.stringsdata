@@ -1,0 +1,80 @@
+{
+  "source": "/Users/boazbriddick/Documents/Reforged/ReforgedWidget/PanicWidget.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "I'm Being\nTempted",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap for a way out",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "I'm Being Tempted",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pause, breathe, and take hold of a way out.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "I'm Being Tempted",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap for a way out",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "I'm Being Tempted",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "I'm Being Tempted",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 179
+        }
+      },
+      {
+        "comment": "",
+        "key": "A one-tap way out: pause, breathe, and take hold of God's Word.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 180
+        }
+      }
+    ]
+  },
+  "version": 1
+}

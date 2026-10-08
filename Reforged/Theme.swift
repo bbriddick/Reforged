@@ -36,6 +36,13 @@ class ThemeManager: ObservableObject {
         currentMode == .amoled
     }
 
+    /// The equipped color theme (crown shop / level perks). Classic is the
+    /// shipped Reforged look. Changing it rebuilds the root view (ContentView
+    /// keys its tree on `palette.id`) so every static color re-reads.
+    @Published var palette: ThemePalette = ThemePalette.named(UserDefaults.standard.string(forKey: "theme_palette") ?? "classic") {
+        didSet { UserDefaults.standard.set(palette.id, forKey: "theme_palette") }
+    }
+
     private init() {
         let saved = UserDefaults.standard.string(forKey: "theme_mode") ?? "system"
         currentMode = ThemeMode(rawValue: saved) ?? .system
@@ -51,6 +58,81 @@ class ThemeManager: ObservableObject {
         case .system:
             colorScheme = nil
         }
+    }
+}
+
+// MARK: - Theme palettes
+
+/// A color theme: paper + card surfaces for light and dark, and the two accent
+/// roles (action = coral in Classic, reward = gold). Text colors and the AMOLED
+/// surfaces are shared by every palette so contrast holds everywhere.
+struct ThemePalette: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let lightBackground: Color
+    let lightCard: Color
+    let darkBackground: Color
+    let darkCard: Color
+    let action: Color
+    let reward: Color
+
+    static func == (a: ThemePalette, b: ThemePalette) -> Bool { a.id == b.id }
+
+    private static func hex(_ v: UInt32) -> Color {
+        Color(red: Double((v >> 16) & 0xFF) / 255, green: Double((v >> 8) & 0xFF) / 255, blue: Double(v & 0xFF) / 255)
+    }
+
+    static let classic = ThemePalette(id: "classic", name: "Classic",
+        lightBackground: hex(0xFAF8F5), lightCard: .white,
+        darkBackground: Color(red: 0.11, green: 0.11, blue: 0.12), darkCard: Color(red: 0.17, green: 0.17, blue: 0.18),
+        action: hex(0xE94560), reward: hex(0xD4A574))
+
+    static let all: [ThemePalette] = [
+        classic,
+        ThemePalette(id: "parchment", name: "Parchment",
+            lightBackground: hex(0xF3EAD7), lightCard: hex(0xFBF6EA),
+            darkBackground: hex(0x1E1A14), darkCard: hex(0x2A241B),
+            action: hex(0xB5523B), reward: hex(0xB8894F)),
+        ThemePalette(id: "midnight", name: "Midnight",
+            lightBackground: hex(0xEEF1F7), lightCard: .white,
+            darkBackground: hex(0x0E1422), darkCard: hex(0x182238),
+            action: hex(0x4F86E8), reward: hex(0xE0B872)),
+        ThemePalette(id: "forest", name: "Forest",
+            lightBackground: hex(0xF1F4EE), lightCard: .white,
+            darkBackground: hex(0x111812), darkCard: hex(0x1B251C),
+            action: hex(0x3E8E5A), reward: hex(0xC9A45C)),
+        ThemePalette(id: "royal", name: "Royal Purple",
+            lightBackground: hex(0xF5F2F8), lightCard: .white,
+            darkBackground: hex(0x16121D), darkCard: hex(0x221B2D),
+            action: hex(0x7B4FB0), reward: hex(0xD4A574)),
+        ThemePalette(id: "vellum", name: "Vellum",
+            lightBackground: hex(0xF6F0E4), lightCard: hex(0xFFFCF5),
+            darkBackground: hex(0x1C1915), darkCard: hex(0x27231D),
+            action: hex(0x8C2F39), reward: hex(0xA9772F)),
+        ThemePalette(id: "candlelight", name: "Candlelight",
+            lightBackground: hex(0xFBF4EA), lightCard: hex(0xFFFBF5),
+            darkBackground: hex(0x17120D), darkCard: hex(0x231B13),
+            action: hex(0xE07A3F), reward: hex(0xF0B35E)),
+        ThemePalette(id: "stainedglass", name: "Stained Glass",
+            lightBackground: hex(0xF4F5F8), lightCard: .white,
+            darkBackground: hex(0x101218), darkCard: hex(0x1A1D26),
+            action: hex(0x2F6FB5), reward: hex(0xE3B341)),
+        ThemePalette(id: "olive", name: "Olive Grove",
+            lightBackground: hex(0xF4F3EA), lightCard: hex(0xFDFCF7),
+            darkBackground: hex(0x15160F), darkCard: hex(0x20221A),
+            action: hex(0x6B7F3A), reward: hex(0xB59A4A)),
+        ThemePalette(id: "desertdawn", name: "Desert Dawn",
+            lightBackground: hex(0xFBF3EC), lightCard: .white,
+            darkBackground: hex(0x1C1512), darkCard: hex(0x28201B),
+            action: hex(0xD9694A), reward: hex(0xD9A066)),
+        ThemePalette(id: "sabbath", name: "Sabbath",
+            lightBackground: hex(0xF2F4F7), lightCard: .white,
+            darkBackground: hex(0x12151A), darkCard: hex(0x1C2027),
+            action: hex(0x5B7A99), reward: hex(0xB8A27A)),
+    ]
+
+    static func named(_ id: String) -> ThemePalette {
+        all.first { $0.id == id } ?? classic
     }
 }
 
@@ -72,9 +154,10 @@ extension Color {
     static let reforgedNavy = Color(red: 0.20, green: 0.20, blue: 0.20) // #333333 charcoal
     static let reforgedDarkBlue = Color(red: 0.15, green: 0.15, blue: 0.15) // darker charcoal variant
 
-    // Accent Colors
-    static let reforgedCoral = Color(red: 0.914, green: 0.271, blue: 0.376) // #e94560
-    static let reforgedGold = Color(red: 0.831, green: 0.647, blue: 0.455) // #d4a574
+    // Accent Colors — theme-aware. Classic = coral #e94560 (act) and gold
+    // #d4a574 (earned/Scripture); other palettes keep the same two roles.
+    static var reforgedCoral: Color { ThemeManager.shared.palette.action }
+    static var reforgedGold: Color { ThemeManager.shared.palette.reward }
 
     // Background Colors - Adaptive
     static let reforgedCream = Color("ReforgedCream")
@@ -90,19 +173,21 @@ extension Color {
 
     // Fallback colors for when asset catalog colors aren't available
     static func adaptiveBackground(_ scheme: ColorScheme?) -> Color {
+        let palette = ThemeManager.shared.palette
         if scheme == .dark {
-            return isAMOLEDActive ? .black : Color(red: 0.11, green: 0.11, blue: 0.12)
+            return isAMOLEDActive ? .black : palette.darkBackground
         }
-        return Color(red: 0.980, green: 0.973, blue: 0.961)
+        return palette.lightBackground
     }
 
     static func adaptiveCardBackground(_ scheme: ColorScheme?) -> Color {
+        let palette = ThemeManager.shared.palette
         if scheme == .dark {
             return isAMOLEDActive
                 ? Color(red: 0.08, green: 0.08, blue: 0.09)
-                : Color(red: 0.17, green: 0.17, blue: 0.18)
+                : palette.darkCard
         }
-        return .white
+        return palette.lightCard
     }
 
     static func adaptiveText(_ scheme: ColorScheme?) -> Color {
@@ -246,6 +331,13 @@ class BibleReadingSettings: ObservableObject {
     }
 
     @Published var verseByVerse: Bool {
+        didSet { save() }
+    }
+
+    /// When on, the reader renders scripture with the TextKit 2 bounded-window reader
+    /// (one laid-out attributed document per window) instead of the SwiftUI FlowLayout
+    /// per-word spine. Defaults on; the toggle in Display settings falls back to FlowLayout.
+    @Published var useTextKitReader: Bool {
         didSet { save() }
     }
 
@@ -406,6 +498,13 @@ class BibleReadingSettings: ObservableObject {
             verseByVerse = defaults.bool(forKey: "bible_verse_by_verse")
         }
 
+        // Defaults on for a fresh install (key not yet written); respects an explicit choice after.
+        if defaults.object(forKey: "bible_use_textkit_reader") == nil {
+            useTextKitReader = true
+        } else {
+            useTextKitReader = defaults.bool(forKey: "bible_use_textkit_reader")
+        }
+
         lastBook = defaults.string(forKey: "bible_last_book") ?? "John"
         let savedChapter = defaults.integer(forKey: "bible_last_chapter")
         lastChapter = savedChapter == 0 ? 3 : savedChapter
@@ -420,6 +519,7 @@ class BibleReadingSettings: ObservableObject {
         defaults.set(fontType.rawValue, forKey: "bible_font_type")
         defaults.set(lineSpacing.rawValue, forKey: "bible_line_spacing")
         defaults.set(verseByVerse, forKey: "bible_verse_by_verse")
+        defaults.set(useTextKitReader, forKey: "bible_use_textkit_reader")
         defaults.set(lastBook, forKey: "bible_last_book")
         defaults.set(lastChapter, forKey: "bible_last_chapter")
         defaults.set(Float(lastScrollPosition), forKey: "bible_scroll_position")
@@ -486,6 +586,75 @@ struct NoBlobButtonStyle: ButtonStyle {
         configuration.label
             .opacity(configuration.isPressed ? 0.75 : 1.0)
             .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+/// Bold, physical Duolingo-style 3D button with an extruded bottom bevel and spring compression
+struct Chunky3DButtonStyle: ButtonStyle {
+    var backgroundColor: Color = Color.reforgedNavy
+    var bevelColor: Color? = nil
+    var cornerRadius: CGFloat = 16
+    var depth: CGFloat = 5
+    var textColor: Color = .white
+
+    private var resolvedBevelColor: Color {
+        bevelColor ?? backgroundColor.opacity(0.7)
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        let isPressed = configuration.isPressed
+        configuration.label
+            .font(.headline)
+            .fontWeight(.bold)
+            .foregroundStyle(textColor)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .padding(.horizontal, 24)
+            .background(
+                ZStack {
+                    // Solid extruded base — the full button shape sitting `depth`
+                    // lower, so a clean solid lip (not a thin line) shows beneath
+                    // the face. Collapses as the face is pressed onto it.
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(resolvedBevelColor)
+                        .offset(y: isPressed ? 1.5 : depth)
+                    // Top face
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(backgroundColor)
+                }
+            )
+            .offset(y: isPressed ? depth : 0)
+            .padding(.bottom, depth)
+            .animation(.spring(response: 0.22, dampingFraction: 0.62), value: isPressed)
+    }
+}
+
+/// View modifier for generic 3D press response
+struct Press3DModifier: ViewModifier {
+    var depth: CGFloat = 4
+    var isPressed: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .offset(y: isPressed ? depth : 0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: isPressed)
+    }
+}
+
+/// Scroll-safe press reporter. A `ButtonStyle` that forwards the button's real
+/// `isPressed` (which SwiftUI cancels correctly when a scroll begins, unlike a raw
+/// DragGesture) to a binding, without transforming the label — so the label can
+/// drive its own bespoke tactile response (compression, sheen, shadow collapse).
+struct PressReportingStyle: ButtonStyle {
+    @Binding var isPressed: Bool
+    var onDown: (() -> Void)? = nil
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { pressing in
+                isPressed = pressing
+                if pressing { onDown?() }
+            }
     }
 }
 
@@ -886,6 +1055,44 @@ class HapticManager {
     /// Long press activated
     func longPressActivated() {
         mediumImpact()
+    }
+
+    // MARK: - 3D & Duolingo Memory Haptic Signatures
+
+    /// Sharp card-edge flip thud at 90° flip angle
+    func cardFlipEdgeThud() {
+        rigidImpact()
+    }
+
+    /// Magnetic snap click when dragging a word tile into a blank slot
+    func magneticSnapClick() {
+        lightImpact()
+    }
+
+    /// Pulse emitted when a spoken word matches during 'Say It Back' speech recognition
+    func speechWordMatched() {
+        softImpact()
+    }
+
+    /// Duolingo-style stage completion chime & vibration
+    func lessonStageComplete() {
+        mediumImpact()
+    }
+
+    /// Wax-seal stamp impact for mastering a verse or completing today's workout
+    func masteryStampSeal() {
+        heavyImpact()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+            self?.success()
+        }
+    }
+
+    /// Streak forge fire rumble
+    func streakForgeRumble() {
+        heavyImpact()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+            self?.mediumImpact()
+        }
     }
 }
 
@@ -1589,9 +1796,16 @@ struct LevelUpView: View {
                             .foregroundStyle(Color.reforgedGold)
                             .tracking(2)
 
-                        Text("You are now a \(levelTitle)")
+                        Text(LevelProgression.levelUpLine(for: newLevel))
                             .font(.headline)
+                            .multilineTextAlignment(.center)
                             .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        if let reward = LevelProgression.freezeRewardLine(AppState.shared.lastLevelUpFreezes) {
+                            Label(reward, systemImage: "snowflake")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color(red: 0.35, green: 0.62, blue: 0.95))
+                        }
                     }
 
                     // Continue button
@@ -1746,116 +1960,6 @@ struct BadgeEarnedView: View {
     private func dismiss() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             isPresented = false
-        }
-    }
-}
-
-// MARK: - Practice Complete Celebration
-
-struct PracticeCompleteCelebration: View {
-    let score: Int // 1-5 quality rating
-    let xpEarned: Int
-    @Binding var isPresented: Bool
-    @State private var showConfetti = false
-    @State private var iconScale: CGFloat = 0.3
-    @State private var textOpacity: Double = 0
-    @Environment(\.colorScheme) var colorScheme
-
-    var celebrationMessage: String {
-        switch score {
-        case 5: return "Perfect!"
-        case 4: return "Great Job!"
-        case 3: return "Good Work!"
-        case 2: return "Keep Practicing!"
-        default: return "Don't Give Up!"
-        }
-    }
-
-    var celebrationIcon: String {
-        switch score {
-        case 5: return "star.circle.fill"
-        case 4: return "hand.thumbsup.circle.fill"
-        case 3: return "checkmark.circle.fill"
-        case 2: return "arrow.clockwise.circle.fill"
-        default: return "heart.circle.fill"
-        }
-    }
-
-    var celebrationColor: Color {
-        switch score {
-        case 5: return .reforgedGold
-        case 4: return .green
-        case 3: return .blue
-        case 2: return .orange
-        default: return .reforgedCoral
-        }
-    }
-
-    var body: some View {
-        if isPresented {
-            VStack(spacing: 20) {
-                // Icon
-                Image(systemName: celebrationIcon)
-                    .font(.system(size: 60))
-                    .foregroundStyle(celebrationColor)
-                    .scaleEffect(iconScale)
-                    .shadow(color: celebrationColor.opacity(0.4), radius: 10)
-
-                // Message
-                VStack(spacing: 8) {
-                    Text(celebrationMessage)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .foregroundStyle(Color.reforgedGold)
-                        Text("+\(xpEarned) XP")
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.reforgedGold)
-                    }
-                    .font(.headline)
-                }
-                .opacity(textOpacity)
-            }
-            .padding(40)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .shadow(color: Color.black.opacity(0.15), radius: 20)
-            .confetti(isActive: $showConfetti, intensity: score >= 4 ? .medium : .low)
-            .onAppear {
-                // Haptic based on score
-                if score >= 4 {
-                    HapticManager.shared.correctAnswer()
-                } else {
-                    HapticManager.shared.lightImpact()
-                }
-
-                // Animate icon
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
-                    iconScale = 1.0
-                }
-
-                // Fade in text
-                withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
-                    textOpacity = 1.0
-                }
-
-                // Show confetti for good scores
-                if score >= 4 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showConfetti = true
-                    }
-                }
-
-                // Auto dismiss
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    withAnimation {
-                        isPresented = false
-                    }
-                }
-            }
         }
     }
 }

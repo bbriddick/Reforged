@@ -1,0 +1,2134 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0AD119BA881D3D4DCA6BABB0 /* TracksRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */; };
+		1AA2D9EB503E6A1B06F67F3D /* BibleReadingSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */; };
+		1AC23DA38F1D26DD79451A25 /* AgeGateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */; };
+		3B40F38F2FBBD3A08D42F18F /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD4BCA6620AB550441B62CA /* SettingsModels.swift */; };
+		54B4AA75BF152C7102BC424E /* LearnModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B85E73BE6B79BBFC71BA1C8 /* LearnModels.swift */; };
+		5C0D488D9F2B8A357C36FB36 /* AccountSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C79FE2CBEAC63ABD279754 /* AccountSettingsSection.swift */; };
+		5D3891187F2724D10FD5A9F2 /* AboutSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5190404405A017340CF7CDD3 /* AboutSection.swift */; };
+		6B09D1742FBC9C9900163A25 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		6B09D1772FBC9C9B00163A25 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC000001279B9E0000000001 /* FamilyControls.framework */; };
+		6B0ADE8C2F3259CE00DBAC28 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6B0ADE8B2F3259CE00DBAC28 /* Launch Screen.storyboard */; };
+		6B3C67BE2F3302EB008165D9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B3C67BD2F3302EB008165D9 /* WidgetKit.framework */; };
+		6B3C67C02F3302EB008165D9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B3C67BF2F3302EB008165D9 /* SwiftUI.framework */; };
+		6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		6B3C67E02F3303EB008165D9 /* ReforgedWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3C67E12F3303EB008165D9 /* ReforgedWidget.swift */; };
+		6B3C67E22F3303EB008165D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B3C67E32F3303EB008165D9 /* Assets.xcassets */; };
+		6B3C67F12F3303EB008165D9 /* PanicWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3C67F22F3303EB008165D9 /* PanicWidget.swift */; };
+		9A4D9885AAA3F662E0376A57 /* LearnViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F811E54E5FD3F7856A5DBC2 /* LearnViews.swift */; };
+		9A7E0011279B9E0000000001 /* VerseOfTheDayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */; };
+		9F25489E7841AF60EE0BEF00 /* DisplaySettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */; };
+		A1000001279B9E0000000001 /* ReforgedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002279B9E0000000001 /* ReforgedApp.swift */; };
+		A1000003279B9E0000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004279B9E0000000001 /* ContentView.swift */; };
+		A1000007279B9E0000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000008279B9E0000000001 /* Assets.xcassets */; };
+		A1000019279B9E0000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001A279B9E0000000001 /* AppDelegate.swift */; };
+		A100001B279B9E0000000001 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001C279B9E0000000001 /* NotificationManager.swift */; };
+		A1000020279B9E0000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000021279B9E0000000001 /* Models.swift */; };
+		A1000022279B9E0000000001 /* MemoryVerse.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000023279B9E0000000001 /* MemoryVerse.swift */; };
+		A1000024279B9E0000000001 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000025279B9E0000000001 /* UserProfile.swift */; };
+		A1000026279B9E0000000001 /* JournalEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000027279B9E0000000001 /* JournalEntry.swift */; };
+		A1000028279B9E0000000001 /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000029279B9E0000000001 /* SampleData.swift */; };
+		A1000030279B9E0000000001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000031279B9E0000000001 /* AppState.swift */; };
+		AMBS0001279B9E0000000001 /* AmbientSoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMBS0002279B9E0000000001 /* AmbientSoundPlayer.swift */; };
+		CRWN0001279B9E0000000001 /* CrownStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRWN0002279B9E0000000001 /* CrownStore.swift */; };
+		A1000032279B9E0000000001 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000033279B9E0000000001 /* HomeView.swift */; };
+		A1000034279B9E0000000001 /* TracksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000035279B9E0000000001 /* TracksView.swift */; };
+		A1000034279B9E0000000101 /* HomeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000035279B9E0000000101 /* HomeSearchView.swift */; };
+		A1000036279B9E0000000001 /* LessonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000037279B9E0000000001 /* LessonView.swift */; };
+		A1000038279B9E0000000001 /* MemoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000039279B9E0000000001 /* MemoryView.swift */; };
+		A100003A279B9E0000000001 /* MemoryReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003B279B9E0000000001 /* MemoryReviewView.swift */; };
+		A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003D279B9E0000000001 /* MemoryPracticeView.swift */; };
+		A100003E279B9E0000000001 /* BibleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003F279B9E0000000001 /* BibleView.swift */; };
+		A1000040279B9E0000000001 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000041279B9E0000000001 /* ProfileView.swift */; };
+		SHOP0001279B9E0000000001 /* CrownShopView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHOP0002279B9E0000000001 /* CrownShopView.swift */; };
+		A1000042279B9E0000000001 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000043279B9E0000000001 /* JournalView.swift */; };
+		A1000044279B9E0000000001 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000045279B9E0000000001 /* OnboardingFlowView.swift */; };
+		A1000046279B9E0000000001 /* ESVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000047279B9E0000000001 /* ESVService.swift */; };
+		A1000048279B9E0000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000049279B9E0000000001 /* Theme.swift */; };
+		A100004A279B9E0000000001 /* BundledDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100004B279B9E0000000001 /* BundledDataService.swift */; };
+		A1000060279B9E0000000001 /* BibleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000061279B9E0000000001 /* BibleModels.swift */; };
+		A1000062279B9E0000000001 /* ChapterNavigationWheel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */; };
+		A1000080279B9E0000000001 /* KJVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000081279B9E0000000001 /* KJVService.swift */; };
+		A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000083279B9E0000000001 /* JournalStorageManager.swift */; };
+		A1000084279B9E0000000001 /* ReadingStreakManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000085279B9E0000000001 /* ReadingStreakManager.swift */; };
+		A1000086279B9E0000000001 /* KnowledgeBase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000087279B9E0000000001 /* KnowledgeBase.swift */; };
+		A1000090279B9E0000000001 /* iCloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000091279B9E0000000001 /* iCloudSyncService.swift */; };
+		A1000092279B9E0000000001 /* AppleSignInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000093279B9E0000000001 /* AppleSignInService.swift */; };
+		A1000094279B9E0000000001 /* CloudKitSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000095279B9E0000000001 /* CloudKitSyncService.swift */; };
+		A10000B0279B9E0000000001 /* StreakShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000B1279B9E0000000001 /* StreakShareCardView.swift */; };
+		A10000C0279B9E0000000001 /* VerseShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000C1279B9E0000000001 /* VerseShareCardView.swift */; };
+		A10000D0279B9E0000000001 /* UnsplashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000D1279B9E0000000001 /* UnsplashService.swift */; };
+		A10000E2279B9E0000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A10000E1279B9E0000000001 /* PrivacyInfo.xcprivacy */; };
+		A10000E3279B9E0000000001 /* MemoryAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */; };
+		A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1AABB01279B9E0000000001 /* ApiBibleService.swift */; };
+		A68BD1368B4DEE2199B124EE /* GroupsHubViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF048A10273B9C0FD63E00B3 /* GroupsHubViewModel.swift */; };
+		AIS0000A279B9E0000000001 /* AISettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AIS0000B279B9E0000000001 /* AISettingsSection.swift */; };
+		AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AL000001279B9E0000000001 /* AccountabilityLockService.swift */; };
+		AN000001279B9E0000000001 /* AntiochSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AN000002279B9E0000000001 /* AntiochSearchService.swift */; };
+		APS00002279B9E0000000001 /* AccountabilityPartnerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = APS00001279B9E0000000001 /* AccountabilityPartnerService.swift */; };
+		APV00002279B9E0000000001 /* AccountabilityPartnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APV00001279B9E0000000001 /* AccountabilityPartnerView.swift */; };
+		B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00001279B9E0000000001 /* StrongsModels.swift */; };
+		B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00003279B9E0000000001 /* StrongsLexiconService.swift */; };
+		B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00005279B9E0000000001 /* WordTappableVerseText.swift */; };
+		B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */; };
+		B1A0000A279B9E0000000001 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00009279B9E0000000001 /* FlowLayout.swift */; };
+		B1A0000C279B9E0000000001 /* StrongHebrewDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */; };
+		B1A0000E279B9E0000000001 /* StrongGreekDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */; };
+		B1A00012279B9E0000000001 /* ConcordanceSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */; };
+		B1A0001C279B9E0000000001 /* kjvpce.json in Resources */ = {isa = PBXBuildFile; fileRef = B1A0001B279B9E0000000001 /* kjvpce.json */; };
+		B1A0AA0100000000000000A2 /* TextKit/ScriptureAttributedText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0AA0100000000000000A1 /* TextKit/ScriptureAttributedText.swift */; };
+		B1A0AA0100000000000000A4 /* TextKit/BibleAttributedTextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0AA0100000000000000A3 /* TextKit/BibleAttributedTextBuilder.swift */; };
+		B1A0AA0100000000000000A6 /* TextKit/BibleTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0AA0100000000000000A5 /* TextKit/BibleTextView.swift */; };
+		B1A0AA0100000000000000A8 /* TextKit/BibleWindowedReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0AA0100000000000000A7 /* TextKit/BibleWindowedReader.swift */; };
+		B9C1AFBE4511D3A9F150099E /* HandoutViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA13B4D8EC53510341B412A1 /* HandoutViews.swift */; };
+		BAFBE3AE35B043D9E9425DA0 /* GroupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326981E4627DA0FA59373737 /* GroupModels.swift */; };
+		BAV00001279B9E0000000001 /* BibleAtlasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAV00002279B9E0000000001 /* BibleAtlasView.swift */; };
+		BDD100000000000000000001 /* BibleDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD100000000000000000002 /* BibleDownloadManager.swift */; };
+		BDD100000000000000000005 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD100000000000000000006 /* NowPlayingView.swift */; };
+		BDD100000000000000000009 /* NetworkRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD10000000000000000000A /* NetworkRetry.swift */; };
+		BPJ00001279B9E0000000001 /* BiblePlaces.json in Resources */ = {isa = PBXBuildFile; fileRef = BPJ00002279B9E0000000001 /* BiblePlaces.json */; };
+		BPS00001279B9E0000000001 /* BiblePlaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BPS00002279B9E0000000001 /* BiblePlaceService.swift */; };
+		BRP00002279B9E0000000001 /* BibleReadingPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00001279B9E0000000001 /* BibleReadingPlan.swift */; };
+		BRP00004279B9E0000000001 /* BibleReadingPlanData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */; };
+		BRP00006279B9E0000000001 /* ReadingPlanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00005279B9E0000000001 /* ReadingPlanService.swift */; };
+		BRP00008279B9E0000000001 /* ReadingPlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00007279B9E0000000001 /* ReadingPlansView.swift */; };
+		BRS00001279B9E0000000001 /* BibleReferenceScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */; };
+		C00F4DA8BD650DA93C8F05F9 /* GroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C1225C9A7896DA8A5F2603 /* GroupsView.swift */; };
+		C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */; };
+		C1A00096279B9E0000000001 /* SuggestedVerses.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A00097279B9E0000000001 /* SuggestedVerses.swift */; };
+		C98C67506FFE873CBB627E7E /* GroupPrayerReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5478BBF8FE099EB550B4A8B3 /* GroupPrayerReviewView.swift */; };
+		CC000001279B9E0000000001 /* VerseCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000002279B9E0000000001 /* VerseCollection.swift */; };
+		CC000003279B9E0000000001 /* CollectionBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000004279B9E0000000001 /* CollectionBuilderView.swift */; };
+		CC000005279B9E0000000001 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000006279B9E0000000001 /* CollectionDetailView.swift */; };
+		CC000090279B9E0000000001 /* ReflectionTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000091279B9E0000000001 /* ReflectionTemplate.swift */; };
+		CDM00001279B9E0000000001 /* CommentaryDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDM00002279B9E0000000001 /* CommentaryDownloadManager.swift */; };
+		CEL00002279B9E0000000001 /* CelebrationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEL00001279B9E0000000001 /* CelebrationOverlay.swift */; };
+		CSMV0001279B9E0000000001 /* CosmeticViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CSMV0002279B9E0000000001 /* CosmeticViews.swift */; };
+		CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */; };
+		WSET0001279B9E0000000001 /* WidgetSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSET0002279B9E0000000001 /* WidgetSettingsSection.swift */; };
+		CMDLVW2279B9E0000000001 /* CommentaryDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */; };
+		CMRD00002279B9E0000000001 /* CommentaryReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */; };
+		CMS00001279B9E0000000001 /* CommentaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMS00002279B9E0000000001 /* CommentaryService.swift */; };
+		CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */ = {isa = PBXBuildFile; fileRef = CRJ00002279B9E0000000001 /* CrossReferences.json */; };
+		CRM00001279B9E0000000001 /* CrossReferenceMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */; };
+		CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRS00002279B9E0000000001 /* CrossReferenceService.swift */; };
+		D1A00005279B9E0000000001 /* LearningTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00001279B9E0000000001 /* LearningTracks.swift */; };
+		D1A00006279B9E0000000001 /* DevotionalTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00002279B9E0000000001 /* DevotionalTracks.swift */; };
+		D1A00007279B9E0000000001 /* DoctrineTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00003279B9E0000000001 /* DoctrineTracks.swift */; };
+		D1A00008279B9E0000000001 /* DoctrineTracksExtended.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */; };
+		D1B00002279B9E0000000001 /* LearningPathView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B00001279B9E0000000001 /* LearningPathView.swift */; };
+		DA000002279B9E0000000001 /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */; };
+		DA000010279B9E0000000001 /* ReforgedActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DA000013279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
+		DA000014279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		DA000015279B9E0000000001 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC000001279B9E0000000001 /* FamilyControls.framework */; };
+		DAAPP01279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
+		DBADC9AD1915DE2F7BB59C49 /* GroupsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A02714018A04BEFD68CAD92 /* GroupsService.swift */; };
+		DC9594E35E6746C572ABE7A5 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11826B8D31CD2DF20F878856 /* SettingsManager.swift */; };
+		DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 667642CA8ACE4CCE82FCC6E8 /* BibleProgressView.swift */; };
+		DD45E35B78B676B857D11FD7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDAFE317A9066691D3A47C88 /* SettingsView.swift */; };
+		DLRV0001279B9E0000000001 /* DailyLessonRunnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DLRV0002279B9E0000000001 /* DailyLessonRunnerView.swift */; };
+		DPBV00002279B9E0000000001 /* RhythmItemEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPBV00001279B9E0000000001 /* RhythmItemEditorView.swift */; };
+		DPCP00002279B9E0000000001 /* CustomReadingPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPCP00001279B9E0000000001 /* CustomReadingPlanStore.swift */; };
+		DPDV00002279B9E0000000001 /* CustomReadingPlanBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPDV00001279B9E0000000001 /* CustomReadingPlanBuilderView.swift */; };
+		DPLV00002279B9E0000000001 /* RhythmHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPLV00001279B9E0000000001 /* RhythmHubView.swift */; };
+		DPMD00002279B9E0000000001 /* RhythmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPMD00001279B9E0000000001 /* RhythmModels.swift */; };
+		DPSM00002279B9E0000000001 /* RhythmStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DPSM00001279B9E0000000001 /* RhythmStorageManager.swift */; };
+		DS000002279B9E0000000001 /* DiscipleshipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS000001279B9E0000000001 /* DiscipleshipView.swift */; };
+		DWSS0001279B9E0000000001 /* DailyWorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = DWSS0002279B9E0000000001 /* DailyWorkoutSession.swift */; };
+		E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00001279B9E0000000001 /* ProfileImageService.swift */; };
+		E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A00003279B9E0000000001 /* ProfileAvatarView.swift */; };
+		E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000002279B9E0000000001 /* BibleSearchService.swift */; };
+		EE277622B31DCD276294A429 /* MemorySettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */; };
+		EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000002279B9E0000000001 /* BibleAudioPlayer.swift */; };
+		EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000004279B9E0000000001 /* UnifiedNavigationView.swift */; };
+		EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000006279B9E0000000001 /* SearchPanelView.swift */; };
+		EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000008279B9E0000000001 /* TakeNoteView.swift */; };
+		EXP00002279B9E0000000001 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXP00001279B9E0000000001 /* ExportService.swift */; };
+		F51AB00E9FE5CB264ECF20DF /* AudioSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */; };
+		FB000002279B9E0000000001 /* FocusBlockingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001279B9E0000000001 /* FocusBlockingView.swift */; };
+		FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FS000001279B9E0000000001 /* FocusBlockingService.swift */; };
+		FSC00002279B9E0000000001 /* FocusSessionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FSC00001279B9E0000000001 /* FocusSessionCard.swift */; };
+		FSS00002279B9E0000000001 /* FocusSessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FSS00001279B9E0000000001 /* FocusSessionService.swift */; };
+		GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = GEM0000B279B9E0000000001 /* GeminiService.swift */; };
+		HSG00002279B9E0000000001 /* HomeSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = HSG00001279B9E0000000001 /* HomeSuggestion.swift */; };
+		KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJV0000A279B9E0000000001 /* KJVAudioService.swift */; };
+		KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */; };
+		KJVDLMG2279B9E0000000001 /* KJVAudioDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */; };
+		KJVDLVW2279B9E0000000001 /* KJVAudioDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */; };
+		MCUR00002279B9E0000000001 /* MemoryCurriculum.swift in Sources */ = {isa = PBXBuildFile; fileRef = MCUR00001279B9E0000000001 /* MemoryCurriculum.swift */; };
+		MCV00002279B9E0000000001 /* MessageComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MCV00001279B9E0000000001 /* MessageComposeView.swift */; };
+		MJVW0001279B9E0000000001 /* MemoryJourneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MJVW0002279B9E0000000001 /* MemoryJourneyView.swift */; };
+		PRGS0001279B9E0000000001 /* ProgressSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRGS0002279B9E0000000001 /* ProgressSheets.swift */; };
+		SFSV0001279B9E0000000001 /* StreakFreezeSavedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SFSV0002279B9E0000000001 /* StreakFreezeSavedView.swift */; };
+		MRNE00002279B9E0000000001 /* MorningRoutineEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MRNE00001279B9E0000000001 /* MorningRoutineEntry.swift */; };
+		MRNV00002279B9E0000000001 /* MorningRoutineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MRNV00001279B9E0000000001 /* MorningRoutineView.swift */; };
+		MRSM00002279B9E0000000001 /* MorningRoutineStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = MRSM00001279B9E0000000001 /* MorningRoutineStorageManager.swift */; };
+		MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		MZP00001279B9E0000000001 /* MinimalZip.swift in Sources */ = {isa = PBXBuildFile; fileRef = MZP00002279B9E0000000001 /* MinimalZip.swift */; };
+		NET0000A279B9E0000000001 /* NETService.swift in Sources */ = {isa = PBXBuildFile; fileRef = NET0000B279B9E0000000001 /* NETService.swift */; };
+		PC000002279B9E0000000001 /* PodcastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000001279B9E0000000001 /* PodcastModels.swift */; };
+		PC000004279B9E0000000001 /* PodcastService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000003279B9E0000000001 /* PodcastService.swift */; };
+		PC000006279B9E0000000001 /* PodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC000005279B9E0000000001 /* PodcastView.swift */; };
+		PPS00002279B9E0000000001 /* PrayerPromptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = PPS00001279B9E0000000001 /* PrayerPromptSheet.swift */; };
+		RF0000A1279B9E0000000001 /* ReflectionNoteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */; };
+		RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RF0000A4279B9E0000000001 /* DeepDrillView.swift */; };
+		RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */; };
+		RG000003279B9E0000000001 /* Fonts/Roboto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000004279B9E0000000001 /* Fonts/Roboto.ttf */; };
+		RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000006279B9E0000000001 /* MatchingGameView.swift */; };
+		RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG000008279B9E0000000001 /* CompleteTheVerseView.swift */; };
+		RG000009279B9E0000000001 /* trparsed.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000A279B9E0000000001 /* trparsed.json */; };
+		RG00000B279B9E0000000001 /* wlc.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000C279B9E0000000001 /* wlc.json */; };
+		RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000001 /* OriginalLanguageService.swift */; };
+		RG00000D279B9E0000000099 /* sblgnt.json in Resources */ = {isa = PBXBuildFile; fileRef = RG00000E279B9E0000000099 /* sblgnt.json */; };
+		RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */; };
+		RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */; };
+		RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */; };
+		RS000002279B9E0000000001 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */; };
+		RTE00002279B9E0000000001 /* RichTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTE00001279B9E0000000001 /* RichTextEditorView.swift */; };
+		RWJ00002279B9E0000000001 /* RewardJackpot.swift in Sources */ = {isa = PBXBuildFile; fileRef = RWJ00001279B9E0000000001 /* RewardJackpot.swift */; };
+		RWS00001279B9E0000000001 /* ReferenceWorkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RWS00002279B9E0000000001 /* ReferenceWorkService.swift */; };
+		SA000002279B9E0000000001 /* ShieldActionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = SA000001279B9E0000000001 /* ShieldActionExtension.swift */; };
+		SA00000C279B9E0000000001 /* ReforgedShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = SA000003279B9E0000000001 /* ReforgedShieldAction.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		SAMS0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MAN00001279B9E0000000001 /* ManagedSettings.framework */; };
+		SB000001279B9E0000000001 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SB000002279B9E0000000001 /* SupabaseAuthService.swift */; };
+		SBS00002279B9E0000000001 /* ScheduledBlockingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SBS00001279B9E0000000001 /* ScheduledBlockingService.swift */; };
+		SC000002279B9E0000000001 /* ShieldContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = SC000001279B9E0000000001 /* ShieldContentProvider.swift */; };
+		SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = RS000003279B9E0000000001 /* ReforgedShield.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */; };
+		SEV00002279B9E0000000001 /* ScheduleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEV00001279B9E0000000001 /* ScheduleEditorView.swift */; };
+		SHC00002279B9E0000000001 /* ShieldComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHC00001279B9E0000000001 /* ShieldComponents.swift */; };
+		SIBV0001279B9E0000000001 /* SayItBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SIBV0002279B9E0000000001 /* SayItBackView.swift */; };
+		SIV00002279B9E0000000001 /* ShieldInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SIV00001279B9E0000000001 /* ShieldInsightsView.swift */; };
+		SL000002279B9E0000000001 /* SocialLimitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SL000001279B9E0000000001 /* SocialLimitService.swift */; };
+		SLHB00002279B9E0000000001 /* StudyLibraryHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */; };
+		SMV00002279B9E0000000001 /* SocialMediaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SMV00001279B9E0000000001 /* SocialMediaView.swift */; };
+		SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SO000001279B9E0000000001 /* ShieldOnboardingView.swift */; };
+		SPDJ00002279B9E0000000001 /* SpurgeonMorningEvening.json in Resources */ = {isa = PBXBuildFile; fileRef = SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */; };
+		SPDS00002279B9E0000000001 /* SpurgeonDevotionalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */; };
+		SPDV00002279B9E0000000001 /* SpurgeonDevotionalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */; };
+		SR000002279B9E0000000001 /* ReforgedReportExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = SR000001279B9E0000000001 /* ReforgedReportExtension.swift */; };
+		SR00000C279B9E0000000001 /* ReforgedReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = SR000003279B9E0000000001 /* ReforgedReport.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		SRFW0001279B9E0000000001 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA00DA01279B9E0000000001 /* DeviceActivity.framework */; };
+		SRFW0002279B9E0000000001 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B3C67BF2F3302EB008165D9 /* SwiftUI.framework */; };
+		SRSV0001279B9E0000000001 /* SpeechRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRSV0002279B9E0000000001 /* SpeechRecognitionService.swift */; };
+		SSS00002279B9E0000000001 /* ShieldStreakService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SSS00001279B9E0000000001 /* ShieldStreakService.swift */; };
+		STLB00002279B9E0000000001 /* StudyLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = STLB00001279B9E0000000001 /* StudyLibraryView.swift */; };
+		SWJ00011279B9E0000000001 /* Scofield.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00021279B9E0000000001 /* Scofield.json */; };
+		SWJ00012279B9E0000000001 /* Easton.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00022279B9E0000000001 /* Easton.json */; };
+		SWJ00013279B9E0000000001 /* AbbottSmith.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00023279B9E0000000001 /* AbbottSmith.json */; };
+		SWJ00014279B9E0000000001 /* Nave.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00024279B9E0000000001 /* Nave.json */; };
+		SWJ00015279B9E0000000001 /* TCR.json in Resources */ = {isa = PBXBuildFile; fileRef = SWJ00025279B9E0000000001 /* TCR.json */; };
+		TBJ00001279B9E0000000001 /* TopicalVerses.json in Resources */ = {isa = PBXBuildFile; fileRef = TBJ00002279B9E0000000001 /* TopicalVerses.json */; };
+		TBS00001279B9E0000000001 /* TopicalBibleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TBS00002279B9E0000000001 /* TopicalBibleService.swift */; };
+		TJMG00002279B9E0000000001 /* TipJarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TJMG00001279B9E0000000001 /* TipJarManager.swift */; };
+		TJVW00002279B9E0000000001 /* TipJarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TJVW00001279B9E0000000001 /* TipJarView.swift */; };
+		TSV00002279B9E0000000001 /* TemptedSOSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TSV00001279B9E0000000001 /* TemptedSOSView.swift */; };
+		TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TTS0000B279B9E0000000001 /* TTSVoiceService.swift */; };
+		UGS00002279B9E0000000001 /* UnlockGateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = UGS00001279B9E0000000001 /* UnlockGateService.swift */; };
+		VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = VSS00002279B9E0000000001 /* VerseStudySheet.swift */; };
+		WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WC000002279B9E0000000001 /* WeeklyCheckinService.swift */; };
+		WLS00001279B9E0000000001 /* WordLocatorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WLS00002279B9E0000000001 /* WordLocatorService.swift */; };
+		WLV00001279B9E0000000001 /* WordLocatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WLV00002279B9E0000000001 /* WordLocatorView.swift */; };
+		WNV0000B279B9E0000000001 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WNV0000A279B9E0000000001 /* WhatsNewView.swift */; };
+		WOC00002279B9E0000000001 /* WordsOfChristData.swift in Sources */ = {isa = PBXBuildFile; fileRef = WOC00001279B9E0000000001 /* WordsOfChristData.swift */; };
+		WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */ = {isa = PBXBuildFile; fileRef = WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		6B3C67CD2F3302EC008165D9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B3C67BA2F3302EB008165D9;
+			remoteInfo = ReforgedWidgetExtension;
+		};
+		DA000011279B9E0000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DA000007279B9E0000000001;
+			remoteInfo = ReforgedActivityMonitor;
+		};
+		SA000004279B9E0000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = SA000007279B9E0000000001;
+			remoteInfo = ReforgedShieldAction;
+		};
+		SC000004279B9E0000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = RS000007279B9E0000000001;
+			remoteInfo = ReforgedShield;
+		};
+		SR000004279B9E0000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000013279B9E0000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = SR000007279B9E0000000001;
+			remoteInfo = ReforgedReport;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6B3C67D02F3302EC008165D9 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6B3C67CF2F3302EC008165D9 /* ReforgedWidgetExtension.appex in Embed Foundation Extensions */,
+				SC000003279B9E0000000001 /* ReforgedShield.appex in Embed Foundation Extensions */,
+				SA00000C279B9E0000000001 /* ReforgedShieldAction.appex in Embed Foundation Extensions */,
+				DA000010279B9E0000000001 /* ReforgedActivityMonitor.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SR00000D279B9E0000000099 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				SR00000C279B9E0000000001 /* ReforgedReport.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgeGateManager.swift; sourceTree = "<group>"; };
+		11826B8D31CD2DF20F878856 /* SettingsManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsManager.swift; path = Reforged/Services/SettingsManager.swift; sourceTree = "<group>"; };
+		150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DisplaySettingsSection.swift; path = Reforged/Views/Settings/DisplaySettingsSection.swift; sourceTree = "<group>"; };
+		22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TracksRepository.swift; sourceTree = "<group>"; };
+		2B85E73BE6B79BBFC71BA1C8 /* LearnModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnModels.swift; sourceTree = "<group>"; };
+		326981E4627DA0FA59373737 /* GroupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupModels.swift; sourceTree = "<group>"; };
+		3AD4BCA6620AB550441B62CA /* SettingsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsModels.swift; path = Reforged/Models/SettingsModels.swift; sourceTree = "<group>"; };
+		43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationSettingsSection.swift; path = Reforged/Views/Settings/NotificationSettingsSection.swift; sourceTree = "<group>"; };
+		WSET0002279B9E0000000001 /* WidgetSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WidgetSettingsSection.swift; path = Reforged/Views/Settings/WidgetSettingsSection.swift; sourceTree = "<group>"; };
+		5190404405A017340CF7CDD3 /* AboutSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AboutSection.swift; path = Reforged/Views/Settings/AboutSection.swift; sourceTree = "<group>"; };
+		5478BBF8FE099EB550B4A8B3 /* GroupPrayerReviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupPrayerReviewView.swift; sourceTree = "<group>"; };
+		667642CA8ACE4CCE82FCC6E8 /* BibleProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleProgressView.swift; sourceTree = "<group>"; };
+		68C79FE2CBEAC63ABD279754 /* AccountSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AccountSettingsSection.swift; path = Reforged/Views/Settings/AccountSettingsSection.swift; sourceTree = "<group>"; };
+		6B0ADE8B2F3259CE00DBAC28 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		6B0CE4A72F9DB23200291A1A /* ReforgedShield.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedShield.entitlements; sourceTree = "<group>"; };
+		6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6B3C67BD2F3302EB008165D9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		6B3C67BF2F3302EB008165D9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		6B3C67E12F3303EB008165D9 /* ReforgedWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReforgedWidget.swift; sourceTree = "<group>"; };
+		6B3C67E32F3303EB008165D9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		6B3C67E42F3303EB008165D9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		6B3C67E52F3303EB008165D9 /* ReforgedWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedWidget.entitlements; sourceTree = "<group>"; };
+		6B3C67F22F3303EB008165D9 /* PanicWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanicWidget.swift; sourceTree = "<group>"; };
+		6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MemorySettingsSection.swift; path = Reforged/Views/Settings/MemorySettingsSection.swift; sourceTree = "<group>"; };
+		6BC809812FE721A2004233EC /* ReforgedDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedDebug.entitlements; sourceTree = "<group>"; };
+		7A02714018A04BEFD68CAD92 /* GroupsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupsService.swift; sourceTree = "<group>"; };
+		7F811E54E5FD3F7856A5DBC2 /* LearnViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LearnViews.swift; sourceTree = "<group>"; };
+		93C1225C9A7896DA8A5F2603 /* GroupsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupsView.swift; sourceTree = "<group>"; };
+		9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseOfTheDayWidget.swift; sourceTree = "<group>"; };
+		A1000002279B9E0000000001 /* ReforgedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReforgedApp.swift; sourceTree = "<group>"; };
+		A1000004279B9E0000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1000008279B9E0000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000009279B9E0000000001 /* Reforged.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Reforged.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A100000A279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A100001A279B9E0000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A100001C279B9E0000000001 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		A100001D279B9E0000000001 /* Reforged.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Reforged.entitlements; sourceTree = "<group>"; };
+		A1000021279B9E0000000001 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		A1000023279B9E0000000001 /* MemoryVerse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryVerse.swift; sourceTree = "<group>"; };
+		A1000025279B9E0000000001 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		A1000027279B9E0000000001 /* JournalEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEntry.swift; sourceTree = "<group>"; };
+		A1000029279B9E0000000001 /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
+		A1000031279B9E0000000001 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		AMBS0002279B9E0000000001 /* AmbientSoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbientSoundPlayer.swift; sourceTree = "<group>"; };
+		CRWN0002279B9E0000000001 /* CrownStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrownStore.swift; sourceTree = "<group>"; };
+		A1000033279B9E0000000001 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		A1000035279B9E0000000001 /* TracksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TracksView.swift; sourceTree = "<group>"; };
+		A1000035279B9E0000000101 /* HomeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSearchView.swift; sourceTree = "<group>"; };
+		A1000037279B9E0000000001 /* LessonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonView.swift; sourceTree = "<group>"; };
+		A1000039279B9E0000000001 /* MemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryView.swift; sourceTree = "<group>"; };
+		A100003B279B9E0000000001 /* MemoryReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReviewView.swift; sourceTree = "<group>"; };
+		A100003D279B9E0000000001 /* MemoryPracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPracticeView.swift; sourceTree = "<group>"; };
+		A100003F279B9E0000000001 /* BibleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleView.swift; sourceTree = "<group>"; };
+		A1000041279B9E0000000001 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		SHOP0002279B9E0000000001 /* CrownShopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrownShopView.swift; sourceTree = "<group>"; };
+		A1000043279B9E0000000001 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
+		A1000045279B9E0000000001 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
+		A1000047279B9E0000000001 /* ESVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESVService.swift; sourceTree = "<group>"; };
+		A1000049279B9E0000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		A100004B279B9E0000000001 /* BundledDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledDataService.swift; sourceTree = "<group>"; };
+		A1000061279B9E0000000001 /* BibleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleModels.swift; sourceTree = "<group>"; };
+		A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterNavigationWheel.swift; sourceTree = "<group>"; };
+		A1000071279B9E0000000001 /* SettingsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
+		A1000073279B9E0000000001 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		A1000081279B9E0000000001 /* KJVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVService.swift; sourceTree = "<group>"; };
+		A1000083279B9E0000000001 /* JournalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalStorageManager.swift; sourceTree = "<group>"; };
+		A1000085279B9E0000000001 /* ReadingStreakManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStreakManager.swift; sourceTree = "<group>"; };
+		A1000087279B9E0000000001 /* KnowledgeBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeBase.swift; sourceTree = "<group>"; };
+		A1000091279B9E0000000001 /* iCloudSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iCloudSyncService.swift; sourceTree = "<group>"; };
+		A1000093279B9E0000000001 /* AppleSignInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInService.swift; sourceTree = "<group>"; };
+		A1000095279B9E0000000001 /* CloudKitSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSyncService.swift; sourceTree = "<group>"; };
+		A10000B1279B9E0000000001 /* StreakShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakShareCardView.swift; sourceTree = "<group>"; };
+		A10000C1279B9E0000000001 /* VerseShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseShareCardView.swift; sourceTree = "<group>"; };
+		A10000D1279B9E0000000001 /* UnsplashService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnsplashService.swift; sourceTree = "<group>"; };
+		A10000E1279B9E0000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryAudioPlayer.swift; sourceTree = "<group>"; };
+		A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BibleReadingSettingsSection.swift; path = Reforged/Views/Settings/BibleReadingSettingsSection.swift; sourceTree = "<group>"; };
+		A1AABB01279B9E0000000001 /* ApiBibleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiBibleService.swift; sourceTree = "<group>"; };
+		AF048A10273B9C0FD63E00B3 /* GroupsHubViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupsHubViewModel.swift; sourceTree = "<group>"; };
+		AIS0000B279B9E0000000001 /* AISettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AISettingsSection.swift; path = Reforged/Views/Settings/AISettingsSection.swift; sourceTree = "<group>"; };
+		AL000001279B9E0000000001 /* AccountabilityLockService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityLockService.swift; sourceTree = "<group>"; };
+		AN000002279B9E0000000001 /* AntiochSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntiochSearchService.swift; sourceTree = "<group>"; };
+		APS00001279B9E0000000001 /* AccountabilityPartnerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityPartnerService.swift; sourceTree = "<group>"; };
+		APV00001279B9E0000000001 /* AccountabilityPartnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityPartnerView.swift; sourceTree = "<group>"; };
+		B1A00001279B9E0000000001 /* StrongsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsModels.swift; sourceTree = "<group>"; };
+		B1A00003279B9E0000000001 /* StrongsLexiconService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsLexiconService.swift; sourceTree = "<group>"; };
+		B1A00005279B9E0000000001 /* WordTappableVerseText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTappableVerseText.swift; sourceTree = "<group>"; };
+		B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsDefinitionSheet.swift; sourceTree = "<group>"; };
+		B1A00009279B9E0000000001 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = StrongHebrewDictionary.json; sourceTree = "<group>"; };
+		B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = StrongGreekDictionary.json; sourceTree = "<group>"; };
+		B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcordanceSearchView.swift; sourceTree = "<group>"; };
+		B1A0001B279B9E0000000001 /* kjvpce.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjvpce.json; sourceTree = "<group>"; };
+		B1A0AA0100000000000000A1 /* TextKit/ScriptureAttributedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextKit/ScriptureAttributedText.swift; sourceTree = "<group>"; };
+		B1A0AA0100000000000000A3 /* TextKit/BibleAttributedTextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextKit/BibleAttributedTextBuilder.swift; sourceTree = "<group>"; };
+		B1A0AA0100000000000000A5 /* TextKit/BibleTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextKit/BibleTextView.swift; sourceTree = "<group>"; };
+		B1A0AA0100000000000000A7 /* TextKit/BibleWindowedReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextKit/BibleWindowedReader.swift; sourceTree = "<group>"; };
+		BAV00002279B9E0000000001 /* BibleAtlasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAtlasView.swift; sourceTree = "<group>"; };
+		BDD100000000000000000002 /* BibleDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleDownloadManager.swift; sourceTree = "<group>"; };
+		BDD100000000000000000006 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
+		BDD10000000000000000000A /* NetworkRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkRetry.swift; sourceTree = "<group>"; };
+		BPJ00002279B9E0000000001 /* BiblePlaces.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BiblePlaces.json; sourceTree = "<group>"; };
+		BPS00002279B9E0000000001 /* BiblePlaceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiblePlaceService.swift; sourceTree = "<group>"; };
+		BRP00001279B9E0000000001 /* BibleReadingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReadingPlan.swift; sourceTree = "<group>"; };
+		BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReadingPlanData.swift; sourceTree = "<group>"; };
+		BRP00005279B9E0000000001 /* ReadingPlanService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlanService.swift; sourceTree = "<group>"; };
+		BRP00007279B9E0000000001 /* ReadingPlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlansView.swift; sourceTree = "<group>"; };
+		BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReferenceScanner.swift; sourceTree = "<group>"; };
+		C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterScrollCoordinator.swift; sourceTree = "<group>"; };
+		C1A00097279B9E0000000001 /* SuggestedVerses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedVerses.swift; sourceTree = "<group>"; };
+		C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AudioSettingsSection.swift; path = Reforged/Views/Settings/AudioSettingsSection.swift; sourceTree = "<group>"; };
+		CA13B4D8EC53510341B412A1 /* HandoutViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HandoutViews.swift; sourceTree = "<group>"; };
+		CC000002279B9E0000000001 /* VerseCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseCollection.swift; sourceTree = "<group>"; };
+		CC000004279B9E0000000001 /* CollectionBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionBuilderView.swift; sourceTree = "<group>"; };
+		CC000006279B9E0000000001 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
+		CC000091279B9E0000000001 /* ReflectionTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionTemplate.swift; sourceTree = "<group>"; };
+		CDM00002279B9E0000000001 /* CommentaryDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryDownloadManager.swift; sourceTree = "<group>"; };
+		CEL00001279B9E0000000001 /* CelebrationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationOverlay.swift; sourceTree = "<group>"; };
+		CSMV0002279B9E0000000001 /* CosmeticViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticViews.swift; sourceTree = "<group>"; };
+		CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CommentaryDownloadsView.swift; path = Reforged/Views/Settings/CommentaryDownloadsView.swift; sourceTree = "<group>"; };
+		CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryReaderView.swift; sourceTree = "<group>"; };
+		CMS00002279B9E0000000001 /* CommentaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentaryService.swift; sourceTree = "<group>"; };
+		CRJ00002279B9E0000000001 /* CrossReferences.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = CrossReferences.json; sourceTree = "<group>"; };
+		CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceMapView.swift; sourceTree = "<group>"; };
+		CRS00002279B9E0000000001 /* CrossReferenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossReferenceService.swift; sourceTree = "<group>"; };
+		D1A00001279B9E0000000001 /* LearningTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningTracks.swift; sourceTree = "<group>"; };
+		D1A00002279B9E0000000001 /* DevotionalTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevotionalTracks.swift; sourceTree = "<group>"; };
+		D1A00003279B9E0000000001 /* DoctrineTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracks.swift; sourceTree = "<group>"; };
+		D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctrineTracksExtended.swift; sourceTree = "<group>"; };
+		D1B00001279B9E0000000001 /* LearningPathView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningPathView.swift; sourceTree = "<group>"; };
+		DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
+		DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedActivityMonitor.entitlements; sourceTree = "<group>"; };
+		DA000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DA00DA01279B9E0000000001 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		DLRV0002279B9E0000000001 /* DailyLessonRunnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyLessonRunnerView.swift; sourceTree = "<group>"; };
+		DPBV00001279B9E0000000001 /* RhythmItemEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RhythmItemEditorView.swift; sourceTree = "<group>"; };
+		DPCP00001279B9E0000000001 /* CustomReadingPlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomReadingPlanStore.swift; sourceTree = "<group>"; };
+		DPDV00001279B9E0000000001 /* CustomReadingPlanBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomReadingPlanBuilderView.swift; sourceTree = "<group>"; };
+		DPLV00001279B9E0000000001 /* RhythmHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RhythmHubView.swift; sourceTree = "<group>"; };
+		DPMD00001279B9E0000000001 /* RhythmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RhythmModels.swift; sourceTree = "<group>"; };
+		DPSM00001279B9E0000000001 /* RhythmStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RhythmStorageManager.swift; sourceTree = "<group>"; };
+		DS000001279B9E0000000001 /* DiscipleshipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscipleshipView.swift; sourceTree = "<group>"; };
+		DWSS0002279B9E0000000001 /* DailyWorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyWorkoutSession.swift; sourceTree = "<group>"; };
+		E1A00001279B9E0000000001 /* ProfileImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageService.swift; sourceTree = "<group>"; };
+		E1A00003279B9E0000000001 /* ProfileAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarView.swift; sourceTree = "<group>"; };
+		E2000002279B9E0000000001 /* BibleSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleSearchService.swift; sourceTree = "<group>"; };
+		EX000002279B9E0000000001 /* BibleAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAudioPlayer.swift; sourceTree = "<group>"; };
+		EX000004279B9E0000000001 /* UnifiedNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedNavigationView.swift; sourceTree = "<group>"; };
+		EX000006279B9E0000000001 /* SearchPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPanelView.swift; sourceTree = "<group>"; };
+		EX000008279B9E0000000001 /* TakeNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNoteView.swift; sourceTree = "<group>"; };
+		EXP00001279B9E0000000001 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+		FB000001279B9E0000000001 /* FocusBlockingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusBlockingView.swift; sourceTree = "<group>"; };
+		FC000001279B9E0000000001 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
+		FDAFE317A9066691D3A47C88 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Reforged/Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
+		FS000001279B9E0000000001 /* FocusBlockingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusBlockingService.swift; sourceTree = "<group>"; };
+		FSC00001279B9E0000000001 /* FocusSessionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSessionCard.swift; sourceTree = "<group>"; };
+		FSS00001279B9E0000000001 /* FocusSessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSessionService.swift; sourceTree = "<group>"; };
+		GEM0000B279B9E0000000001 /* GeminiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiService.swift; sourceTree = "<group>"; };
+		HSG00001279B9E0000000001 /* HomeSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSuggestion.swift; sourceTree = "<group>"; };
+		KJV0000A279B9E0000000001 /* KJVAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioService.swift; sourceTree = "<group>"; };
+		KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_audio_manifest.json; sourceTree = "<group>"; };
+		KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KJVAudioDownloadManager.swift; sourceTree = "<group>"; };
+		KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KJVAudioDownloadsView.swift; path = Reforged/Views/Settings/KJVAudioDownloadsView.swift; sourceTree = "<group>"; };
+		MAN00001279B9E0000000001 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		MCUR00001279B9E0000000001 /* MemoryCurriculum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryCurriculum.swift; sourceTree = "<group>"; };
+		MCV00001279B9E0000000001 /* MessageComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposeView.swift; sourceTree = "<group>"; };
+		MJVW0002279B9E0000000001 /* MemoryJourneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryJourneyView.swift; sourceTree = "<group>"; };
+		PRGS0002279B9E0000000001 /* ProgressSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressSheets.swift; sourceTree = "<group>"; };
+		SFSV0002279B9E0000000001 /* StreakFreezeSavedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakFreezeSavedView.swift; sourceTree = "<group>"; };
+		MRNE00001279B9E0000000001 /* MorningRoutineEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningRoutineEntry.swift; sourceTree = "<group>"; };
+		MRNV00001279B9E0000000001 /* MorningRoutineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningRoutineView.swift; sourceTree = "<group>"; };
+		MRSM00001279B9E0000000001 /* MorningRoutineStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningRoutineStorageManager.swift; sourceTree = "<group>"; };
+		MZP00002279B9E0000000001 /* MinimalZip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinimalZip.swift; sourceTree = "<group>"; };
+		NET0000B279B9E0000000001 /* NETService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NETService.swift; sourceTree = "<group>"; };
+		PC000001279B9E0000000001 /* PodcastModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastModels.swift; sourceTree = "<group>"; };
+		PC000003279B9E0000000001 /* PodcastService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastService.swift; sourceTree = "<group>"; };
+		PC000005279B9E0000000001 /* PodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastView.swift; sourceTree = "<group>"; };
+		PPS00001279B9E0000000001 /* PrayerPromptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerPromptSheet.swift; sourceTree = "<group>"; };
+		PW000001279B9E0000000001 /* PanicWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanicWidget.swift; sourceTree = "<group>"; };
+		RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionNoteSheet.swift; sourceTree = "<group>"; };
+		RF0000A4279B9E0000000001 /* DeepDrillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepDrillView.swift; sourceTree = "<group>"; };
+		RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/LibreBaskerville.ttf; sourceTree = "<group>"; };
+		RG000004279B9E0000000001 /* Fonts/Roboto.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/Roboto.ttf; sourceTree = "<group>"; };
+		RG000006279B9E0000000001 /* MatchingGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingGameView.swift; sourceTree = "<group>"; };
+		RG000008279B9E0000000001 /* CompleteTheVerseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTheVerseView.swift; sourceTree = "<group>"; };
+		RG00000A279B9E0000000001 /* trparsed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trparsed.json; sourceTree = "<group>"; };
+		RG00000C279B9E0000000001 /* wlc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wlc.json; sourceTree = "<group>"; };
+		RG00000E279B9E0000000001 /* OriginalLanguageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLanguageService.swift; sourceTree = "<group>"; };
+		RG00000E279B9E0000000099 /* sblgnt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sblgnt.json; sourceTree = "<group>"; };
+		RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/SILEOT.ttf; sourceTree = "<group>"; };
+		RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/Roboto-Italic.ttf"; sourceTree = "<group>"; };
+		RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fonts/LibreBaskerville-Italic.ttf"; sourceTree = "<group>"; };
+		RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldConfigurationExtension.swift; sourceTree = "<group>"; };
+		RS000003279B9E0000000001 /* ReforgedShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		RS000005279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		RSKF00001279B9E0000000001 /* Reforged.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Reforged.storekit; sourceTree = "<group>"; };
+		RTE00001279B9E0000000001 /* RichTextEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextEditorView.swift; sourceTree = "<group>"; };
+		RWJ00001279B9E0000000001 /* RewardJackpot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardJackpot.swift; sourceTree = "<group>"; };
+		RWS00002279B9E0000000001 /* ReferenceWorkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferenceWorkService.swift; sourceTree = "<group>"; };
+		SA000001279B9E0000000001 /* ShieldActionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldActionExtension.swift; sourceTree = "<group>"; };
+		SA000003279B9E0000000001 /* ReforgedShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		SA00000A279B9E0000000001 /* ReforgedShieldAction.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedShieldAction.entitlements; sourceTree = "<group>"; };
+		SA00000B279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		SB000002279B9E0000000001 /* SupabaseAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthService.swift; sourceTree = "<group>"; };
+		SBS00001279B9E0000000001 /* ScheduledBlockingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBlockingService.swift; sourceTree = "<group>"; };
+		SC000001279B9E0000000001 /* ShieldContentProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldContentProvider.swift; sourceTree = "<group>"; };
+		SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		SEV00001279B9E0000000001 /* ScheduleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleEditorView.swift; sourceTree = "<group>"; };
+		SHC00001279B9E0000000001 /* ShieldComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldComponents.swift; sourceTree = "<group>"; };
+		SIBV0002279B9E0000000001 /* SayItBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SayItBackView.swift; sourceTree = "<group>"; };
+		SIV00001279B9E0000000001 /* ShieldInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldInsightsView.swift; sourceTree = "<group>"; };
+		SL000001279B9E0000000001 /* SocialLimitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialLimitService.swift; sourceTree = "<group>"; };
+		SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyLibraryHubView.swift; sourceTree = "<group>"; };
+		SMV00001279B9E0000000001 /* SocialMediaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialMediaView.swift; sourceTree = "<group>"; };
+		SO000001279B9E0000000001 /* ShieldOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldOnboardingView.swift; sourceTree = "<group>"; };
+		SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SpurgeonMorningEvening.json; sourceTree = "<group>"; };
+		SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpurgeonDevotionalService.swift; sourceTree = "<group>"; };
+		SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpurgeonDevotionalView.swift; sourceTree = "<group>"; };
+		SR000001279B9E0000000001 /* ReforgedReportExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReforgedReportExtension.swift; sourceTree = "<group>"; };
+		SR000003279B9E0000000001 /* ReforgedReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReforgedReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		SR00000A279B9E0000000001 /* ReforgedReport.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReforgedReport.entitlements; sourceTree = "<group>"; };
+		SR00000B279B9E0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		SRSV0002279B9E0000000001 /* SpeechRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionService.swift; sourceTree = "<group>"; };
+		SSS00001279B9E0000000001 /* ShieldStreakService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldStreakService.swift; sourceTree = "<group>"; };
+		STLB00001279B9E0000000001 /* StudyLibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StudyLibraryView.swift; path = Reforged/Views/Settings/StudyLibraryView.swift; sourceTree = "<group>"; };
+		SWJ00021279B9E0000000001 /* Scofield.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Scofield.json; sourceTree = "<group>"; };
+		SWJ00022279B9E0000000001 /* Easton.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Easton.json; sourceTree = "<group>"; };
+		SWJ00023279B9E0000000001 /* AbbottSmith.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AbbottSmith.json; sourceTree = "<group>"; };
+		SWJ00024279B9E0000000001 /* Nave.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Nave.json; sourceTree = "<group>"; };
+		SWJ00025279B9E0000000001 /* TCR.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = TCR.json; sourceTree = "<group>"; };
+		TBJ00002279B9E0000000001 /* TopicalVerses.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = TopicalVerses.json; sourceTree = "<group>"; };
+		TBS00002279B9E0000000001 /* TopicalBibleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicalBibleService.swift; sourceTree = "<group>"; };
+		TJMG00001279B9E0000000001 /* TipJarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarManager.swift; sourceTree = "<group>"; };
+		TJVW00001279B9E0000000001 /* TipJarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarView.swift; sourceTree = "<group>"; };
+		TSV00001279B9E0000000001 /* TemptedSOSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemptedSOSView.swift; sourceTree = "<group>"; };
+		TTS0000B279B9E0000000001 /* TTSVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSVoiceService.swift; sourceTree = "<group>"; };
+		UGS00001279B9E0000000001 /* UnlockGateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockGateService.swift; sourceTree = "<group>"; };
+		VSS00002279B9E0000000001 /* VerseStudySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseStudySheet.swift; sourceTree = "<group>"; };
+		WC000002279B9E0000000001 /* WeeklyCheckinService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyCheckinService.swift; sourceTree = "<group>"; };
+		WLS00002279B9E0000000001 /* WordLocatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordLocatorService.swift; sourceTree = "<group>"; };
+		WLV00002279B9E0000000001 /* WordLocatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordLocatorView.swift; sourceTree = "<group>"; };
+		WNV0000A279B9E0000000001 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
+		WOC00001279B9E0000000001 /* WordsOfChristData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordsOfChristData.swift; sourceTree = "<group>"; };
+		WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = kjv_words_of_christ_red_markup.json; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6B3C67B82F3302EB008165D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B3C67C02F3302EB008165D9 /* SwiftUI.framework in Frameworks */,
+				6B3C67BE2F3302EB008165D9 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A100000B279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B09D1742FBC9C9900163A25 /* ManagedSettings.framework in Frameworks */,
+				DAAPP01279B9E0000000001 /* DeviceActivity.framework in Frameworks */,
+				6B09D1772FBC9C9B00163A25 /* FamilyControls.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA000009279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DA000013279B9E0000000001 /* DeviceActivity.framework in Frameworks */,
+				DA000014279B9E0000000001 /* ManagedSettings.framework in Frameworks */,
+				DA000015279B9E0000000001 /* FamilyControls.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		RS000009279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SCFW0002279B9E0000000001 /* ManagedSettingsUI.framework in Frameworks */,
+				MSEX0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SA000009279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SAMS0001279B9E0000000001 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SR000009279B9E0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SRFW0001279B9E0000000001 /* DeviceActivity.framework in Frameworks */,
+				SRFW0002279B9E0000000001 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0D25205077E81A17B7F863AE /* Groups */ = {
+			isa = PBXGroup;
+			children = (
+				93C1225C9A7896DA8A5F2603 /* GroupsView.swift */,
+				5478BBF8FE099EB550B4A8B3 /* GroupPrayerReviewView.swift */,
+				CA13B4D8EC53510341B412A1 /* HandoutViews.swift */,
+			);
+			path = Groups;
+			sourceTree = "<group>";
+		};
+		1D0773BF52EC137008448331 /* Learn */ = {
+			isa = PBXGroup;
+			children = (
+				7F811E54E5FD3F7856A5DBC2 /* LearnViews.swift */,
+			);
+			path = Learn;
+			sourceTree = "<group>";
+		};
+		4AE0CDA58A8F9A1E0D2ABE54 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				AF048A10273B9C0FD63E00B3 /* GroupsHubViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		6B1AD23B3001DE8200754446 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				DA00DA01279B9E0000000001 /* DeviceActivity.framework */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		6B3C67BC2F3302EB008165D9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				6B3C67BD2F3302EB008165D9 /* WidgetKit.framework */,
+				6B3C67BF2F3302EB008165D9 /* SwiftUI.framework */,
+				FC000001279B9E0000000001 /* FamilyControls.framework */,
+				MAN00001279B9E0000000001 /* ManagedSettings.framework */,
+				SCFW0001279B9E0000000001 /* ManagedSettingsUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		6B3C67E62F3303EB008165D9 /* ReforgedWidget */ = {
+			isa = PBXGroup;
+			children = (
+				6B3C67E12F3303EB008165D9 /* ReforgedWidget.swift */,
+				6B3C67F22F3303EB008165D9 /* PanicWidget.swift */,
+				PW000001279B9E0000000001 /* PanicWidget.swift */,
+				9A7E0010279B9E0000000001 /* VerseOfTheDayWidget.swift */,
+				6B3C67E32F3303EB008165D9 /* Assets.xcassets */,
+				6B3C67E42F3303EB008165D9 /* Info.plist */,
+				6B3C67E52F3303EB008165D9 /* ReforgedWidget.entitlements */,
+			);
+			path = ReforgedWidget;
+			sourceTree = "<group>";
+		};
+		A100000C279B9E0000000001 = {
+			isa = PBXGroup;
+			children = (
+				6B0ADE8B2F3259CE00DBAC28 /* Launch Screen.storyboard */,
+				A100000D279B9E0000000001 /* Reforged */,
+				6B3C67E62F3303EB008165D9 /* ReforgedWidget */,
+				RS000006279B9E0000000001 /* ReforgedShield */,
+				SA000006279B9E0000000001 /* ReforgedShieldAction */,
+				SR000006279B9E0000000001 /* ReforgedReport */,
+				DA000006279B9E0000000001 /* ReforgedActivityMonitor */,
+				6B3C67BC2F3302EB008165D9 /* Frameworks */,
+				A100000E279B9E0000000001 /* Products */,
+				11826B8D31CD2DF20F878856 /* SettingsManager.swift */,
+				FDAFE317A9066691D3A47C88 /* SettingsView.swift */,
+				3AD4BCA6620AB550441B62CA /* SettingsModels.swift */,
+				5190404405A017340CF7CDD3 /* AboutSection.swift */,
+				68C79FE2CBEAC63ABD279754 /* AccountSettingsSection.swift */,
+				C1F658F913BA7F6123B98DF8 /* AudioSettingsSection.swift */,
+				KJVDLVW1279B9E0000000001 /* KJVAudioDownloadsView.swift */,
+				CMDLVW1279B9E0000000001 /* CommentaryDownloadsView.swift */,
+				STLB00001279B9E0000000001 /* StudyLibraryView.swift */,
+				AIS0000B279B9E0000000001 /* AISettingsSection.swift */,
+				A12B8D4FC6456B31AE1C06B4 /* BibleReadingSettingsSection.swift */,
+				150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */,
+				6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */,
+				43C0E2F8D7C74225E70E14D1 /* NotificationSettingsSection.swift */,
+				WSET0002279B9E0000000001 /* WidgetSettingsSection.swift */,
+				6B1AD23B3001DE8200754446 /* Recovered References */,
+			);
+			sourceTree = "<group>";
+		};
+		A100000D279B9E0000000001 /* Reforged */ = {
+			isa = PBXGroup;
+			children = (
+				6BC809812FE721A2004233EC /* ReforgedDebug.entitlements */,
+				RSKF00001279B9E0000000001 /* Reforged.storekit */,
+				A1000002279B9E0000000001 /* ReforgedApp.swift */,
+				A100001A279B9E0000000001 /* AppDelegate.swift */,
+				A1000004279B9E0000000001 /* ContentView.swift */,
+				A100001C279B9E0000000001 /* NotificationManager.swift */,
+				A1000049279B9E0000000001 /* Theme.swift */,
+				A1000050279B9E0000000001 /* Models */,
+				A1000051279B9E0000000001 /* Data */,
+				A1000052279B9E0000000001 /* Services */,
+				A1000053279B9E0000000001 /* Views */,
+				B1A0000F279B9E0000000001 /* Resources */,
+				A1000008279B9E0000000001 /* Assets.xcassets */,
+				A100000A279B9E0000000001 /* Info.plist */,
+				A10000E1279B9E0000000001 /* PrivacyInfo.xcprivacy */,
+				A100001D279B9E0000000001 /* Reforged.entitlements */,
+				4AE0CDA58A8F9A1E0D2ABE54 /* ViewModels */,
+			);
+			path = Reforged;
+			sourceTree = "<group>";
+		};
+		A100000E279B9E0000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000009279B9E0000000001 /* Reforged.app */,
+				6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */,
+				RS000003279B9E0000000001 /* ReforgedShield.appex */,
+				SA000003279B9E0000000001 /* ReforgedShieldAction.appex */,
+				SR000003279B9E0000000001 /* ReforgedReport.appex */,
+				DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1000050279B9E0000000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000021279B9E0000000001 /* Models.swift */,
+				A1000023279B9E0000000001 /* MemoryVerse.swift */,
+				CC000002279B9E0000000001 /* VerseCollection.swift */,
+				A1000025279B9E0000000001 /* UserProfile.swift */,
+				A1000027279B9E0000000001 /* JournalEntry.swift */,
+				MRNE00001279B9E0000000001 /* MorningRoutineEntry.swift */,
+				DPMD00001279B9E0000000001 /* RhythmModels.swift */,
+				MCUR00001279B9E0000000001 /* MemoryCurriculum.swift */,
+				CC000091279B9E0000000001 /* ReflectionTemplate.swift */,
+				A1000061279B9E0000000001 /* BibleModels.swift */,
+				A1000071279B9E0000000001 /* SettingsModels.swift */,
+				B1A00001279B9E0000000001 /* StrongsModels.swift */,
+				C1A00097279B9E0000000001 /* SuggestedVerses.swift */,
+				BRP00001279B9E0000000001 /* BibleReadingPlan.swift */,
+				PC000001279B9E0000000001 /* PodcastModels.swift */,
+				326981E4627DA0FA59373737 /* GroupModels.swift */,
+				2B85E73BE6B79BBFC71BA1C8 /* LearnModels.swift */,
+				DWSS0002279B9E0000000001 /* DailyWorkoutSession.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A1000051279B9E0000000001 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				A1000029279B9E0000000001 /* SampleData.swift */,
+				D1A00001279B9E0000000001 /* LearningTracks.swift */,
+				D1A00002279B9E0000000001 /* DevotionalTracks.swift */,
+				D1A00003279B9E0000000001 /* DoctrineTracks.swift */,
+				D1A00004279B9E0000000001 /* DoctrineTracksExtended.swift */,
+				WOC00001279B9E0000000001 /* WordsOfChristData.swift */,
+				BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		A1000052279B9E0000000001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A1000031279B9E0000000001 /* AppState.swift */,
+				AMBS0002279B9E0000000001 /* AmbientSoundPlayer.swift */,
+				CRWN0002279B9E0000000001 /* CrownStore.swift */,
+				A1000047279B9E0000000001 /* ESVService.swift */,
+				A1000081279B9E0000000001 /* KJVService.swift */,
+				NET0000B279B9E0000000001 /* NETService.swift */,
+				KJV0000A279B9E0000000001 /* KJVAudioService.swift */,
+				KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */,
+				A1AABB01279B9E0000000001 /* ApiBibleService.swift */,
+				BDD100000000000000000002 /* BibleDownloadManager.swift */,
+				BDD10000000000000000000A /* NetworkRetry.swift */,
+				A100004B279B9E0000000001 /* BundledDataService.swift */,
+				E2000002279B9E0000000001 /* BibleSearchService.swift */,
+				AN000002279B9E0000000001 /* AntiochSearchService.swift */,
+				GEM0000B279B9E0000000001 /* GeminiService.swift */,
+				TTS0000B279B9E0000000001 /* TTSVoiceService.swift */,
+				A1000073279B9E0000000001 /* SettingsManager.swift */,
+				A1000083279B9E0000000001 /* JournalStorageManager.swift */,
+				MRSM00001279B9E0000000001 /* MorningRoutineStorageManager.swift */,
+				DPSM00001279B9E0000000001 /* RhythmStorageManager.swift */,
+				DPCP00001279B9E0000000001 /* CustomReadingPlanStore.swift */,
+				A1000085279B9E0000000001 /* ReadingStreakManager.swift */,
+				A1000087279B9E0000000001 /* KnowledgeBase.swift */,
+				A1000091279B9E0000000001 /* iCloudSyncService.swift */,
+				A1000093279B9E0000000001 /* AppleSignInService.swift */,
+				SB000002279B9E0000000001 /* SupabaseAuthService.swift */,
+				WC000002279B9E0000000001 /* WeeklyCheckinService.swift */,
+				A1000095279B9E0000000001 /* CloudKitSyncService.swift */,
+				FS000001279B9E0000000001 /* FocusBlockingService.swift */,
+				AL000001279B9E0000000001 /* AccountabilityLockService.swift */,
+				SC000001279B9E0000000001 /* ShieldContentProvider.swift */,
+				SL000001279B9E0000000001 /* SocialLimitService.swift */,
+				SBS00001279B9E0000000001 /* ScheduledBlockingService.swift */,
+				FSS00001279B9E0000000001 /* FocusSessionService.swift */,
+				UGS00001279B9E0000000001 /* UnlockGateService.swift */,
+				APS00001279B9E0000000001 /* AccountabilityPartnerService.swift */,
+				SSS00001279B9E0000000001 /* ShieldStreakService.swift */,
+				BRP00005279B9E0000000001 /* ReadingPlanService.swift */,
+				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
+				CRS00002279B9E0000000001 /* CrossReferenceService.swift */,
+				BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */,
+				WLS00002279B9E0000000001 /* WordLocatorService.swift */,
+				BPS00002279B9E0000000001 /* BiblePlaceService.swift */,
+				SPDS00001279B9E0000000001 /* SpurgeonDevotionalService.swift */,
+				CMS00002279B9E0000000001 /* CommentaryService.swift */,
+				CDM00002279B9E0000000001 /* CommentaryDownloadManager.swift */,
+				MZP00002279B9E0000000001 /* MinimalZip.swift */,
+				RWS00002279B9E0000000001 /* ReferenceWorkService.swift */,
+				TBS00002279B9E0000000001 /* TopicalBibleService.swift */,
+				RG00000E279B9E0000000001 /* OriginalLanguageService.swift */,
+				A10000D1279B9E0000000001 /* UnsplashService.swift */,
+				E1A00001279B9E0000000001 /* ProfileImageService.swift */,
+				EXP00001279B9E0000000001 /* ExportService.swift */,
+				PC000003279B9E0000000001 /* PodcastService.swift */,
+				7A02714018A04BEFD68CAD92 /* GroupsService.swift */,
+				08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */,
+				22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */,
+				TJMG00001279B9E0000000001 /* TipJarManager.swift */,
+				SRSV0002279B9E0000000001 /* SpeechRecognitionService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A1000053279B9E0000000001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000054279B9E0000000001 /* Home */,
+				MRNG00001279B9E0000000001 /* MorningRoutine */,
+				DS000003279B9E0000000001 /* Discipleship */,
+				BRP00009279B9E0000000001 /* ReadingPlans */,
+				A1000055279B9E0000000001 /* Tracks */,
+				A1000056279B9E0000000001 /* Memory */,
+				A1000057279B9E0000000001 /* Bible */,
+				A1000058279B9E0000000001 /* Profile */,
+				A1000059279B9E0000000001 /* Onboarding */,
+				B1A00010279B9E0000000001 /* Components */,
+				CA97E9787DB142498D99D497 /* Progress */,
+				SHG00001279B9E0000000001 /* Shared */,
+				WNV0000A279B9E0000000001 /* WhatsNewView.swift */,
+				0D25205077E81A17B7F863AE /* Groups */,
+				1D0773BF52EC137008448331 /* Learn */,
+				TJSG00001279B9E0000000001 /* Support */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000054279B9E0000000001 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				A1000033279B9E0000000001 /* HomeView.swift */,
+				HSG00001279B9E0000000001 /* HomeSuggestion.swift */,
+				A1000035279B9E0000000101 /* HomeSearchView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		A1000055279B9E0000000001 /* Tracks */ = {
+			isa = PBXGroup;
+			children = (
+				A1000035279B9E0000000001 /* TracksView.swift */,
+				A1000037279B9E0000000001 /* LessonView.swift */,
+				D1B00001279B9E0000000001 /* LearningPathView.swift */,
+			);
+			path = Tracks;
+			sourceTree = "<group>";
+		};
+		A1000056279B9E0000000001 /* Memory */ = {
+			isa = PBXGroup;
+			children = (
+				A1000039279B9E0000000001 /* MemoryView.swift */,
+				A100003B279B9E0000000001 /* MemoryReviewView.swift */,
+				A100003D279B9E0000000001 /* MemoryPracticeView.swift */,
+				A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */,
+				RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */,
+				RF0000A4279B9E0000000001 /* DeepDrillView.swift */,
+				RG000006279B9E0000000001 /* MatchingGameView.swift */,
+				RG000008279B9E0000000001 /* CompleteTheVerseView.swift */,
+				CC000004279B9E0000000001 /* CollectionBuilderView.swift */,
+				CC000006279B9E0000000001 /* CollectionDetailView.swift */,
+				DLRV0002279B9E0000000001 /* DailyLessonRunnerView.swift */,
+				MJVW0002279B9E0000000001 /* MemoryJourneyView.swift */,
+				PRGS0002279B9E0000000001 /* ProgressSheets.swift */,
+				SIBV0002279B9E0000000001 /* SayItBackView.swift */,
+			);
+			path = Memory;
+			sourceTree = "<group>";
+		};
+		A1000057279B9E0000000001 /* Bible */ = {
+			isa = PBXGroup;
+			children = (
+				A100003F279B9E0000000001 /* BibleView.swift */,
+				C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */,
+				EX000002279B9E0000000001 /* BibleAudioPlayer.swift */,
+				EX000004279B9E0000000001 /* UnifiedNavigationView.swift */,
+				EX000006279B9E0000000001 /* SearchPanelView.swift */,
+				EX000008279B9E0000000001 /* TakeNoteView.swift */,
+				VSS00002279B9E0000000001 /* VerseStudySheet.swift */,
+				CRM00002279B9E0000000001 /* CrossReferenceMapView.swift */,
+				CMRD00001279B9E0000000001 /* CommentaryReaderView.swift */,
+				WLV00002279B9E0000000001 /* WordLocatorView.swift */,
+				BAV00002279B9E0000000001 /* BibleAtlasView.swift */,
+				BDD100000000000000000006 /* NowPlayingView.swift */,
+				A1000063279B9E0000000001 /* ChapterNavigationWheel.swift */,
+				B1A00005279B9E0000000001 /* WordTappableVerseText.swift */,
+				B1A0AA0100000000000000A1 /* TextKit/ScriptureAttributedText.swift */,
+				B1A0AA0100000000000000A3 /* TextKit/BibleAttributedTextBuilder.swift */,
+				B1A0AA0100000000000000A5 /* TextKit/BibleTextView.swift */,
+				B1A0AA0100000000000000A7 /* TextKit/BibleWindowedReader.swift */,
+				B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */,
+				B1A00011279B9E0000000001 /* ConcordanceSearchView.swift */,
+				A10000C1279B9E0000000001 /* VerseShareCardView.swift */,
+			);
+			path = Bible;
+			sourceTree = "<group>";
+		};
+		A1000058279B9E0000000001 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				A1000041279B9E0000000001 /* ProfileView.swift */,
+				SHOP0002279B9E0000000001 /* CrownShopView.swift */,
+				A1000043279B9E0000000001 /* JournalView.swift */,
+				A10000B1279B9E0000000001 /* StreakShareCardView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		A1000059279B9E0000000001 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				A1000045279B9E0000000001 /* OnboardingFlowView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		B1A0000F279B9E0000000001 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B1A0000B279B9E0000000001 /* StrongHebrewDictionary.json */,
+				B1A0000D279B9E0000000001 /* StrongGreekDictionary.json */,
+				B1A0001B279B9E0000000001 /* kjvpce.json */,
+				KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */,
+				RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */,
+				RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */,
+				RG000004279B9E0000000001 /* Fonts/Roboto.ttf */,
+				RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */,
+				RG000010279B9E0000000001 /* Fonts/SILEOT.ttf */,
+				RG00000A279B9E0000000001 /* trparsed.json */,
+				RG00000C279B9E0000000001 /* wlc.json */,
+				RG00000E279B9E0000000099 /* sblgnt.json */,
+				CRJ00002279B9E0000000001 /* CrossReferences.json */,
+				BPJ00002279B9E0000000001 /* BiblePlaces.json */,
+				SWJ00021279B9E0000000001 /* Scofield.json */,
+				SWJ00022279B9E0000000001 /* Easton.json */,
+				SWJ00023279B9E0000000001 /* AbbottSmith.json */,
+				SWJ00024279B9E0000000001 /* Nave.json */,
+				SWJ00025279B9E0000000001 /* TCR.json */,
+				SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */,
+				TBJ00002279B9E0000000001 /* TopicalVerses.json */,
+				WOC00004279B9E0000000001 /* kjv_words_of_christ_red_markup.json */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B1A00010279B9E0000000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				B1A00009279B9E0000000001 /* FlowLayout.swift */,
+				E1A00003279B9E0000000001 /* ProfileAvatarView.swift */,
+				RTE00001279B9E0000000001 /* RichTextEditorView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		BRP00009279B9E0000000001 /* ReadingPlans */ = {
+			isa = PBXGroup;
+			children = (
+				BRP00007279B9E0000000001 /* ReadingPlansView.swift */,
+				SPDV00001279B9E0000000001 /* SpurgeonDevotionalView.swift */,
+			);
+			path = ReadingPlans;
+			sourceTree = "<group>";
+		};
+		CA97E9787DB142498D99D497 /* Progress */ = {
+			isa = PBXGroup;
+			children = (
+				667642CA8ACE4CCE82FCC6E8 /* BibleProgressView.swift */,
+			);
+			path = Progress;
+			sourceTree = "<group>";
+		};
+		DA000006279B9E0000000001 /* ReforgedActivityMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				DA000004279B9E0000000001 /* ReforgedActivityMonitor.entitlements */,
+				DA000001279B9E0000000001 /* DeviceActivityMonitorExtension.swift */,
+				DA000005279B9E0000000001 /* Info.plist */,
+			);
+			path = ReforgedActivityMonitor;
+			sourceTree = "<group>";
+		};
+		DS000003279B9E0000000001 /* Discipleship */ = {
+			isa = PBXGroup;
+			children = (
+				DS000001279B9E0000000001 /* DiscipleshipView.swift */,
+				DPLV00001279B9E0000000001 /* RhythmHubView.swift */,
+				DPBV00001279B9E0000000001 /* RhythmItemEditorView.swift */,
+				DPDV00001279B9E0000000001 /* CustomReadingPlanBuilderView.swift */,
+				SLHB00001279B9E0000000001 /* StudyLibraryHubView.swift */,
+				FB000001279B9E0000000001 /* FocusBlockingView.swift */,
+				SEV00001279B9E0000000001 /* ScheduleEditorView.swift */,
+				FSC00001279B9E0000000001 /* FocusSessionCard.swift */,
+				SMV00001279B9E0000000001 /* SocialMediaView.swift */,
+				SHC00001279B9E0000000001 /* ShieldComponents.swift */,
+				APV00001279B9E0000000001 /* AccountabilityPartnerView.swift */,
+				PPS00001279B9E0000000001 /* PrayerPromptSheet.swift */,
+				TSV00001279B9E0000000001 /* TemptedSOSView.swift */,
+				SIV00001279B9E0000000001 /* ShieldInsightsView.swift */,
+				SO000001279B9E0000000001 /* ShieldOnboardingView.swift */,
+				PC000005279B9E0000000001 /* PodcastView.swift */,
+			);
+			path = Discipleship;
+			sourceTree = "<group>";
+		};
+		MRNG00001279B9E0000000001 /* MorningRoutine */ = {
+			isa = PBXGroup;
+			children = (
+				MRNV00001279B9E0000000001 /* MorningRoutineView.swift */,
+			);
+			path = MorningRoutine;
+			sourceTree = "<group>";
+		};
+		RS000006279B9E0000000001 /* ReforgedShield */ = {
+			isa = PBXGroup;
+			children = (
+				6B0CE4A72F9DB23200291A1A /* ReforgedShield.entitlements */,
+				RS000001279B9E0000000001 /* ShieldConfigurationExtension.swift */,
+				RS000005279B9E0000000001 /* Info.plist */,
+			);
+			path = ReforgedShield;
+			sourceTree = "<group>";
+		};
+		SA000006279B9E0000000001 /* ReforgedShieldAction */ = {
+			isa = PBXGroup;
+			children = (
+				SA00000A279B9E0000000001 /* ReforgedShieldAction.entitlements */,
+				SA000001279B9E0000000001 /* ShieldActionExtension.swift */,
+				SA00000B279B9E0000000001 /* Info.plist */,
+			);
+			path = ReforgedShieldAction;
+			sourceTree = "<group>";
+		};
+		SHG00001279B9E0000000001 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				MCV00001279B9E0000000001 /* MessageComposeView.swift */,
+				CEL00001279B9E0000000001 /* CelebrationOverlay.swift */,
+				CSMV0002279B9E0000000001 /* CosmeticViews.swift */,
+				SFSV0002279B9E0000000001 /* StreakFreezeSavedView.swift */,
+				RWJ00001279B9E0000000001 /* RewardJackpot.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		SR000006279B9E0000000001 /* ReforgedReport */ = {
+			isa = PBXGroup;
+			children = (
+				SR00000A279B9E0000000001 /* ReforgedReport.entitlements */,
+				SR000001279B9E0000000001 /* ReforgedReportExtension.swift */,
+				SR00000B279B9E0000000001 /* Info.plist */,
+			);
+			path = ReforgedReport;
+			sourceTree = "<group>";
+		};
+		TJSG00001279B9E0000000001 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				TJVW00001279B9E0000000001 /* TipJarView.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6B3C67BA2F3302EB008165D9 /* ReforgedWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6B3C67D42F3302EC008165D9 /* Build configuration list for PBXNativeTarget "ReforgedWidgetExtension" */;
+			buildPhases = (
+				6B3C67B72F3302EB008165D9 /* Sources */,
+				6B3C67B82F3302EB008165D9 /* Frameworks */,
+				6B3C67B92F3302EB008165D9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedWidgetExtension;
+			productName = ReforgedWidgetExtension;
+			productReference = 6B3C67BB2F3302EB008165D9 /* ReforgedWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A100000F279B9E0000000001 /* Reforged */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000010279B9E0000000001 /* Build configuration list for PBXNativeTarget "Reforged" */;
+			buildPhases = (
+				A1000011279B9E0000000001 /* Sources */,
+				A100000B279B9E0000000001 /* Frameworks */,
+				A1000012279B9E0000000001 /* Resources */,
+				6B3C67D02F3302EC008165D9 /* Embed Foundation Extensions */,
+				SR00000D279B9E0000000099 /* Embed ExtensionKit Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6B3C67CE2F3302EC008165D9 /* PBXTargetDependency */,
+				SC000005279B9E0000000001 /* PBXTargetDependency */,
+				SA000005279B9E0000000001 /* PBXTargetDependency */,
+				SR000005279B9E0000000001 /* PBXTargetDependency */,
+				DA000012279B9E0000000001 /* PBXTargetDependency */,
+			);
+			name = Reforged;
+			productName = Reforged;
+			productReference = A1000009279B9E0000000001 /* Reforged.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DA000007279B9E0000000001 /* ReforgedActivityMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedActivityMonitor" */;
+			buildPhases = (
+				DA000008279B9E0000000001 /* Sources */,
+				DA000009279B9E0000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedActivityMonitor;
+			productName = ReforgedActivityMonitor;
+			productReference = DA000003279B9E0000000001 /* ReforgedActivityMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		RS000007279B9E0000000001 /* ReforgedShield */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = RS00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShield" */;
+			buildPhases = (
+				RS000008279B9E0000000001 /* Sources */,
+				RS000009279B9E0000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedShield;
+			productName = ReforgedShield;
+			productReference = RS000003279B9E0000000001 /* ReforgedShield.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		SA000007279B9E0000000001 /* ReforgedShieldAction */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = SA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShieldAction" */;
+			buildPhases = (
+				SA000008279B9E0000000001 /* Sources */,
+				SA000009279B9E0000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedShieldAction;
+			productName = ReforgedShieldAction;
+			productReference = SA000003279B9E0000000001 /* ReforgedShieldAction.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		SR000007279B9E0000000001 /* ReforgedReport */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = SR00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedReport" */;
+			buildPhases = (
+				SR000008279B9E0000000001 /* Sources */,
+				SR000009279B9E0000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReforgedReport;
+			productName = ReforgedReport;
+			productReference = SR000003279B9E0000000001 /* ReforgedReport.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1000013279B9E0000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					6B3C67BA2F3302EB008165D9 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					A100000F279B9E0000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					RS000007279B9E0000000001 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+				};
+			};
+			buildConfigurationList = A1000014279B9E0000000001 /* Build configuration list for PBXProject "Reforged" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A100000C279B9E0000000001;
+			productRefGroup = A100000E279B9E0000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A100000F279B9E0000000001 /* Reforged */,
+				6B3C67BA2F3302EB008165D9 /* ReforgedWidgetExtension */,
+				RS000007279B9E0000000001 /* ReforgedShield */,
+				SA000007279B9E0000000001 /* ReforgedShieldAction */,
+				SR000007279B9E0000000001 /* ReforgedReport */,
+				DA000007279B9E0000000001 /* ReforgedActivityMonitor */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6B3C67B92F3302EB008165D9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B3C67E22F3303EB008165D9 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1000012279B9E0000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000007279B9E0000000001 /* Assets.xcassets in Resources */,
+				6B0ADE8C2F3259CE00DBAC28 /* Launch Screen.storyboard in Resources */,
+				A10000E2279B9E0000000001 /* PrivacyInfo.xcprivacy in Resources */,
+				B1A0000C279B9E0000000001 /* StrongHebrewDictionary.json in Resources */,
+				B1A0000E279B9E0000000001 /* StrongGreekDictionary.json in Resources */,
+				B1A0001C279B9E0000000001 /* kjvpce.json in Resources */,
+				KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */,
+				WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */,
+				RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */,
+				RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */,
+				RG000003279B9E0000000001 /* Fonts/Roboto.ttf in Resources */,
+				RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */,
+				RG00000F279B9E0000000001 /* Fonts/SILEOT.ttf in Resources */,
+				RG000009279B9E0000000001 /* trparsed.json in Resources */,
+				RG00000B279B9E0000000001 /* wlc.json in Resources */,
+				RG00000D279B9E0000000099 /* sblgnt.json in Resources */,
+				CRJ00001279B9E0000000001 /* CrossReferences.json in Resources */,
+				BPJ00001279B9E0000000001 /* BiblePlaces.json in Resources */,
+				SWJ00011279B9E0000000001 /* Scofield.json in Resources */,
+				SWJ00012279B9E0000000001 /* Easton.json in Resources */,
+				SWJ00013279B9E0000000001 /* AbbottSmith.json in Resources */,
+				SWJ00014279B9E0000000001 /* Nave.json in Resources */,
+				SWJ00015279B9E0000000001 /* TCR.json in Resources */,
+				SPDJ00002279B9E0000000001 /* SpurgeonMorningEvening.json in Resources */,
+				TBJ00001279B9E0000000001 /* TopicalVerses.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6B3C67B72F3302EB008165D9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B3C67E02F3303EB008165D9 /* ReforgedWidget.swift in Sources */,
+				6B3C67F12F3303EB008165D9 /* PanicWidget.swift in Sources */,
+				9A7E0011279B9E0000000001 /* VerseOfTheDayWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1000011279B9E0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001279B9E0000000001 /* ReforgedApp.swift in Sources */,
+				A1000019279B9E0000000001 /* AppDelegate.swift in Sources */,
+				A1000003279B9E0000000001 /* ContentView.swift in Sources */,
+				A100001B279B9E0000000001 /* NotificationManager.swift in Sources */,
+				A1000020279B9E0000000001 /* Models.swift in Sources */,
+				A1000022279B9E0000000001 /* MemoryVerse.swift in Sources */,
+				A1000024279B9E0000000001 /* UserProfile.swift in Sources */,
+				A1000026279B9E0000000001 /* JournalEntry.swift in Sources */,
+				CC000090279B9E0000000001 /* ReflectionTemplate.swift in Sources */,
+				A1000028279B9E0000000001 /* SampleData.swift in Sources */,
+				A1000030279B9E0000000001 /* AppState.swift in Sources */,
+				AMBS0001279B9E0000000001 /* AmbientSoundPlayer.swift in Sources */,
+				CRWN0001279B9E0000000001 /* CrownStore.swift in Sources */,
+				A1000032279B9E0000000001 /* HomeView.swift in Sources */,
+				A1000034279B9E0000000101 /* HomeSearchView.swift in Sources */,
+				A1000034279B9E0000000001 /* TracksView.swift in Sources */,
+				A1000036279B9E0000000001 /* LessonView.swift in Sources */,
+				A1000038279B9E0000000001 /* MemoryView.swift in Sources */,
+				A100003A279B9E0000000001 /* MemoryReviewView.swift in Sources */,
+				A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */,
+				A10000E3279B9E0000000001 /* MemoryAudioPlayer.swift in Sources */,
+				RF0000A1279B9E0000000001 /* ReflectionNoteSheet.swift in Sources */,
+				RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */,
+				RG000005279B9E0000000001 /* MatchingGameView.swift in Sources */,
+				RG000007279B9E0000000001 /* CompleteTheVerseView.swift in Sources */,
+				CC000001279B9E0000000001 /* VerseCollection.swift in Sources */,
+				CC000003279B9E0000000001 /* CollectionBuilderView.swift in Sources */,
+				CC000005279B9E0000000001 /* CollectionDetailView.swift in Sources */,
+				A100003E279B9E0000000001 /* BibleView.swift in Sources */,
+				C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */,
+				EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */,
+				EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */,
+				EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */,
+				EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */,
+				VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */,
+				CRM00001279B9E0000000001 /* CrossReferenceMapView.swift in Sources */,
+				CMRD00002279B9E0000000001 /* CommentaryReaderView.swift in Sources */,
+				BDD100000000000000000005 /* NowPlayingView.swift in Sources */,
+				DCCFDCEC273E4308938F40FD /* BibleProgressView.swift in Sources */,
+				A1000040279B9E0000000001 /* ProfileView.swift in Sources */,
+				SHOP0001279B9E0000000001 /* CrownShopView.swift in Sources */,
+				A1000042279B9E0000000001 /* JournalView.swift in Sources */,
+				A10000B0279B9E0000000001 /* StreakShareCardView.swift in Sources */,
+				A10000C0279B9E0000000001 /* VerseShareCardView.swift in Sources */,
+				A1000044279B9E0000000001 /* OnboardingFlowView.swift in Sources */,
+				BDD100000000000000000001 /* BibleDownloadManager.swift in Sources */,
+				BDD100000000000000000009 /* NetworkRetry.swift in Sources */,
+				A1000046279B9E0000000001 /* ESVService.swift in Sources */,
+				A10000D0279B9E0000000001 /* UnsplashService.swift in Sources */,
+				A1000080279B9E0000000001 /* KJVService.swift in Sources */,
+				NET0000A279B9E0000000001 /* NETService.swift in Sources */,
+				KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */,
+				KJVDLMG2279B9E0000000001 /* KJVAudioDownloadManager.swift in Sources */,
+				KJVDLVW2279B9E0000000001 /* KJVAudioDownloadsView.swift in Sources */,
+				CMDLVW2279B9E0000000001 /* CommentaryDownloadsView.swift in Sources */,
+				STLB00002279B9E0000000001 /* StudyLibraryView.swift in Sources */,
+				A1AABB00279B9E0000000001 /* ApiBibleService.swift in Sources */,
+				A1000082279B9E0000000001 /* JournalStorageManager.swift in Sources */,
+				MRNE00002279B9E0000000001 /* MorningRoutineEntry.swift in Sources */,
+				MRSM00002279B9E0000000001 /* MorningRoutineStorageManager.swift in Sources */,
+				DPMD00002279B9E0000000001 /* RhythmModels.swift in Sources */,
+				MCUR00002279B9E0000000001 /* MemoryCurriculum.swift in Sources */,
+				DPSM00002279B9E0000000001 /* RhythmStorageManager.swift in Sources */,
+				DPLV00002279B9E0000000001 /* RhythmHubView.swift in Sources */,
+				DPBV00002279B9E0000000001 /* RhythmItemEditorView.swift in Sources */,
+				DPDV00002279B9E0000000001 /* CustomReadingPlanBuilderView.swift in Sources */,
+				DPCP00002279B9E0000000001 /* CustomReadingPlanStore.swift in Sources */,
+				TJMG00002279B9E0000000001 /* TipJarManager.swift in Sources */,
+				TJVW00002279B9E0000000001 /* TipJarView.swift in Sources */,
+				MRNV00002279B9E0000000001 /* MorningRoutineView.swift in Sources */,
+				A1000084279B9E0000000001 /* ReadingStreakManager.swift in Sources */,
+				A1000086279B9E0000000001 /* KnowledgeBase.swift in Sources */,
+				A1000048279B9E0000000001 /* Theme.swift in Sources */,
+				A100004A279B9E0000000001 /* BundledDataService.swift in Sources */,
+				E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */,
+				AN000001279B9E0000000001 /* AntiochSearchService.swift in Sources */,
+				GEM0000A279B9E0000000001 /* GeminiService.swift in Sources */,
+				TTS0000A279B9E0000000001 /* TTSVoiceService.swift in Sources */,
+				AIS0000A279B9E0000000001 /* AISettingsSection.swift in Sources */,
+				A1000060279B9E0000000001 /* BibleModels.swift in Sources */,
+				A1000062279B9E0000000001 /* ChapterNavigationWheel.swift in Sources */,
+				A1000090279B9E0000000001 /* iCloudSyncService.swift in Sources */,
+				A1000092279B9E0000000001 /* AppleSignInService.swift in Sources */,
+				SB000001279B9E0000000001 /* SupabaseAuthService.swift in Sources */,
+				WC000001279B9E0000000001 /* WeeklyCheckinService.swift in Sources */,
+				A1000094279B9E0000000001 /* CloudKitSyncService.swift in Sources */,
+				FS000002279B9E0000000001 /* FocusBlockingService.swift in Sources */,
+				SC000002279B9E0000000001 /* ShieldContentProvider.swift in Sources */,
+				SL000002279B9E0000000001 /* SocialLimitService.swift in Sources */,
+				SBS00002279B9E0000000001 /* ScheduledBlockingService.swift in Sources */,
+				FSS00002279B9E0000000001 /* FocusSessionService.swift in Sources */,
+				UGS00002279B9E0000000001 /* UnlockGateService.swift in Sources */,
+				HSG00002279B9E0000000001 /* HomeSuggestion.swift in Sources */,
+				SEV00002279B9E0000000001 /* ScheduleEditorView.swift in Sources */,
+				FSC00002279B9E0000000001 /* FocusSessionCard.swift in Sources */,
+				SMV00002279B9E0000000001 /* SocialMediaView.swift in Sources */,
+				SHC00002279B9E0000000001 /* ShieldComponents.swift in Sources */,
+				APS00002279B9E0000000001 /* AccountabilityPartnerService.swift in Sources */,
+				SSS00002279B9E0000000001 /* ShieldStreakService.swift in Sources */,
+				APV00002279B9E0000000001 /* AccountabilityPartnerView.swift in Sources */,
+				MCV00002279B9E0000000001 /* MessageComposeView.swift in Sources */,
+				CEL00002279B9E0000000001 /* CelebrationOverlay.swift in Sources */,
+				CSMV0001279B9E0000000001 /* CosmeticViews.swift in Sources */,
+				RWJ00002279B9E0000000001 /* RewardJackpot.swift in Sources */,
+				PPS00002279B9E0000000001 /* PrayerPromptSheet.swift in Sources */,
+				TSV00002279B9E0000000001 /* TemptedSOSView.swift in Sources */,
+				SIV00002279B9E0000000001 /* ShieldInsightsView.swift in Sources */,
+				AL000002279B9E0000000001 /* AccountabilityLockService.swift in Sources */,
+				SO000002279B9E0000000001 /* ShieldOnboardingView.swift in Sources */,
+				DS000002279B9E0000000001 /* DiscipleshipView.swift in Sources */,
+				SLHB00002279B9E0000000001 /* StudyLibraryHubView.swift in Sources */,
+				FB000002279B9E0000000001 /* FocusBlockingView.swift in Sources */,
+				PC000002279B9E0000000001 /* PodcastModels.swift in Sources */,
+				PC000004279B9E0000000001 /* PodcastService.swift in Sources */,
+				PC000006279B9E0000000001 /* PodcastView.swift in Sources */,
+				DC9594E35E6746C572ABE7A5 /* SettingsManager.swift in Sources */,
+				DD45E35B78B676B857D11FD7 /* SettingsView.swift in Sources */,
+				3B40F38F2FBBD3A08D42F18F /* SettingsModels.swift in Sources */,
+				5D3891187F2724D10FD5A9F2 /* AboutSection.swift in Sources */,
+				5C0D488D9F2B8A357C36FB36 /* AccountSettingsSection.swift in Sources */,
+				F51AB00E9FE5CB264ECF20DF /* AudioSettingsSection.swift in Sources */,
+				1AA2D9EB503E6A1B06F67F3D /* BibleReadingSettingsSection.swift in Sources */,
+				9F25489E7841AF60EE0BEF00 /* DisplaySettingsSection.swift in Sources */,
+				EE277622B31DCD276294A429 /* MemorySettingsSection.swift in Sources */,
+				CFE14672DCFF035AE64EF9A9 /* NotificationSettingsSection.swift in Sources */,
+				WSET0001279B9E0000000001 /* WidgetSettingsSection.swift in Sources */,
+				B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */,
+				B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */,
+				CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */,
+				BRS00001279B9E0000000001 /* BibleReferenceScanner.swift in Sources */,
+				WLS00001279B9E0000000001 /* WordLocatorService.swift in Sources */,
+				BPS00001279B9E0000000001 /* BiblePlaceService.swift in Sources */,
+				SPDS00002279B9E0000000001 /* SpurgeonDevotionalService.swift in Sources */,
+				SPDV00002279B9E0000000001 /* SpurgeonDevotionalView.swift in Sources */,
+				CMS00001279B9E0000000001 /* CommentaryService.swift in Sources */,
+				CDM00001279B9E0000000001 /* CommentaryDownloadManager.swift in Sources */,
+				MZP00001279B9E0000000001 /* MinimalZip.swift in Sources */,
+				RWS00001279B9E0000000001 /* ReferenceWorkService.swift in Sources */,
+				BAV00001279B9E0000000001 /* BibleAtlasView.swift in Sources */,
+				WLV00001279B9E0000000001 /* WordLocatorView.swift in Sources */,
+				TBS00001279B9E0000000001 /* TopicalBibleService.swift in Sources */,
+				RG00000D279B9E0000000001 /* OriginalLanguageService.swift in Sources */,
+				B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */,
+				B1A0AA0100000000000000A2 /* TextKit/ScriptureAttributedText.swift in Sources */,
+				B1A0AA0100000000000000A4 /* TextKit/BibleAttributedTextBuilder.swift in Sources */,
+				B1A0AA0100000000000000A6 /* TextKit/BibleTextView.swift in Sources */,
+				B1A0AA0100000000000000A8 /* TextKit/BibleWindowedReader.swift in Sources */,
+				B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */,
+				B1A0000A279B9E0000000001 /* FlowLayout.swift in Sources */,
+				C1A00096279B9E0000000001 /* SuggestedVerses.swift in Sources */,
+				B1A00012279B9E0000000001 /* ConcordanceSearchView.swift in Sources */,
+				D1A00005279B9E0000000001 /* LearningTracks.swift in Sources */,
+				D1A00006279B9E0000000001 /* DevotionalTracks.swift in Sources */,
+				D1A00007279B9E0000000001 /* DoctrineTracks.swift in Sources */,
+				D1A00008279B9E0000000001 /* DoctrineTracksExtended.swift in Sources */,
+				WOC00002279B9E0000000001 /* WordsOfChristData.swift in Sources */,
+				BRP00002279B9E0000000001 /* BibleReadingPlan.swift in Sources */,
+				BRP00004279B9E0000000001 /* BibleReadingPlanData.swift in Sources */,
+				BRP00006279B9E0000000001 /* ReadingPlanService.swift in Sources */,
+				BRP00008279B9E0000000001 /* ReadingPlansView.swift in Sources */,
+				D1B00002279B9E0000000001 /* LearningPathView.swift in Sources */,
+				E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */,
+				E1A00004279B9E0000000001 /* ProfileAvatarView.swift in Sources */,
+				WNV0000B279B9E0000000001 /* WhatsNewView.swift in Sources */,
+				RTE00002279B9E0000000001 /* RichTextEditorView.swift in Sources */,
+				EXP00002279B9E0000000001 /* ExportService.swift in Sources */,
+				BAFBE3AE35B043D9E9425DA0 /* GroupModels.swift in Sources */,
+				DBADC9AD1915DE2F7BB59C49 /* GroupsService.swift in Sources */,
+				1AC23DA38F1D26DD79451A25 /* AgeGateManager.swift in Sources */,
+				A68BD1368B4DEE2199B124EE /* GroupsHubViewModel.swift in Sources */,
+				C00F4DA8BD650DA93C8F05F9 /* GroupsView.swift in Sources */,
+				C98C67506FFE873CBB627E7E /* GroupPrayerReviewView.swift in Sources */,
+				B9C1AFBE4511D3A9F150099E /* HandoutViews.swift in Sources */,
+				54B4AA75BF152C7102BC424E /* LearnModels.swift in Sources */,
+				0AD119BA881D3D4DCA6BABB0 /* TracksRepository.swift in Sources */,
+				9A4D9885AAA3F662E0376A57 /* LearnViews.swift in Sources */,
+				DLRV0001279B9E0000000001 /* DailyLessonRunnerView.swift in Sources */,
+				MJVW0001279B9E0000000001 /* MemoryJourneyView.swift in Sources */,
+				PRGS0001279B9E0000000001 /* ProgressSheets.swift in Sources */,
+				SFSV0001279B9E0000000001 /* StreakFreezeSavedView.swift in Sources */,
+				SIBV0001279B9E0000000001 /* SayItBackView.swift in Sources */,
+				SRSV0001279B9E0000000001 /* SpeechRecognitionService.swift in Sources */,
+				DWSS0001279B9E0000000001 /* DailyWorkoutSession.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA000008279B9E0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DA000002279B9E0000000001 /* DeviceActivityMonitorExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		RS000008279B9E0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				RS000002279B9E0000000001 /* ShieldConfigurationExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SA000008279B9E0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SA000002279B9E0000000001 /* ShieldActionExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SR000008279B9E0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				SR000002279B9E0000000001 /* ReforgedReportExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6B3C67CE2F3302EC008165D9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 6B3C67BA2F3302EB008165D9 /* ReforgedWidgetExtension */;
+			targetProxy = 6B3C67CD2F3302EC008165D9 /* PBXContainerItemProxy */;
+		};
+		DA000012279B9E0000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = DA000007279B9E0000000001 /* ReforgedActivityMonitor */;
+			targetProxy = DA000011279B9E0000000001 /* PBXContainerItemProxy */;
+		};
+		SA000005279B9E0000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = SA000007279B9E0000000001 /* ReforgedShieldAction */;
+			targetProxy = SA000004279B9E0000000001 /* PBXContainerItemProxy */;
+		};
+		SC000005279B9E0000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = RS000007279B9E0000000001 /* ReforgedShield */;
+			targetProxy = SC000004279B9E0000000001 /* PBXContainerItemProxy */;
+		};
+		SR000005279B9E0000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = SR000007279B9E0000000001 /* ReforgedReport */;
+			targetProxy = SR000004279B9E0000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		6B3C67D12F3302EC008165D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReforgedWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Reading Streak";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6B3C67D22F3302EC008165D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReforgedWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Reading Streak";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A1000015279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1000016279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 53998XCUML;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A1000017279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = Reforged/ReforgedDebug.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Reforged/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Reforged Bible";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Reforged uses your camera to take a profile photo.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Reforged needs access to save your streak card to your photo library.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen";
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1000018279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Reforged/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Reforged Bible";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Reforged uses your camera to take a profile photo.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Reforged needs access to save your streak card to your photo library.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen";
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		DA00000D279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DA00000E279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		RS00000D279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedShield/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		RS00000E279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedShield/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		SA00000D279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedShieldAction/ReforgedShieldAction.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shieldaction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		SA00000E279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedShieldAction/ReforgedShieldAction.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shieldaction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		SR00000D279B9E0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedReport/ReforgedReport.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedReport/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.report;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		SR00000E279B9E0000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReforgedReport/ReforgedReport.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = 53998XCUML;
+				INFOPLIST_FILE = ReforgedReport/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.report;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6B3C67D42F3302EC008165D9 /* Build configuration list for PBXNativeTarget "ReforgedWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B3C67D12F3302EC008165D9 /* Debug */,
+				6B3C67D22F3302EC008165D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000010279B9E0000000001 /* Build configuration list for PBXNativeTarget "Reforged" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000017279B9E0000000001 /* Debug */,
+				A1000018279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000014279B9E0000000001 /* Build configuration list for PBXProject "Reforged" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000015279B9E0000000001 /* Debug */,
+				A1000016279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedActivityMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA00000D279B9E0000000001 /* Debug */,
+				DA00000E279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		RS00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShield" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				RS00000D279B9E0000000001 /* Debug */,
+				RS00000E279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		SA00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedShieldAction" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				SA00000D279B9E0000000001 /* Debug */,
+				SA00000E279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		SR00000F279B9E0000000001 /* Build configuration list for PBXNativeTarget "ReforgedReport" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				SR00000D279B9E0000000001 /* Debug */,
+				SR00000E279B9E0000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1000013279B9E0000000001 /* Project object */;
+}

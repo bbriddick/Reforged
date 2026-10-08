@@ -1,0 +1,19 @@
+{
+  "" : {
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ReforgedShieldAction-primary.dia",
+    "emit-module-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ReforgedShieldAction-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ReforgedShieldAction-primary-emit-module.dia",
+    "pch" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ReforgedShieldAction-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ReforgedShieldAction-primary.swiftdeps"
+  },
+  "/Users/boazbriddick/Documents/Reforged/ReforgedShieldAction/ShieldActionExtension.swift" : {
+    "const-values" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ShieldActionExtension.swiftconstvalues",
+    "dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ShieldActionExtension.d",
+    "diagnostics" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ShieldActionExtension.dia",
+    "index-unit-output-path" : "/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ShieldActionExtension.o",
+    "llvm-bc" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ShieldActionExtension.bc",
+    "object" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ShieldActionExtension.o",
+    "swift-dependencies" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ShieldActionExtension.swiftdeps",
+    "swiftmodule" : "/Users/boazbriddick/Documents/Reforged/build/DeviceBuild/Build/Intermediates.noindex/Reforged.build/Debug-iphoneos/ReforgedShieldAction.build/Objects-normal/arm64/ShieldActionExtension~partial.swiftmodule"
+  }
+}

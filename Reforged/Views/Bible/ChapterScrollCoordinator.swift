@@ -45,6 +45,35 @@ enum BibleChapterSpine {
     }()
 }
 
+// MARK: - Bounded Reader Window
+
+/// Pure windowing policy for the TextKit 2 bounded-window reader (`BibleReaderWindowController`).
+/// The complete canon is indexed in `BibleChapterSpine`, but only this bounded slice
+/// (current chapter ± `radius`) is ever assembled into the live TextKit document.
+enum BibleReaderWindow {
+    static let radius = 2
+
+    static func refs(aroundID id: String, radius: Int = radius) -> [ChapterRef] {
+        let center = BibleChapterSpine.indexByID[id] ?? 0
+        return refs(aroundIndex: center, radius: radius)
+    }
+
+    static func refs(aroundIndex center: Int, radius: Int = radius) -> [ChapterRef] {
+        guard !BibleChapterSpine.all.isEmpty else { return [] }
+        let safeCenter = min(max(center, 0), BibleChapterSpine.all.count - 1)
+        let lower = max(0, safeCenter - radius)
+        let upper = min(BibleChapterSpine.all.count - 1, safeCenter + radius)
+        return Array(BibleChapterSpine.all[lower...upper])
+    }
+
+    /// True when the centered chapter has reached an edge of the current window, so the
+    /// window should rotate to re-center it (keeping ± `radius` chapters buffered).
+    static func needsRecentering(id: String, in refs: [ChapterRef]) -> Bool {
+        guard let localIndex = refs.firstIndex(where: { $0.id == id }) else { return true }
+        return localIndex == refs.startIndex || localIndex == refs.index(before: refs.endIndex)
+    }
+}
+
 // MARK: - Loaded Chapter Model
 
 /// One fully-rendered chapter body. Self-contained (verses + derived sections + red-letter segments) so a
@@ -307,6 +336,12 @@ final class ChapterScrollCoordinator: ObservableObject {
 
     /// Computes the Words-of-Christ (red-letter) segments for a chapter's verses.
     private func computeWordsOfChrist(for verses: [ParsedVerse]) -> [String: [WOCSegment]] {
+        Self.wordsOfChrist(for: verses, translation: translation)
+    }
+
+    /// Static Words-of-Christ derivation, shared by the spine coordinator and the TextKit 2
+    /// windowed reader so both readers apply red-letter identically.
+    static func wordsOfChrist(for verses: [ParsedVerse], translation: BibleTranslation) -> [String: [WOCSegment]] {
         guard SettingsManager.shared.showRedLetterText else { return [:] }
 
         var segmentsByReference: [String: [WOCSegment]] = [:]
@@ -329,6 +364,12 @@ final class ChapterScrollCoordinator: ObservableObject {
     }
 
     private func groupVersesBySection(_ verses: [ParsedVerse]) -> [VerseSection] {
+        Self.sections(from: verses)
+    }
+
+    /// Static section grouping, shared by the spine coordinator and the TextKit 2 windowed
+    /// reader so both group paragraph sections identically.
+    static func sections(from verses: [ParsedVerse]) -> [VerseSection] {
         var sections: [VerseSection] = []
         var currentHeading: String? = nil
         var currentVerses: [ParsedVerse] = []

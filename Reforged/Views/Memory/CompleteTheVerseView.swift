@@ -328,7 +328,7 @@ struct CompleteTheVerseView: View {
 
             Spacer()
         }
-        .confetti(isActive: $showConfetti, intensity: perfect ? .extreme : .medium)
+        .arcadeConfetti(isActive: $showConfetti, intensity: perfect ? .extreme : .medium)
         .onAppear {
             HapticManager.shared.achievementUnlocked()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {

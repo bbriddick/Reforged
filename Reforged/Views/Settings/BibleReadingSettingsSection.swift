@@ -244,9 +244,11 @@ struct TranslationReorderSheet: View {
     }
 }
 
+#if false
 #Preview {
     ScrollView {
         BibleReadingSettingsSection()
             .padding()
     }
 }
+#endif
