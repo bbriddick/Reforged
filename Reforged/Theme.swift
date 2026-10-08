@@ -334,6 +334,12 @@ class BibleReadingSettings: ObservableObject {
         didSet { save() }
     }
 
+    /// Lays poetry (Psalms, Proverbs, the prophets…) out one line per row with indents. When off,
+    /// poetic verses flow as ordinary prose. Defaults on.
+    @Published var showPoetryLayout: Bool {
+        didSet { save() }
+    }
+
     /// When on, the reader renders scripture with the TextKit 2 bounded-window reader
     /// (one laid-out attributed document per window) instead of the SwiftUI FlowLayout
     /// per-word spine. Defaults on; the toggle in Display settings falls back to FlowLayout.
@@ -498,6 +504,8 @@ class BibleReadingSettings: ObservableObject {
             verseByVerse = defaults.bool(forKey: "bible_verse_by_verse")
         }
 
+        showPoetryLayout = defaults.object(forKey: "bible_show_poetry_layout") as? Bool ?? true
+
         // Defaults on for a fresh install (key not yet written); respects an explicit choice after.
         if defaults.object(forKey: "bible_use_textkit_reader") == nil {
             useTextKitReader = true
@@ -519,6 +527,7 @@ class BibleReadingSettings: ObservableObject {
         defaults.set(fontType.rawValue, forKey: "bible_font_type")
         defaults.set(lineSpacing.rawValue, forKey: "bible_line_spacing")
         defaults.set(verseByVerse, forKey: "bible_verse_by_verse")
+        defaults.set(showPoetryLayout, forKey: "bible_show_poetry_layout")
         defaults.set(useTextKitReader, forKey: "bible_use_textkit_reader")
         defaults.set(lastBook, forKey: "bible_last_book")
         defaults.set(lastChapter, forKey: "bible_last_chapter")

@@ -7,6 +7,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Set notification delegate
         UNUserNotificationCenter.current().delegate = self
 
+        // YouVersion Platform SDK (licensed NASB). No-op until YouVersionConfig is filled in.
+        YouVersionConfig.configureSDK()
+
         // Pre-load bundled KJV Bible on a background thread so it is ready
         // before the user opens BibleView for the first time.
         Task.detached(priority: .userInitiated) {
@@ -46,7 +49,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let rawOrder = UserDefaults.standard.array(forKey: "settings.translationOrder") as? [String] ?? []
         let networkTranslations: [BibleTranslation] = rawOrder
             .compactMap { BibleTranslation(rawValue: $0) }
-            .filter { !$0.isOriginalLanguage && $0 != .kjv }
+            .filter { !$0.isOriginalLanguage && $0 != .kjv && $0 != .nlt && $0 != .esv }  // ESV and NLT: licenses cap stored text at 500 verses
 
         guard !networkTranslations.isEmpty else { return }
 
@@ -79,6 +82,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                             switch translation {
                             case .esv:
                                 _ = try await ESVService.shared.fetchChapterParsed(book: book, chapter: chapter)
+                            case .nasb where YouVersionConfig.isConfigured:
+                                break  // Lockman license: no background bulk prefetch of NASB
                             case .csb, .nkjv, .nasb, .rvr1960, .nlt:
                                 _ = try await ApiBibleService.shared.fetchChapterParsed(
                                     book: book, chapter: chapter, translation: translation)

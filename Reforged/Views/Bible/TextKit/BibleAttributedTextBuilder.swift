@@ -104,21 +104,60 @@ struct BibleAttributedTextBuilder {
 
     // MARK: Paragraph mode
 
+    /// A paragraph (prose block or one poetic line) that has text but no terminating newline yet.
+    private struct OpenParagraph {
+        let start: Int
+        let style: NSParagraphStyle
+        let isPoetry: Bool
+        let indent: Int
+    }
+
+    private func closeParagraph(_ open: inout OpenParagraph?, into output: NSMutableAttributedString) {
+        guard let paragraph = open else { return }
+        output.append(NSAttributedString(string: "\n", attributes: [
+            .paragraphStyle: paragraph.style,
+            .font: baseFont(italic: false)
+        ]))
+        output.addAttribute(.paragraphStyle, value: paragraph.style,
+                            range: NSRange(location: paragraph.start, length: output.length - paragraph.start))
+        open = nil
+    }
+
     private func appendParagraphs(into output: NSMutableAttributedString) {
         for section in chapter.sections {
             if let heading = section.heading {
                 appendSectionHeading(heading, into: output)
             }
-            let paragraphStart = output.length
-            for (index, verse) in section.verses.enumerated() {
-                appendVerse(verse, into: output, trailingSpace: index < section.verses.count - 1)
+            var open: OpenParagraph? = nil
+            let verses = section.verses
+            for (index, verse) in verses.enumerated() {
+                let next = index + 1 < verses.count ? verses[index + 1] : nil
+                if let title = verse.title {
+                    closeParagraph(&open, into: output)
+                    appendTitle(title, into: output)
+                }
+
+                if let lines = poetryLines(for: verse) {
+                    let continuing = verse.continuesPreviousLine && open?.isPoetry == true ? open : nil
+                    if continuing == nil { closeParagraph(&open, into: output) }
+                    let endsRun = next.map { poetryLines(for: $0) == nil } ?? true
+                    open = appendVerse(verse, into: output,
+                                       trailingSpace: next?.continuesPreviousLine ?? false,
+                                       poetry: lines, continuing: continuing,
+                                       stanzaBreak: verse.startsNewParagraph && continuing == nil,
+                                       endsPoetryRun: endsRun, endSpacing: 8)
+                } else {
+                    if verse.startsNewParagraph || open?.isPoetry == true {
+                        closeParagraph(&open, into: output)
+                    }
+                    if open == nil {
+                        open = OpenParagraph(start: output.length, style: bodyParagraphStyle(), isPoetry: false, indent: 0)
+                    }
+                    let nextJoins = next.map { !$0.startsNewParagraph && poetryLines(for: $0) == nil } ?? false
+                    appendVerse(verse, into: output, trailingSpace: nextJoins)
+                }
             }
-            output.append(NSAttributedString(string: "\n", attributes: [
-                .paragraphStyle: bodyParagraphStyle(),
-                .font: baseFont(italic: false)
-            ]))
-            let paragraphRange = NSRange(location: paragraphStart, length: output.length - paragraphStart)
-            output.addAttribute(.paragraphStyle, value: bodyParagraphStyle(), range: paragraphRange)
+            closeParagraph(&open, into: output)
         }
     }
 
@@ -129,22 +168,73 @@ struct BibleAttributedTextBuilder {
             if let heading = verse.sectionHeading {
                 appendSectionHeading(heading, into: output)
             }
+            if let title = verse.title {
+                appendTitle(title, into: output)
+            }
             let verseStart = output.length
-            appendVerse(verse, into: output, trailingSpace: false)
-            output.append(NSAttributedString(string: "\n", attributes: [
-                .paragraphStyle: verseByVerseParagraphStyle(),
-                .font: baseFont(italic: false)
-            ]))
-            let range = NSRange(location: verseStart, length: output.length - verseStart)
-            output.addAttribute(.paragraphStyle, value: verseByVerseParagraphStyle(), range: range)
+            var open: OpenParagraph?
+            if let lines = poetryLines(for: verse) {
+                open = appendVerse(verse, into: output, trailingSpace: false,
+                                   poetry: lines, continuing: nil, stanzaBreak: false,
+                                   endsPoetryRun: true, endSpacing: 12)
+            } else {
+                appendVerse(verse, into: output, trailingSpace: false)
+                open = OpenParagraph(start: verseStart, style: verseByVerseParagraphStyle(), isPoetry: false, indent: 0)
+            }
+            closeParagraph(&open, into: output)
         }
+    }
+
+    // MARK: Poetry + titles
+
+    /// Poetry layout for a verse, or nil to render it as flowing prose (original languages, and
+    /// verses with red-letter segments whose run structure doesn't map onto lines).
+    private func poetryLines(for verse: ParsedVerse) -> [PoetryLine]? {
+        guard settings.showPoetryLayout, !isOriginalLanguage, let lines = verse.poetryLines, !lines.isEmpty,
+              chapter.woc[verse.reference] == nil else { return nil }
+        return lines
+    }
+
+    /// Psalm superscription / acrostic title ("A Psalm of David.", "Aleph"), set below the heading.
+    private func appendTitle(_ title: String, into output: NSMutableAttributedString) {
+        let style = NSMutableParagraphStyle()
+        style.alignment = .left
+        style.paragraphSpacingBefore = 2
+        style.paragraphSpacing = 8
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: baseFont(italic: true),
+            .foregroundColor: palette.secondaryText,
+            .paragraphStyle: style,
+            .scriptureRole: ScriptureRole.sectionHeading.rawValue
+        ]
+        output.append(NSAttributedString(string: title + "\n", attributes: attrs))
+    }
+
+    private func poetryParagraphStyle(indent: Int, stanzaBreak: Bool, spacingAfter: CGFloat) -> NSParagraphStyle {
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = settings.lineSpacing.spacing
+        style.paragraphSpacing = spacingAfter
+        style.paragraphSpacingBefore = stanzaBreak ? 14 : 0
+        let unit = settings.effectiveFontSize * 1.1
+        style.firstLineHeadIndent = unit * CGFloat(indent)
+        // Wrapped lines hang one step further in, the way printed poetry sets long lines.
+        style.headIndent = unit * CGFloat(indent + 1)
+        style.alignment = .left
+        style.baseWritingDirection = .leftToRight
+        return style
     }
 
     // MARK: One verse
 
+    @discardableResult
     private func appendVerse(_ verse: ParsedVerse,
                              into output: NSMutableAttributedString,
-                             trailingSpace: Bool) {
+                             trailingSpace: Bool,
+                             poetry: [PoetryLine]? = nil,
+                             continuing: OpenParagraph? = nil,
+                             stanzaBreak: Bool = false,
+                             endsPoetryRun: Bool = true,
+                             endSpacing: CGFloat = 8) -> OpenParagraph? {
         let verseRangeStart = output.length
         let isSelected = renderState.selectedReferences.contains(verse.reference)
         // Illuminated Capitals (crown shop): the chapter opens on a gilded raised
@@ -159,8 +249,15 @@ struct BibleAttributedTextBuilder {
             appendBookmarkIndicator(verse, into: output)
         }
 
+        var open: OpenParagraph? = nil
         if isOriginalLanguage {
             appendOriginalLanguageWords(verse, into: output, isSelected: isSelected)
+        } else if let lines = poetry {
+            open = appendPoetryLines(lines, verse: verse, into: output, isSelected: isSelected,
+                                     verseStart: verseRangeStart, continuing: continuing,
+                                     stanzaBreak: stanzaBreak, endsPoetryRun: endsPoetryRun,
+                                     trailingSpace: trailingSpace, raisedInitial: raisedInitial,
+                                     endSpacing: endSpacing)
         } else {
             appendEnglishWords(verse, into: output, isSelected: isSelected, trailingSpace: trailingSpace,
                                raisedInitial: raisedInitial)
@@ -180,6 +277,68 @@ struct BibleAttributedTextBuilder {
         } else if let highlight = renderState.highlightsByReference[verse.reference] {
             output.addAttribute(.backgroundColor, value: highlight.uiHighlightColor(isDark: palette.isDark), range: verseRange)
         }
+        return open
+    }
+
+    /// Lays a poetic verse out one line per paragraph, with indent levels. The verse number
+    /// (already appended) leads the first line. The last line is returned still open so the
+    /// next verse can continue it (verses that start mid-line) or the caller can close it.
+    private func appendPoetryLines(_ lines: [PoetryLine],
+                                   verse: ParsedVerse,
+                                   into output: NSMutableAttributedString,
+                                   isSelected: Bool,
+                                   verseStart: Int,
+                                   continuing: OpenParagraph?,
+                                   stanzaBreak: Bool,
+                                   endsPoetryRun: Bool,
+                                   trailingSpace: Bool,
+                                   raisedInitial: Bool,
+                                   endSpacing: CGFloat) -> OpenParagraph {
+        var lineStart = verseStart
+        var currentIndent = lines[0].indent
+        var openFromEarlier = continuing
+
+        for (i, line) in lines.enumerated() {
+            let isLast = i == lines.count - 1
+            let tokens = tokenizeVerseText(line.text, verseId: "\(verse.id)_l\(i)").map {
+                ColoredToken(display: $0.displayText, clean: $0.cleanWord, italic: $0.isItalic, red: false)
+            }
+            appendTokens(tokens, verse: verse, into: output, isSelected: isSelected,
+                         trailingSpace: isLast && trailingSpace,
+                         raisedInitial: raisedInitial && i == 0)
+
+            if !isLast {
+                if i == 0, let earlier = openFromEarlier {
+                    // The first line finishes a line begun by the previous verse.
+                    output.append(NSAttributedString(string: "\n", attributes: [
+                        .paragraphStyle: earlier.style, .font: baseFont(italic: false)
+                    ]))
+                    output.addAttribute(.paragraphStyle, value: earlier.style,
+                                        range: NSRange(location: earlier.start, length: output.length - earlier.start))
+                    openFromEarlier = nil
+                } else {
+                    let style = poetryParagraphStyle(indent: line.indent, stanzaBreak: i == 0 && stanzaBreak, spacingAfter: 0)
+                    output.append(NSAttributedString(string: "\n", attributes: [
+                        .paragraphStyle: style, .font: baseFont(italic: false)
+                    ]))
+                    output.addAttribute(.paragraphStyle, value: style,
+                                        range: NSRange(location: lineStart, length: output.length - lineStart))
+                }
+                lineStart = output.length
+                currentIndent = lines[i + 1].indent
+            }
+        }
+
+        if let earlier = openFromEarlier {
+            // Single-line verse that continues the previous verse's line: keep that line open.
+            let style = poetryParagraphStyle(indent: earlier.indent, stanzaBreak: false,
+                                             spacingAfter: endsPoetryRun ? endSpacing : 0)
+            return OpenParagraph(start: earlier.start, style: style, isPoetry: true, indent: earlier.indent)
+        }
+        let style = poetryParagraphStyle(indent: currentIndent,
+                                         stanzaBreak: lines.count == 1 && stanzaBreak,
+                                         spacingAfter: endsPoetryRun ? endSpacing : 0)
+        return OpenParagraph(start: lineStart, style: style, isPoetry: true, indent: currentIndent)
     }
 
     private func appendVerseNumber(_ verse: ParsedVerse, into output: NSMutableAttributedString) {
@@ -204,7 +363,16 @@ struct BibleAttributedTextBuilder {
                                     isSelected: Bool,
                                     trailingSpace: Bool,
                                     raisedInitial: Bool = false) {
-        let tokens = coloredTokens(for: verse)
+        appendTokens(coloredTokens(for: verse), verse: verse, into: output, isSelected: isSelected,
+                     trailingSpace: trailingSpace, raisedInitial: raisedInitial)
+    }
+
+    private func appendTokens(_ tokens: [ColoredToken],
+                              verse: ParsedVerse,
+                              into output: NSMutableAttributedString,
+                              isSelected: Bool,
+                              trailingSpace: Bool,
+                              raisedInitial: Bool) {
         for (index, token) in tokens.enumerated() {
             var display = token.display
             if index == tokens.count - 1 && trailingSpace && !display.hasSuffix(" ") {

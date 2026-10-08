@@ -199,7 +199,7 @@ class ApiBibleService {
     // MARK: - Book ID Mapping
 
     /// Maps standard book names to API.Bible 3-letter book IDs
-    private static let bookIdMap: [String: String] = [
+    static let bookIdMap: [String: String] = [
         "Genesis": "GEN", "Exodus": "EXO", "Leviticus": "LEV",
         "Numbers": "NUM", "Deuteronomy": "DEU", "Joshua": "JOS",
         "Judges": "JDG", "Ruth": "RUT", "1 Samuel": "1SA",
@@ -298,12 +298,34 @@ class ApiBibleService {
     }
 
     func cachedChapterCount(for translation: BibleTranslation) -> Int {
+        if translation == .nlt { return NLTService.shared.cachedChapterCount() }
+        if let versionId = YouVersionConfig.versionId(for: translation) {
+            return YouVersionOfflineStore.shared.count(versionId: versionId)
+        }
         guard let bibleId = ApiBibleConfig.bibleIds[translation] else { return 0 }
         let prefix = "\(bibleId)_"
         return chapterCache.keys.filter { $0.hasPrefix(prefix) }.count
     }
 
+    /// Removes text cached from API.Bible for a translation, ignoring any YouVersion routing.
+    func clearLegacyCache(for translation: BibleTranslation) {
+        guard let bibleId = ApiBibleConfig.bibleIds[translation] else { return }
+        let prefix = "\(bibleId)_"
+        chapterCache = chapterCache.filter { !$0.key.hasPrefix(prefix) }
+        pendingCacheSave?.cancel()
+        pendingCacheSave = nil
+        saveCacheToDisk()
+    }
+
     func clearCache(for translation: BibleTranslation) {
+        if translation == .nlt {
+            NLTService.shared.clearCache()
+            return
+        }
+        if YouVersionConfig.versionId(for: translation) != nil {
+            Task { await YouVersionService.shared.clearCache(for: translation) }
+            return
+        }
         guard let bibleId = ApiBibleConfig.bibleIds[translation] else { return }
         let prefix = "\(bibleId)_"
         chapterCache = chapterCache.filter { !$0.key.hasPrefix(prefix) }
@@ -353,6 +375,12 @@ class ApiBibleService {
     // MARK: - Fetch Chapter Parsed
 
     func fetchChapterParsed(book: String, chapter: Int, translation: BibleTranslation) async throws -> (verses: [ParsedVerse], canonical: String) {
+        if translation == .nlt {
+            return try await NLTService.shared.fetchChapterParsed(book: book, chapter: chapter)
+        }
+        if YouVersionConfig.versionId(for: translation) != nil {
+            return try await YouVersionService.shared.fetchChapterParsed(book: book, chapter: chapter, translation: translation)
+        }
         guard let bibleId = ApiBibleConfig.bibleIds[translation] else {
             throw ApiBibleError.unsupportedTranslation
         }
@@ -409,6 +437,12 @@ class ApiBibleService {
     // MARK: - Fetch Verse for Memory
 
     func fetchVerseForMemory(reference: String, translation: BibleTranslation) async throws -> (text: String, canonical: String) {
+        if translation == .nlt {
+            return try await NLTService.shared.fetchVerseForMemory(reference: reference)
+        }
+        if YouVersionConfig.versionId(for: translation) != nil {
+            return try await YouVersionService.shared.fetchVerseForMemory(reference: reference, translation: translation)
+        }
         guard let bibleId = ApiBibleConfig.bibleIds[translation] else {
             throw ApiBibleError.unsupportedTranslation
         }

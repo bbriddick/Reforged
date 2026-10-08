@@ -4,89 +4,56 @@ struct BibleReadingSettingsSection: View {
     @StateObject private var settings = SettingsManager.shared
     @Environment(\.colorScheme) var colorScheme
     @State private var showReorder = false
+    @State private var showManageBibles = false
 
     var body: some View {
         VStack(spacing: 0) {
-            // Default Translation
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Default Translation")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Spacer()
-                    Button {
-                        showReorder = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.up.arrow.down")
-                                .font(.caption)
-                            Text("Reorder")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundStyle(Color.reforgedNavy)
-                    }
-                    .buttonStyle(.plain)
-                }
+            translationBlock
 
-                HStack {
-                    ForEach(settings.translationOrder) { translation in
-                        TranslationButton(
-                            translation: translation,
-                            isSelected: settings.defaultTranslation == translation
-                        ) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                settings.defaultTranslation = translation
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(.vertical, 10)
-            .sheet(isPresented: $showReorder) {
-                TranslationReorderSheet(translationOrder: $settings.translationOrder)
-            }
-
-            SettingsDivider()
-
-            // Show Superscript Verse Numbers
+            groupHeader("Display")
             SettingsToggleRow(
                 title: "Superscript Verse Numbers",
                 subtitle: "Display verse numbers in smaller, raised text",
                 isOn: $settings.showSuperscriptVerseNumbers
             )
-
             SettingsDivider()
-
-            // Show Paragraph Headings
             SettingsToggleRow(
                 title: "Show Paragraph Headings",
                 subtitle: "Display section headings when available",
                 isOn: $settings.showParagraphHeadings
             )
 
-            SettingsDivider()
-
-            // Auto-restore Reading Location
+            groupHeader("Navigation")
             SettingsToggleRow(
                 title: "Remember Reading Position",
                 subtitle: "Return to your last reading location when opening the Bible",
                 isOn: $settings.autoRestoreReadingLocation
             )
-
             SettingsDivider()
-
-            // Persistent Chapter Navigation
             SettingsToggleRow(
                 title: "Chapter Navigation Arrows",
                 subtitle: "Show navigation arrows to quickly move between chapters",
                 isOn: $settings.persistentChapterNavigation
             )
 
+            groupHeader("Original Languages")
+            SettingsToggleRow(
+                title: "Original Language Text",
+                subtitle: "Show Textus Receptus (Greek NT) and Westminster Leningrad Codex (Hebrew OT) in word study",
+                isOn: $settings.showOriginalLanguageText
+            )
             SettingsDivider()
+            SettingsToggleRow(
+                title: "Original Languages in Switcher",
+                subtitle: "Add TR (Greek NT) and WLC (Hebrew OT) as readable versions in the translation menu",
+                isOn: $settings.showOriginalLanguagesInSwitcher
+            )
 
-            // Day Boundary
+            groupHeader("Offline Commentaries")
+            CommentaryDownloadsView()
+                .padding(.bottom, 6)
+
+            groupHeader("Streak")
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Bedtime")
@@ -110,37 +77,8 @@ struct BibleReadingSettingsSection: View {
             .padding(.vertical, 10)
 
             SettingsDivider()
+                .padding(.top, 14)
 
-            // Original Language Text (Word Study)
-            SettingsToggleRow(
-                title: "Original Language Text",
-                subtitle: "Show Textus Receptus (Greek NT) and Westminster Leningrad Codex (Hebrew OT) in word study",
-                isOn: $settings.showOriginalLanguageText
-            )
-
-            SettingsDivider()
-
-            // Original Languages in Version Switcher
-            SettingsToggleRow(
-                title: "Original Languages in Switcher",
-                subtitle: "Add TR (Greek NT) and WLC (Hebrew OT) as readable versions in the translation menu",
-                isOn: $settings.showOriginalLanguagesInSwitcher
-            )
-
-            SettingsDivider()
-
-            // Offline Commentaries
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Offline Commentaries")
-                    .font(.subheadline).fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                CommentaryDownloadsView()
-            }
-            .padding(.vertical, 10)
-
-            SettingsDivider()
-
-            // Reset Button
             SettingsButtonRow(
                 title: "Reset Bible Settings",
                 icon: "arrow.counterclockwise",
@@ -151,6 +89,99 @@ struct BibleReadingSettingsSection: View {
                 }
             }
         }
+    }
+
+    // MARK: - Pieces
+
+    private func groupHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.footnote)
+            .fontWeight(.semibold)
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 28)
+            .padding(.bottom, 4)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var translationBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Default Translation")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                Button {
+                    showReorder = true
+                } label: {
+                    Label("Reorder", systemImage: "arrow.up.arrow.down")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 68), spacing: 8)], spacing: 8) {
+                ForEach(settings.translationOrder) { translation in
+                    TranslationButton(
+                        translation: translation,
+                        isSelected: settings.defaultTranslation == translation
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            settings.defaultTranslation = translation
+                        }
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(settings.defaultTranslation.fullName)
+                    .font(.footnote)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text(settings.defaultTranslation.copyright)
+                    .font(.caption)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button { showManageBibles = true } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.title3)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Manage Bibles")
+                            .font(.subheadline).fontWeight(.medium)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text("Offline reading, downloads, Greek & Hebrew")
+                            .font(.caption)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(Color.adaptiveCardBackground(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.top, 10)
+        .sheet(isPresented: $showReorder) {
+            TranslationReorderSheet(translationOrder: $settings.translationOrder)
+        }
+        .sheet(isPresented: $showManageBibles) { ManageBiblesView() }
     }
 }
 
@@ -164,18 +195,14 @@ struct TranslationButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Text(translation.rawValue)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
-
-                Text(translation.copyright)
-                    .font(.caption2)
-                    .foregroundStyle(isSelected ? .white.opacity(0.8) : Color.adaptiveTextSecondary(colorScheme))
-            }
+            Text(translation.rawValue)
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
             .frame(maxWidth: .infinity)
-            .frame(height: 60)
+            .frame(height: 44)
             .background(isSelected ? Color.reforgedNavy : Color.adaptiveCardBackground(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
@@ -184,6 +211,8 @@ struct TranslationButton: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(translation.fullName)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

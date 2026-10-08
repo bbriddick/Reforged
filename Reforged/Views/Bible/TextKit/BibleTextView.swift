@@ -214,15 +214,41 @@ final class ScriptureTextView: UITextView {
               let location = cm.location(cm.documentRange.location, offsetBy: index) else { return nil }
         lm.ensureLayout(for: lm.documentRange)
         guard let fragment = lm.textLayoutFragment(for: location) else { return nil }
-        return fragment.layoutFragmentFrame.minY + textContainerInset.top
+        // A layout fragment is a whole paragraph, so a verse in the middle of a long paragraph would
+        // resolve to the paragraph's top. Descend to the line that actually holds the character.
+        var y = fragment.layoutFragmentFrame.minY
+        let fragmentStart = cm.offset(from: cm.documentRange.location, to: fragment.rangeInElement.location)
+        let local = index - fragmentStart
+        if let line = fragment.textLineFragments.first(where: { NSLocationInRange(local, $0.characterRange) }) {
+            y += line.typographicBounds.minY
+        }
+        return y + textContainerInset.top
+    }
+
+    /// Height of the laid-out text. `contentSize` can lag behind a freshly assembled document, which
+    /// would clamp a deep scroll target short of the verse; the layout manager's usage bounds don't.
+    private var laidOutContentHeight: CGFloat {
+        guard let lm = textLayoutManager else { return contentSize.height }
+        lm.ensureLayout(for: lm.documentRange)
+        let used = lm.usageBoundsForTextContainer.height + textContainerInset.top + textContainerInset.bottom
+        return max(contentSize.height, used)
     }
 
     /// Scrolls the character at `index` to (near) the top of the viewport.
     func scrollCharacterToTop(_ index: Int, animated: Bool) {
         guard let y = contentY(forCharacterIndex: index) else { return }
-        let maxOffset = max(0, contentSize.height - bounds.height + adjustedContentInset.bottom)
+        let maxOffset = max(0, laidOutContentHeight - bounds.height + adjustedContentInset.bottom)
         let target = min(max(0, y - textContainerInset.top), maxOffset)
         setContentOffset(CGPoint(x: 0, y: target), animated: animated)
+    }
+
+    /// True when the view is still where `scrollCharacterToTop(index)` would put it — used to
+    /// re-apply a navigation once layout has settled, without fighting a user who has scrolled.
+    func isScrolledToCharacter(_ index: Int) -> Bool {
+        guard let y = contentY(forCharacterIndex: index) else { return true }
+        let maxOffset = max(0, laidOutContentHeight - bounds.height + adjustedContentInset.bottom)
+        let target = min(max(0, y - textContainerInset.top), maxOffset)
+        return abs(contentOffset.y - target) < 2
     }
 
     // MARK: Accessibility
@@ -347,6 +373,6 @@ final class AttributedScriptureCache {
         let notes = renderState.notedReferences.sorted().joined(separator: ",")
         let bookmarks = renderState.bookmarkedReferences.sorted().joined(separator: ",")
         let audio = renderState.audioReference ?? ""
-        return "\(chapter.id)_\(chapter.verses.count)_\(translation.rawValue)_\(settings.fontType.rawValue)_\(settings.effectiveFontSize)_\(settings.lineSpacing.rawValue)_\(colorScheme == .dark)_\(verseByVerse)_\(includeChapterHeader)_\(sel)_\(lookup)_\(highlights)_\(notes)_\(bookmarks)_\(audio)_\(ReaderCosmetics.cacheKey)"
+        return "\(chapter.id)_\(chapter.verses.count)_\(translation.rawValue)_\(settings.fontType.rawValue)_\(settings.effectiveFontSize)_\(settings.lineSpacing.rawValue)_\(colorScheme == .dark)_\(verseByVerse)_\(settings.showPoetryLayout)_\(includeChapterHeader)_\(sel)_\(lookup)_\(highlights)_\(notes)_\(bookmarks)_\(audio)_\(ReaderCosmetics.cacheKey)"
     }
 }

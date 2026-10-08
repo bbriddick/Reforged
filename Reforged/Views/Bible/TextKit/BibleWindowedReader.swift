@@ -460,6 +460,20 @@ struct BibleWindowedReader: UIViewRepresentable {
                     textView.scrollCharacterToTop(offset, animated: animated)
                     coordinator.rebuildVerseYs()
                     coordinator.syncLastReported()
+                    // TextKit finishes sizing the document a beat later; if that moved the target,
+                    // land on it again — but never once the reader has started scrolling.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak textView] in
+                        guard let textView, !animated,
+                              !textView.isTracking, !textView.isDragging, !textView.isDecelerating,
+                              coordinator.lastAnchorID == anchor.id,
+                              let current = controller.characterOffset(forReference: reference),
+                              !textView.isScrolledToCharacter(current) else { return }
+                        coordinator.suppressReporting = true
+                        textView.scrollCharacterToTop(current, animated: false)
+                        coordinator.rebuildVerseYs()
+                        coordinator.syncLastReported()
+                        coordinator.suppressReporting = false
+                    }
                 }
                 coordinator.suppressReporting = false
                 coordinator.anchorsInFlight -= 1

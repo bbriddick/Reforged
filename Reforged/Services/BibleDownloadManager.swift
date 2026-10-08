@@ -1,3 +1,4 @@
+import YouVersionPlatform
 import Foundation
 import Combine
 
@@ -121,6 +122,13 @@ class BibleDownloadManager: ObservableObject {
 
     func download(_ translation: BibleTranslation) {
         guard activeTasks[translation] == nil else { return }
+        // ESV and NLT: the publishers cap stored text at 500 verses, so there is no bulk download.
+        if translation == .nlt || translation == .esv { return }
+        // Licensed NASB: no bulk download unless the YouVersion offline switch is on.
+        if YouVersionConfig.versionId(for: translation) != nil {
+            downloadYouVersion(translation)
+            return
+        }
 
         // Show bundle-download state immediately; fall back to chapter progress if needed
         states[translation] = .downloadingBundle
@@ -153,6 +161,25 @@ class BibleDownloadManager: ObservableObject {
         }
 
         activeTasks[translation] = task
+    }
+
+    private func downloadYouVersion(_ translation: BibleTranslation) {
+        guard YouVersionConfig.downloadsOffered else { return }
+        if YouVersionConfig.requireSignInForDownload && !YouVersionAPI.isSignedIn { return }
+
+        let total = Self.totalChapters
+        states[translation] = .downloading(downloaded: cachedCount(for: translation), total: total)
+        activeTasks[translation] = Task {
+            do {
+                try await YouVersionService.shared.downloadAll(translation: translation) { [weak self] done in
+                    self?.states[translation] = .downloading(downloaded: done, total: total)
+                }
+            } catch {
+                debugLog("[\(translation.rawValue)] YouVersion download stopped: \(error)")
+            }
+            activeTasks[translation] = nil
+            states[translation] = computeState(for: translation)
+        }
     }
 
     // MARK: - Bundle Download
@@ -247,6 +274,13 @@ class BibleDownloadManager: ObservableObject {
 
     func clearDownload(_ translation: BibleTranslation) {
         cancelDownload(translation)
+        if YouVersionConfig.versionId(for: translation) != nil {
+            Task {
+                await YouVersionService.shared.clearCache(for: translation)
+                states[translation] = computeState(for: translation)
+            }
+            return
+        }
         switch translation {
         case .esv:                    ESVService.shared.clearCache()
         case .kjv:                    KJVService.shared.clearCache()

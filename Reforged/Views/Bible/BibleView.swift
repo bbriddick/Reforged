@@ -163,6 +163,7 @@ struct BibleView: View {
 
     // iPad/Mac: Show navigation sidebar
     @State private var showNavigationSidebar = false
+    @State private var showManageBibles = false
 
     // iPad/Mac: which study-tools-rail panel is expanded (nil = rail collapsed to icons)
     @State private var activeToolPanel: BibleToolPanelKind?
@@ -652,26 +653,21 @@ struct BibleView: View {
                         }
                     }
                 }
-                if settingsManager.showOriginalLanguagesInSwitcher {
+                let originals = settingsManager.enabledOriginalLanguages
+                if !originals.isEmpty {
                     Divider()
-                    Button { onTranslationSelect(.tr) } label: {
-                        HStack {
-                            Text("TR — Greek NT")
-                            if currentTranslation == .tr { Image(systemName: "checkmark") }
+                    ForEach(originals) { t in
+                        Button { onTranslationSelect(t) } label: {
+                            HStack {
+                                Text(t.originalLanguageMenuLabel)
+                                if currentTranslation == t { Image(systemName: "checkmark") }
+                            }
                         }
                     }
-                    Button { onTranslationSelect(.sblgnt) } label: {
-                        HStack {
-                            Text("SBLGNT — Greek NT")
-                            if currentTranslation == .sblgnt { Image(systemName: "checkmark") }
-                        }
-                    }
-                    Button { onTranslationSelect(.wlc) } label: {
-                        HStack {
-                            Text("WLC — Hebrew OT")
-                            if currentTranslation == .wlc { Image(systemName: "checkmark") }
-                        }
-                    }
+                }
+                Divider()
+                Button { showManageBibles = true } label: {
+                    Label("Manage Bibles…", systemImage: "arrow.down.circle")
                 }
             } label: {
                 HStack(spacing: 4) {
@@ -1242,6 +1238,11 @@ struct BibleView: View {
                 .font(.caption)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 .fixedSize(horizontal: false, vertical: true)
+
+            if currentTranslation == .nasb, let lockman = URL(string: "https://www.lockman.org") {
+                Link("The Lockman Foundation · lockman.org", destination: lockman)
+                    .font(.caption)
+            }
         }
     }
 
@@ -1365,7 +1366,7 @@ struct BibleView: View {
                         chapter: selectedChapter,
                         translation: currentTranslation,
                         translationOrder: settingsManager.translationOrder,
-                        showOriginalLanguagesInSwitcher: settingsManager.showOriginalLanguagesInSwitcher,
+                        originalLanguagesInSwitcher: settingsManager.enabledOriginalLanguages,
                         showAudioPlayer: showAudioPlayer,
                         audioPlayer: audioPlayer,
                         onNavigationTap: onNavigationTap,
@@ -1374,7 +1375,8 @@ struct BibleView: View {
                         onFormatTap: onFormatTap,
                         onTranslationSelect: { newTranslation in
                             onTranslationSelect(newTranslation)
-                        }
+                        },
+                        onManageBibles: { showManageBibles = true }
                     )
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -1732,6 +1734,9 @@ struct BibleView: View {
             if let ref = targetRef, let verse = allLoadedVerses.first(where: { $0.reference == ref }) {
                 panelVerse = verse
             }
+        }
+        .sheet(isPresented: $showManageBibles) {
+            ManageBiblesView()
         }
         .sheet(isPresented: $showNavigationSidebar) {
             makeNavigationView(usesSheetPresentation: true)
@@ -2264,7 +2269,7 @@ struct BibleView: View {
     /// in place, keeping the same verse at the top. (Light/dark is handled separately by the
     /// reader itself, since a color change doesn't move the layout.)
     private var readerPresentationKey: String {
-        "\(readingSettings.verseByVerse)|\(readingSettings.fontType.rawValue)|\(readingSettings.fontSize.rawValue)|\(readingSettings.lineSpacing.rawValue)"
+        "\(readingSettings.verseByVerse)|\(readingSettings.showPoetryLayout)|\(readingSettings.fontType.rawValue)|\(readingSettings.fontSize.rawValue)|\(readingSettings.lineSpacing.rawValue)"
     }
 
     /// Cheap change-signature for the interactive overlay, so the reader re-renders only when
@@ -3417,7 +3422,7 @@ struct BibleTopBar: View {
     let chapter: Int
     let translation: BibleTranslation
     var translationOrder: [BibleTranslation] = BibleTranslation.allCases.filter { !$0.isOriginalLanguage }
-    var showOriginalLanguagesInSwitcher: Bool = false
+    var originalLanguagesInSwitcher: [BibleTranslation] = []
     let showAudioPlayer: Bool
     @ObservedObject var audioPlayer: BibleAudioPlayer
     let onNavigationTap: () -> Void
@@ -3425,6 +3430,7 @@ struct BibleTopBar: View {
     let onAudioTap: () -> Void
     let onFormatTap: () -> Void
     let onTranslationSelect: (BibleTranslation) -> Void
+    var onManageBibles: (() -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
@@ -3570,31 +3576,23 @@ struct BibleTopBar: View {
                     }
                 }
             }
-            if showOriginalLanguagesInSwitcher {
+            if !originalLanguagesInSwitcher.isEmpty {
                 Divider()
-                Button {
-                    onTranslationSelect(.tr)
-                } label: {
-                    HStack {
-                        Text("TR — Greek NT")
-                        if translation == .tr { Image(systemName: "checkmark") }
+                ForEach(originalLanguagesInSwitcher) { t in
+                    Button {
+                        onTranslationSelect(t)
+                    } label: {
+                        HStack {
+                            Text(t.originalLanguageMenuLabel)
+                            if translation == t { Image(systemName: "checkmark") }
+                        }
                     }
                 }
-                Button {
-                    onTranslationSelect(.sblgnt)
-                } label: {
-                    HStack {
-                        Text("SBLGNT — Greek NT")
-                        if translation == .sblgnt { Image(systemName: "checkmark") }
-                    }
-                }
-                Button {
-                    onTranslationSelect(.wlc)
-                } label: {
-                    HStack {
-                        Text("WLC — Hebrew OT")
-                        if translation == .wlc { Image(systemName: "checkmark") }
-                    }
+            }
+            if let onManageBibles {
+                Divider()
+                Button(action: onManageBibles) {
+                    Label("Manage Bibles…", systemImage: "arrow.down.circle")
                 }
             }
         } label: {
@@ -4400,6 +4398,19 @@ private struct FormattingVerseLayoutSection: View {
             }
             .tint(Color.reforgedGold)
             .onChange(of: settings.verseByVerse) { _ in HapticManager.shared.lightImpact() }
+
+            Toggle(isOn: $settings.showPoetryLayout) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Poetry Layout")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("Show Psalms and prophecy line by line")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+            .tint(Color.reforgedGold)
+            .onChange(of: settings.showPoetryLayout) { _ in HapticManager.shared.lightImpact() }
         }
     }
 }

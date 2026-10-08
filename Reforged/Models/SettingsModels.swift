@@ -186,6 +186,16 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
 
     /// True for original-language texts — hidden unless the setting is enabled.
+    /// Label for the translation switcher menu (original-language texts only).
+    var originalLanguageMenuLabel: String {
+        switch self {
+        case .tr: return "TR — Greek NT"
+        case .sblgnt: return "SBLGNT — Greek NT"
+        case .wlc: return "WLC — Hebrew OT"
+        default: return rawValue
+        }
+    }
+
     var isOriginalLanguage: Bool {
         self == .tr || self == .wlc || self == .sblgnt
     }
@@ -236,7 +246,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .nlt: return "© 1996, 2004, 2015 Tyndale House Foundation"
         case .csb: return "© 2017 Holman Bible Publishers"
         case .nkjv: return "© 1982 Thomas Nelson"
-        case .nasb: return "© 1995 The Lockman Foundation"
+        case .nasb: return "© 1960, 1971, 1977, 1995 The Lockman Foundation"
         case .rvr1960: return "© 1960 Sociedades Bíblicas en América Latina; © Renovado 1988 Sociedades Bíblicas Unidas"
         case .tr: return "Public Domain"
         case .sblgnt: return "© 2010 Society of Biblical Literature and Logos Bible Software"
@@ -255,7 +265,7 @@ enum BibleTranslation: String, CaseIterable, Codable, Identifiable {
         case .nkjv:
             return "Scripture quotations marked NKJV are taken from the New King James Version®, Copyright © 1982 Thomas Nelson. Used by permission. All rights reserved. The NKJV text may not be quoted in any publication made available to the public by a Creative Commons license. The NKJV may not be translated into any other language. Website: www.thomasnelson.com"
         case .nasb:
-            return "Scripture quotations marked NASB are taken from the (NASB®) New American Standard Bible®, Copyright © 1960, 1971, 1977, 1995 by The Lockman Foundation. Used by permission. All rights reserved. The NASB text may not be quoted in any publication made available to the public by a Creative Commons license. The NASB may not be translated into any other language. Website: www.lockman.org"
+            return "Scripture quotations marked NASB are taken from the (NASB®) New American Standard Bible®, Copyright © 1960, 1971, 1977, 1995 by The Lockman Foundation, La Habra, Calif. Used by permission. All rights reserved. For Permission to Quote Information visit www.Lockman.org"
         case .rvr1960:
             return "Las citas bíblicas marcadas RVR1960 son tomadas de la Reina-Valera 1960®, © Sociedades Bíblicas en América Latina, 1960; © Renovado, Sociedades Bíblicas Unidas, 1988. Utilizado con permiso. Reina-Valera 1960® es una marca registrada de las Sociedades Bíblicas Unidas y puede ser usada solamente bajo licencia. Website: www.sociedades-biblicas.net"
         case .net:

@@ -35,6 +35,15 @@ struct UnifiedNavigationView: View {
     @State private var hasPositionedBookList = false
     @State private var sortOrder: SortOrder = .traditional
     @State private var showVersePicker = false
+    /// iPhone navigator: one flow, Book → Chapter → Verse. Opens on the chapters of the book being read,
+    /// because changing chapter is the common case.
+    enum NavStep: Int, CaseIterable { case book, chapter, verse }
+    @State private var step: NavStep = .chapter
+    /// Direction of the last step / item change, so content slides the way the flow runs.
+    @State private var slideForward = true
+    @State private var browsedBookID: String? = nil
+    @State private var navigatorReady = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Software keyboard on screen. Tracked from notifications rather than inferred
     /// from focus — with a hardware keyboard the field is focused but nothing rises.
     @State private var keyboardVisible = false
@@ -62,6 +71,31 @@ struct UnifiedNavigationView: View {
     @State private var navSelectedBook: String? = nil
     @State private var navCachedBookCounts: [String: Int] = [:]
     @ObservedObject private var settingsMgr = SettingsManager.shared
+
+    /// The book whose chapters the iPhone drill-down is showing (defaults to the book being read).
+    private var browsedBook: BibleBook {
+        BibleData.books.first { $0.id == browsedBookID } ?? selectedBook
+    }
+
+    /// Chapter tapped in a grid: straight to the reader for incompatible original-language
+    /// testaments, otherwise on to the verse step.
+    private func selectChapter(_ book: BibleBook, _ chapter: Int) {
+        pickerBook = book
+        pickerChapter = chapter
+        let incompatible =
+            ((translation == .tr || translation == .sblgnt) && book.testament == .old) ||
+            (translation == .wlc && book.testament == .new)
+        if incompatible {
+            commitPickerSelection()
+            dismiss()
+            onSelect()
+        } else {
+            loadVersesForChapter()
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                showVersePicker = true
+            }
+        }
+    }
 
     /// Writes the verse picker's chapter into the reader bindings — only at the moment of navigation.
     private func commitPickerSelection() {
@@ -459,12 +493,18 @@ struct UnifiedNavigationView: View {
         } else if showsRecentSearches {
             recentSearchesView
         } else {
-            booksView
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        if searchFieldFocused { searchFieldFocused = false }
-                    }
-                )
+            Group {
+                if controlsAtBottom {
+                    phoneNavigator
+                } else {
+                    booksView
+                }
+            }
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    if searchFieldFocused { searchFieldFocused = false }
+                }
+            )
         }
     }
 
@@ -476,10 +516,6 @@ struct UnifiedNavigationView: View {
         VStack(spacing: 0) {
             searchActionRows
                 .padding(.top, 6)
-            if !showsSearchResults && !searchFieldFocused {
-                listControlsRow
-                    .transition(.opacity)
-            }
             jumpBackRow
             searchRow
         }
@@ -956,6 +992,346 @@ struct UnifiedNavigationView: View {
         }
     }
 
+    // MARK: - Phone navigator (Book → Chapter → Verse)
+    //
+    // One flow with one mental model. Each step is the same shape — a large title, then the choices
+    // resting in the lower half of the screen where the thumb is — and a standard segmented control
+    // underneath says where you are and jumps between steps. Picking a book or chapter moves you on;
+    // picking a verse takes you there. Sideways swipes change the item at the current level (books on
+    // the chapter step, chapters on the verse step).
+
+    private var slideAnimation: Animation {
+        reduceMotion ? .easeInOut(duration: 0.15) : .spring(response: 0.32, dampingFraction: 0.9)
+    }
+
+    private var slideTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .move(edge: slideForward ? .trailing : .leading).combined(with: .opacity),
+                removal: .move(edge: slideForward ? .leading : .trailing).combined(with: .opacity))
+    }
+
+    private func goTo(_ newStep: NavStep) {
+        guard newStep != step else { return }
+        slideForward = newStep.rawValue > step.rawValue
+        withAnimation(slideAnimation) { step = newStep }
+    }
+
+    /// Points the chapter and verse steps at `book` (its chapter 1, or the chapter being read).
+    private func setBrowsedBook(_ book: BibleBook) {
+        browsedBookID = book.id
+        pickerBook = book
+        pickerChapter = (book.id == selectedBook.id && selectedChapter <= book.chapters) ? selectedChapter : 1
+    }
+
+    private func chooseBook(_ book: BibleBook) {
+        HapticManager.shared.lightImpact()
+        setBrowsedBook(book)
+        goTo(.chapter)
+    }
+
+    /// Swipe on the chapter step: the neighbouring book.
+    private func stepBook(offset: Int) {
+        guard let index = BibleData.books.firstIndex(where: { $0.id == browsedBook.id }) else { return }
+        let target = index + offset
+        guard BibleData.books.indices.contains(target) else { return }
+        slideForward = offset > 0
+        HapticManager.shared.lightImpact()
+        withAnimation(slideAnimation) { setBrowsedBook(BibleData.books[target]) }
+    }
+
+    private func chooseChapter(_ chapter: Int) {
+        let book = browsedBook
+        pickerBook = book
+        pickerChapter = chapter
+        let incompatible =
+            ((translation == .tr || translation == .sblgnt) && book.testament == .old) ||
+            (translation == .wlc && book.testament == .new)
+        if incompatible {
+            commitPickerSelection()
+            dismiss()
+            onSelect()
+            return
+        }
+        HapticManager.shared.lightImpact()
+        goTo(.verse)
+    }
+
+    /// Swipe on the verse step: the neighbouring chapter of the same book.
+    private func stepChapter(offset: Int) {
+        let target = pickerChapter + offset
+        guard (1...browsedBook.chapters).contains(target) else { return }
+        slideForward = offset > 0
+        HapticManager.shared.lightImpact()
+        withAnimation(slideAnimation) { pickerChapter = target }
+    }
+
+    private func chooseVerse(_ verse: Int) {
+        commitPickerSelection()
+        dismiss()
+        // The verse handler alone focuses the chapter and scrolls after hydration; onSelect() would
+        // fire a competing chapter-top load.
+        if let selectVerse = onSelectVerse { selectVerse(verse) } else { onSelect() }
+    }
+
+    private func readChapter() {
+        commitPickerSelection()
+        dismiss()
+        onSelect()
+    }
+
+    private var phoneNavigator: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                switch step {
+                case .book:    bookStep.transition(slideTransition)
+                case .chapter: chapterStep.transition(slideTransition)
+                case .verse:   verseStep.transition(slideTransition)
+                }
+            }
+            .clipped()
+            stepBar
+        }
+        .onAppear {
+            guard !navigatorReady else { return }
+            navigatorReady = true
+            setBrowsedBook(selectedBook)
+        }
+    }
+
+    // MARK: Step 1 — Books
+
+    private struct BookGroup: Identifiable {
+        let id: String
+        let title: String?
+        let books: [BibleBook]
+    }
+
+    private var bookGroups: [BookGroup] {
+        if sortOrder == .alphabetical {
+            return [BookGroup(id: "all", title: nil, books: BibleData.books.sorted { $0.name < $1.name })]
+        }
+        return [
+            BookGroup(id: "ot", title: "Old Testament", books: BibleData.books.filter { $0.testament == .old }),
+            BookGroup(id: "nt", title: "New Testament", books: BibleData.books.filter { $0.testament == .new })
+        ]
+    }
+
+    private var bookStep: some View {
+        ScrollViewReader { proxy in
+            List {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Books")
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                    Menu {
+                        Picker("Sort order", selection: $sortOrder) {
+                            Text("Bible order").tag(SortOrder.traditional)
+                            Text("A–Z").tag(SortOrder.alphabetical)
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("Sort books")
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 0, trailing: 8))
+
+                ForEach(bookGroups) { group in
+                    Section {
+                        ForEach(group.books) { book in
+                            Button { chooseBook(book) } label: {
+                                let isReading = book.id == selectedBook.id
+                                HStack(spacing: 8) {
+                                    Text(book.name)
+                                        .font(.body.weight(isReading ? .semibold : .regular))
+                                        .foregroundStyle(isReading ? Color.reforgedGold : Color.adaptiveText(colorScheme))
+                                    Spacer(minLength: 8)
+                                    Text("\(book.chapters)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
+                                }
+                                .frame(height: 48)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .listRowBackground(Color.adaptiveTertiaryBackground(colorScheme))
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 12))
+                            .id(book.id)
+                            .accessibilityHint("\(book.chapters) chapters")
+                        }
+                    } header: {
+                        if let title = group.title { Text(title) }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.immediately)
+            .onAppear { proxy.scrollTo(browsedBook.id, anchor: .center) }
+        }
+    }
+
+    // MARK: Steps 2 & 3 — Chapters and verses share one layout
+
+    private var chapterStep: some View {
+        let book = browsedBook
+        return numberGrid(
+            title: book.name,
+            subtitle: "\(book.chapters) chapter\(book.chapters == 1 ? "" : "s")",
+            count: book.chapters,
+            active: book.id == selectedBook.id ? selectedChapter : nil,
+            noun: "Chapter",
+            scrollKey: book.id,
+            onSelect: chooseChapter,
+            onSwipe: { stepBook(offset: $0) }
+        )
+    }
+
+    private var verseStep: some View {
+        let book = browsedBook
+        let chapter = pickerChapter
+        let count = BibleVerseCounts.count(book: book.name, chapter: chapter) ?? 1
+        return numberGrid(
+            title: "\(book.name) \(chapter)",
+            subtitle: "\(count) verse\(count == 1 ? "" : "s")",
+            count: count,
+            active: nil,
+            noun: "Verse",
+            scrollKey: "\(book.id)-\(chapter)",
+            onSelect: chooseVerse,
+            onSwipe: { stepChapter(offset: $0) }
+        )
+    }
+
+    /// A title over a grid of numbers. Short grids rest on the bar below; long ones start a third of
+    /// the way down and scroll up, so the first rows are already under the thumb.
+    private func numberGrid(title: String,
+                            subtitle: String,
+                            count: Int,
+                            active: Int?,
+                            noun: String,
+                            scrollKey: String,
+                            onSelect: @escaping (Int) -> Void,
+                            onSwipe: @escaping (Int) -> Void) -> some View {
+        GeometryReader { geo in
+            let rows = Int((Double(count) / 5).rounded(.up))
+            let gridHeight = CGFloat(rows) * 52 + 16
+            let band = max(geo.size.height - gridHeight, geo.size.height * 0.35)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(title)
+                                .font(.largeTitle.weight(.bold))
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                            Text(subtitle)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: band, alignment: .bottomLeading)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                            ForEach(1...max(count, 1), id: \.self) { n in
+                                let isActive = n == active
+                                Button { onSelect(n) } label: {
+                                    Text("\(n)")
+                                        .font(.headline.weight(.semibold))
+                                        .foregroundStyle(isActive ? .white : Color.adaptiveText(colorScheme))
+                                        .frame(maxWidth: .infinity, minHeight: 44)
+                                        .background(isActive ? Color.reforgedGold : Color.adaptiveTertiaryBackground(colorScheme))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .stroke(isActive ? Color.clear : (colorScheme == .dark ? Color.white.opacity(0.07) : Color.black.opacity(0.04)), lineWidth: 0.5)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                                .id("n-\(n)")
+                                .accessibilityLabel("\(noun) \(n)")
+                                .accessibilityAddTraits(isActive ? .isSelected : [])
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                    }
+                }
+                .scrollDismissesKeyboard(.immediately)
+                .onAppear {
+                    // Long grids open with the item being read in the lower part of the screen.
+                    guard let active, active > 15 else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("n-\(active)", anchor: UnitPoint(x: 0.5, y: 0.88)) }
+                }
+            }
+        }
+        .id(scrollKey)
+        .transition(slideTransition)
+        // Sideways swipe steps through the neighbouring items; vertical scrolling is left alone.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24)
+                .onEnded { value in
+                    let dx = value.translation.width, dy = value.translation.height
+                    guard abs(dx) > 70, abs(dx) > abs(dy) * 1.8 else { return }
+                    onSwipe(dx < 0 ? 1 : -1)
+                }
+        )
+    }
+
+    // MARK: Step bar — where you are, and the one primary action
+
+    private var stepBinding: Binding<NavStep> {
+        Binding(get: { step }, set: { goTo($0) })
+    }
+
+    private var stepBar: some View {
+        VStack(spacing: 10) {
+            if step == .verse {
+                Button(action: readChapter) {
+                    Text("Read \(browsedBook.name) \(pickerChapter)")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(Color.reforgedGold)
+                        .clipShape(Capsule())
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            Picker("Browse", selection: stepBinding) {
+                Text(browsedBook.name).tag(NavStep.book)
+                Text("Chapter \(pickerChapter)").tag(NavStep.chapter)
+                Text("Verse").tag(NavStep.verse)
+            }
+            .pickerStyle(.segmented)
+            .controlSize(.large)
+            .accessibilityLabel("Browse by book, chapter or verse")
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .overlay(alignment: .top) { Divider() }
+        .animation(slideAnimation, value: step)
+    }
+
     // MARK: - Books View
 
     /// Testament filter + sort — quiet controls, so the current book (gold)
@@ -1045,21 +1421,7 @@ struct UnifiedNavigationView: View {
                                     LazyVGrid(columns: columns, spacing: 8) {
                                         ForEach(1...book.chapters, id: \.self) { chapter in
                                             Button {
-                                                pickerBook = book
-                                                pickerChapter = chapter
-                                                let incompatible =
-                                                    ((translation == .tr || translation == .sblgnt) && book.testament == .old) ||
-                                                    (translation == .wlc && book.testament == .new)
-                                                if incompatible {
-                                                    commitPickerSelection()
-                                                    dismiss()
-                                                    onSelect()
-                                                } else {
-                                                    loadVersesForChapter()
-                                                    withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
-                                                        showVersePicker = true
-                                                    }
-                                                }
+                                                selectChapter(book, chapter)
                                             } label: {
                                                 let isActive = book.id == selectedBook.id && chapter == selectedChapter
                                                 Text("\(chapter)")

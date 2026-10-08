@@ -21,6 +21,7 @@ struct DiscipleshipView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
                     headerSection
+                    protectionGroup
                     learningPathCard
                     rhythmCard
 
@@ -86,10 +87,8 @@ struct DiscipleshipView: View {
 
     private var toolsSection: some View {
         VStack(spacing: 16) {
-            sectionLabel("Tools")
+            sectionLabel("Share")
             ShareGospelCard()
-            focusShieldCard
-            temptedSOSCard
         }
     }
 
@@ -475,40 +474,77 @@ struct DiscipleshipView: View {
 
     // MARK: - Focus Shield Card
 
+    /// The shield leads the screen: status first, then the emergency action
+    /// directly beneath it so protection and "I'm struggling now" read as one unit.
+    private var protectionGroup: some View {
+        VStack(spacing: 8) {
+            focusShieldCard
+            temptedSOSCard
+        }
+    }
+
     private var focusShieldCard: some View {
-        NavigationLink(destination: FocusBlockingView()) {
-            HStack(spacing: 16) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(shieldIconColor.opacity(0.15))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "shield.lefthalf.filled")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(shieldIconColor)
+        let active = focusService.isAnyBlockingActive
+        let tint = shieldIconColor
+        return NavigationLink(destination: FocusBlockingView()) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .center, spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(tint.opacity(0.18))
+                            .frame(width: 60, height: 60)
+                        Image(systemName: active ? "checkmark.shield.fill" : "shield.lefthalf.filled")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(tint)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(active ? "PROTECTED" : "NOT SET UP")
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(tint)
+                        Text("Focus & Purity Shield")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                    }
+                    Spacer(minLength: 0)
                 }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Focus & Purity Shield")
-                        .font(.headline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text(focusStatusLabel)
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                Text(active ? focusService.statusDescription
+                            : "Block adult content and distracting apps so the right choice is the easy one.")
+                    .font(.subheadline)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 6) {
+                    Text(active ? "Manage shield" : "Set up protection")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(active ? Color.adaptiveText(colorScheme) : Color.white)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(active ? Color.adaptiveBorder(colorScheme).opacity(0.5) : tint)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .padding(16)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(18)
+            .background(
+                ZStack {
+                    Color.adaptiveCardBackground(colorScheme)
+                    tint.opacity(colorScheme == .dark ? 0.10 : 0.07)
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(tint.opacity(0.35), lineWidth: 1)
+            )
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Tempted SOS Card
@@ -518,19 +554,20 @@ struct DiscipleshipView: View {
             HapticManager.shared.buttonTap()
             showTemptedSOS = true
         } label: {
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 10)
                         .fill(Color.reforgedCoral.opacity(0.15))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 40, height: 40)
                     Image(systemName: "hand.raised.brakesignal")
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.reforgedCoral)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("I'm Being Tempted")
-                        .font(.headline)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                     Text("Pause, breathe, and take hold of a way out")
                         .font(.caption)

@@ -79,6 +79,8 @@ struct ESVCachedChapter: Codable {
     let canonical: String
     let cachedAt: Date
     let verses: [ESVCachedVerse]
+    /// Last time this chapter was read; the least recently read are evicted first (see `ESVStorageLimit`).
+    var lastRead: Date? = nil
 
     var isStale: Bool {
         let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
@@ -98,6 +100,26 @@ struct LocalCachedVerse: Codable {
     let text: String
     let canonical: String
     let cachedAt: Date
+    var lastRead: Date? = nil
+}
+
+// MARK: - Storage limit
+
+/// Crossway's terms limit how much ESV text may be stored on the device. Everything ESVService
+/// keeps (cached chapters and cached verses combined) stays within `maxStoredVerses`; the least
+/// recently read entries are dropped first.
+enum ESVStorageLimit {
+    static let maxStoredVerses = 500
+
+    /// Verses covered by a reference like "John 3:16", "Psalm 19:7-11" or "Psalm 23" (counted as 1).
+    static func verseCount(forReference reference: String) -> Int {
+        guard let colon = reference.lastIndex(of: ":") else { return 1 }
+        let tail = reference[reference.index(after: colon)...]
+        let numbers = tail.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+        guard let first = numbers.first else { return 1 }
+        guard numbers.count > 1, numbers[1] >= first else { return 1 }
+        return numbers[1] - first + 1
+    }
 }
 
 // MARK: - ESV Service
@@ -116,11 +138,12 @@ class ESVService {
 
     // Increment when the query format for any book group changes so stale
     // entries are automatically evicted and re-fetched on next launch.
-    private static let cacheFormatVersion = 2
+    private static let cacheFormatVersion = 3
     private static let cacheFormatVersionKey = "esv_cache_format_version"
 
     private init() {
         loadCacheFromDisk()
+        enforceStorageLimit()
     }
 
     // MARK: - Cache Management
@@ -140,6 +163,8 @@ class ESVService {
             // "Book 1:1-99" query that returns properly delimited chapter text.
             let storedVersion = UserDefaults.standard.integer(forKey: Self.cacheFormatVersionKey)
             if storedVersion < Self.cacheFormatVersion {
+                // v3: chapters are requested with poetry indentation; older entries have flat lines.
+                if storedVersion < 3 { cache = [:] }
                 let singleChapterBooks: Set<String> = ["Obadiah", "Philemon", "2 John", "3 John", "Jude"]
                 let before = cache.count
                 cache = cache.filter { !singleChapterBooks.contains($0.value.book) }
@@ -191,6 +216,7 @@ class ESVService {
 
         // Reject stale entries and entries with suspiciously few verses (cache poisoning guard)
         if !cached.isStale && cached.verses.count >= 2 {
+            chapterCache[key]?.lastRead = Date()
             return cached
         }
 
@@ -200,7 +226,40 @@ class ESVService {
     private func cacheChapter(_ chapter: ESVCachedChapter) {
         let key = cacheKeyFor(book: chapter.book, chapter: chapter.chapter)
         chapterCache[key] = chapter
+        enforceStorageLimit()
         scheduleCacheSave()
+    }
+
+    // MARK: - Storage limit
+
+    /// Evicts least recently read chapters/verses until the combined total is within the limit.
+    private func enforceStorageLimit() {
+        enum Kind { case chapter(String), verse(String) }
+        var items: [(kind: Kind, last: Date, count: Int)] = []
+        for (k, c) in chapterCache {
+            items.append((.chapter(k), c.lastRead ?? c.cachedAt, c.verses.count))
+        }
+        let verseCache = loadedLocalVerseCache()
+        for (k, v) in verseCache {
+            items.append((.verse(k), v.lastRead ?? v.cachedAt, ESVStorageLimit.verseCount(forReference: k)))
+        }
+        var total = items.reduce(0) { $0 + $1.count }
+        guard total > ESVStorageLimit.maxStoredVerses else { return }
+
+        var chaptersChanged = false
+        var versesChanged = false
+        for item in items.sorted(by: { $0.last < $1.last }) {
+            if total <= ESVStorageLimit.maxStoredVerses { break }
+            switch item.kind {
+            case .chapter(let k): chapterCache[k] = nil; chaptersChanged = true
+            case .verse(let k): localVerseCache?[k] = nil; versesChanged = true
+            }
+            total -= item.count
+        }
+        if chaptersChanged { scheduleCacheSave() }
+        if versesChanged, let cache = localVerseCache, let data = try? JSONEncoder().encode(cache) {
+            UserDefaults.standard.set(data, forKey: verseCacheKey)
+        }
     }
 
     func clearCache() {
@@ -208,7 +267,9 @@ class ESVService {
         pendingCacheSave = nil
         chapterCache.removeAll()
         UserDefaults.standard.removeObject(forKey: cacheKey)
-        debugLog("ESV chapter cache cleared.")
+        localVerseCache = [:]
+        UserDefaults.standard.removeObject(forKey: verseCacheKey)
+        debugLog("ESV chapter and verse caches cleared.")
     }
 
     /// Bulk-import a pre-built bundle. Sets cachedAt to now so content stays fresh.
@@ -224,10 +285,11 @@ class ESVService {
                 verses: chapter.verses
             )
         }
+        enforceStorageLimit()
         pendingCacheSave?.cancel()
         pendingCacheSave = nil
         saveCacheToDisk()
-        debugLog("ESV bundle injected: \(bundle.count) chapters.")
+        debugLog("ESV bundle injected (capped to \(ESVStorageLimit.maxStoredVerses) verses).")
     }
 
     var cachedChapterCount: Int { chapterCache.count }
@@ -395,7 +457,9 @@ class ESVService {
     }
 
     private func getLocalCachedVerse(reference: String) -> (text: String, canonical: String)? {
-        guard let cached = loadedLocalVerseCache()[reference.lowercased()] else { return nil }
+        let key = reference.lowercased()
+        guard let cached = loadedLocalVerseCache()[key] else { return nil }
+        localVerseCache?[key]?.lastRead = Date()
         return (text: cached.text, canonical: cached.canonical)
     }
 
@@ -403,7 +467,8 @@ class ESVService {
         var cache = loadedLocalVerseCache()
         cache[reference.lowercased()] = LocalCachedVerse(text: text, canonical: canonical, cachedAt: Date())
         localVerseCache = cache
-        if let data = try? JSONEncoder().encode(cache) {
+        enforceStorageLimit()
+        if let data = try? JSONEncoder().encode(localVerseCache ?? cache) {
             UserDefaults.standard.set(data, forKey: verseCacheKey)
         }
     }
@@ -434,8 +499,8 @@ class ESVService {
             URLQueryItem(name: "include-passage-references", value: "false"),
             URLQueryItem(name: "include-first-verse-numbers", value: "true"),
             URLQueryItem(name: "indent-paragraphs", value: "0"),
-            URLQueryItem(name: "indent-poetry", value: "false"),
-            URLQueryItem(name: "indent-poetry-lines", value: "0"),
+            URLQueryItem(name: "indent-poetry", value: "true"),
+            URLQueryItem(name: "indent-poetry-lines", value: "2"),
             URLQueryItem(name: "indent-declares", value: "0"),
             URLQueryItem(name: "indent-psalm-doxology", value: "0"),
             URLQueryItem(name: "line-length", value: "0") // No line wrapping
@@ -485,7 +550,11 @@ class ESVService {
         var verses: [ParsedVerse] = []
         var headings: [Int: String] = [:]
 
-        let originalText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Poetry indentation makes ESV emit whitespace-only lines for stanza breaks; treat them as
+        // empty. Only newlines are trimmed from the ends so the first marker keeps its indent.
+        let originalText = text
+            .replacingOccurrences(of: #"(?m)^[ \t]+$"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .newlines)
         let pattern = #"\[(\d+)\]"#
 
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
@@ -499,6 +568,15 @@ class ESVService {
             return (parseVersesFallback(text, book: book, chapter: chapter), headings)
         }
 
+        func leadingSpaces(_ s: Substring) -> Int { s.prefix(while: { $0 == " " }).count }
+        func trailingNewlineCount(_ s: String) -> Int {
+            var n = 0
+            for ch in s.reversed() {
+                if ch == "\n" { n += 1 } else if ch == " " || ch == "\t" { continue } else { break }
+            }
+            return n
+        }
+
         for (index, match) in matches.enumerated() {
             guard let verseNumRange = Range(match.range(at: 1), in: originalText),
                   let verseNum = Int(originalText[verseNumRange]),
@@ -506,17 +584,24 @@ class ESVService {
 
             let textStart = matchRange.upperBound
 
-            // --- Paragraph break detection ---
+            // --- Where the marker sits on its line (drives poetry indent + mid-line starts) ---
+            let lineStart = originalText[..<matchRange.lowerBound].lastIndex(of: "\n")
+                .map { originalText.index(after: $0) } ?? originalText.startIndex
+            let beforeMarkerOnLine = originalText[lineStart..<matchRange.lowerBound]
+            let markerAtLineStart = beforeMarkerOnLine.allSatisfy { $0 == " " || $0 == "\t" }
+            let markerIndent = markerAtLineStart ? beforeMarkerOnLine.count : 0
+
+            // --- Paragraph / stanza break: a blank line immediately before this verse ---
             var startsNewParagraph = index == 0
             if index > 0 {
                 let prevEnd = matches[index - 1].range.upperBound
                 if let betweenRange = Range(NSRange(location: prevEnd, length: match.range.location - prevEnd), in: originalText) {
-                    let between = String(originalText[betweenRange])
-                    startsNewParagraph = between.contains("\n\n") || between.contains("\n    ") || between.contains("\n\t")
+                    startsNewParagraph = trailingNewlineCount(String(originalText[betweenRange])) >= 2
                 }
             }
 
             // --- Heading extraction: text between previous verse end and this verse marker ---
+            var title: String? = nil
             if index > 0 {
                 let prevEnd = matches[index - 1].range.upperBound
                 if let betweenRange = Range(NSRange(location: prevEnd, length: match.range.location - prevEnd), in: originalText) {
@@ -524,11 +609,10 @@ class ESVService {
                     if let h = extractHeadingFromBetweenText(between, isFirstVerse: false) {
                         headings[verseNum] = h
 
-                        // The raw verse text for the previous verse runs from after its
-                        // [N] marker all the way to the start of this [M] marker — the
-                        // same span as `between`. That means the heading text was included
-                        // in the previous verse's processed string. Strip it now.
-                        if !verses.isEmpty {
+                        // The previous verse's prose text runs up to this marker, so it
+                        // swallowed the heading. Strip it. (Poetry verses stop at the first
+                        // unindented line, so they never contain it.)
+                        if !verses.isEmpty, verses[verses.count - 1].poetryLines == nil {
                             let last = verses[verses.count - 1]
                             if let headingRange = last.text.range(of: h, options: [.caseInsensitive]) {
                                 let patched = String(last.text[..<headingRange.lowerBound])
@@ -539,18 +623,27 @@ class ESVService {
                                     text: patched.isEmpty ? last.text : patched,
                                     reference: last.reference,
                                     startsNewParagraph: last.startsNewParagraph,
-                                    sectionHeading: last.sectionHeading
+                                    sectionHeading: last.sectionHeading,
+                                    title: last.title
                                 )
                             }
                         }
                     }
                 }
             } else {
-                // Text before the first verse marker may contain a chapter heading
-                // (e.g. "Greeting" in Philemon or "Salutation" in 2 John).
+                // Text before the first verse marker: a section heading (e.g. "Greeting" in
+                // Philemon) and, after it, a psalm title ("A Psalm of David.") or acrostic
+                // title ("Aleph").
                 let before = String(originalText[originalText.startIndex..<matchRange.lowerBound])
                 if let h = extractHeadingFromBetweenText(before, isFirstVerse: true) {
                     headings[verseNum] = h
+                }
+                let blocks = before
+                    .components(separatedBy: "\n\n")
+                    .map { $0.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: " ") }
+                    .filter { !$0.isEmpty }
+                if blocks.count >= 2 {
+                    title = blocks.dropFirst().joined(separator: " ")
                 }
             }
 
@@ -563,15 +656,43 @@ class ESVService {
                 textEnd = originalText.endIndex
             }
 
-            let rawVerseText = String(originalText[textStart..<textEnd])
-            var verseText = rawVerseText
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .replacingOccurrences(of: "\n", with: " ")
-            while verseText.contains("  ") {
-                verseText = verseText.replacingOccurrences(of: "  ", with: " ")
+            let rawLines = String(originalText[textStart..<textEnd]).components(separatedBy: "\n")
+
+            // --- Poetry: marker on an indented line, or indented continuation lines ---
+            let hangingLines = rawLines.dropFirst().filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            let isPoetry = (markerAtLineStart && markerIndent >= 2) || hangingLines.first.map { leadingSpaces(Substring($0)) >= 2 } == true
+
+            var poetryLines: [PoetryLine]? = nil
+            var verseText: String
+
+            if isPoetry {
+                var lines: [PoetryLine] = []
+                if let first = rawLines.first {
+                    let firstText = first.trimmingCharacters(in: .whitespaces)
+                    if !firstText.isEmpty {
+                        let extra = max(0, leadingSpaces(Substring(first)) - 1)
+                        lines.append(PoetryLine(text: firstText, indent: markerAtLineStart ? max(0, (markerIndent + extra - 2) / 2) : 0))
+                    }
+                }
+                for raw in rawLines.dropFirst() {
+                    let trimmed = raw.trimmingCharacters(in: .whitespaces)
+                    if trimmed.isEmpty { continue }
+                    let spaces = leadingSpaces(Substring(raw))
+                    if spaces < 2 { break }   // unindented text after the poem (e.g. a heading)
+                    lines.append(PoetryLine(text: trimmed, indent: max(0, (spaces - 2) / 2)))
+                }
+                poetryLines = lines.isEmpty ? nil : lines
+                verseText = lines.map(\.text).joined(separator: " ")
+            } else {
+                verseText = rawLines.joined(separator: "\n")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "\n", with: " ")
+                while verseText.contains("  ") {
+                    verseText = verseText.replacingOccurrences(of: "  ", with: " ")
+                }
+                // Remove trailing heading text that leaked into the verse body
+                verseText = stripTrailingHeading(from: verseText)
             }
-            // Remove trailing heading text that leaked into the verse body
-            verseText = stripTrailingHeading(from: verseText)
 
             if !verseText.isEmpty {
                 let reference = "\(book) \(chapter):\(verseNum)"
@@ -581,7 +702,10 @@ class ESVService {
                     text: verseText,
                     reference: reference,
                     startsNewParagraph: startsNewParagraph,
-                    sectionHeading: headings[verseNum]
+                    sectionHeading: headings[verseNum],
+                    poetryLines: poetryLines,
+                    continuesPreviousLine: index > 0 && !markerAtLineStart && poetryLines != nil,
+                    title: title
                 ))
             }
         }
@@ -756,24 +880,9 @@ class ESVService {
 
     // MARK: - Precache All Chapters (for offline use)
 
-    func precacheBook(_ bookName: String) async {
-        guard let book = BibleData.books.first(where: { $0.name == bookName }) else { return }
-
-        for chapter in 1...book.chapters {
-            // Skip if already cached and not stale
-            if let cached = getCachedChapter(book: bookName, chapter: chapter), !cached.isStale {
-                continue
-            }
-
-            do {
-                _ = try await fetchChapterParsed(book: bookName, chapter: chapter)
-                // Small delay to avoid rate limiting
-                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
-            } catch {
-                debugLog("Failed to precache \(bookName) \(chapter): \(error)")
-            }
-        }
-    }
+    /// Intentionally a no-op: ESV text may not be stored in bulk (see `ESVStorageLimit`), so books
+    /// are never pre-cached. Chapters are fetched as they are read and only the most recent are kept.
+    func precacheBook(_ bookName: String) async {}
 
     // Force refresh a chapter (ignores cache)
     func refreshChapter(book: String, chapter: Int) async throws -> (verses: [ParsedVerse], canonical: String, headings: [Int: String]) {

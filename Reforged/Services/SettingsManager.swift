@@ -92,8 +92,53 @@ class SettingsManager: ObservableObject {
         didSet { save(showOriginalLanguageText, forKey: Keys.showOriginalLanguageText) }
     }
 
-    @Published var showOriginalLanguagesInSwitcher: Bool {
-        didSet { save(showOriginalLanguagesInSwitcher, forKey: Keys.showOriginalLanguagesInSwitcher) }
+    /// Which original-language texts appear in the translation switcher (one toggle per text).
+    @Published var showTRInSwitcher: Bool {
+        didSet { save(showTRInSwitcher, forKey: Keys.showTRInSwitcher) }
+    }
+    @Published var showSBLGNTInSwitcher: Bool {
+        didSet { save(showSBLGNTInSwitcher, forKey: Keys.showSBLGNTInSwitcher) }
+    }
+    @Published var showWLCInSwitcher: Bool {
+        didSet { save(showWLCInSwitcher, forKey: Keys.showWLCInSwitcher) }
+    }
+
+    /// Combined switch kept for older call sites (onboarding, Settings): on if any text is on;
+    /// setting it turns all three on or off.
+    var showOriginalLanguagesInSwitcher: Bool {
+        get { showTRInSwitcher || showSBLGNTInSwitcher || showWLCInSwitcher }
+        set {
+            showTRInSwitcher = newValue
+            showSBLGNTInSwitcher = newValue
+            showWLCInSwitcher = newValue
+        }
+    }
+
+    /// Enabled original-language texts, in menu order.
+    var enabledOriginalLanguages: [BibleTranslation] {
+        var result: [BibleTranslation] = []
+        if showTRInSwitcher { result.append(.tr) }
+        if showSBLGNTInSwitcher { result.append(.sblgnt) }
+        if showWLCInSwitcher { result.append(.wlc) }
+        return result
+    }
+
+    func isInSwitcher(_ translation: BibleTranslation) -> Bool {
+        switch translation {
+        case .tr: return showTRInSwitcher
+        case .sblgnt: return showSBLGNTInSwitcher
+        case .wlc: return showWLCInSwitcher
+        default: return true
+        }
+    }
+
+    func setInSwitcher(_ translation: BibleTranslation, _ isOn: Bool) {
+        switch translation {
+        case .tr: showTRInSwitcher = isOn
+        case .sblgnt: showSBLGNTInSwitcher = isOn
+        case .wlc: showWLCInSwitcher = isOn
+        default: break
+        }
     }
 
     // MARK: - Audio Settings
@@ -323,6 +368,9 @@ class SettingsManager: ObservableObject {
         static let persistentChapterNavigation = "settings.persistentChapterNavigation"
         static let showOriginalLanguageText = "settings.showOriginalLanguageText"
         static let showOriginalLanguagesInSwitcher = "settings.showOriginalLanguagesInSwitcher"
+        static let showTRInSwitcher = "settings.showTRInSwitcher"
+        static let showSBLGNTInSwitcher = "settings.showSBLGNTInSwitcher"
+        static let showWLCInSwitcher = "settings.showWLCInSwitcher"
         static let playbackSpeed = "settings.playbackSpeed"
         static let skipInterval = "settings.skipInterval"
         static let continueAudioOnNavigate = "settings.continueAudioOnNavigate"
@@ -383,7 +431,11 @@ class SettingsManager: ObservableObject {
         self.autoRestoreReadingLocation = UserDefaults.standard.object(forKey: Keys.autoRestoreReadingLocation) as? Bool ?? true
         self.persistentChapterNavigation = UserDefaults.standard.object(forKey: Keys.persistentChapterNavigation) as? Bool ?? true
         self.showOriginalLanguageText = UserDefaults.standard.object(forKey: Keys.showOriginalLanguageText) as? Bool ?? true
-        self.showOriginalLanguagesInSwitcher = UserDefaults.standard.object(forKey: Keys.showOriginalLanguagesInSwitcher) as? Bool ?? false
+        // Per-text toggles; users who turned the old combined switch on keep all three on.
+        let legacyOriginalLanguages = UserDefaults.standard.object(forKey: Keys.showOriginalLanguagesInSwitcher) as? Bool ?? false
+        self.showTRInSwitcher = UserDefaults.standard.object(forKey: Keys.showTRInSwitcher) as? Bool ?? legacyOriginalLanguages
+        self.showSBLGNTInSwitcher = UserDefaults.standard.object(forKey: Keys.showSBLGNTInSwitcher) as? Bool ?? legacyOriginalLanguages
+        self.showWLCInSwitcher = UserDefaults.standard.object(forKey: Keys.showWLCInSwitcher) as? Bool ?? legacyOriginalLanguages
 
         // Load Audio Settings
         self.playbackSpeed = PlaybackSpeed(rawValue: UserDefaults.standard.string(forKey: Keys.playbackSpeed) ?? "") ?? .normal

@@ -29,6 +29,13 @@ enum AppDateFormatters {
 
 // MARK: - Parsed Verse Model
 
+/// One line of a poetic verse (Psalms, Proverbs, prophets…). `indent` is 0 for a flush line and
+/// 1, 2… for progressively indented (hanging) lines.
+struct PoetryLine: Equatable {
+    let text: String
+    let indent: Int
+}
+
 struct ParsedVerse: Identifiable, Equatable {
     let id: String
     let number: Int
@@ -36,6 +43,13 @@ struct ParsedVerse: Identifiable, Equatable {
     let reference: String // e.g., "John 3:16"
     var startsNewParagraph: Bool = false // Indicates if this verse starts a new paragraph
     var sectionHeading: String? = nil // Section heading that appears before this verse (e.g., "The Word Became Flesh")
+    /// Line-by-line layout for poetry. `text` always holds the same words joined with spaces
+    /// (copy, share, memory and search use it); nil for prose.
+    var poetryLines: [PoetryLine]? = nil
+    /// True when this verse starts partway through a poetic line begun by the previous verse.
+    var continuesPreviousLine: Bool = false
+    /// Psalm superscription ("A Psalm of David.") or acrostic title ("Aleph") shown before the verse.
+    var title: String? = nil
 
     static func == (lhs: ParsedVerse, rhs: ParsedVerse) -> Bool {
         lhs.id == rhs.id

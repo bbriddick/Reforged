@@ -73,6 +73,9 @@ final class BibleSearchService {
             return await KJVService.shared.searchPassages(query: query, pageSize: pageSize)
         case .net:
             return await NETService.shared.searchPassages(query: query, pageSize: pageSize)
+        case .nasb where YouVersionConfig.isConfigured:
+            // YouVersion verse search ships after SDK 5.5.0; NASB search returns nothing until then.
+            return []
         case .csb, .nkjv, .nasb, .rvr1960, .nlt:
             return try await ApiBibleService.shared.searchPassages(query: query, translation: translation, pageSize: pageSize)
                 .map { BibleSearchResult(reference: $0.reference, content: $0.text, translation: translation) }
