@@ -152,7 +152,7 @@ enum HomeSuggestion: Equatable {
         case .readChapter:   return "Open the Bible"
         case .reviewVerses:  return "Review now"
         case .memorizeFirst: return "Add a verse"
-        case .journal:       return "Open Journal"
+        case .journal:       return "Open Notes"
         case .restWell:      return "Read more"
         }
     }

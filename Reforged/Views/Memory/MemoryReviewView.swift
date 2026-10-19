@@ -50,13 +50,7 @@ struct MemoryReviewView: View {
             case .graded:
                 if let verse = currentGradedVerse {
                     VStack(spacing: 8) {
-                        HStack(spacing: 6) {
-                            Image(systemName: currentMode.icon)
-                            Text(currentMode.displayName)
-                        }
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        stageLabel(icon: currentMode.icon, title: currentMode.displayName)
 
                         MemoryExerciseView(
                             verse: verse,
@@ -87,37 +81,54 @@ struct MemoryReviewView: View {
         VStack(spacing: 8) {
             HStack {
                 Text("\(min(reviewedCount + 1, totalCount)) of \(totalCount)")
-                    .font(.caption)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
                 Spacer()
 
                 Text("\(reviewedCount) reviewed")
-                    .font(.caption)
-                    .fontWeight(.medium)
+                    .font(.caption.bold())
                     .foregroundStyle(Color.reforgedGold)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.reforgedGold.opacity(0.12), in: Capsule())
             }
 
+            // Same thick gold bar as the daily lesson runner.
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color.adaptiveBorder(colorScheme))
-                        .frame(height: 6)
+                        .frame(height: 12)
 
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [Color.reforgedNavy, Color.reforgedGold],
+                                colors: [Color.reforgedGold, Color.orange],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                        .frame(width: geo.size.width * progressFraction, height: 6)
+                        .frame(width: geo.size.width * progressFraction, height: 12)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: progressFraction)
                 }
             }
-            .frame(height: 6)
+            .frame(height: 12)
         }
         .padding()
+    }
+
+    /// Pill naming the current exercise stage (e.g. "Fill in Blank").
+    private func stageLabel(icon: String, title: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+            Text(title)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(Color.reforgedCoral)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.reforgedCoral.opacity(colorScheme == .dark ? 0.22 : 0.13), in: Capsule())
     }
 
     private var progressFraction: CGFloat {
@@ -150,14 +161,7 @@ struct MemoryReviewView: View {
 
             Spacer()
 
-            Button("Go Back") { dismiss() }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color.reforgedNavy)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
+            PracticeButton(title: "Go Back") { dismiss() }
         }
         .padding()
     }
@@ -210,6 +214,9 @@ struct MemoryReviewView: View {
     private func rate(verseId: String, quality: Int) {
         appState.updateVerseReview(verseId: verseId, quality: quality)
         appState.addXP(quality >= 3 ? 15 : 5, source: "review")
+        if let reference = appState.memoryVerses.first(where: { $0.id == verseId })?.reference {
+            appState.awardSouthlandReviewPoints(reference: reference)
+        }
         reviewedCount += 1
     }
 
@@ -241,17 +248,24 @@ struct FlashcardDeckView: View {
     var body: some View {
         VStack(spacing: 16) {
             // Stage label
-            HStack(spacing: 6) {
-                Image(systemName: "rectangle.on.rectangle.angled")
-                Text("Flashcards")
-            }
-            .font(.caption)
-            .fontWeight(.medium)
-            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            HStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "rectangle.on.rectangle.angled")
+                    Text("Flashcards")
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.reforgedCoral)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.reforgedCoral.opacity(colorScheme == .dark ? 0.22 : 0.13), in: Capsule())
 
-            Text("\(knownCount) of \(verses.count) known")
-                .font(.caption2)
-                .foregroundStyle(Color.reforgedGold)
+                Text("\(knownCount) of \(verses.count) known")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.reforgedGold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.reforgedGold.opacity(0.12), in: Capsule())
+            }
 
             Spacer(minLength: 0)
 
@@ -284,25 +298,24 @@ struct FlashcardDeckView: View {
                         handleSwipe(top, .unknown)
                     } label: {
                         Label("Still learning", systemImage: "arrow.uturn.left")
-                            .font(.subheadline).fontWeight(.semibold)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.red.opacity(0.15))
-                            .foregroundStyle(.red)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .buttonStyle(PracticeLipButtonStyle(face: .red, lip: Color.red.practiceBevel(), depth: 4))
 
                     Button {
                         handleSwipe(top, .known)
                     } label: {
                         Label("Known", systemImage: "checkmark")
-                            .font(.subheadline).fontWeight(.semibold)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.green.opacity(0.15))
-                            .foregroundStyle(.green)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .buttonStyle(PracticeLipButtonStyle(face: Color.practiceGreen,
+                                                         lip: Color.practiceGreen.practiceBevel(), depth: 4))
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 8)

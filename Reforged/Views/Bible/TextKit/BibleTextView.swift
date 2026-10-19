@@ -77,7 +77,60 @@ final class ScriptureTextView: UITextView {
     // (bounded) document range once the bounds are known makes `contentSize` span everything, so the
     // window scrolls end-to-end. `layoutSubviews` is where bounds are valid, and the width/length
     // guard keeps this from re-running every pass.
+    /// True while a width-change reflow is being re-anchored, so scroll reporting ignores the
+    /// transient offsets (they'd report a drifted verse and could rotate the window).
+    private(set) var isReanchoring = false
+    /// True from the moment the bounds width differs from the last laid-out width until the
+    /// re-anchor lands. Scroll reports in that window pair a new layout with the old offset, so
+    /// they name the wrong verse (and can trigger a window rebuild that overrides the re-anchor).
+    var isReflowPending: Bool {
+        isReanchoring || reanchorIndex != nil || (lastLayoutWidth > 0 && abs(bounds.width - lastLayoutWidth) > 0.5)
+    }
+    /// Called after a width-change re-anchor so the owner can refresh its verse-position table.
+    var onReanchored: (() -> Void)?
+    /// Sorted character offsets of each verse's first character, supplied by the owner.
+    var verseStartOffsets: (() -> [Int])?
+    private var reanchorIndex: Int?
+    private var reanchorWork: DispatchWorkItem?
+
+    // A width change (sidebar collapse, rotation, split view) reflows every line, so the unchanged
+    // contentOffset would land on different text. By `layoutSubviews` UIKit has already re-laid the
+    // text at the new width, so the anchor (the verse at the top of the viewport) must be read when
+    // the new size arrives, while the layout is still the old one.
+    override var bounds: CGRect {
+        get { super.bounds }
+        set { captureReanchor(forWidth: newValue.width); super.bounds = newValue }
+    }
+
+    override var frame: CGRect {
+        get { super.frame }
+        set { captureReanchor(forWidth: newValue.width); super.frame = newValue }
+    }
+
+    private func captureReanchor(forWidth width: CGFloat) {
+        guard reanchorIndex == nil, width > 0, lastLayoutWidth > 0,
+              abs(width - lastLayoutWidth) > 0.5, abs(width - super.bounds.width) > 0.5,
+              scriptureString.length == lastLayoutLength,
+              contentOffset.y > textContainerInset.top + 2,
+              !isTracking, !isDragging, !isDecelerating,
+              let starts = verseStartOffsets?(), !starts.isEmpty else { return }
+        let threshold = contentOffset.y + textContainerInset.top + 1
+        var lo = 0, hi = starts.count - 1, best = 0
+        while lo <= hi {
+            let mid = (lo + hi) / 2
+            if let y = contentY(forCharacterIndex: starts[mid]), y <= threshold {
+                best = mid
+                lo = mid + 1
+            } else {
+                hi = mid - 1
+            }
+        }
+        reanchorIndex = starts[best]
+        isReanchoring = true
+    }
+
     override func layoutSubviews() {
+        let widthChangedNow = lastLayoutWidth > 0 && abs(bounds.width - lastLayoutWidth) > 0.5
         super.layoutSubviews()
         guard bounds.width > 0, let lm = textLayoutManager else { return }
         if bounds.width != lastLayoutWidth || scriptureString.length != lastLayoutLength {
@@ -85,6 +138,38 @@ final class ScriptureTextView: UITextView {
             lastLayoutLength = scriptureString.length
             lm.ensureLayout(for: lm.documentRange)
         }
+        if reanchorIndex != nil {
+            scheduleReanchor(attempt: 0)
+        } else if widthChangedNow {
+            DispatchQueue.main.async { [weak self] in self?.onReanchored?() }
+        }
+    }
+
+    /// TextKit 2 hasn't re-laid the text at the new width inside the layout pass that noticed the
+    /// change (positions still reflect the old width), so the scroll-back is applied a beat later
+    /// and re-checked until the anchor character really is at the top.
+    private func scheduleReanchor(attempt: Int) {
+        reanchorWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, let index = self.reanchorIndex else { return }
+            guard !self.isTracking, !self.isDragging else { self.finishReanchor(); return }
+            self.layoutIfNeeded()
+            self.ensureFullLayout()
+            self.scrollCharacterToTop(index, animated: false)
+            if attempt < 3, !self.isScrolledToCharacter(index) {
+                self.scheduleReanchor(attempt: attempt + 1)
+            } else {
+                self.finishReanchor()
+            }
+        }
+        reanchorWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
+    }
+
+    private func finishReanchor() {
+        reanchorIndex = nil
+        onReanchored?()
+        isReanchoring = false
     }
 
     // MARK: Factory
@@ -373,6 +458,6 @@ final class AttributedScriptureCache {
         let notes = renderState.notedReferences.sorted().joined(separator: ",")
         let bookmarks = renderState.bookmarkedReferences.sorted().joined(separator: ",")
         let audio = renderState.audioReference ?? ""
-        return "\(chapter.id)_\(chapter.verses.count)_\(translation.rawValue)_\(settings.fontType.rawValue)_\(settings.effectiveFontSize)_\(settings.lineSpacing.rawValue)_\(colorScheme == .dark)_\(verseByVerse)_\(settings.showPoetryLayout)_\(includeChapterHeader)_\(sel)_\(lookup)_\(highlights)_\(notes)_\(bookmarks)_\(audio)_\(ReaderCosmetics.cacheKey)"
+        return "\(chapter.id)_\(chapter.verses.count)_\(translation.rawValue)_\(settings.fontType.rawValue)_\(settings.readerFontSize)_\(settings.systemTextScale)_\(settings.lineSpacing.rawValue)_\(colorScheme == .dark)_\(verseByVerse)_\(settings.showPoetryLayout)_\(includeChapterHeader)_\(sel)_\(lookup)_\(highlights)_\(notes)_\(bookmarks)_\(audio)_\(ReaderCosmetics.cacheKey)"
     }
 }

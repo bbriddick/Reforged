@@ -29,8 +29,11 @@ struct MorningRoutineView: View {
     // Scripture (resolved on appear)
     @State private var scriptureRef = ""
     @State private var scriptureText = ""
-    @State private var scriptureReflection = ""
     @State private var spurgeonBody = ""
+    @State private var showChapter = false
+    @State private var chapterVerses: [ParsedVerse] = []
+    @State private var chapterLoading = false
+    @State private var chapterFailed = false
 
     // Prayer
     @State private var prayerText = ""
@@ -127,12 +130,13 @@ struct MorningRoutineView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     stepHeading("Scripture", subtitle: "Sit with today's Word before you speak.")
 
-                    VStack(alignment: .leading, spacing: 12) {
+                    // Today's verse is the one Spurgeon's devotion opens with, so the
+                    // verse and the reading below it always belong together.
+                    VStack(alignment: .leading, spacing: 14) {
                         Text("\u{201C}\(scriptureText)\u{201D}")
-                            .font(.system(.title3, design: .serif))
-                            .italic()
+                            .font(Font.custom("LibreBaskerville-Italic", size: 19))
                             .foregroundStyle(Color.adaptiveText(colorScheme))
-                            .lineSpacing(6)
+                            .lineSpacing(9)
                         if !scriptureRef.isEmpty {
                             LinkedScriptureText(text: scriptureRef,
                                                 font: .subheadline.weight(.semibold),
@@ -141,14 +145,11 @@ struct MorningRoutineView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-                    .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.reforgedGold.opacity(0.30), lineWidth: 1.5))
+                    .padding(22)
+                    .practiceCard(radius: 22)
 
-                    if !scriptureReflection.isEmpty {
-                        reflectionBlock(title: "Reflection", body: scriptureReflection)
-                    }
+                    chapterSection
+
                     if !spurgeonBody.isEmpty {
                         reflectionBlock(title: "Spurgeon's Morning Devotion", body: spurgeonBody, linked: true)
                     }
@@ -157,6 +158,157 @@ struct MorningRoutineView: View {
                 .padding(.vertical, 20)
             }
             primaryButton("Begin Prayer") { advance(to: .prayer) }
+        }
+    }
+
+    // MARK: Read the whole chapter
+
+    /// The book and chapter of today's verse, if the reference names a verse.
+    private var chapterTarget: (book: String, chapter: Int, verseStart: Int, verseEnd: Int)? {
+        guard let canonical = BibleReferenceScanner.detectReferences(in: scriptureRef).first?.reference,
+              let parsed = MemoryVerseReference.parse(canonical) else { return nil }
+        return (parsed.book, parsed.chapter, parsed.verseStart, parsed.verseEnd)
+    }
+
+    @ViewBuilder
+    private var chapterSection: some View {
+        if let target = chapterTarget {
+            let isRead = appState.user.chaptersRead.contains("\(target.book) \(target.chapter)")
+            VStack(spacing: 0) {
+                Button {
+                    HapticManager.shared.buttonTap()
+                    withAnimation(.easeInOut(duration: 0.25)) { showChapter.toggle() }
+                    if showChapter && chapterVerses.isEmpty && !chapterLoading {
+                        Task { await loadChapter(target) }
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: isRead ? "checkmark.circle.fill" : "book.fill")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(isRead ? Color.practiceGreen : Color.reforgedCoral)
+                            .frame(width: 38, height: 38)
+                            .background((isRead ? Color.practiceGreen : Color.reforgedCoral).opacity(0.14),
+                                        in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Read all of \(target.book) \(target.chapter)")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                            Text(isRead ? "Marked as read" : "Open the full chapter")
+                                .font(.footnote)
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .rotationEffect(.degrees(showChapter ? 180 : 0))
+                    }
+                    .padding(16)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(showChapter ? "Collapses the chapter" : "Expands the full chapter")
+
+                if showChapter {
+                    Divider()
+                    chapterBody(target, isRead: isRead)
+                }
+            }
+            .practiceCard(radius: 18)
+        }
+    }
+
+    @ViewBuilder
+    private func chapterBody(_ target: (book: String, chapter: Int, verseStart: Int, verseEnd: Int),
+                             isRead: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if chapterLoading {
+                HStack { Spacer(); ProgressView(); Spacer() }.padding(.vertical, 24)
+            } else if chapterFailed {
+                VStack(spacing: 10) {
+                    Text("Couldn't load the chapter right now.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    Button("Try again") { Task { await loadChapter(target) } }
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+            } else {
+                ForEach(chapterVerses) { verse in
+                    let highlighted = verse.number >= target.verseStart && verse.number <= target.verseEnd
+                    (Text("\(verse.number)  ")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(Color.reforgedGold)
+                     + italicizedBrackets(verse.text).font(.body))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .lineSpacing(5)
+                        .padding(.horizontal, highlighted ? 10 : 0)
+                        .padding(.vertical, highlighted ? 6 : 0)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(highlighted ? Color.reforgedGold.opacity(0.14) : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+
+                if !chapterVerses.isEmpty {
+                    if isRead {
+                        Label("You've read this chapter", systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.practiceGreen)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    } else {
+                        Button {
+                            HapticManager.shared.success()
+                            appState.markChapterRead(book: target.book, chapter: target.chapter)
+                        } label: {
+                            Label("Mark as read", systemImage: "checkmark")
+                        }
+                        .buttonStyle(Chunky3DButtonStyle(
+                            backgroundColor: Color.reforgedCoral,
+                            bevelColor: Color.reforgedCoral.practiceBevel()))
+                    }
+                }
+            }
+        }
+        .padding(16)
+    }
+
+    /// The KJV marks words the translators supplied in [brackets]. Show them the way a
+    /// printed KJV does: italic, without the brackets.
+    private func italicizedBrackets(_ text: String) -> Text {
+        var result = Text("")
+        var buffer = ""
+        var italic = false
+        func flush() {
+            guard !buffer.isEmpty else { return }
+            result = result + (italic ? Text(buffer).italic() : Text(buffer))
+            buffer = ""
+        }
+        for character in text {
+            if character == "[" {
+                flush(); italic = true
+            } else if character == "]" {
+                flush(); italic = false
+            } else {
+                buffer.append(character)
+            }
+        }
+        flush()
+        return result
+    }
+
+    private func loadChapter(_ target: (book: String, chapter: Int, verseStart: Int, verseEnd: Int)) async {
+        chapterLoading = true
+        chapterFailed = false
+        defer { chapterLoading = false }
+        do {
+            chapterVerses = try await ChapterTextFetcher.fetch(
+                book: target.book, chapter: target.chapter,
+                translation: SettingsManager.shared.defaultTranslation)
+            if chapterVerses.isEmpty { chapterFailed = true }
+        } catch {
+            chapterFailed = true
         }
     }
 
@@ -385,16 +537,12 @@ struct MorningRoutineView: View {
             action()
         } label: {
             Text(title)
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color.reforgedNavy)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(Chunky3DButtonStyle(
+            backgroundColor: Color.reforgedCoral,
+            bevelColor: Color.reforgedCoral.practiceBevel()))
         .padding(.horizontal, 24)
-        .padding(.bottom, 32)
+        .padding(.bottom, 24)
         .padding(.top, 8)
     }
 
@@ -418,22 +566,21 @@ struct MorningRoutineView: View {
     }
 
     private func resolveScripture() {
-        appState.refreshDailyInsightIfNeeded()
-
-        if let insight = appState.dailyInsight {
-            scriptureRef = insight.verse
-            scriptureText = insight.verseText
-            scriptureReflection = insight.reflection
-        }
-
-        // Always offer today's Spurgeon morning reading as the classic devotion,
-        // and use it as the scripture fallback when there's no daily insight yet.
+        // Spurgeon's reading for today leads: its verse is the day's Scripture, so the
+        // verse and the devotion beneath it always match.
         let today = SpurgeonDevotionalService.shared.todayDayNumber()
         if let day = SpurgeonDevotionalService.shared.day(today) {
             spurgeonBody = day.morning.body
-            if scriptureText.isEmpty {
-                scriptureText = day.morning.verse
-                scriptureRef = day.morning.reference
+            scriptureText = day.morning.verse
+            scriptureRef = day.morning.reference
+        }
+
+        // No devotion available: fall back to the daily insight's verse.
+        if scriptureText.isEmpty {
+            appState.refreshDailyInsightIfNeeded()
+            if let insight = appState.dailyInsight {
+                scriptureRef = insight.verse
+                scriptureText = insight.verseText
             }
         }
 
@@ -683,6 +830,29 @@ struct MorningRoutineCard: View {
         case 0..<12:  return ("Good morning", "Begin this morning", "sunrise.fill")
         case 12..<17: return ("Good afternoon", "Begin this afternoon", "sun.max.fill")
         default:      return ("Good evening", "Begin this evening", "moon.stars.fill")
+        }
+    }
+}
+
+
+// MARK: - Chapter text for any translation
+
+enum ChapterTextFetcher {
+    static func fetch(book: String, chapter: Int, translation: BibleTranslation) async throws -> [ParsedVerse] {
+        switch translation {
+        case .esv:
+            let (verses, _, _) = try await ESVService.shared.fetchChapterParsed(book: book, chapter: chapter)
+            return verses
+        case .kjv, .tr, .sblgnt, .wlc:
+            let (verses, _) = try await KJVService.shared.fetchChapterParsed(book: book, chapter: chapter)
+            return verses
+        case .net:
+            let (verses, _) = try await NETService.shared.fetchChapterParsed(book: book, chapter: chapter)
+            return verses
+        default:
+            let (verses, _) = try await ApiBibleService.shared.fetchChapterParsed(
+                book: book, chapter: chapter, translation: translation)
+            return verses
         }
     }
 }

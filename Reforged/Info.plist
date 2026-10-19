@@ -18,11 +18,14 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>LibreBaskerville.ttf</string>
+		<string>ArchivoBlack-Regular.ttf</string>
 		<string>LibreBaskerville-Italic.ttf</string>
 		<string>Roboto.ttf</string>
 		<string>Roboto-Italic.ttf</string>
 		<string>SILEOT.ttf</string>
 	</array>
+	<key>NSContactsUsageDescription</key>
+	<string>Reforged checks which of your contacts have chosen to be findable. Only scrambled (hashed) email addresses leave your phone, and your contacts are never stored or uploaded.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Reforged uses your camera so you can set a profile photo and scan group invite QR codes.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

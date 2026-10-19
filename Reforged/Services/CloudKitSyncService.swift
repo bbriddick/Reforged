@@ -102,6 +102,13 @@ class CloudKitSyncService: ObservableObject {
             record["streakHistory"] = historyJSON as CKRecordValue
         }
 
+        // Synced preferences (translation, theme, reading, reminders, tour state)
+        if let prefs = profile.preferences,
+           let prefsData = try? JSONEncoder().encode(prefs),
+           let prefsJSON = String(data: prefsData, encoding: .utf8) {
+            record["preferencesJSON"] = prefsJSON as CKRecordValue
+        }
+
         // Profile image as CKAsset
         if let imagePath = profile.profileImagePath,
            let imageURL = ProfileImageService.shared.imageURL(named: imagePath) {
@@ -190,6 +197,9 @@ class CloudKitSyncService: ObservableObject {
             profileImagePath: profileImagePath
         )
         profile.streakHistory = streakHistory
+        if let json = record["preferencesJSON"] as? String, let data = json.data(using: .utf8) {
+            profile.preferences = try? JSONDecoder().decode(SyncedPreferences.self, from: data)
+        }
         profile.xpSpent = record["xpSpent"] as? Int ?? 0
         if let json = record["cosmeticsJSON"] as? String, let data = json.data(using: .utf8),
            let cosmetics = try? JSONDecoder().decode(CosmeticsState.self, from: data) {

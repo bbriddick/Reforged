@@ -92,6 +92,7 @@ struct DeepDrillView: View {
 
 struct DrillProgressStepper: View {
     let currentRound: Int
+    @Environment(\.colorScheme) private var colorScheme
 
     private let rounds = ["Flashcard", "Fill Blank", "Typing"]
 
@@ -100,37 +101,42 @@ struct DrillProgressStepper: View {
             ForEach(rounds.indices, id: \.self) { index in
                 HStack(spacing: 0) {
                     // Step circle
+                    // Token with an extruded lip, like the Memory path's nodes.
                     ZStack {
                         Circle()
+                            .fill(stepColor(index).practiceBevel())
+                            .frame(width: 30, height: 30)
+                            .offset(y: 2)
+                        Circle()
                             .fill(stepColor(index))
-                            .frame(width: 28, height: 28)
+                            .frame(width: 30, height: 30)
 
                         if index < currentRound {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundStyle(.white)
                         } else {
                             Text("\(index + 1)")
                                 .font(.caption)
                                 .fontWeight(.bold)
-                                .foregroundStyle(index == currentRound ? .white : Color.secondary)
+                                .foregroundStyle(index == currentRound ? .white : Color.adaptiveTextSecondary(colorScheme))
                         }
                     }
+                    .frame(width: 30, height: 32)
 
                     // Label
                     Text(rounds[index])
-                        .font(.caption2)
-                        .fontWeight(index == currentRound ? .semibold : .regular)
-                        .foregroundStyle(index <= currentRound ? stepColor(index) : Color.secondary)
-                        .padding(.leading, 4)
+                        .font(.caption.weight(index == currentRound ? .bold : .semibold))
+                        .foregroundStyle(index <= currentRound ? Color.adaptiveText(colorScheme) : Color.adaptiveTextSecondary(colorScheme))
+                        .padding(.leading, 6)
 
-                    // Connector line (not after last)
+                    // Connector (not after last)
                     if index < rounds.count - 1 {
-                        Rectangle()
-                            .fill(index < currentRound ? Color.reforgedGold : Color.secondary.opacity(0.3))
-                            .frame(height: 2)
+                        Capsule()
+                            .fill(index < currentRound ? Color.reforgedGold : Color.adaptiveBorder(colorScheme))
+                            .frame(height: 4)
                             .frame(maxWidth: .infinity)
-                            .padding(.horizontal, 6)
+                            .padding(.horizontal, 8)
                     }
                 }
             }
@@ -143,7 +149,7 @@ struct DrillProgressStepper: View {
         } else if index == currentRound {
             return Color.reforgedCoral
         } else {
-            return Color.secondary.opacity(0.3)
+            return Color.adaptiveBorder(colorScheme)
         }
     }
 }

@@ -75,21 +75,40 @@ async function storefrontIndex(): Promise<Map<string, { name: string; slug: stri
   return index
 }
 
-async function loadProducts(token: string): Promise<ShopProduct[]> {
+async function loadProducts(token: string | undefined): Promise<ShopProduct[]> {
+  const storefront = await storefrontIndex()
+
+  // The public Quick Store IS the Reforged shop. When it can be read, it is the
+  // source of truth for what to show: an account-level token can see several
+  // Printful stores, and listing the first one returned a different shop's products.
+  if (storefront.size > 0) {
+    return [...storefront.values()].map((s) => ({
+      id: s.slug,
+      name: s.name,
+      price: s.price ?? null,
+      currency: "USD",
+      imageURL: s.imageURL ?? null,
+      url: `${STORE_URL}/product/${s.slug}`,
+    }))
+  }
+
+  // Storefront unreadable: fall back to the Printful API.
+  if (!token) throw new Error("Storefront unavailable and no Printful token is set")
+
   // Account-level tokens need a store id; store-level tokens don't.
   let storeId: number | undefined
   try {
     const stores = await printful("/stores", token)
     if (Array.isArray(stores) && stores.length > 0) {
       const preferred = Deno.env.get("PRINTFUL_STORE_ID")
-      storeId = preferred ? Number(preferred) : stores[0].id
+      // Prefer the store whose site or name is Reforged's, not just the first one listed.
+      const reforged = stores.find((st: any) =>
+        /reforged/i.test(`${st?.name ?? ""} ${st?.website ?? ""}`))
+      storeId = preferred ? Number(preferred) : (reforged?.id ?? stores[0].id)
     }
   } catch (_) { /* store-level token */ }
 
-  const [list, storefront] = await Promise.all([
-    printful("/store/products?limit=100", token, storeId),
-    storefrontIndex(),
-  ])
+  const list = await printful("/store/products?limit=100", token, storeId)
 
   const products = await Promise.all((list ?? []).map(async (p: any): Promise<ShopProduct | null> => {
     if (p.is_ignored) return null
@@ -140,7 +159,7 @@ Deno.serve(async (req) => {
   const token = ["PRINTFUL_IOS_API_KEY", "PRINTFUL_API_TOKEN", "PRINTFUL_API_KEY"]
     .map((name) => Deno.env.get(name))
     .find((value) => value && value.length > 0)
-  if (!token) return json({ error: "Printful token secret is not set" }, 500)
+  // The token is only needed if the public storefront can't be read.
   try {
     const products = await loadProducts(token)
     return json({ storeURL: STORE_URL, products }, 200, 1800)

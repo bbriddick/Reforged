@@ -196,6 +196,15 @@ struct UnifiedNavigationView: View {
         }
     }
 
+    /// Extra spellings people type for a book, beyond its name / abbreviation / singular form.
+    private static let bookAliases: [String: [String]] = [
+        "psa": ["ps", "psa", "pslm"], "sng": ["song of songs", "songs", "sos", "sg"],
+        "gen": ["ge", "gn"], "exo": ["ex", "exod"], "mat": ["mt"], "mrk": ["mk", "mr"],
+        "luk": ["lk"], "jhn": ["jn"], "rom": ["ro"], "1jn": ["1 jn", "1john"],
+        "2jn": ["2 jn", "2john"], "3jn": ["3 jn", "3john"], "rev": ["revelations", "rv"],
+        "pro": ["prov", "pr"], "isa": ["is"], "jer": ["jr"], "heb": ["hb"], "jas": ["jm"]
+    ]
+
     var parsedReference: ParsedBibleRef? {
         let trimmed = searchText.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
@@ -203,7 +212,11 @@ struct UnifiedNavigationView: View {
         let sorted = BibleData.books.sorted { $0.name.count > $1.name.count }
 
         for book in sorted {
-            for candidate in [book.name.lowercased(), book.abbreviation.lowercased()] {
+            let singular = book.name.lowercased().hasSuffix("s") ? String(book.name.lowercased().dropLast()) : nil
+            let candidates = [book.name.lowercased(), book.abbreviation.lowercased()]
+                + (singular.map { [$0] } ?? [])
+                + (Self.bookAliases[book.id] ?? [])
+            for candidate in candidates.sorted(by: { $0.count > $1.count }) {
                 guard lower.hasPrefix(candidate) else { continue }
                 let afterBook = lower.dropFirst(candidate.count)
                 guard let first = afterBook.first, first.isWhitespace else { continue }
@@ -222,7 +235,7 @@ struct UnifiedNavigationView: View {
                 }
 
                 guard let chapter = Int(chapterPart), chapter >= 1, chapter <= book.chapters else { break }
-                let verse = versePart.flatMap { Int($0) }
+                let verse = versePart.flatMap { Int($0.split(separator: "-").first ?? "") }
                 return ParsedBibleRef(book: book, chapter: chapter, verse: verse)
             }
         }
@@ -497,7 +510,14 @@ struct UnifiedNavigationView: View {
                 if controlsAtBottom {
                     phoneNavigator
                 } else {
-                    booksView
+                    VStack(spacing: 0) {
+                        if let target = ContinueReading.current() {
+                            ContinueReadingCard(target: target, compact: true) { openContinue(target) }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                        }
+                        booksView
+                    }
                 }
             }
             .simultaneousGesture(
@@ -543,7 +563,11 @@ struct UnifiedNavigationView: View {
                         .submitLabel(.search)
                         .onSubmit {
                             searchFieldFocused = false
-                            navPerformSearch()
+                            if let ref = parsedReference {
+                                jumpToReference(ref)
+                            } else {
+                                navPerformSearch()
+                            }
                         }
 
                     if !searchText.isEmpty {
@@ -591,6 +615,21 @@ struct UnifiedNavigationView: View {
             .animation(.spring(response: 0.3), value: isSearchActive)
     }
 
+    private func jumpToReference(_ ref: ParsedBibleRef) {
+        selectedBook = ref.book
+        selectedChapter = ref.chapter
+        if let verse = ref.verse, let selectVerse = onSelectVerse {
+            // Verse target: route ONLY through the verse handler so it establishes the focused
+            // chapter and lets hydration complete before scrolling. Calling onSelect() first
+            // would fire a competing chapter-top loadChapter().
+            dismiss()
+            selectVerse(verse)
+        } else {
+            dismiss()
+            onSelect()
+        }
+    }
+
     /// "Go to <reference>" and full-text search — appear while typing, next to the field.
     @ViewBuilder
     private var searchActionRows: some View {
@@ -599,18 +638,7 @@ struct UnifiedNavigationView: View {
             // Reference jump row
             if let ref = parsedReference {
                 Button {
-                    selectedBook = ref.book
-                    selectedChapter = ref.chapter
-                    if let verse = ref.verse, let selectVerse = onSelectVerse {
-                        // Verse target: route ONLY through the verse handler so it establishes the focused
-                        // chapter and lets hydration complete before scrolling. Calling onSelect() first
-                        // would fire a competing chapter-top loadChapter().
-                        dismiss()
-                        selectVerse(verse)
-                    } else {
-                        dismiss()
-                        onSelect()
-                    }
+                    jumpToReference(ref)
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "arrow.right.circle.fill")
@@ -1075,6 +1103,17 @@ struct UnifiedNavigationView: View {
         if let selectVerse = onSelectVerse { selectVerse(verse) } else { onSelect() }
     }
 
+    /// Opens the continue-reading target (today's plan entry, or where the reader left off).
+    private func openContinue(_ target: ContinueTarget) {
+        guard let book = BibleData.books.first(where: { $0.name == target.book }) else { return }
+        HapticManager.shared.lightImpact()
+        pickerBook = book
+        pickerChapter = target.chapter
+        commitPickerSelection()
+        dismiss()
+        if target.verse > 1, let selectVerse = onSelectVerse { selectVerse(target.verse) } else { onSelect() }
+    }
+
     private func readChapter() {
         commitPickerSelection()
         dismiss()
@@ -1313,6 +1352,11 @@ struct UnifiedNavigationView: View {
                 }
                 .buttonStyle(.plain)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            if step != .verse, let target = ContinueReading.current() {
+                ContinueReadingCard(target: target, compact: true) { openContinue(target) }
+                    .transition(.opacity)
             }
 
             Picker("Browse", selection: stepBinding) {

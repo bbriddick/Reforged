@@ -1394,7 +1394,7 @@ struct PracticeCompleteCelebration: View {
                 config: JackpotConfig(
                     hero: .symbol(celebrationIcon),
                     headline: celebrationMessage,
-                    title: score >= 3 ? "That verse is sinking in." : "Every rep plants it deeper.",
+                    title: score >= 3 ? "That verse is sinking in." : "Each time you return, it takes deeper root.",
                     accent: score >= 5 ? .gold : (score >= 3 ? .coral : .muted),
                     reels: [
                         JackpotReel(icon: "star.fill", label: "XP earned", value: xpEarned, tint: .reforgedGold),

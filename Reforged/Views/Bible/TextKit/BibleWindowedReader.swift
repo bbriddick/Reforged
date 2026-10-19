@@ -90,6 +90,12 @@ final class BibleReaderWindowController: ObservableObject {
         assembleDocument()
     }
 
+    /// Every verse in the live window, in canonical order — for selection actions (note, memory,
+    /// study, copy, share) that act on the selected verses, which may span chapters.
+    var allLoadedVerses: [ParsedVerse] {
+        refs.compactMap { loaded[$0.id] }.flatMap { $0.verses }
+    }
+
     /// The parsed verse for a reference, if its chapter is in the live window (for word lookup).
     func verse(forReference reference: String) -> ParsedVerse? {
         guard let parsed = BibleData.parseReference(reference) else { return nil }
@@ -392,6 +398,13 @@ struct BibleWindowedReader: UIViewRepresentable {
         context.coordinator.lastDocument = controller.document
         context.coordinator.lastColorScheme = colorScheme
         context.coordinator.rebuildVerseYs()
+        textView.verseStartOffsets = { [weak coordinator = context.coordinator] in
+            (coordinator?.parent.controller.verseOffsets.map(\.offset) ?? []).sorted()
+        }
+        textView.onReanchored = { [weak coordinator = context.coordinator] in
+            coordinator?.rebuildVerseYs()
+            coordinator?.syncLastReported()
+        }
         return container
     }
 
@@ -436,9 +449,9 @@ struct BibleWindowedReader: UIViewRepresentable {
                 textView.setContentOffset(savedOffset, animated: false)
             }
             context.coordinator.suppressReporting = false
-        } else if widthChanged {
-            context.coordinator.rebuildVerseYs()
         }
+        // A width-only change is NOT rebuilt here: the verse table must stay at the old layout
+        // until the text view captures its re-anchor (it refreshes the table once relaid).
         context.coordinator.lastWidth = textView.bounds.width
 
         // Consume a pending scroll anchor (navigation / reflow re-anchor). Reporting stays
@@ -525,7 +538,7 @@ struct BibleWindowedReader: UIViewRepresentable {
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            guard !suppressReporting, anchorsInFlight == 0, let textView else { return }
+            guard !suppressReporting, anchorsInFlight == 0, let textView, !textView.isReflowPending else { return }
 
             // Report scroll direction for reading-mode chrome reveal/hide.
             let offsetY = scrollView.contentOffset.y

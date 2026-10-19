@@ -35,6 +35,8 @@ extension NoteAccent {
 // MARK: - Notes Library
 
 struct JournalView: View {
+    /// Set by search results: open this entry's editor on arrival.
+    var initialEntry: JournalEntry? = nil
     @State private var entries: [JournalEntry] = []
     @State private var showNewEntry = false
     @State private var showPromptEntry = false
@@ -82,9 +84,8 @@ struct JournalView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: ReforgedTheme.spacingL) {
+                VStack(spacing: 28) {
                     header
-                    PrivacyNoticeBanner()
                     searchBar
                     entryTypeButtons
                     foldersSection
@@ -114,6 +115,9 @@ struct JournalView: View {
             .sheet(isPresented: $showExport) {
                 ExportNotesSheet(journalEntries: entries, bibleNotes: readingState.allNotes)
             }
+            .onAppear {
+                if let initialEntry, entryToEdit == nil { entryToEdit = initialEntry }
+            }
             .sheet(item: $entryToEdit) { entry in
                 NewJournalEntrySheet(
                     entries: $entries,
@@ -141,52 +145,42 @@ struct JournalView: View {
     // MARK: Sections
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("Notes")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+                    .font(.largeTitle.bold())
                     .foregroundStyle(Color.adaptiveText(colorScheme))
 
                 Spacer()
 
-                Button(action: { showFolderEditor = true }) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.callout)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                        .frame(width: 36, height: 36)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(Circle())
-                }
-
-                Button(action: { showExport = true }) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.callout)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                        .frame(width: 36, height: 36)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(Circle())
-                }
-
-                Button(action: { showPrivacyInfo = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "lock.fill")
-                            .font(.caption)
-                        Text("Private")
-                            .font(.caption)
-                            .fontWeight(.medium)
+                // Folder, export and privacy live in one quiet menu.
+                Menu {
+                    Button { showFolderEditor = true } label: {
+                        Label("New Folder", systemImage: "folder.badge.plus")
                     }
-                    .foregroundStyle(Color.green)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.green.opacity(0.12))
-                    .clipShape(Capsule())
+                    Button { showExport = true } label: {
+                        Label("Export Notes", systemImage: "square.and.arrow.up")
+                    }
+                    Button { showPrivacyInfo = true } label: {
+                        Label("About Privacy", systemImage: "lock")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .frame(width: 40, height: 40)
+                        .background(Color.adaptiveCardBackground(colorScheme), in: Circle())
+                        .overlay(Circle().stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
                 }
+                .accessibilityLabel("More")
             }
 
-            Text("Reflect on your journey with God's Word")
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            Button { showPrivacyInfo = true } label: {
+                Label("Private, stored only on this device", systemImage: "lock.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -195,8 +189,8 @@ struct JournalView: View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            TextField("Search notes...", text: $searchText)
-                .font(.subheadline)
+            TextField("Search notes", text: $searchText)
+                .font(.body)
             if !searchText.isEmpty {
                 Button { searchText = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -205,23 +199,27 @@ struct JournalView: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-        .overlay(
-            RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
-                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-        )
+        .frame(minHeight: 44)
+        .background(Color.adaptiveSecondaryBackground(colorScheme),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var entryTypeButtons: some View {
-        HStack(spacing: 12) {
-            JournalEntryTypeCard(icon: "pencil.line", title: "Free Write",
-                                 tint: .reforgedNavy, adaptiveIcon: true) { showNewEntry = true }
-            JournalEntryTypeCard(icon: "lightbulb.fill", title: "With Prompt",
-                                 tint: .reforgedGold) { showPromptEntry = true }
-            JournalEntryTypeCard(icon: "list.bullet.clipboard.fill", title: "Guided Method",
-                                 tint: .reforgedCoral) { showTemplateEntry = true }
+        VStack(spacing: 4) {
+            PracticeButton(title: "Write a note", icon: "square.and.pencil") { showNewEntry = true }
+                .padding(.horizontal, -16)
+
+            HStack(spacing: 24) {
+                Button { showPromptEntry = true } label: {
+                    Label("Start with a prompt", systemImage: "lightbulb")
+                }
+                Button { showTemplateEntry = true } label: {
+                    Label("Guided method", systemImage: "list.bullet.clipboard")
+                }
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .padding(.vertical, 6)
         }
     }
 
@@ -229,16 +227,7 @@ struct JournalView: View {
     private var foldersSection: some View {
         if !org.folders.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Folders")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Spacer()
-                    Text("\(org.folders.count)")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                }
+                PracticeSectionLabel(text: "Folders")
 
                 let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
                 LazyVGrid(columns: columns, spacing: 12) {
@@ -267,12 +256,9 @@ struct JournalView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: "pin.fill")
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(Color.reforgedGold)
-                Text("Pinned")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                PracticeSectionLabel(text: "Pinned")
             }
 
             ForEach(pinnedEntries) { entry in journalRow(entry) }
@@ -282,15 +268,12 @@ struct JournalView: View {
 
     private var notesSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 0) {
-                JournalTab(title: "All", isSelected: selectedTab == 0) { selectTab(0) }
-                JournalTab(title: "Reflections", isSelected: selectedTab == 1) { selectTab(1) }
-                JournalTab(title: "Bible Notes", isSelected: selectedTab == 2) { selectTab(2) }
+            Picker("Notes", selection: Binding(get: { selectedTab }, set: { selectTab($0) })) {
+                Text("All").tag(0)
+                Text("Reflections").tag(1)
+                Text("Bible Notes").tag(2)
             }
-            .padding(4)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
-            .shadow(color: Color.black.opacity(0.04), radius: 4, y: 2)
+            .pickerStyle(.segmented)
 
             if selectedTab == 2 {
                 if filteredBibleNotes.isEmpty {
@@ -467,7 +450,7 @@ struct FolderCard: View {
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
         }
         .padding(ReforgedTheme.spacingM)
-        .reforgedCard()
+        .practiceCard(radius: 16)
     }
 }
 
@@ -790,7 +773,7 @@ struct MoveToFolderSheet: View {
                                 .font(.title3)
                                 .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                                 .frame(width: 44, height: 44)
-                                .background(Color.reforgedNavy.opacity(0.1))
+                                .background(Color.adaptiveBorder(colorScheme).opacity(0.7))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                             Text("New Folder…")
                                 .font(.subheadline).fontWeight(.semibold)
@@ -798,7 +781,7 @@ struct MoveToFolderSheet: View {
                             Spacer()
                         }
                         .padding(ReforgedTheme.spacingM)
-                        .reforgedCard()
+                        .practiceCard(radius: 16)
                     }
                     .buttonStyle(.plain)
                 }
@@ -843,7 +826,7 @@ struct MoveToFolderSheet: View {
                 }
             }
             .padding(ReforgedTheme.spacingM)
-            .reforgedCard()
+            .practiceCard(radius: 16)
         }
         .buttonStyle(.plain)
     }
@@ -909,12 +892,12 @@ struct PrivacyNoticeBanner: View {
                 .foregroundStyle(Color.green)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Your journal is private & secure")
+                Text("Your notes are private")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(Color.adaptiveText(colorScheme))
 
-                Text("Entries are encrypted and stored only on this device")
+                Text("Notes are encrypted and stored only on this device")
                     .font(.caption)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
             }
@@ -957,7 +940,7 @@ struct JournalPrivacySheet: View {
                     }
 
                     // Title
-                    Text("Your Journal is Private")
+                    Text("Your Notes Are Private")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
@@ -968,7 +951,7 @@ struct JournalPrivacySheet: View {
                         PrivacyPoint(
                             icon: "iphone",
                             title: "Stored Locally Only",
-                            description: "Your journal entries are stored exclusively on this device. They are never uploaded to our servers or any cloud service."
+                            description: "Your notes are stored exclusively on this device. They are never uploaded to our servers or any cloud service."
                         )
 
                         PrivacyPoint(
@@ -980,7 +963,7 @@ struct JournalPrivacySheet: View {
                         PrivacyPoint(
                             icon: "eye.slash.fill",
                             title: "No One Can Read Them",
-                            description: "Not even Reforged developers can access your journal entries. Your thoughts and prayers remain completely private."
+                            description: "Not even Reforged developers can access your notes. Your thoughts and prayers remain completely private."
                         )
 
                         PrivacyPoint(
@@ -1007,7 +990,7 @@ struct JournalPrivacySheet: View {
                                 .foregroundStyle(Color.adaptiveText(colorScheme))
                         }
 
-                        Text("Because your journal is stored only on this device, it will be lost if you uninstall the app or reset your device. Consider keeping a separate backup of important reflections if needed.")
+                        Text("Because your notes are stored only on this device, it will be lost if you uninstall the app or reset your device. Consider keeping a separate backup of important reflections if needed.")
                             .font(.caption)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
@@ -1105,7 +1088,7 @@ struct JournalEntryTypeCard: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, ReforgedTheme.spacingM)
             .padding(.horizontal, 6)
-            .reforgedCard()
+            .practiceCard(radius: 16)
         }
         .buttonStyle(.plain)
     }
@@ -1141,47 +1124,29 @@ struct EmptyJournalView: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .fill(Color.reforgedGold.opacity(0.12))
-                    .frame(width: 100, height: 100)
+        VStack(spacing: 20) {
+            Image(systemName: "square.and.pencil")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(Color.reforgedCoral)
+                .frame(width: 72, height: 72)
+                .background(Color.reforgedCoral.opacity(colorScheme == .dark ? 0.22 : 0.13), in: Circle())
 
-                Image(systemName: "book.closed.fill")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.reforgedGold)
-            }
-
-            VStack(spacing: 8) {
-                Text("Your journal is empty")
-                    .font(.title3)
-                    .fontWeight(.bold)
+            VStack(spacing: 6) {
+                Text("No notes yet")
+                    .font(.title3.bold())
                     .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                Text("Start writing reflections on your Bible study journey")
+                Text("Capture what God is showing you in his Word.")
                     .font(.subheadline)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     .multilineTextAlignment(.center)
             }
 
-            Button(action: onAdd) {
-                HStack(spacing: 8) {
-                    Image(systemName: "pencil")
-                        .font(.callout.bold())
-                    Text("Write Your First Entry")
-                        .font(.headline)
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 14)
-                .background(Color.reforgedNavy)
-                .clipShape(Capsule())
-                .shadow(color: Color.reforgedNavy.opacity(0.3), radius: 8, y: 4)
-            }
+            PracticeButton(title: "Write a note", action: onAdd)
+                .padding(.horizontal, -16)
         }
-        .padding(ReforgedTheme.spacingXL)
+        .padding(24)
         .frame(maxWidth: .infinity)
-        .reforgedCard(elevated: true)
+        .practiceCard(radius: 20)
     }
 }
 
@@ -1194,7 +1159,7 @@ struct EmptyBibleNotesView: View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(Color.reforgedNavy.opacity(0.12))
+                    .fill(Color.reforgedCoral.opacity(0.13))
                     .frame(width: 100, height: 100)
 
                 Image(systemName: "note.text.badge.plus")
@@ -1347,7 +1312,7 @@ struct BibleNoteRow: View {
             HStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(Color.reforgedNavy.opacity(0.12))
+                        .fill(Color.reforgedCoral.opacity(0.13))
                         .frame(width: 36, height: 36)
 
                     Image(systemName: "book.fill")
@@ -1393,7 +1358,7 @@ struct BibleNoteRow: View {
                 .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Color.reforgedNavy.opacity(0.1))
+                .background(Color.adaptiveBorder(colorScheme).opacity(0.7))
                 .clipShape(Capsule())
 
                 if let folderName {
@@ -1402,7 +1367,7 @@ struct BibleNoteRow: View {
             }
         }
         .padding(ReforgedTheme.spacingM)
-        .reforgedCard()
+        .practiceCard(radius: 16)
     }
 }
 
@@ -1507,13 +1472,6 @@ struct JournalEntryRow: View {
                         .foregroundStyle(Color.reforgedGold)
                 }
 
-                if onEdit != nil {
-                    Button(action: { onEdit?() }) {
-                        Image(systemName: "pencil")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                }
             }
 
             // Content preview
@@ -1560,20 +1518,23 @@ struct JournalEntryRow: View {
                 if let folderName {
                     NoteFolderBadge(name: folderName)
                 }
-                ForEach(entry.tags, id: \.self) { tag in
+                ForEach(Array(entry.tags.prefix(2)), id: \.self) { tag in
                     Text(tag)
                         .font(.caption2)
                         .fontWeight(.medium)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.reforgedNavy.opacity(0.1))
+                        .background(Color.adaptiveBorder(colorScheme).opacity(0.7))
                         .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                         .clipShape(Capsule())
                 }
             }
         }
         .padding(ReforgedTheme.spacingM)
-        .reforgedCard()
+        .practiceCard(radius: 16)
+        .contentShape(Rectangle())
+        .onTapGesture { onEdit?() }
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -1631,7 +1592,7 @@ struct NewJournalEntrySheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "lock.fill")
                             .foregroundStyle(Color.green)
-                        Text("This entry will be stored securely on your device only")
+                        Text("This note is stored only on your device")
                             .font(.caption)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
@@ -1838,7 +1799,7 @@ struct NewJournalEntrySheet: View {
                                 .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(Color.reforgedNavy.opacity(0.1))
+                                .background(Color.adaptiveBorder(colorScheme).opacity(0.7))
                                 .clipShape(Capsule())
                             }
                         }
@@ -1899,7 +1860,7 @@ struct NewJournalEntrySheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "star.fill")
                             .foregroundStyle(Color.reforgedGold)
-                        Text("Earn +15 XP for journaling")
+                        Text("Earn +15 XP for writing a note")
                             .font(.subheadline)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
@@ -2055,9 +2016,9 @@ struct NewJournalEntrySheet: View {
     }
 
     private var navigationTitleText: String {
-        if isEditing { return "Edit Entry" }
+        if isEditing { return "Edit Note" }
         if templateMode { return "Guided Reflection" }
-        return usePrompt ? "Prompted Entry" : "Free Write"
+        return usePrompt ? "Prompted Note" : "New Note"
     }
 
     func saveEntry() {
@@ -2133,14 +2094,14 @@ struct PromptChip: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .frame(maxWidth: 160)
-                .background(isSelected ? Color.reforgedNavy : Color.adaptiveCardBackground(colorScheme))
+                .background(isSelected ? Color.reforgedCoral : Color.adaptiveCardBackground(colorScheme))
                 .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
                 .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
                 .overlay(
                     RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium)
                         .stroke(isSelected ? Color.clear : Color.adaptiveBorder(colorScheme), lineWidth: 1)
                 )
-                .shadow(color: isSelected ? Color.reforgedNavy.opacity(0.2) : Color.clear, radius: 4, y: 2)
+                .shadow(color: isSelected ? Color.reforgedCoral.opacity(0.25) : Color.clear, radius: 4, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -2281,12 +2242,12 @@ struct ExportNotesSheet: View {
 
                         Toggle(isOn: $includeJournal) {
                             Label(
-                                "Journal Reflections (\(journalEntries.count))",
+                                "Reflections (\(journalEntries.count))",
                                 systemImage: "pencil.line"
                             )
                             .font(.subheadline)
                         }
-                        .tint(Color.reforgedNavy)
+                        .tint(Color.reforgedCoral)
 
                         Toggle(isOn: $includeBibleNotes) {
                             Label(
@@ -2295,10 +2256,10 @@ struct ExportNotesSheet: View {
                             )
                             .font(.subheadline)
                         }
-                        .tint(Color.reforgedNavy)
+                        .tint(Color.reforgedCoral)
                     }
                     .padding(ReforgedTheme.spacingM)
-                    .reforgedCard()
+                    .practiceCard(radius: 16)
 
                     // Format options
                     VStack(alignment: .leading, spacing: 12) {
@@ -2449,7 +2410,7 @@ struct ExportFormatRow: View {
                 }
             }
             .padding(ReforgedTheme.spacingM)
-            .reforgedCard()
+            .practiceCard(radius: 16)
             .opacity(isDisabled ? 0.5 : 1.0)
         }
         .buttonStyle(.plain)

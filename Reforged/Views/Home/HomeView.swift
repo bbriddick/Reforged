@@ -64,6 +64,9 @@ struct HomeView: View {
         } label: {
             ProfileAvatarView(size: 40)
         }
+        .simultaneousGesture(TapGesture().onEnded {
+            FeatureUsage.record(.profile)
+        })
         .buttonStyle(.plain)
         .accessibilityLabel("Profile")
         .accessibilityHint("Your profile, badges, and app settings")
@@ -80,7 +83,7 @@ struct HomeView: View {
         }
         .searchable(text: $searchText,
                     placement: .navigationBarDrawer(displayMode: .automatic),
-                    prompt: "Search Scripture, topics, words…")
+                    prompt: "Search Scripture, topics, notes, AI…")
         .onChange(of: searchText) { query in
             if query.isEmpty { searchModel.invalidateJournalCache() }
             searchModel.updateLocal(query: query, appState: appState)
@@ -101,6 +104,8 @@ struct HomeView: View {
     private var homeScroll: some View {
         ScrollView {
             VStack(spacing: horizontalSizeClass == .regular ? ReforgedTheme.spacingL : ReforgedTheme.spacingXL) {
+                // After restoring an account on a new device: one dismissible card.
+                DeviceSetupCard()
                 // iPad/Mac: a command band (hero + key stats) over an adaptive
                 // multi-column dashboard that fills the width. iPhone keeps the
                 // single-column stack with the hero on top.
@@ -110,17 +115,24 @@ struct HomeView: View {
                     // Five groups, tight inside (12–16pt) and generous between
                     // (32pt), so the screen reads as Today → Progress → Reading →
                     // Learning → Tools instead of ten equally spaced cards.
-                    VStack(spacing: ReforgedTheme.spacingM) {
-                        WelcomeHeader()
-                        MorningRoutineCard { showMorningRoutine = true }
-                    }
+                    // One hero names the next step; the rest of today sits in a single
+                    // quiet list under it, and everything optional is grouped below.
+                    WelcomeHeader()
+                    HomeTodayGroup { showMorningRoutine = true }
                     ProgressGroup()
                     DailyInsightCard()
-                    ContinueLearningSection()
-                    VStack(spacing: 12) {
-                        QuickActionsSection()
-                        TipsEntryCard()
-                        ShareGospelCard()
+                    HubGroup(title: "More") {
+                        NavigationLink(destination: TipsView()) {
+                            HubRowLabel(icon: "lightbulb.fill", tint: Color.reforgedGold,
+                                        title: "Tips", subtitle: "Get more out of Reforged") { EmptyView() }
+                        }
+                        .buttonStyle(.plain)
+                        HubDivider()
+                        NavigationLink(destination: ShareGospelDetailView()) {
+                            HubRowLabel(icon: "person.2.fill", tint: Color.reforgedCoral,
+                                        title: "Share the Gospel", subtitle: "The Four P's") { EmptyView() }
+                        }
+                        .buttonStyle(.plain)
                     }
                     ShopHomeCard()
                 }
@@ -531,6 +543,7 @@ struct StreakCard: View {
     var streak: Int {
         streakManager.currentStreak
     }
+
 
     /// Sourced from the engine so the card and the celebration agree on what
     /// counts as a milestone.
@@ -1971,6 +1984,89 @@ struct DailyInsightCard: View {
     }
 }
 
+// MARK: - Today group (iPhone Home)
+
+/// Everything else asking for attention today, as quiet rows under the hero: pick up
+/// reading, the guided routine, and the next lesson.
+struct HomeTodayGroup: View {
+    let onBeginRoutine: () -> Void
+    @EnvironmentObject var appState: AppState
+    @StateObject private var planService = ReadingPlanService.shared
+    @ObservedObject private var routine = MorningRoutineStorageManager.shared
+
+    private var nextLesson: (track: Track, lesson: Lesson)? {
+        for track in appState.tracks {
+            if let lesson = track.lessons.first(where: { !$0.isCompleted }) { return (track, lesson) }
+        }
+        return nil
+    }
+
+    private var routineTitle: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 0..<12: return "Good morning"
+        case 12..<17: return "Good afternoon"
+        default: return "Good evening"
+        }
+    }
+
+    var body: some View {
+        // Reading `planService` keeps the reading row in step with plan progress.
+        let _ = planService.completedDaysMap
+        let target = ContinueReading.current()
+        let lesson = nextLesson
+
+            HubGroup(title: "Also today") {
+                if let target {
+                    Button {
+                        HapticManager.shared.buttonTap()
+                        NotificationCenter.default.post(
+                            name: .switchTab, object: nil,
+                            userInfo: [AppNotificationUserInfoKey.tab: 2])
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            NotificationCenter.default.post(
+                                name: .navigateToBibleVerse, object: nil,
+                                userInfo: [AppNotificationUserInfoKey.reference: target.reference])
+                        }
+                    } label: {
+                        HubRowLabel(icon: target.isPlan ? "calendar" : "bookmark.fill",
+                                    tint: Color.reforgedGold,
+                                    title: target.title, subtitle: target.subtitle) { EmptyView() }
+                    }
+                    .buttonStyle(.plain)
+                    HubDivider()
+                }
+
+                if routine.isCompletedToday {
+                    Button {
+                        HapticManager.shared.lightImpact()
+                        routine.resetToday()
+                        onBeginRoutine()
+                    } label: {
+                        HubRowLabel(icon: "checkmark.seal.fill", tint: Color.practiceGreen,
+                                    title: "Routine complete", subtitle: "Tap to walk through it again") { EmptyView() }
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Button(action: onBeginRoutine) {
+                        HubRowLabel(icon: "sunrise.fill", tint: Color.reforgedCoral,
+                                    title: routineTitle, subtitle: "Scripture, prayer and memory in about five minutes") { EmptyView() }
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if let lesson {
+                    HubDivider()
+                    NavigationLink(destination: LessonView(lesson: lesson.lesson)) {
+                        HubRowLabel(icon: "book.fill", tint: Color(red: 0.55, green: 0.35, blue: 0.7),
+                                    title: "Next lesson",
+                                    subtitle: "\(lesson.lesson.title), +\(lesson.lesson.xpReward) XP") { EmptyView() }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+    }
+}
+
 // MARK: - Continue Learning Section
 
 struct ContinueLearningSection: View {
@@ -2116,7 +2212,7 @@ struct QuickActionsSection: View {
                         icon: "pencil.line",
                         iconColor: Color.reforgedGold,
                         iconBackground: Color.reforgedGold.opacity(0.15),
-                        title: "Journal",
+                        title: "Notes",
                         subtitle: "Reflect on God's Word"
                     )
                 }

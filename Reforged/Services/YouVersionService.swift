@@ -20,7 +20,9 @@ struct YouVersionConfig {
     /// Lockman confirm a whole-Bible download is acceptable for this app (the license requires
     /// bulk extraction to be "difficult or impractical" outside the app). While `false`, NASB is
     /// only cached chapter-by-chapter as the user reads.
-    static let offlineDownloadEnabled = true
+    /// Off for now: the sign-in this download requires isn't working yet, so the NASB row in
+    /// Manage Bibles shows no sign-in or download. NASB still reads online and caches chapters.
+    static let offlineDownloadEnabled = false
     /// When the download is on, require the user to sign in with YouVersion first (mirrors the
     /// SDK's own download flow).
     static let requireSignInForDownload = true

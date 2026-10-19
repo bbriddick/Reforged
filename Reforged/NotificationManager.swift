@@ -13,10 +13,11 @@ class NotificationManager: NSObject, ObservableObject {
     }
     
     /// Request permission to send notifications
-    func requestAuthorization() {
+    func requestAuthorization(completion: ((Bool) -> Void)? = nil) {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             DispatchQueue.main.async {
                 self.isAuthorized = granted
+                completion?(granted)
                 
                 if granted {
                     self.registerForRemoteNotifications()
@@ -36,6 +37,23 @@ class NotificationManager: NSObject, ObservableObject {
         }
     }
     
+    /// Apple's guidance is to call `registerForRemoteNotifications()` on every launch:
+    /// tokens can change (reinstall, restore, rotation), and the app only learns the new
+    /// one by registering again. Skips the prompt: only re-registers if already allowed.
+    func refreshRemoteRegistrationIfAuthorized() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            NSLog("[Push] authorizationStatus=%ld", settings.authorizationStatus.rawValue)
+            if settings.authorizationStatus == .notDetermined {
+                // Never asked: ask now (registers on grant).
+                DispatchQueue.main.async { self.requestAuthorization() }
+            } else {
+                // A device token is issued whether or not alerts are allowed, and the
+                // server needs it either way. Re-register on every launch.
+                DispatchQueue.main.async { self.registerForRemoteNotifications() }
+            }
+        }
+    }
+
     /// Check current authorization status
     func checkAuthorizationStatus() {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -49,14 +67,15 @@ class NotificationManager: NSObject, ObservableObject {
     func handleDeviceToken(_ deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
         self.deviceToken = token
+        NSLog("[Push] device token received (%d chars)", token.count)
         debugLog("Device Token: \(token)")
         
-        // TODO: Send this token to your server for push notifications
-        // Example: sendTokenToServer(token)
+        Task { @MainActor in FriendsStore.shared.deviceTokenReceived(token) }
     }
     
     /// Handle registration failure
     func handleRegistrationError(_ error: Error) {
+        NSLog("[Push] registration FAILED: %@", error.localizedDescription)
         debugLog("Failed to register for remote notifications: \(error.localizedDescription)")
     }
     

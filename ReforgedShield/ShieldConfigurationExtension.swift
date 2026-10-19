@@ -152,10 +152,10 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     // MARK: - Block Notification
 
-    /// Fires a local notification when a block is shown so the user can open
-    /// Reforged to a refocusing passage. Throttled via the shared App Group so
-    /// repeated renders / rapid retries don't spam. The notification carries the
-    /// same verse shown on the shield; tapping it deep-links to the passage.
+    /// Fires a local notification when a block is shown, inviting the user to open
+    /// "I'm Being Tempted" (breathe, fight with the Word, take a step). Throttled via
+    /// the shared App Group so repeated renders / rapid retries don't spam. Tapping it
+    /// opens that flow directly (see AppDelegate action "tempted").
     private func scheduleRefocusNotificationIfNeeded(_ item: ShieldEncouragement) {
         guard let defaults = UserDefaults(suiteName: appGroup) else { return }
         if let last = defaults.object(forKey: notifThrottleKey) as? Date,
@@ -165,19 +165,14 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         defaults.set(Date(), forKey: notifThrottleKey)
 
         let content = UNMutableNotificationContent()
-        content.title = "Pause and refocus"
-        content.body = "\"\(item.verseText)\"\n— \(item.verseReference)"
+        content.title = "Feeling the pull?"
+        content.body = "Something was just blocked. Tap to open I'm Being Tempted and take a minute with God."
         content.sound = .default
-        content.userInfo = [
-            "action": "refocus",
-            "verseText": item.verseText,
-            "verseReference": item.verseReference,
-            "suggestion": item.suggestion
-        ]
+        content.userInfo = ["action": "tempted"]
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(
-            identifier: "reforged.refocus.\(UUID().uuidString)",
+            identifier: "reforged.tempted.\(UUID().uuidString)",
             content: content,
             trigger: trigger
         )

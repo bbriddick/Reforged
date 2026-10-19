@@ -6,7 +6,6 @@ struct HelpAndSupportView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.openURL) var openURL
     @State private var showWhatsNew = false
-    @State private var showPrivacyPolicy = false
     @State private var showTermsOfUse = false
     @State private var showTipJar = false
 
@@ -86,12 +85,29 @@ struct HelpAndSupportView: View {
 
             SettingsDivider()
 
+            #if DEBUG
+            // Developer tool (debug builds only): replays the returning-user fast lane. Nothing
+            // is deleted: onboarding reappears, recognises the saved sign-in, and the restore
+            // re-merges the same account.
+            Button {
+                AppState.shared.user.onboardingCompleted = false
+            } label: {
+                Label("Developer: replay as returning user", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .background(Color.adaptiveCardBackground(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            #endif
+
             // MARK: Legal
             sectionHeader(icon: "doc.text.fill", color: Color.reforgedNavy, title: "Legal")
 
             VStack(spacing: 0) {
-                actionRow(icon: "lock.shield.fill", iconColor: Color.reforgedNavy, title: "Privacy Policy", subtitle: "How we handle your data") {
-                    showPrivacyPolicy = true
+                externalRow(icon: "lock.shield.fill", iconColor: Color.reforgedNavy, title: "Privacy Policy", subtitle: "How we handle your data") {
+                    if let url = URL(string: "https://reforgedapp.org/privacy") { openURL(url) }
                 }
                 Divider().padding(.leading, 58)
                 actionRow(icon: "doc.text.fill", iconColor: Color.reforgedNavy, title: "Terms of Use", subtitle: "Terms and conditions for using Reforged") {
@@ -127,12 +143,27 @@ struct HelpAndSupportView: View {
             attributionCard(icon: "character.book.closed.fill", iconColor: Color.adaptiveNavyText(colorScheme), title: "Word Study Data") {
                 attributionEntry(
                     title: "Strong's Exhaustive Concordance",
-                    body: "Hebrew and Greek lexicon data is derived from Strong's Exhaustive Concordance by James Strong (1890), which is in the public domain. Digital lexicon data sourced from the Open Scriptures Hebrew/Greek lexicon project (CC BY-SA 4.0)."
+                    body: "Hebrew and Greek lexicon data is derived from Strong's Dictionaries of Hebrew and Greek Words by James Strong (1890), which is in the public domain. Digital editions by Ulrik Sandborg-Petersen and the Open Scriptures project."
                 )
                 Divider()
                 attributionEntry(
-                    title: "Brown-Driver-Briggs / Thayer's Lexicon",
-                    body: "Enriched word definitions provided by the Brown-Driver-Briggs Hebrew Lexicon and Thayer's Greek Lexicon via the Bolls.life Bible API. These reference works are in the public domain."
+                    title: "King James Version with Strong's Numbers",
+                    body: "The King James Version with Strong's numbers and morphology is from the CrossWire Bible Society (KJV2003 Project) and The Bible Foundation, who grant a general public license to use the text for any purpose."
+                )
+                Divider()
+                attributionEntry(
+                    title: "Greek New Testament",
+                    body: "The Textus Receptus with parsing and Strong's numbers is the work of Dr. Maurice A. Robinson, released to the public domain. Accented Greek forms are from the STEP Bible Translators Amalgamated Greek New Testament (stepbible.org), data created by Tyndale House, Cambridge, licensed CC BY 4.0."
+                )
+                Divider()
+                attributionEntry(
+                    title: "Hebrew Bible and Lexicon",
+                    body: "The Westminster Leningrad Codex with morphology is from the Open Scriptures Hebrew Bible Project, and the Brown-Driver-Briggs lexicon data is from the Open Scriptures HebrewLexicon project. Both are licensed CC BY 4.0 over public domain texts."
+                )
+                Divider()
+                attributionEntry(
+                    title: "Abbott-Smith Greek Lexicon",
+                    body: "A Manual Greek Lexicon of the New Testament by G. Abbott-Smith (1922), in the public domain, digitized by the Abbott-Smith TEI project."
                 )
             }
 
@@ -239,9 +270,6 @@ struct HelpAndSupportView: View {
         .sheet(isPresented: $showWhatsNew) {
             WhatsNewView(isPresented: $showWhatsNew)
                 .environmentObject(SettingsManager.shared)
-        }
-        .sheet(isPresented: $showPrivacyPolicy) {
-            PolicyView(title: "Privacy Policy", content: privacyPolicyContent)
         }
         .sheet(isPresented: $showTermsOfUse) {
             PolicyView(title: "Terms of Use", content: termsOfUseContent)
@@ -381,51 +409,6 @@ struct HelpAndSupportView: View {
 
     // MARK: - Legal Content
 
-    private var privacyPolicyContent: String {
-        """
-        Privacy Policy for Reforged
-
-        Last updated: February 2025
-
-        1. Information We Collect
-
-        Reforged collects the following information to provide and improve our services:
-        • Account information (email address, name)
-        • Bible reading progress and bookmarks
-        • Memory verse progress and review history
-        • Learning track progress
-        • App settings and preferences
-
-        2. How We Use Your Information
-
-        We use your information to:
-        • Sync your progress across devices
-        • Provide personalized recommendations
-        • Send optional reminders and notifications
-        • Improve our app and services
-
-        3. Data Storage and Security
-
-        Your data is securely stored using industry-standard encryption. We use Apple's iCloud and CloudKit for backend services, which provides enterprise-grade security.
-
-        4. Data Sharing
-
-        We do not sell, trade, or rent your personal information to third parties. We may share anonymized, aggregated data for analytics purposes.
-
-        5. Your Rights
-
-        You have the right to:
-        • Access your personal data
-        • Request deletion of your data
-        • Export your data
-        • Opt out of marketing communications
-
-        6. Contact Us
-
-        If you have questions about this Privacy Policy, please contact us at support@reforgedapp.org.
-        """
-    }
-
     private var termsOfUseContent: String {
         """
         Terms of Use for Reforged
@@ -453,7 +436,7 @@ struct HelpAndSupportView: View {
 
         5. Intellectual Property
 
-        Scripture quotations are from the ESV® Bible (© 2001 Crossway), KJV (Public Domain), CSB® (© 2017 Holman Bible Publishers), NKJV® (© 1982 Thomas Nelson), NASB® (© 1995 The Lockman Foundation), and Reina-Valera 1960® (© Sociedades Bíblicas en América Latina, 1960; © Renovado Sociedades Bíblicas Unidas, 1988). Used by permission. All rights reserved. Hebrew and Greek word study data is derived from Strong's Exhaustive Concordance (public domain) and the Open Scriptures lexicon project (CC BY-SA 4.0). Enriched definitions from Brown-Driver-Briggs and Thayer's lexicons (public domain) via Bolls.life. Verse cross-reference data is drawn from the Treasury of Scripture Knowledge, topical verse data from the Topical Bible, and place locations from the Bible Geocoding project, all via openbible.info (CC BY 4.0). All other content and features are owned by Reforged.
+        Scripture quotations are from the ESV® Bible (© 2001 Crossway), KJV (Public Domain), CSB® (© 2017 Holman Bible Publishers), NKJV® (© 1982 Thomas Nelson), NASB® (© 1995 The Lockman Foundation), and Reina-Valera 1960® (© Sociedades Bíblicas en América Latina, 1960; © Renovado Sociedades Bíblicas Unidas, 1988). Used by permission. All rights reserved. Hebrew and Greek word study data is derived from Strong's Exhaustive Concordance (public domain), the CrossWire KJV with Strong's numbers, Dr. Maurice A. Robinson's Textus Receptus (public domain), the Open Scriptures Hebrew Bible and Hebrew Lexicon projects (CC BY 4.0), the Abbott-Smith Greek Lexicon (public domain), and STEP Bible accented Greek data (CC BY 4.0). Verse cross-reference data is drawn from the Treasury of Scripture Knowledge, topical verse data from the Topical Bible, and place locations from the Bible Geocoding project, all via openbible.info (CC BY 4.0). All other content and features are owned by Reforged.
 
         6. Disclaimer of Warranties
 

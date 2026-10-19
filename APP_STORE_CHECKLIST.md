@@ -45,8 +45,8 @@ Developer portal.
   reviewer-usable login, or clear notes in "App Review Information."
 - ☐ **Review notes** — explain the Screen Time / Family Controls usage (focus
   blocking for discipleship) so review understands the entitlement.
-- ☐ **Bump build number** before each upload (`CURRENT_PROJECT_VERSION`, currently 16;
-  `MARKETING_VERSION` 2.0).
+- ☐ **Bump build number** before each upload (`CURRENT_PROJECT_VERSION`, currently 21;
+  `MARKETING_VERSION` 2.4).
 
 ## Pre-upload build steps
 

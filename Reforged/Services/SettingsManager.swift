@@ -47,7 +47,21 @@ class SettingsManager: ObservableObject {
     // MARK: - Bible Reading Preferences
 
     @Published var defaultTranslation: BibleTranslation {
-        didSet { save(defaultTranslation.rawValue, forKey: Keys.defaultTranslation) }
+        didSet {
+            save(defaultTranslation.rawValue, forKey: Keys.defaultTranslation)
+            // Choosing a Bible as your default brings it back if it was hidden.
+            if hiddenTranslations.contains(defaultTranslation) { hiddenTranslations.remove(defaultTranslation) }
+        }
+    }
+
+    /// English and modern Bibles the member has hidden from the translation switcher.
+    @Published var hiddenTranslations: Set<BibleTranslation> {
+        didSet { UserDefaults.standard.set(hiddenTranslations.map(\.rawValue), forKey: Keys.hiddenTranslations) }
+    }
+
+    /// The Bibles shown in the switcher, in the member's order.
+    var switcherTranslations: [BibleTranslation] {
+        translationOrder.filter { !hiddenTranslations.contains($0) }
     }
 
     @Published var translationOrder: [BibleTranslation] {
@@ -128,7 +142,7 @@ class SettingsManager: ObservableObject {
         case .tr: return showTRInSwitcher
         case .sblgnt: return showSBLGNTInSwitcher
         case .wlc: return showWLCInSwitcher
-        default: return true
+        default: return !hiddenTranslations.contains(translation)
         }
     }
 
@@ -137,8 +151,19 @@ class SettingsManager: ObservableObject {
         case .tr: showTRInSwitcher = isOn
         case .sblgnt: showSBLGNTInSwitcher = isOn
         case .wlc: showWLCInSwitcher = isOn
-        default: break
+        default:
+            if isOn {
+                hiddenTranslations.remove(translation)
+            } else if translation != defaultTranslation, switcherTranslations.count > 1 {
+                // Your default Bible, and the last one standing, always stay in the switcher.
+                hiddenTranslations.insert(translation)
+            }
         }
+    }
+
+    /// Whether a Bible can be hidden from the switcher right now.
+    func canHideFromSwitcher(_ translation: BibleTranslation) -> Bool {
+        translation.isOriginalLanguage || (translation != defaultTranslation && switcherTranslations.count > 1)
     }
 
     // MARK: - Audio Settings
@@ -358,6 +383,7 @@ class SettingsManager: ObservableObject {
         static let themeMode = "settings.themeMode"
         static let defaultTranslation = "settings.defaultTranslation"
         static let translationOrder = "settings.translationOrder"
+        static let hiddenTranslations = "settings.hiddenTranslations"
         static let readingMode = "settings.readingMode"
         static let keepScreenOn = "settings.keepScreenOn"
         static let showSuperscriptVerseNumbers = "settings.showSuperscriptVerseNumbers"
@@ -424,6 +450,8 @@ class SettingsManager: ObservableObject {
         } else {
             self.translationOrder = BibleTranslation.allCases.filter { !$0.isOriginalLanguage }
         }
+        let hiddenRaw = UserDefaults.standard.array(forKey: Keys.hiddenTranslations) as? [String] ?? []
+        self.hiddenTranslations = Set(hiddenRaw.compactMap { BibleTranslation(rawValue: $0) }.filter { !$0.isOriginalLanguage })
         self.showSuperscriptVerseNumbers = UserDefaults.standard.object(forKey: Keys.showSuperscriptVerseNumbers) as? Bool ?? true
         self.showParagraphHeadings = UserDefaults.standard.object(forKey: Keys.showParagraphHeadings) as? Bool ?? true
         self.showRedLetterText = UserDefaults.standard.object(forKey: Keys.showRedLetterText) as? Bool ?? false
@@ -594,6 +622,7 @@ class SettingsManager: ObservableObject {
     func resetBibleSettings() {
         defaultTranslation = .kjv
         translationOrder = BibleTranslation.allCases.filter { !$0.isOriginalLanguage }
+        hiddenTranslations = []
         showSuperscriptVerseNumbers = true
         showParagraphHeadings = true
         autoRestoreReadingLocation = true

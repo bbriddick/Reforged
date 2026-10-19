@@ -8,9 +8,8 @@ struct ApiBibleConfig {
 
     // Per-translation API key overrides. Most bibles share the default key above, but some
     // publisher-restricted texts (e.g. NLT/Tyndale) are licensed under their own key.
-    static let apiKeyOverrides: [BibleTranslation: String] = [
-        .nlt: "hmz8d18_vB9WwraDGXPMp"
-    ]
+    // (NLT is not served by API.Bible; its key lives in `NLTConfig.apiKey`.)
+    static let apiKeyOverrides: [BibleTranslation: String] = [:]
 
     static func apiKey(for translation: BibleTranslation) -> String {
         apiKeyOverrides[translation] ?? apiKey

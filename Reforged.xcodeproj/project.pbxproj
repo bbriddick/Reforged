@@ -7,6 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		SWVW0000227A1B0E0000000001 /* SwitchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SWVW0000127A1B0E0000000001 /* SwitchViews.swift */; };
+		VCHL0000227A1B0E0000000001 /* VerseChallenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = VCHL0000127A1B0E0000000001 /* VerseChallenge.swift */; };
+		SRWD0000227A1B0E0000000001 /* SouthlandRewardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRWD0000127A1B0E0000000001 /* SouthlandRewardViews.swift */; };
+		STRK0000227A1B0E0000000001 /* SouthlandTrackViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = STRK0000127A1B0E0000000001 /* SouthlandTrackViews.swift */; };
+		SCUR0000227A1B0E0000000001 /* SouthlandCurriculum.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCUR0000127A1B0E0000000001 /* SouthlandCurriculum.swift */; };
+		41B1181AD03BA1EC9B1964A0 /* Fonts/ArchivoBlack-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 553311A9A538760A438F98D6 /* Fonts/ArchivoBlack-Regular.ttf */; };
+		BF58802D680AA51E0D4B392E /* NewUserFlowViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C6991F3EA3E1EB5C22BFAB /* NewUserFlowViews.swift */; };
+		B12C9CFA93CF137F3C8FF121 /* DeviceSetupCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5343B0793CA671D18040E3C3 /* DeviceSetupCard.swift */; };
+		9EE8C9DA22E9625D466313AD /* ReturningUserViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5718CA6A14BF6F122B538820 /* ReturningUserViews.swift */; };
+		14C2CCAA850E4F7F80AA94C1 /* SyncedPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDA9CAF3BE4CE0566CEDBC7 /* SyncedPreferences.swift */; };
+		870EF10B58EB96BFF60FCA36 /* ReadTogetherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C24AE06B3250A3346BD6CF41 /* ReadTogetherViews.swift */; };
+		C22F8E9865640CE768D62F26 /* SharedReadingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F5FA1EB4A968D8C0E725B2 /* SharedReadingsService.swift */; };
+		B226708514892313DED1F01C /* FriendsDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DB322B2083DDD49DB3B9190 /* FriendsDesign.swift */; };
+		65AC8273F8E14F02D3862168 /* TogetherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AAF07893E5DE43A374F689A /* TogetherViews.swift */; };
+		650ED9C20712872902263E1F /* SharedVersesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796824015B7FE3D8556CAEC4 /* SharedVersesService.swift */; };
+		41CCD8C77411712EF9FA8BFB /* FindFromContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5A1F36251F0AE6B5E918AB7 /* FindFromContactsView.swift */; };
+		60E062464699A445895CE438 /* ContactInvite.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2D04C97BFB6A8DF29ECD01F /* ContactInvite.swift */; };
+		D9006C9AD63F2891D0EB98E8 /* FriendsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31FFA9009CCA5AD8311283AF /* FriendsOnboardingView.swift */; };
+		F0D7C44674D98E0F2C6858B8 /* FriendsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F832654D2CEB14B1E7812BC /* FriendsService.swift */; };
+		34A46915C670E174C3018302 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6222303427CEA684331DDD80 /* FriendsView.swift */; };
 		YV0000032F0000000000A001 /* YouVersionPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = YV0000022F0000000000A001 /* YouVersionPlatform */; };
 		0AD119BA881D3D4DCA6BABB0 /* TracksRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */; };
 		YV0000062F0000000000A001 /* ManageBiblesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = YV0000072F0000000000A001 /* ManageBiblesView.swift */; };
@@ -84,6 +104,9 @@
 		APV00002279B9E0000000001 /* AccountabilityPartnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APV00001279B9E0000000001 /* AccountabilityPartnerView.swift */; };
 		B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00001279B9E0000000001 /* StrongsModels.swift */; };
 		B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00003279B9E0000000001 /* StrongsLexiconService.swift */; };
+		5D0000B1279B9E0000000001 /* StudyDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D0000A1279B9E0000000001 /* StudyDatabase.swift */; };
+		5D0000B2279B9E0000000001 /* StudyDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D0000A2279B9E0000000001 /* StudyDataSource.swift */; };
+		5D0000B3279B9E0000000001 /* reforged-study.rsdb in Resources */ = {isa = PBXBuildFile; fileRef = 5D0000A3279B9E0000000001 /* reforged-study.rsdb */; };
 		B1A00006279B9E0000000001 /* WordTappableVerseText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00005279B9E0000000001 /* WordTappableVerseText.swift */; };
 		B1A00008279B9E0000000001 /* StrongsDefinitionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */; };
 		B1A0000A279B9E0000000001 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A00009279B9E0000000001 /* FlowLayout.swift */; };
@@ -105,6 +128,8 @@
 		BPS00001279B9E0000000001 /* BiblePlaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BPS00002279B9E0000000001 /* BiblePlaceService.swift */; };
 		BRP00002279B9E0000000001 /* BibleReadingPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00001279B9E0000000001 /* BibleReadingPlan.swift */; };
 		BRP00004279B9E0000000001 /* BibleReadingPlanData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */; };
+		YV00000C2F0000000000A001 /* ContinueReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = YV00000D2F0000000000A001 /* ContinueReading.swift */; };
+		YV00000C2F0000000000A002 /* AppTour.swift in Sources */ = {isa = PBXBuildFile; fileRef = YV00000D2F0000000000A002 /* AppTour.swift */; };
 		BRP00006279B9E0000000001 /* ReadingPlanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00005279B9E0000000001 /* ReadingPlanService.swift */; };
 		BRP00008279B9E0000000001 /* ReadingPlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRP00007279B9E0000000001 /* ReadingPlansView.swift */; };
 		BRS00001279B9E0000000001 /* BibleReferenceScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */; };
@@ -156,6 +181,7 @@
 		E2000001279B9E0000000001 /* BibleSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000002279B9E0000000001 /* BibleSearchService.swift */; };
 		EE277622B31DCD276294A429 /* MemorySettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B7622BA76BF984A9FA0E578 /* MemorySettingsSection.swift */; };
 		EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000002279B9E0000000001 /* BibleAudioPlayer.swift */; };
+		YV00000E2F0000000000A001 /* ContinueReadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = YV00000F2F0000000000A001 /* ContinueReadingCard.swift */; };
 		EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000004279B9E0000000001 /* UnifiedNavigationView.swift */; };
 		EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000006279B9E0000000001 /* SearchPanelView.swift */; };
 		EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX000008279B9E0000000001 /* TakeNoteView.swift */; };
@@ -318,6 +344,26 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		SWVW0000127A1B0E0000000001 /* SwitchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwitchViews.swift; sourceTree = "<group>"; };
+		VCHL0000127A1B0E0000000001 /* VerseChallenge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseChallenge.swift; sourceTree = "<group>"; };
+		SRWD0000127A1B0E0000000001 /* SouthlandRewardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SouthlandRewardViews.swift; sourceTree = "<group>"; };
+		STRK0000127A1B0E0000000001 /* SouthlandTrackViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SouthlandTrackViews.swift; sourceTree = "<group>"; };
+		SCUR0000127A1B0E0000000001 /* SouthlandCurriculum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SouthlandCurriculum.swift; sourceTree = "<group>"; };
+		553311A9A538760A438F98D6 /* Fonts/ArchivoBlack-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fonts/ArchivoBlack-Regular.ttf; sourceTree = "<group>"; };
+		A5C6991F3EA3E1EB5C22BFAB /* NewUserFlowViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NewUserFlowViews.swift; sourceTree = "<group>"; };
+		5343B0793CA671D18040E3C3 /* DeviceSetupCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceSetupCard.swift; sourceTree = "<group>"; };
+		5718CA6A14BF6F122B538820 /* ReturningUserViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReturningUserViews.swift; sourceTree = "<group>"; };
+		6DDA9CAF3BE4CE0566CEDBC7 /* SyncedPreferences.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncedPreferences.swift; sourceTree = "<group>"; };
+		C24AE06B3250A3346BD6CF41 /* ReadTogetherViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReadTogetherViews.swift; sourceTree = "<group>"; };
+		27F5FA1EB4A968D8C0E725B2 /* SharedReadingsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedReadingsService.swift; sourceTree = "<group>"; };
+		8DB322B2083DDD49DB3B9190 /* FriendsDesign.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsDesign.swift; sourceTree = "<group>"; };
+		9AAF07893E5DE43A374F689A /* TogetherViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TogetherViews.swift; sourceTree = "<group>"; };
+		796824015B7FE3D8556CAEC4 /* SharedVersesService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedVersesService.swift; sourceTree = "<group>"; };
+		A5A1F36251F0AE6B5E918AB7 /* FindFromContactsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FindFromContactsView.swift; sourceTree = "<group>"; };
+		F2D04C97BFB6A8DF29ECD01F /* ContactInvite.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContactInvite.swift; sourceTree = "<group>"; };
+		31FFA9009CCA5AD8311283AF /* FriendsOnboardingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsOnboardingView.swift; sourceTree = "<group>"; };
+		1F832654D2CEB14B1E7812BC /* FriendsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsService.swift; sourceTree = "<group>"; };
+		6222303427CEA684331DDD80 /* FriendsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
 		08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgeGateManager.swift; sourceTree = "<group>"; };
 		11826B8D31CD2DF20F878856 /* SettingsManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsManager.swift; path = Reforged/Services/SettingsManager.swift; sourceTree = "<group>"; };
 		150D0666467F9D6D3579BA96 /* DisplaySettingsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DisplaySettingsSection.swift; path = Reforged/Views/Settings/DisplaySettingsSection.swift; sourceTree = "<group>"; };
@@ -410,6 +456,9 @@
 		APV00001279B9E0000000001 /* AccountabilityPartnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityPartnerView.swift; sourceTree = "<group>"; };
 		B1A00001279B9E0000000001 /* StrongsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsModels.swift; sourceTree = "<group>"; };
 		B1A00003279B9E0000000001 /* StrongsLexiconService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsLexiconService.swift; sourceTree = "<group>"; };
+		5D0000A1279B9E0000000001 /* StudyDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyDatabase.swift; sourceTree = "<group>"; };
+		5D0000A2279B9E0000000001 /* StudyDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyDataSource.swift; sourceTree = "<group>"; };
+		5D0000A3279B9E0000000001 /* reforged-study.rsdb */ = {isa = PBXFileReference; lastKnownFileType = file; path = "reforged-study.rsdb"; sourceTree = "<group>"; };
 		B1A00005279B9E0000000001 /* WordTappableVerseText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTappableVerseText.swift; sourceTree = "<group>"; };
 		B1A00007279B9E0000000001 /* StrongsDefinitionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrongsDefinitionSheet.swift; sourceTree = "<group>"; };
 		B1A00009279B9E0000000001 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
@@ -430,6 +479,8 @@
 		BRP00001279B9E0000000001 /* BibleReadingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReadingPlan.swift; sourceTree = "<group>"; };
 		BRP00003279B9E0000000001 /* BibleReadingPlanData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReadingPlanData.swift; sourceTree = "<group>"; };
 		BRP00005279B9E0000000001 /* ReadingPlanService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlanService.swift; sourceTree = "<group>"; };
+		YV00000D2F0000000000A001 /* ContinueReading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueReading.swift; sourceTree = "<group>"; };
+		YV00000D2F0000000000A002 /* AppTour.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTour.swift; sourceTree = "<group>"; };
 		BRP00007279B9E0000000001 /* ReadingPlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlansView.swift; sourceTree = "<group>"; };
 		BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleReferenceScanner.swift; sourceTree = "<group>"; };
 		C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterScrollCoordinator.swift; sourceTree = "<group>"; };
@@ -473,6 +524,7 @@
 		E2000002279B9E0000000001 /* BibleSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleSearchService.swift; sourceTree = "<group>"; };
 		EX000002279B9E0000000001 /* BibleAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleAudioPlayer.swift; sourceTree = "<group>"; };
 		EX000004279B9E0000000001 /* UnifiedNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedNavigationView.swift; sourceTree = "<group>"; };
+		YV00000F2F0000000000A001 /* ContinueReadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueReadingCard.swift; sourceTree = "<group>"; };
 		EX000006279B9E0000000001 /* SearchPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPanelView.swift; sourceTree = "<group>"; };
 		EX000008279B9E0000000001 /* TakeNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNoteView.swift; sourceTree = "<group>"; };
 		EXP00001279B9E0000000001 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
@@ -632,6 +684,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		049CE5DDAA0F0A8F93F0AE19 /* Friends */ = {
+			isa = PBXGroup;
+			children = (
+				6222303427CEA684331DDD80 /* FriendsView.swift */,
+				C24AE06B3250A3346BD6CF41 /* ReadTogetherViews.swift */,
+				8DB322B2083DDD49DB3B9190 /* FriendsDesign.swift */,
+				9AAF07893E5DE43A374F689A /* TogetherViews.swift */,
+				A5A1F36251F0AE6B5E918AB7 /* FindFromContactsView.swift */,
+				F2D04C97BFB6A8DF29ECD01F /* ContactInvite.swift */,
+				31FFA9009CCA5AD8311283AF /* FriendsOnboardingView.swift */,
+			);
+			path = Friends;
+			sourceTree = "<group>";
+		};
 		0D25205077E81A17B7F863AE /* Groups */ = {
 			isa = PBXGroup;
 			children = (
@@ -772,6 +838,7 @@
 				MRNE00001279B9E0000000001 /* MorningRoutineEntry.swift */,
 				DPMD00001279B9E0000000001 /* RhythmModels.swift */,
 				MCUR00001279B9E0000000001 /* MemoryCurriculum.swift */,
+				SCUR0000127A1B0E0000000001 /* SouthlandCurriculum.swift */,
 				CC000091279B9E0000000001 /* ReflectionTemplate.swift */,
 				A1000061279B9E0000000001 /* BibleModels.swift */,
 				YV00000B2F0000000000A001 /* BibleVerseCounts.swift */,
@@ -812,6 +879,7 @@
 				A1000081279B9E0000000001 /* KJVService.swift */,
 				NET0000B279B9E0000000001 /* NETService.swift */,
 				KJV0000A279B9E0000000001 /* KJVAudioService.swift */,
+				VCHL0000127A1B0E0000000001 /* VerseChallenge.swift */,
 				KJVDLMG1279B9E0000000001 /* KJVAudioDownloadManager.swift */,
 				A1AABB01279B9E0000000001 /* ApiBibleService.swift */,
 				YV0000052F0000000000A001 /* YouVersionService.swift */,
@@ -845,7 +913,11 @@
 				APS00001279B9E0000000001 /* AccountabilityPartnerService.swift */,
 				SSS00001279B9E0000000001 /* ShieldStreakService.swift */,
 				BRP00005279B9E0000000001 /* ReadingPlanService.swift */,
+				YV00000D2F0000000000A001 /* ContinueReading.swift */,
+				YV00000D2F0000000000A002 /* AppTour.swift */,
 				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
+				5D0000A1279B9E0000000001 /* StudyDatabase.swift */,
+				5D0000A2279B9E0000000001 /* StudyDataSource.swift */,
 				CRS00002279B9E0000000001 /* CrossReferenceService.swift */,
 				BRS00002279B9E0000000001 /* BibleReferenceScanner.swift */,
 				WLS00002279B9E0000000001 /* WordLocatorService.swift */,
@@ -862,6 +934,10 @@
 				EXP00001279B9E0000000001 /* ExportService.swift */,
 				PC000003279B9E0000000001 /* PodcastService.swift */,
 				7A02714018A04BEFD68CAD92 /* GroupsService.swift */,
+				1F832654D2CEB14B1E7812BC /* FriendsService.swift */,
+				6DDA9CAF3BE4CE0566CEDBC7 /* SyncedPreferences.swift */,
+				27F5FA1EB4A968D8C0E725B2 /* SharedReadingsService.swift */,
+				796824015B7FE3D8556CAEC4 /* SharedVersesService.swift */,
 				08AEBA5EE0A827F997BCE877 /* AgeGateManager.swift */,
 				22F06061ADC9E1667CABB6F9 /* TracksRepository.swift */,
 				TJMG00001279B9E0000000001 /* TipJarManager.swift */,
@@ -886,6 +962,7 @@
 				CA97E9787DB142498D99D497 /* Progress */,
 				SHG00001279B9E0000000001 /* Shared */,
 				WNV0000A279B9E0000000001 /* WhatsNewView.swift */,
+				049CE5DDAA0F0A8F93F0AE19 /* Friends */,
 				0D25205077E81A17B7F863AE /* Groups */,
 				1D0773BF52EC137008448331 /* Learn */,
 				TJSG00001279B9E0000000001 /* Support */,
@@ -897,6 +974,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000033279B9E0000000001 /* HomeView.swift */,
+				5343B0793CA671D18040E3C3 /* DeviceSetupCard.swift */,
 				HSG00001279B9E0000000001 /* HomeSuggestion.swift */,
 				TPS00001279B9E0000000001 /* TipsView.swift */,
 				A1000035279B9E0000000101 /* HomeSearchView.swift */,
@@ -929,6 +1007,9 @@
 				CC000006279B9E0000000001 /* CollectionDetailView.swift */,
 				DLRV0002279B9E0000000001 /* DailyLessonRunnerView.swift */,
 				MJVW0002279B9E0000000001 /* MemoryJourneyView.swift */,
+				STRK0000127A1B0E0000000001 /* SouthlandTrackViews.swift */,
+				SRWD0000127A1B0E0000000001 /* SouthlandRewardViews.swift */,
+				SWVW0000127A1B0E0000000001 /* SwitchViews.swift */,
 				PRGS0002279B9E0000000001 /* ProgressSheets.swift */,
 				SIBV0002279B9E0000000001 /* SayItBackView.swift */,
 			);
@@ -942,6 +1023,7 @@
 				C0FFEE01279B9E0000000001 /* ChapterScrollCoordinator.swift */,
 				EX000002279B9E0000000001 /* BibleAudioPlayer.swift */,
 				EX000004279B9E0000000001 /* UnifiedNavigationView.swift */,
+				YV00000F2F0000000000A001 /* ContinueReadingCard.swift */,
 				EX000006279B9E0000000001 /* SearchPanelView.swift */,
 				EX000008279B9E0000000001 /* TakeNoteView.swift */,
 				VSS00002279B9E0000000001 /* VerseStudySheet.swift */,
@@ -979,6 +1061,8 @@
 			isa = PBXGroup;
 			children = (
 				A1000045279B9E0000000001 /* OnboardingFlowView.swift */,
+				A5C6991F3EA3E1EB5C22BFAB /* NewUserFlowViews.swift */,
+				5718CA6A14BF6F122B538820 /* ReturningUserViews.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -991,6 +1075,7 @@
 				B1A0001B279B9E0000000001 /* kjvpce.json */,
 				KJVAMAN1279B9E0000000001 /* kjv_audio_manifest.json */,
 				RG000002279B9E0000000001 /* Fonts/LibreBaskerville.ttf */,
+				553311A9A538760A438F98D6 /* Fonts/ArchivoBlack-Regular.ttf */,
 				RG000014279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf */,
 				RG000004279B9E0000000001 /* Fonts/Roboto.ttf */,
 				RG000012279B9E0000000001 /* Fonts/Roboto-Italic.ttf */,
@@ -1003,6 +1088,7 @@
 				SWJ00021279B9E0000000001 /* Scofield.json */,
 				SWJ00022279B9E0000000001 /* Easton.json */,
 				SWJ00023279B9E0000000001 /* AbbottSmith.json */,
+				5D0000A3279B9E0000000001 /* reforged-study.rsdb */,
 				SWJ00024279B9E0000000001 /* Nave.json */,
 				SWJ00025279B9E0000000001 /* TCR.json */,
 				SPDJ00001279B9E0000000001 /* SpurgeonMorningEvening.json */,
@@ -1310,6 +1396,7 @@
 				KJVAMAN2279B9E0000000001 /* kjv_audio_manifest.json in Resources */,
 				WOC00003279B9E0000000001 /* kjv_words_of_christ_red_markup.json in Resources */,
 				RG000001279B9E0000000001 /* Fonts/LibreBaskerville.ttf in Resources */,
+				41B1181AD03BA1EC9B1964A0 /* Fonts/ArchivoBlack-Regular.ttf in Resources */,
 				RG000013279B9E0000000001 /* Fonts/LibreBaskerville-Italic.ttf in Resources */,
 				RG000003279B9E0000000001 /* Fonts/Roboto.ttf in Resources */,
 				RG000011279B9E0000000001 /* Fonts/Roboto-Italic.ttf in Resources */,
@@ -1322,6 +1409,7 @@
 				SWJ00011279B9E0000000001 /* Scofield.json in Resources */,
 				SWJ00012279B9E0000000001 /* Easton.json in Resources */,
 				SWJ00013279B9E0000000001 /* AbbottSmith.json in Resources */,
+				5D0000B3279B9E0000000001 /* reforged-study.rsdb in Resources */,
 				SWJ00014279B9E0000000001 /* Nave.json in Resources */,
 				SWJ00015279B9E0000000001 /* TCR.json in Resources */,
 				SPDJ00002279B9E0000000001 /* SpurgeonMorningEvening.json in Resources */,
@@ -1361,6 +1449,7 @@
 				AMBS0001279B9E0000000001 /* AmbientSoundPlayer.swift in Sources */,
 				CRWN0001279B9E0000000001 /* CrownStore.swift in Sources */,
 				A1000032279B9E0000000001 /* HomeView.swift in Sources */,
+				B12C9CFA93CF137F3C8FF121 /* DeviceSetupCard.swift in Sources */,
 				A1000034279B9E0000000101 /* HomeSearchView.swift in Sources */,
 				A1000034279B9E0000000001 /* TracksView.swift in Sources */,
 				A1000036279B9E0000000001 /* LessonView.swift in Sources */,
@@ -1379,6 +1468,7 @@
 				C0FFEE02279B9E0000000001 /* ChapterScrollCoordinator.swift in Sources */,
 				EX000001279B9E0000000001 /* BibleAudioPlayer.swift in Sources */,
 				EX000003279B9E0000000001 /* UnifiedNavigationView.swift in Sources */,
+				YV00000E2F0000000000A001 /* ContinueReadingCard.swift in Sources */,
 				EX000005279B9E0000000001 /* SearchPanelView.swift in Sources */,
 				EX000007279B9E0000000001 /* TakeNoteView.swift in Sources */,
 				VSS00001279B9E0000000001 /* VerseStudySheet.swift in Sources */,
@@ -1393,6 +1483,8 @@
 				A10000B0279B9E0000000001 /* StreakShareCardView.swift in Sources */,
 				A10000C0279B9E0000000001 /* VerseShareCardView.swift in Sources */,
 				A1000044279B9E0000000001 /* OnboardingFlowView.swift in Sources */,
+				BF58802D680AA51E0D4B392E /* NewUserFlowViews.swift in Sources */,
+				9EE8C9DA22E9625D466313AD /* ReturningUserViews.swift in Sources */,
 				BDD100000000000000000001 /* BibleDownloadManager.swift in Sources */,
 				BDD100000000000000000009 /* NetworkRetry.swift in Sources */,
 				A1000046279B9E0000000001 /* ESVService.swift in Sources */,
@@ -1400,6 +1492,7 @@
 				A1000080279B9E0000000001 /* KJVService.swift in Sources */,
 				NET0000A279B9E0000000001 /* NETService.swift in Sources */,
 				KJV0000B279B9E0000000001 /* KJVAudioService.swift in Sources */,
+				VCHL0000227A1B0E0000000001 /* VerseChallenge.swift in Sources */,
 				KJVDLMG2279B9E0000000001 /* KJVAudioDownloadManager.swift in Sources */,
 				KJVDLVW2279B9E0000000001 /* KJVAudioDownloadsView.swift in Sources */,
 				CMDLVW2279B9E0000000001 /* CommentaryDownloadsView.swift in Sources */,
@@ -1412,6 +1505,7 @@
 				MRSM00002279B9E0000000001 /* MorningRoutineStorageManager.swift in Sources */,
 				DPMD00002279B9E0000000001 /* RhythmModels.swift in Sources */,
 				MCUR00002279B9E0000000001 /* MemoryCurriculum.swift in Sources */,
+				SCUR0000227A1B0E0000000001 /* SouthlandCurriculum.swift in Sources */,
 				DPSM00002279B9E0000000001 /* RhythmStorageManager.swift in Sources */,
 				DPLV00002279B9E0000000001 /* RhythmHubView.swift in Sources */,
 				DPBV00002279B9E0000000001 /* RhythmItemEditorView.swift in Sources */,
@@ -1481,6 +1575,8 @@
 				WSET0001279B9E0000000001 /* WidgetSettingsSection.swift in Sources */,
 				B1A00002279B9E0000000001 /* StrongsModels.swift in Sources */,
 				B1A00004279B9E0000000001 /* StrongsLexiconService.swift in Sources */,
+				5D0000B1279B9E0000000001 /* StudyDatabase.swift in Sources */,
+				5D0000B2279B9E0000000001 /* StudyDataSource.swift in Sources */,
 				CRS00001279B9E0000000001 /* CrossReferenceService.swift in Sources */,
 				BRS00001279B9E0000000001 /* BibleReferenceScanner.swift in Sources */,
 				WLS00001279B9E0000000001 /* WordLocatorService.swift in Sources */,
@@ -1512,6 +1608,8 @@
 				BRP00002279B9E0000000001 /* BibleReadingPlan.swift in Sources */,
 				BRP00004279B9E0000000001 /* BibleReadingPlanData.swift in Sources */,
 				BRP00006279B9E0000000001 /* ReadingPlanService.swift in Sources */,
+				YV00000C2F0000000000A001 /* ContinueReading.swift in Sources */,
+				YV00000C2F0000000000A002 /* AppTour.swift in Sources */,
 				BRP00008279B9E0000000001 /* ReadingPlansView.swift in Sources */,
 				D1B00002279B9E0000000001 /* LearningPathView.swift in Sources */,
 				E1A00002279B9E0000000001 /* ProfileImageService.swift in Sources */,
@@ -1526,11 +1624,25 @@
 				C00F4DA8BD650DA93C8F05F9 /* GroupsView.swift in Sources */,
 				C98C67506FFE873CBB627E7E /* GroupPrayerReviewView.swift in Sources */,
 				B9C1AFBE4511D3A9F150099E /* HandoutViews.swift in Sources */,
+				F0D7C44674D98E0F2C6858B8 /* FriendsService.swift in Sources */,
+				14C2CCAA850E4F7F80AA94C1 /* SyncedPreferences.swift in Sources */,
+				C22F8E9865640CE768D62F26 /* SharedReadingsService.swift in Sources */,
+				650ED9C20712872902263E1F /* SharedVersesService.swift in Sources */,
+				34A46915C670E174C3018302 /* FriendsView.swift in Sources */,
+				870EF10B58EB96BFF60FCA36 /* ReadTogetherViews.swift in Sources */,
+				B226708514892313DED1F01C /* FriendsDesign.swift in Sources */,
+				65AC8273F8E14F02D3862168 /* TogetherViews.swift in Sources */,
+				41CCD8C77411712EF9FA8BFB /* FindFromContactsView.swift in Sources */,
+				60E062464699A445895CE438 /* ContactInvite.swift in Sources */,
+				D9006C9AD63F2891D0EB98E8 /* FriendsOnboardingView.swift in Sources */,
 				54B4AA75BF152C7102BC424E /* LearnModels.swift in Sources */,
 				0AD119BA881D3D4DCA6BABB0 /* TracksRepository.swift in Sources */,
 				9A4D9885AAA3F662E0376A57 /* LearnViews.swift in Sources */,
 				DLRV0001279B9E0000000001 /* DailyLessonRunnerView.swift in Sources */,
 				MJVW0001279B9E0000000001 /* MemoryJourneyView.swift in Sources */,
+				STRK0000227A1B0E0000000001 /* SouthlandTrackViews.swift in Sources */,
+				SRWD0000227A1B0E0000000001 /* SouthlandRewardViews.swift in Sources */,
+				SWVW0000227A1B0E0000000001 /* SwitchViews.swift in Sources */,
 				PRGS0001279B9E0000000001 /* ProgressSheets.swift in Sources */,
 				SFSV0001279B9E0000000001 /* StreakFreezeSavedView.swift in Sources */,
 				SIBV0001279B9E0000000001 /* SayItBackView.swift in Sources */,
@@ -1615,7 +1727,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1627,7 +1739,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1650,7 +1762,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedWidget/ReforgedWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ReforgedWidget/Info.plist;
@@ -1662,7 +1774,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1809,7 +1921,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/ReforgedDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1832,7 +1944,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1856,7 +1968,7 @@
 				CODE_SIGN_ENTITLEMENTS = Reforged/Reforged.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1876,7 +1988,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1896,7 +2008,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1905,7 +2017,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1922,7 +2034,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedActivityMonitor/ReforgedActivityMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1931,7 +2043,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.activitymonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1948,7 +2060,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1957,7 +2069,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1974,7 +2086,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShield/ReforgedShield.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShield/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1983,7 +2095,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2000,7 +2112,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShieldAction/ReforgedShieldAction.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShieldAction/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -2009,7 +2121,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shieldaction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2026,7 +2138,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedShieldAction/ReforgedShieldAction.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedShieldAction/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -2035,7 +2147,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.shieldaction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2052,7 +2164,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedReport/ReforgedReport.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -2061,7 +2173,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.report;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2078,7 +2190,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReforgedReport/ReforgedReport.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = 53998XCUML;
 				INFOPLIST_FILE = ReforgedReport/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -2087,7 +2199,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reforged.app.report;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

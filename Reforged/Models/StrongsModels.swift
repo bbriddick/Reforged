@@ -97,6 +97,13 @@ struct CachedStrongsDetail: Codable {
 
 // MARK: - Word Lookup Result
 
+/// How firmly a KJV word was tied to its original-language word (`tools/study-db`).
+enum StudyMatchQuality: String {
+    case exact
+    case strongsOnly = "strongs_only"
+    case none
+}
+
 struct WordLookupResult: Identifiable {
     let id = UUID()
     let tappedWord: String
@@ -123,6 +130,15 @@ struct WordLookupResult: Identifiable {
 
     // Fallback: bundled dictionary entries (when API unavailable)
     let strongsEntries: [StrongsEntry]
+
+    // Set by the local study database; defaults keep the API path and fallbacks unchanged.
+    var matchQuality: StudyMatchQuality = .exact
+    var isAramaic: Bool = false
+    /// Name of the long-form lexicon shown in the detail card; nil keeps the API-era labels.
+    var detailedSourceLabel: String? = nil
+    /// Robinson / OSHB code and its plain-English expansion for the exact original word, when known.
+    var morphCode: String? = nil
+    var morphExpansion: String? = nil
 }
 
 // MARK: - Strong's Dictionary Entry (bundled offline data)

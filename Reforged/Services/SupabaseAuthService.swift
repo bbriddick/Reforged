@@ -281,6 +281,11 @@ final class SupabaseAuthService: ObservableObject {
 
     // MARK: - Token Refresh
 
+    /// One refresh at a time. Supabase rotates refresh tokens, so two overlapping refreshes
+    /// (Friends, profile sync and Groups all ask at launch) would race: the loser is told its
+    /// token was already used, which used to sign the user out.
+    private var refreshTask: Task<Bool, Never>?
+
     /// Returns `true` if a valid token is available (refreshing if necessary).
     func refreshTokenIfNeeded() async -> Bool {
         // Check expiry with 60 s buffer
@@ -289,25 +294,46 @@ final class SupabaseAuthService: ObservableObject {
            Date().timeIntervalSince1970 < expiresAt - 60 {
             return true
         }
+        if let refreshTask { return await refreshTask.value }
+        let task = Task { await self.performRefresh() }
+        refreshTask = task
+        let ok = await task.value
+        refreshTask = nil
+        return ok
+    }
 
+    private func signOutLocally() {
+        clearKeychain(); isSignedIn = false; userId = nil; userEmail = nil
+    }
+
+    private func performRefresh() async -> Bool {
         guard let refreshToken = loadFromKeychain(key: kRefreshToken) else {
-            clearKeychain(); isSignedIn = false; userId = nil; userEmail = nil
+            signOutLocally()
             return false
         }
 
         do {
             let body: [String: Any] = ["refresh_token": refreshToken]
-            let req = try makeRequest(path: "/auth/v1/token?grant_type=refresh_token",
+            var req = try makeRequest(path: "/auth/v1/token?grant_type=refresh_token",
                                       method: "POST", body: body)
+            // Every Friends request waits on this, so don't let it hang for the 60 s default.
+            req.timeoutInterval = 15
             let (data, response) = try await URLSession.shared.data(for: req)
 
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+            guard let http = response as? HTTPURLResponse else { return false }
+
+            // Only a definitive rejection of the refresh token ends the session. Server hiccups
+            // and rate limits keep it, so the next attempt can succeed.
+            if [400, 401, 403].contains(http.statusCode) {
+                signOutLocally()
+                return false
+            }
+            guard http.statusCode == 200,
                   let json         = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let newAccess    = json["access_token"] as? String,
                   let newRefresh   = json["refresh_token"] as? String,
                   let userObj      = json["user"] as? [String: Any],
                   let uid          = userObj["id"] as? String else {
-                clearKeychain(); isSignedIn = false; userId = nil; userEmail = nil
                 return false
             }
 
@@ -318,7 +344,7 @@ final class SupabaseAuthService: ObservableObject {
             return true
 
         } catch {
-            clearKeychain(); isSignedIn = false; userId = nil; userEmail = nil
+            // Offline or timed out: stay signed in and try again later.
             return false
         }
     }
@@ -336,9 +362,10 @@ final class SupabaseAuthService: ObservableObject {
 
     // MARK: - Profile Upsert
 
-    func upsertProfile(_ user: UserProfile) async {
+    @discardableResult
+    func upsertProfile(_ user: UserProfile) async -> Bool {
         guard await refreshTokenIfNeeded(),
-              let token = loadFromKeychain(key: kAccessToken) else { return }
+              let token = loadFromKeychain(key: kAccessToken) else { return false }
 
         let body: [String: Any] = [
             "user_id":          user.id,
@@ -365,12 +392,47 @@ final class SupabaseAuthService: ObservableObject {
             let (_, response) = try await URLSession.shared.data(for: req)
             if let http = response as? HTTPURLResponse, http.statusCode < 300 {
                 debugLog("✅ Supabase profile upserted")
+                return true
             } else if let http = response as? HTTPURLResponse {
                 debugLog("⚠️ Supabase upsert status: \(http.statusCode)")
             }
         } catch {
             debugLog("❌ Supabase upsert error: \(error)")
         }
+        return false
+    }
+
+    // MARK: - Synced preferences (best-effort, optional column)
+    //
+    // `profiles.preferences` (jsonb) may not exist yet; both calls fail quietly so the main
+    // profile upsert and fetch are never affected.
+
+    func savePreferences(_ prefs: SyncedPreferences) async {
+        guard await refreshTokenIfNeeded(),
+              let token = loadFromKeychain(key: kAccessToken),
+              let uid = userId,
+              let data = try? JSONEncoder().encode(prefs),
+              let object = try? JSONSerialization.jsonObject(with: data) else { return }
+        do {
+            let req = try makeRequest(path: "/rest/v1/profiles?user_id=eq.\(uid)", method: "PATCH",
+                                      body: ["preferences": object], accessToken: token,
+                                      extraHeaders: ["Prefer": "return=minimal"])
+            _ = try await URLSession.shared.data(for: req)
+        } catch { /* optional column / offline */ }
+    }
+
+    func fetchPreferences() async -> SyncedPreferences? {
+        guard await refreshTokenIfNeeded(),
+              let token = loadFromKeychain(key: kAccessToken),
+              let uid = userId else { return nil }
+        struct Row: Decodable { let preferences: SyncedPreferences? }
+        do {
+            let req = try makeRequest(path: "/rest/v1/profiles?user_id=eq.\(uid)&select=preferences", method: "GET",
+                                      accessToken: token)
+            let (data, response) = try await URLSession.shared.data(for: req)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+            return (try? JSONDecoder().decode([Row].self, from: data))?.first?.preferences
+        } catch { return nil }
     }
 
     // MARK: - Profile Fetch

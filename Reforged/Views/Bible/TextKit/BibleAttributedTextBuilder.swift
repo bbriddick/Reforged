@@ -53,7 +53,7 @@ struct BibleAttributedTextBuilder {
         centered.paragraphSpacingBefore = 16
 
         let eyebrow: [NSAttributedString.Key: Any] = [
-            .font: ReaderFonts.chapterBookEyebrow(),
+            .font: ReaderFonts.chapterBookEyebrow(scale: settings.readerHeadingScale),
             .foregroundColor: ReaderPalette.gold,
             .kern: 1.0,
             .paragraphStyle: centered,
@@ -69,7 +69,7 @@ struct BibleAttributedTextBuilder {
         titleStyle.paragraphSpacingBefore = 4
 
         let title: [NSAttributedString.Key: Any] = [
-            .font: ReaderFonts.chapterTitle(),
+            .font: ReaderFonts.chapterTitle(scale: settings.readerHeadingScale),
             .foregroundColor: palette.text,
             .paragraphStyle: titleStyle,
             .scriptureRole: ScriptureRole.chapterTitle.rawValue,
@@ -94,7 +94,7 @@ struct BibleAttributedTextBuilder {
         style.paragraphSpacing = 4
 
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: ReaderFonts.sectionHeading(),
+            .font: ReaderFonts.sectionHeading(scale: settings.readerHeadingScale),
             .foregroundColor: palette.secondaryText,
             .paragraphStyle: style,
             .scriptureRole: ScriptureRole.sectionHeading.rawValue
@@ -212,10 +212,10 @@ struct BibleAttributedTextBuilder {
 
     private func poetryParagraphStyle(indent: Int, stanzaBreak: Bool, spacingAfter: CGFloat) -> NSParagraphStyle {
         let style = NSMutableParagraphStyle()
-        style.lineSpacing = settings.lineSpacing.spacing
+        style.lineSpacing = settings.lineSpacing.spacing * settings.readerHeadingScale
         style.paragraphSpacing = spacingAfter
         style.paragraphSpacingBefore = stanzaBreak ? 14 : 0
-        let unit = settings.effectiveFontSize * 1.1
+        let unit = settings.readerFontSize * 1.1
         style.firstLineHeadIndent = unit * CGFloat(indent)
         // Wrapped lines hang one step further in, the way printed poetry sets long lines.
         style.headIndent = unit * CGFloat(indent + 1)
@@ -342,9 +342,9 @@ struct BibleAttributedTextBuilder {
     }
 
     private func appendVerseNumber(_ verse: ParsedVerse, into output: NSMutableAttributedString) {
-        let baselineOffset = min(max(3.0, settings.effectiveVerseNumberSize * 0.45), 8.0)
+        let baselineOffset = min(max(3.0, settings.readerVerseNumberSize * 0.45), 8.0)
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: ReaderFonts.verseNumber(size: settings.effectiveVerseNumberSize),
+            .font: ReaderFonts.verseNumber(size: settings.readerVerseNumberSize),
             .foregroundColor: ReaderPalette.gold,
             .baselineOffset: baselineOffset,
             .scriptureRole: ScriptureRole.verseNumber.rawValue,
@@ -403,7 +403,7 @@ struct BibleAttributedTextBuilder {
                 let rest = String(display[display.index(after: letterIndex)...])
                 if !prefix.isEmpty { output.append(NSAttributedString(string: prefix, attributes: attrs)) }
                 var initialAttrs = attrs
-                initialAttrs[.font] = ReaderCosmetics.initialFont(bodySize: settings.effectiveFontSize)
+                initialAttrs[.font] = ReaderCosmetics.initialFont(bodySize: settings.readerFontSize)
                 initialAttrs[.foregroundColor] = ReaderPalette.gold
                 output.append(NSAttributedString(string: letter, attributes: initialAttrs))
                 output.append(NSAttributedString(string: rest, attributes: attrs))
@@ -419,7 +419,7 @@ struct BibleAttributedTextBuilder {
                                              into output: NSMutableAttributedString,
                                              isSelected: Bool) {
         let words = verse.text.components(separatedBy: " ").filter { !$0.isEmpty }
-        let font = ReaderFonts.originalLanguage(translation, size: settings.effectiveFontSize)
+        let font = ReaderFonts.originalLanguage(translation, size: settings.readerFontSize)
         for (index, word) in words.enumerated() {
             let display = index < words.count - 1 ? word + " " : word
             var attrs: [NSAttributedString.Key: Any] = [
@@ -444,7 +444,7 @@ struct BibleAttributedTextBuilder {
     /// A small coral bookmark ribbon leading the verse text, marking a bookmarked verse.
     /// Tapping it carries the verse metadata so it selects the verse like the verse number does.
     private func appendBookmarkIndicator(_ verse: ParsedVerse, into output: NSMutableAttributedString) {
-        let side = settings.effectiveVerseNumberSize
+        let side = settings.readerVerseNumberSize
         let attachment = NSTextAttachment()
         if let image = UIImage(systemName: "bookmark.fill")?
             .withTintColor(UIColor(Color.reforgedCoral), renderingMode: .alwaysOriginal) {
@@ -471,7 +471,7 @@ struct BibleAttributedTextBuilder {
         if let image = UIImage(named: "sticky-note")?.withRenderingMode(.alwaysTemplate) {
             let tinted = image.withTintColor(ReaderPalette.gold, renderingMode: .alwaysOriginal)
             attachment.image = tinted
-            let side = settings.effectiveVerseNumberSize
+            let side = settings.readerVerseNumberSize
             attachment.bounds = CGRect(x: 0, y: 0, width: side, height: side)
         }
         let attrs: [NSAttributedString.Key: Any] = [
@@ -534,7 +534,7 @@ struct BibleAttributedTextBuilder {
 
     private func baseFont(italic: Bool) -> UIFont {
         if isOriginalLanguage {
-            return ReaderFonts.originalLanguage(translation, size: settings.effectiveFontSize)
+            return ReaderFonts.originalLanguage(translation, size: settings.readerFontSize)
         }
         return ReaderFonts.body(settings, italic: italic)
     }
@@ -550,7 +550,7 @@ struct BibleAttributedTextBuilder {
     private func paragraphStyle(spacingAfter: CGFloat) -> NSParagraphStyle {
         let style = NSMutableParagraphStyle()
         let multiplier: CGFloat = translation == .wlc ? 1.4 : 1.0
-        style.lineSpacing = settings.lineSpacing.spacing * multiplier
+        style.lineSpacing = settings.lineSpacing.spacing * settings.readerHeadingScale * multiplier
         style.paragraphSpacing = spacingAfter
         style.alignment = isRTL ? .right : .left
         style.baseWritingDirection = isRTL ? .rightToLeft : .leftToRight

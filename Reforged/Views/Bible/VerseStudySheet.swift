@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// A key verb/infinitive/noun chip shown in the Word Study section.
-/// NT chips carry an exact Strong's number from bundled Greek morphology (offline);
-/// OT chips come from a Gemini classification of the English text (no interlinear alignment).
+/// A key noun/verb chip shown in the Word Study section. The label is the word as the reader sees
+/// it in the verse (the KJV rendering), with the original-language word beneath. Chips come from
+/// the Greek or Hebrew text in the study database with exact Strong's numbers and morphology; the
+/// bundled Greek text and a Gemini classification of the English remain as fallbacks.
 private struct WordStudyChip: Identifiable {
     let id = UUID()
     let word: String
@@ -10,6 +11,10 @@ private struct WordStudyChip: Identifiable {
     let strongsNumber: String?
     let originalWord: String
     let morphDescription: String
+    /// How the KJV renders the word in this verse, when known.
+    var english: String? = nil
+
+    var isHebrew: Bool { strongsNumber?.hasPrefix("H") ?? false }
 }
 
 private struct IdentifiablePrompt: Identifiable {
@@ -17,9 +22,9 @@ private struct IdentifiablePrompt: Identifiable {
     let text: String
 }
 
-/// Consolidates three study aids for a single verse: a verb/noun/infinitive breakdown
-/// (tap to open Word Study), Gemini study questions (tap to open the note editor), and
-/// offline cross references (tap to expand an inline preview).
+/// Study aids for a single verse, in the order a reader uses them: the verse itself, the words
+/// in it (tap to open Word Study), where else Scripture says it, what commentators say, the
+/// places and topics it touches, and (with AI on) questions to reflect on.
 struct VerseStudySheet: View {
     let verse: ParsedVerse
     let bookName: String
@@ -29,6 +34,9 @@ struct VerseStudySheet: View {
     /// When hosted in the iPad tools sidebar (not a sheet), the environment dismiss
     /// is a no-op, so the host passes an explicit close. Falls back to `dismiss`.
     var onClose: (() -> Void)? = nil
+    /// When hosted in the iPad rail, a tapped word chip hands its study to the host to dock beside
+    /// the reader; without it the study opens as a sheet over this one.
+    var onOpenWordStudy: ((WordLookupResult) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
@@ -38,7 +46,8 @@ struct VerseStudySheet: View {
     @State private var isLoadingWords = false
     @State private var studyQuestions: [String] = []
     @State private var isLoadingQuestions = false
-    @State private var questionsFailed = false
+    /// True when `studyQuestions` are the general offline set rather than ones for this verse.
+    @State private var usingFallbackQuestions = false
     @State private var expandedCrossRefs: Set<String> = []
     @State private var crossRefPreviewText: [String: String] = [:]
     @State private var crossRefsAsMap = false
@@ -48,6 +57,7 @@ struct VerseStudySheet: View {
     @State private var atlasFocusID: String?
     @State private var showAtlas = false
     @State private var expandedCommentaries: Set<String> = []
+    @State private var showDownloadableCommentaries = false
     @ObservedObject private var commentaryDownloads = CommentaryDownloadManager.shared
 
     private var isNewTestament: Bool {
@@ -78,7 +88,9 @@ struct VerseStudySheet: View {
         }
     }
 
-    private var showWordStudySection: Bool { isNewTestament || settings.aiEnabled }
+    private var showWordStudySection: Bool { isNewTestament || settings.aiEnabled || StudyDataFlags.useLocal }
+
+    // MARK: Body
 
     var body: some View {
         NavigationStack {
@@ -88,10 +100,6 @@ struct VerseStudySheet: View {
 
                     if showWordStudySection {
                         wordStudySection
-                    }
-
-                    if settings.aiEnabled {
-                        studyQuestionsSection
                     }
 
                     crossReferencesSection
@@ -105,10 +113,16 @@ struct VerseStudySheet: View {
                     if !verseTopics.isEmpty {
                         topicsSection
                     }
+
+                    if settings.aiEnabled {
+                        studyQuestionsSection
+                    }
                 }
-                .padding()
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
-            .background(Color.adaptiveCardBackground(colorScheme).ignoresSafeArea())
+            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle("Verse Study")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -150,67 +164,165 @@ struct VerseStudySheet: View {
         }
     }
 
+    // MARK: - Shared building blocks
+
+    /// Section title with an optional trailing action. The action keeps a 44 pt hit area.
+    private func sectionHeader(_ title: String, action: (title: String, icon: String, run: () -> Void)? = nil) -> some View {
+        HStack(alignment: .center) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            Spacer()
+
+            if let action {
+                Button(action: action.run) {
+                    Label(action.title, systemImage: action.icon)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .padding(.horizontal, 4)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.leading, 4)
+        .frame(minHeight: 28)
+    }
+
+    /// One rounded surface lifted off the paper canvas; rows inside separate with hairlines.
+    private func surface<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.adaptiveCardBackground(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
+    }
+
+    private var rowDivider: some View {
+        Divider().padding(.leading, 16)
+    }
+
+    private func emptyNote(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     // MARK: - Verse header
 
+    /// The verse as Scripture is always set: serif, honouring the reader's font settings, with its
+    /// reference and translation.
     private var verseHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(verse.reference)
-                .font(.headline)
-                .foregroundStyle(Color.reforgedGold)
-            Text(verse.text)
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
+        surface {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(verse.reference)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.reforgedGold)
+                    Text(translation.compactCode)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+
+                Text(verse.text)
+                    .font(settings.scriptureFont)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.adaptiveBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
     }
 
     // MARK: - Word Study
 
     private var wordStudySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Word Study")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Words in this verse")
 
-            if isLoadingWords {
-                ProgressView()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else if wordChips.isEmpty {
-                Text("No key words identified for this verse.")
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
-            } else {
-                FlowLayout(spacing: 8, lineSpacing: 8) {
-                    ForEach(wordChips) { chip in
-                        Button {
-                            Task { await lookupChip(chip) }
-                        } label: {
-                            VStack(spacing: 2) {
-                                Text(chip.word)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Text(chip.partOfSpeech)
-                                    .font(.caption2)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            surface {
+                if isLoadingWords {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 72, alignment: .center)
+                } else if wordChips.isEmpty {
+                    emptyNote("No key words identified for this verse.")
+                } else {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Tap a word to see its original language and meaning.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+                        FlowLayout(spacing: 8, lineSpacing: 8) {
+                            ForEach(wordChips) { chip in
+                                chipButton(chip)
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.reforgedGold.opacity(0.12))
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(16)
                 }
             }
         }
     }
 
+    private func chipButton(_ chip: WordStudyChip) -> some View {
+        let showOriginal = chip.originalWord.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+            != chip.word.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        return Button {
+            Task { await lookupChip(chip) }
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(chip.word)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                if showOriginal {
+                    Text(chip.originalWord)
+                        .font(chip.isHebrew ? .custom("Ezra SIL", size: 18) : .callout)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(minHeight: 44, alignment: .leading)
+            .background(Color.adaptiveNavyText(colorScheme).opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(chip.word), \(chip.partOfSpeech)")
+        .accessibilityHint("Opens word study")
+    }
+
     private func loadWordChips() async {
+        isLoadingWords = true
+        defer { isLoadingWords = false }
+
+        // Same source for both testaments: the original text with exact Strong's numbers.
+        if StudyDataFlags.useLocal {
+            let words = await LocalStudyDataSource.shared.keyWords(
+                bookName: bookName, chapter: chapter, verse: verse.number)
+            if !words.isEmpty {
+                wordChips = words.map { w in
+                    WordStudyChip(
+                        word: w.english ?? (w.transliteration.isEmpty ? w.surface : w.transliteration),
+                        partOfSpeech: w.partOfSpeech,
+                        strongsNumber: w.strongs,
+                        originalWord: w.surface,
+                        morphDescription: w.grammar,
+                        english: w.english
+                    )
+                }
+                return
+            }
+        }
+
         if isNewTestament {
             await loadNTWordChips()
         } else {
@@ -218,18 +330,17 @@ struct VerseStudySheet: View {
         }
     }
 
+    /// Fallback when the study database is unavailable: the bundled Greek text.
     private func loadNTWordChips() async {
         guard let bookNum = OriginalLanguageService.bookNumber(for: bookName) else { return }
 
-        isLoadingWords = true
         OriginalLanguageService.shared.preloadTR()
-        // Bundled Greek data loads on a background queue — wait for it rather than reading an empty index.
+        // Bundled Greek data loads on a background queue; wait for it rather than reading an empty index.
         let maxAttempts = 100
         for _ in 0..<maxAttempts {
             if OriginalLanguageService.shared.trReady { break }
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
-        isLoadingWords = false
 
         let tokens = OriginalLanguageService.shared.trTokens(bookNumber: bookNum, chapter: chapter, verse: verse.number)
 
@@ -257,8 +368,12 @@ struct VerseStudySheet: View {
         wordChips = chips
     }
 
+    /// Fallback when the study database is unavailable: a Gemini classification of the English.
     private func loadOTWordChips() async {
-        isLoadingWords = true
+        guard settings.aiEnabled else {
+            wordChips = []
+            return
+        }
         let tags = (try? await GeminiService.shared.classifyKeyWords(reference: verse.reference, verseText: verse.text)) ?? []
         wordChips = tags.map { tag in
             WordStudyChip(
@@ -269,136 +384,56 @@ struct VerseStudySheet: View {
                 morphDescription: ""
             )
         }
-        isLoadingWords = false
+    }
+
+    private func present(_ result: WordLookupResult) {
+        if let onOpenWordStudy {
+            onOpenWordStudy(result)
+        } else {
+            wordLookupResult = result
+        }
     }
 
     private func lookupChip(_ chip: WordStudyChip) async {
         if let strongsNumber = chip.strongsNumber {
-            wordLookupResult = await StrongsLexiconService.shared.lookupByStrongsNumber(
+            present(await StrongsLexiconService.shared.lookupByStrongsNumber(
                 strongsNumber,
-                tappedWord: chip.originalWord,
+                tappedWord: chip.english ?? chip.originalWord,
                 originalForm: chip.originalWord,
                 morphDescription: chip.morphDescription,
                 verseReference: verse.reference,
                 bookName: bookName,
                 chapter: chapter,
                 verseNumber: verse.number,
-                isHebrew: false
-            )
+                isHebrew: strongsNumber.hasPrefix("H")
+            ))
         } else {
-            wordLookupResult = await StrongsLexiconService.shared.lookupWord(
+            present(await StrongsLexiconService.shared.lookupWord(
                 chip.word,
                 verseReference: verse.reference,
                 bookName: bookName,
                 chapter: chapter,
                 verseNumber: verse.number,
                 isHebrew: true
-            )
+            ))
         }
-    }
-
-    // MARK: - Study Questions
-
-    private var studyQuestionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Study Questions")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-            if isLoadingQuestions {
-                ProgressView()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else if questionsFailed {
-                Button {
-                    Task { await loadStudyQuestions() }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.clockwise")
-                        Text("Couldn't load — tap to try again")
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.reforgedGold)
-                }
-                .buttonStyle(.plain)
-            } else if studyQuestions.isEmpty {
-                Text("No study questions available.")
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(studyQuestions, id: \.self) { question in
-                        Button {
-                            studyNotePrompt = IdentifiablePrompt(text: question)
-                        } label: {
-                            HStack(alignment: .top, spacing: 8) {
-                                Text(question)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                                Spacer()
-                                Image(systemName: "square.and.pencil")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.reforgedGold)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(Color.adaptiveCardBackground(colorScheme))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-    }
-
-    private func loadStudyQuestions() async {
-        guard settings.aiEnabled else { return }
-        isLoadingQuestions = true
-        questionsFailed = false
-        do {
-            studyQuestions = try await GeminiService.shared.generateJournalPrompts(
-                reference: verse.reference,
-                verseText: verse.text
-            )
-        } catch {
-            studyQuestions = []
-            questionsFailed = true
-        }
-        isLoadingQuestions = false
     }
 
     // MARK: - Cross References
 
     private var crossReferencesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Cross References")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                Spacer()
-                if !crossReferences.isEmpty {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { crossRefsAsMap.toggle() }
-                    } label: {
-                        Label(crossRefsAsMap ? "List" : "Map",
-                              systemImage: crossRefsAsMap ? "list.bullet" : "point.3.connected.trianglepath.dotted")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.reforgedGold)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader(
+                "Cross references",
+                action: crossReferences.isEmpty ? nil : (
+                    title: crossRefsAsMap ? "List" : "Map",
+                    icon: crossRefsAsMap ? "list.bullet" : "point.3.connected.trianglepath.dotted",
+                    run: { withAnimation(.easeInOut(duration: 0.2)) { crossRefsAsMap.toggle() } }
+                )
+            )
 
             if crossReferences.isEmpty {
-                Text("No cross references found for this verse.")
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
+                surface { emptyNote("No cross references found for this verse.") }
             } else if crossRefsAsMap {
                 CrossReferenceMapView(
                     sourceReference: verse.reference,
@@ -406,8 +441,9 @@ struct VerseStudySheet: View {
                     onSelect: navigateToReference
                 )
             } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(crossReferences) { entry in
+                surface {
+                    ForEach(Array(crossReferences.enumerated()), id: \.element.id) { index, entry in
+                        if index > 0 { rowDivider }
                         crossReferenceRow(entry)
                     }
                 }
@@ -431,7 +467,7 @@ struct VerseStudySheet: View {
     private func crossReferenceRow(_ entry: CrossReferenceEntry) -> some View {
         let isExpanded = expandedCrossRefs.contains(entry.reference)
 
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 8) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     if isExpanded {
@@ -442,44 +478,50 @@ struct VerseStudySheet: View {
                 }
             } label: {
                 HStack {
-                    Image(systemName: "arrow.triangle.branch")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                     Text(entry.reference)
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                     Spacer()
-                    ZStack {
-                        Circle()
-                            .fill(Color.adaptiveNavyText(colorScheme).opacity(0.12))
-                            .frame(width: 24, height: 24)
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             if isExpanded {
-                Group {
+                VStack(alignment: .leading, spacing: 10) {
                     if let text = crossRefPreviewText[entry.reference] {
                         Text(text.isEmpty ? "Verse text unavailable." : text)
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .font(.system(.callout, design: .serif))
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                            .lineSpacing(4)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if !text.isEmpty {
+                            Button {
+                                navigateToReference(entry.reference)
+                            } label: {
+                                Text("Open in the reader")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                                    .frame(minHeight: 44, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
                     } else {
                         ProgressView()
                             .task { await loadVersePreview(entry.reference) }
                     }
                 }
-                .padding(.leading, 20)
+                .padding(.bottom, 4)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 16)
     }
 
     private func loadVersePreview(_ reference: String) async {
@@ -504,30 +546,66 @@ struct VerseStudySheet: View {
     // MARK: - Commentary
 
     private var commentarySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Commentary")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                Spacer()
-                Button { openStudyLibrary() } label: {
-                    Label("Library", systemImage: "books.vertical")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.reforgedGold)
-                }
-                .buttonStyle(.plain)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader(
+                "Commentary",
+                action: (title: "Library", icon: "books.vertical", run: { openStudyLibrary() })
+            )
 
-            if commentaryEntries.isEmpty && downloadableCommentaries.isEmpty {
-                Text("No commentary available for this verse.")
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
-            } else {
-                ForEach(commentaryEntries) { entry in
-                    commentaryRow(entry)
+            surface {
+                if commentaryEntries.isEmpty && downloadableCommentaries.isEmpty {
+                    emptyNote("No commentary available for this verse.")
+                } else {
+                    ForEach(Array(commentaryEntries.enumerated()), id: \.element.id) { index, entry in
+                        if index > 0 { rowDivider }
+                        commentaryRow(entry)
+                    }
+
+                    if !downloadableCommentaries.isEmpty {
+                        if !commentaryEntries.isEmpty { rowDivider }
+                        downloadableCommentariesBlock
+                    }
                 }
+            }
+        }
+    }
+
+    /// The not-yet-downloaded commentaries live behind one row instead of one row each, so a verse
+    /// that already has commentary is not topped up with a stack of download prompts.
+    private var downloadableCommentariesBlock: some View {
+        let open = showDownloadableCommentaries || commentaryEntries.isEmpty
+        return VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { showDownloadableCommentaries.toggle() }
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.body)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .frame(width: 24)
+                    Text(commentaryEntries.isEmpty
+                         ? "Download a commentary"
+                         : "\(downloadableCommentaries.count) more to download")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                    if !commentaryEntries.isEmpty {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .rotationEffect(.degrees(open ? 90 : 0))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(commentaryEntries.isEmpty)
+
+            if open {
                 ForEach(downloadableCommentaries) { source in
+                    rowDivider
                     commentaryDownloadRow(source)
                 }
             }
@@ -544,104 +622,93 @@ struct VerseStudySheet: View {
                 }
             } label: {
                 HStack {
-                    Image(systemName: "text.book.closed")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
                     Text(entry.source.displayName)
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             if isExpanded {
                 LinkedScriptureText(text: entry.text,
-                                    font: .caption,
-                                    baseColor: Color.adaptiveTextSecondary(colorScheme))
-                    .padding(.leading, 20)
+                                    font: .callout,
+                                    baseColor: Color.adaptiveText(colorScheme))
+                    .padding(.bottom, 12)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 16)
     }
 
     private func commentaryDownloadRow(_ source: CommentarySource) -> some View {
-        HStack {
-            Image(systemName: "arrow.down.circle")
-                .font(.caption)
-                .foregroundStyle(Color.reforgedGold)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(source.displayName)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                Text("Tap to download · \(CommentaryDownloadManager.formatBytes(source.approxBytes))")
-                    .font(.caption2)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            }
-            Spacer()
-            if commentaryDownloads.isBusy(source) {
-                ProgressView()
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
+        Button {
             if !commentaryDownloads.isBusy(source) { commentaryDownloads.download(source) }
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(source.displayName)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("Download \u{00B7} \(CommentaryDownloadManager.formatBytes(source.approxBytes))")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                Spacer()
+                if commentaryDownloads.isBusy(source) {
+                    ProgressView()
+                } else {
+                    Image(systemName: "arrow.down.circle")
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                }
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 52)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .buttonStyle(.plain)
     }
 
     // MARK: - Places
 
     private var placesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Places")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                Spacer()
-                Button {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader(
+                "Places",
+                action: (title: "Atlas", icon: "map", run: {
                     atlasFocusID = nil
                     showAtlas = true
-                } label: {
-                    Label("Atlas", systemImage: "map")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.reforgedGold)
-                }
-                .buttonStyle(.plain)
-            }
+                })
+            )
 
-            FlowLayout(spacing: 6, lineSpacing: 6) {
-                ForEach(versePlaces) { place in
-                    Button {
-                        atlasFocusID = place.id
-                        showAtlas = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "mappin.circle.fill")
-                                .font(.caption2)
-                            Text(place.name)
-                                .font(.caption)
-                                .fontWeight(.semibold)
+            surface {
+                FlowLayout(spacing: 8, lineSpacing: 8) {
+                    ForEach(versePlaces) { place in
+                        Button {
+                            atlasFocusID = place.id
+                            showAtlas = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "mappin.circle.fill")
+                                    .font(.footnote)
+                                Text(place.name)
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: 44)
+                            .background(Color.adaptiveNavyText(colorScheme).opacity(0.08))
+                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Color.adaptiveChipBackground(colorScheme))
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                        .clipShape(Capsule())
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(16)
             }
         }
     }
@@ -649,77 +716,148 @@ struct VerseStudySheet: View {
     // MARK: - Topics
 
     private var topicsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Topics")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Topics")
 
-            // Wrap the topic chips instead of scrolling them sideways, so every
-            // topic is visible at once — especially in the narrow iPad tools panel.
-            FlowLayout(spacing: 6, lineSpacing: 6) {
-                ForEach(verseTopics, id: \.self) { topic in
-                    let isExpanded = expandedTopic == topic
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            expandedTopic = isExpanded ? nil : topic
+            surface {
+                VStack(alignment: .leading, spacing: 12) {
+                    // Wrapped, not scrolled sideways, so every topic is visible at once,
+                    // especially in the narrow iPad tools panel.
+                    FlowLayout(spacing: 8, lineSpacing: 8) {
+                        ForEach(verseTopics, id: \.self) { topic in
+                            let isExpanded = expandedTopic == topic
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    expandedTopic = isExpanded ? nil : topic
+                                }
+                            } label: {
+                                Text(topic.capitalized)
+                                    .font(.subheadline.weight(.medium))
+                                    .padding(.horizontal, 12)
+                                    .frame(minHeight: 44)
+                                    .background(isExpanded
+                                        ? Color.adaptiveNavyText(colorScheme)
+                                        : Color.adaptiveNavyText(colorScheme).opacity(0.08))
+                                    .foregroundStyle(isExpanded
+                                        ? Color.adaptiveCardBackground(colorScheme)
+                                        : Color.adaptiveNavyText(colorScheme))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(isExpanded ? .isSelected : [])
                         }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "tag")
-                                .font(.caption2)
-                            Text(topic.capitalized)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(isExpanded
-                            ? (colorScheme == .dark ? Color.reforgedGold : Color.reforgedNavy)
-                            : Color.adaptiveChipBackground(colorScheme))
-                        .foregroundStyle(isExpanded ? .white : Color.adaptiveNavyText(colorScheme))
-                        .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
-                }
-            }
 
-            if let topic = expandedTopic {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(TopicalBibleService.shared.verses(for: topic).prefix(5)) { entry in
-                        topicVerseRow(entry)
+                    if let topic = expandedTopic {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(TopicalBibleService.shared.verses(for: topic).prefix(5).enumerated()),
+                                    id: \.element.id) { index, entry in
+                                if index > 0 { Divider() }
+                                topicVerseRow(entry)
+                            }
+                        }
                     }
                 }
+                .padding(16)
             }
         }
     }
 
     private func topicVerseRow(_ entry: TopicalVerseEntry) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(entry.reference)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                Spacer()
-                Text("\(entry.votes) votes")
-                    .font(.caption2)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            }
+            Text(entry.reference)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.reforgedGold)
 
-            Group {
-                if let text = crossRefPreviewText[entry.reference] {
-                    Text(text.isEmpty ? "Verse text unavailable." : text)
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                } else {
+            if let text = crossRefPreviewText[entry.reference] {
+                Text(text.isEmpty ? "Verse text unavailable." : text)
+                    .font(.system(.callout, design: .serif))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ProgressView()
+                    .task { await loadVersePreview(entry.reference) }
+            }
+        }
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Study Questions
+
+    private var studyQuestionsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Questions to reflect on")
+
+            surface {
+                if isLoadingQuestions {
                     ProgressView()
-                        .task { await loadVersePreview(entry.reference) }
+                        .frame(maxWidth: .infinity, minHeight: 72, alignment: .center)
+                } else if studyQuestions.isEmpty {
+                    emptyNote("No study questions available.")
+                } else {
+                    ForEach(Array(studyQuestions.enumerated()), id: \.offset) { index, question in
+                        if index > 0 { rowDivider }
+                        Button {
+                            studyNotePrompt = IdentifiablePrompt(text: question)
+                        } label: {
+                            HStack(alignment: .top, spacing: 12) {
+                                Text(question)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
+                                Image(systemName: "square.and.pencil")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(minHeight: 52, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if usingFallbackQuestions {
+                        rowDivider
+                        Button {
+                            Task { await loadStudyQuestions() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("General questions. Tap to load ones for this verse.")
+                            }
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func loadStudyQuestions() async {
+        guard settings.aiEnabled else { return }
+        isLoadingQuestions = true
+        do {
+            studyQuestions = try await GeminiService.shared.generateJournalPrompts(
+                reference: verse.reference,
+                verseText: verse.text
+            )
+            usingFallbackQuestions = false
+        } catch {
+            // Offline or the service is down: general questions still give the reader a start.
+            debugLog("[VerseStudy] questions failed: \(error)")
+            studyQuestions = GeminiService.fallbackJournalPrompts
+            usingFallbackQuestions = true
+        }
+        isLoadingQuestions = false
     }
 }

@@ -497,6 +497,8 @@ extension Notification.Name {
     /// Posted (after switching to the Discipleship tab) to push the Study Library hub —
     /// e.g. from the verse-study Commentary "Library" button.
     static let openStudyLibrary = Notification.Name("OpenStudyLibrary")
+    /// Opens a specific memory verse's lesson (userInfo: `AppNotificationUserInfoKey.reference`).
+    static let openMemoryVerse = Notification.Name("OpenMemoryVerse")
     /// Posted by the iPad Bible reader to collapse/restore the left nav sidebar when a
     /// study-tools panel opens/closes (userInfo `collapsed`: Bool).
     static let setBibleNavCollapsed = Notification.Name("SetBibleNavCollapsed")

@@ -10,7 +10,12 @@ struct SpurgeonDevotionalView: View {
     @StateObject private var service = ReadingPlanService.shared
     @Environment(\.colorScheme) private var colorScheme
 
-    @State private var selectedDay: Int = SpurgeonDevotionalService.shared.todayDayNumber()
+    @State private var selectedDay: Int
+
+    init(plan: BibleReadingPlan, initialDay: Int? = nil) {
+        self.plan = plan
+        _selectedDay = State(initialValue: initialDay ?? SpurgeonDevotionalService.shared.todayDayNumber())
+    }
 
     private var totalDays: Int { SpurgeonDevotionalService.shared.totalDays }
     private var todayDay: Int { SpurgeonDevotionalService.shared.todayDayNumber() }

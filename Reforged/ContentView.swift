@@ -17,7 +17,7 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if !appState.user.onboardingCompleted {
+            if !appState.user.onboardingCompleted || appState.isRestoringAccount {
                 OnboardingFlowView()
                     .preferredColorScheme(themeManager.colorScheme)
                     // No .id() here — theme changes must NOT reset onboarding state
@@ -31,12 +31,28 @@ struct ContentView: View {
                     // must not tear down an in-flight reward animation.
                     // Tag 3 = Memory: the only tab with the arcade reward treatment.
                     .celebrationOverlay(arcade: selectedTab == 3)
+                    // The guided tour hovers over every tab from here — one card at a time.
+                    .overlay { AppTourOverlay() }
                     .onAppear { focusHomeOnFirstOpenOfDay() }
             }
         }
         .environmentObject(appState)
         .environmentObject(themeManager)
         .environmentObject(settingsManager)
+        .onAppear {
+            // First time in the main app: walk the user through it, starting in the Bible.
+            // Delayed so launch-time tab selection (e.g. "focus Home on first open of day")
+            // settles first.
+            guard appState.user.onboardingCompleted else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if appState.user.onboardingCompleted { AppTour.shared.launchCheck(currentTab: selectedTab) }
+            }
+        }
+        .onChange(of: selectedTab) { tab in
+            // Opening a view the user hasn't toured yet brings the walkthrough back up for it.
+            guard appState.user.onboardingCompleted else { return }
+            AppTour.shared.tabChanged(to: tab)
+        }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
                 // Re-check Screen Time authorization (can read stale right at launch)
@@ -55,6 +71,8 @@ struct ContentView: View {
                 // the protected-days streak current across day rollovers
                 AccountabilityPartnerService.shared.checkAuthorizationRevocation()
                 ShieldStreakService.shared.refreshProtectionState()
+                // Friends: sync opted-in aggregates and keep the push token fresh
+                Task { await FriendsStore.shared.syncOnForeground() }
                 // Refresh daily insight when app becomes active
                 appState.refreshDailyInsightIfNeeded()
                 // Rebuild daily reminders from current settings (idempotent — never stacks)
@@ -99,6 +117,18 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .showTemptedSOS)) { _ in
             showTemptedSOS = true
+        }
+        .onChange(of: appState.pendingTemptedSOS) { pending in
+            if pending && appState.user.onboardingCompleted {
+                showTemptedSOS = true
+                appState.pendingTemptedSOS = false
+            }
+        }
+        .onAppear {
+            if appState.pendingTemptedSOS && appState.user.onboardingCompleted {
+                showTemptedSOS = true
+                appState.pendingTemptedSOS = false
+            }
         }
         .sheet(item: $refocusVerse) { verse in
             RefocusVerseSheet(verse: verse)
@@ -406,6 +436,7 @@ struct SidebarNavigationView: View {
                     NavigationRow(icon: "shield.lefthalf.filled", title: "Discipleship", tag: 1, selectedTab: $selectedTab)
                     NavigationRow(icon: "text.book.closed.fill", title: "Bible", tag: 2, selectedTab: $selectedTab)
                     NavigationRow(icon: "brain.head.profile", title: "Memory", tag: 3, selectedTab: $selectedTab)
+                    NavigationRow(icon: "person.2.fill", title: "Friends", tag: 7, selectedTab: $selectedTab)
                     // Groups tab hidden for now — restore this row to bring it back
                     // (GroupsView and the `case 6` detail branch below are left intact).
                     // NavigationRow(icon: "person.3.fill", title: "Groups", tag: 6, selectedTab: $selectedTab)
@@ -427,6 +458,10 @@ struct SidebarNavigationView: View {
                 }
             }
             .listStyle(.sidebar)
+            // Same canvas as the detail column, so the sidebar blends in rather than sitting as a
+            // differently-coloured slab beside it.
+            .scrollContentBackground(.hidden)
+            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle("")
             // Matched to the Bible reader's docked-panel width so the panel replaces
             // the sidebar's slot exactly, leaving the reader untouched.
@@ -453,7 +488,11 @@ struct SidebarNavigationView: View {
                 ProfileView()
                     .environment(\.isSidebarNavigation, true)
             case 5:
-                SettingsView()
+                // Own stack so pushed settings screens get a back button in the detail column.
+                NavigationStack { SettingsView() }
+                    .environment(\.isSidebarNavigation, true)
+            case 7:
+                NavigationStack { FriendsView() }
                     .environment(\.isSidebarNavigation, true)
             case 6:
                 GroupsView()
@@ -590,6 +629,12 @@ struct MainTabView: View {
                     Label("Memory", systemImage: "brain.head.profile")
                 }
                 .tag(3)
+
+            NavigationStack { FriendsView() }
+                .tabItem {
+                    Label("Friends", systemImage: "person.2.fill")
+                }
+                .tag(7)
 
             // Groups tab hidden for now — uncomment to bring it back.
             // GroupsView()

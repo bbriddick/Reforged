@@ -1,8 +1,10 @@
 import SwiftUI
 import AVFoundation
 
-// MARK: - Now Playing View (Apple Music style full-screen player)
+// MARK: - Now Playing View (full-screen player)
 
+/// Full-screen audio player. It follows the app's appearance (warm paper in light, charcoal in
+/// dark) like every other screen; only the cover art is fixed, the way an album cover is.
 struct NowPlayingView: View {
     @ObservedObject var audioPlayer: BibleAudioPlayer
     /// When hosted in the iPad tools sidebar (not a sheet), the environment dismiss
@@ -28,9 +30,12 @@ struct NowPlayingView: View {
 
     var audioSubtitle: String {
         audioPlayer.isTTSMode
-            ? "\(audioPlayer.currentTranslation.rawValue.uppercased()) · Text-to-Speech"
+            ? "\(audioPlayer.currentTranslation.rawValue.uppercased()) \u{00B7} Text-to-Speech"
             : (audioPlayer.currentTranslation == .kjv ? "KJV Audio Bible" : "ESV Audio Bible")
     }
+
+    private var primary: Color { Color.adaptiveText(colorScheme) }
+    private var secondary: Color { Color.adaptiveTextSecondary(colorScheme) }
 
     var body: some View {
         GeometryReader { geo in
@@ -38,15 +43,7 @@ struct NowPlayingView: View {
             let isLandscape = !isWide && geo.size.width > geo.size.height
 
             ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.08, green: 0.12, blue: 0.22),
-                        Color(red: 0.04, green: 0.06, blue: 0.14)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                Color.adaptiveBackground(colorScheme).ignoresSafeArea()
 
                 if isLandscape {
                     landscapeBody(geo: geo)
@@ -66,7 +63,7 @@ struct NowPlayingView: View {
         }
     }
 
-    // MARK: - Portrait / iPad layout (existing vertical stack)
+    // MARK: - Portrait / iPad layout
 
     @ViewBuilder
     private func portraitBody(geo: GeometryProxy, isWide: Bool) -> some View {
@@ -76,113 +73,86 @@ struct NowPlayingView: View {
 
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
-                // Handle / dismiss bar
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.white.opacity(0.3))
+                // Grab handle (the sheet's own indicator is hidden for this full-screen player)
+                Capsule()
+                    .fill(secondary.opacity(0.35))
                     .frame(width: 36, height: 5)
-                    .padding(.top, 12)
-                    .padding(.bottom, 20)
+                    .padding(.top, 10)
+                    .padding(.bottom, 8)
 
-                // Header
-                HStack {
-                    Button { onClose?() ?? dismiss() } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
+                // Header: collapse, title
+                ZStack {
+                    Text("Now playing")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(secondary)
+
+                    HStack {
+                        Button { onClose?() ?? dismiss() } label: {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(primary)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel("Close player")
+                        Spacer()
                     }
-                    Spacer()
-                    VStack(spacing: 2) {
-                        Text("NOW PLAYING")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.white.opacity(0.6))
-                            .tracking(1.5)
-                        Text(audioSubtitle)
-                            .font(.caption)
-                            .foregroundStyle(Color.white.opacity(0.4))
-                    }
-                    Spacer()
-                    Color.clear.frame(width: 44, height: 44)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 12)
 
-                Spacer(minLength: isWide ? 28 : 20)
+                Spacer(minLength: isWide ? 24 : 16)
 
-                AudioAlbumArtwork(book: displayBook, chapter: displayChapter, translation: audioPlayer.currentTranslation)
-                    .frame(width: artSize, height: artSize)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(color: Color.black.opacity(0.5), radius: 30, y: 12)
-                    .scaleEffect(audioPlayer.isPlaying ? 1.0 : 0.92)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.7), value: audioPlayer.isPlaying)
+                cover(size: artSize, radius: 16)
 
-                Spacer(minLength: isWide ? 28 : 24)
+                Spacer(minLength: isWide ? 32 : 28)
 
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(displayBook.isEmpty ? "—" : "\(displayBook) \(displayChapter)")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        Text(audioSubtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.white.opacity(0.6))
-                    }
-                    Spacer()
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(displayBook.isEmpty ? "Audio Bible" : "\(displayBook) \(displayChapter)")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(primary)
+                        .lineLimit(1)
+                    Text(audioSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(secondary)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, hPad)
 
                 Spacer(minLength: 20)
 
                 scrubberView(hPad: hPad)
 
-                Spacer(minLength: isWide ? 28 : 24)
+                Spacer(minLength: isWide ? 24 : 20)
 
                 controlsRow(isWide: isWide)
 
                 Spacer(minLength: 28)
 
-                HStack(alignment: .center) {
-                    speedButton()
-                    Spacer()
-                    if showsKJVDownload {
-                        kjvDownloadButton()
-                        Spacer()
-                    }
-                    SleepTimerButtonView(audioPlayer: audioPlayer).equatable()
-                }
-                .padding(.horizontal, hPad)
+                optionsRow
+                    .padding(.horizontal, hPad)
 
-                Spacer(minLength: isWide ? 48 : 40)
+                Spacer(minLength: isWide ? 40 : 32)
             }
             .frame(width: maxContent)
             .frame(maxWidth: .infinity)
         }
     }
 
-    // MARK: - Landscape iPhone layout (top: artwork+info, bottom: full-width controls)
+    // MARK: - Landscape iPhone layout (top: artwork + info, bottom: full-width controls)
 
     @ViewBuilder
     private func landscapeBody(geo: GeometryProxy) -> some View {
-        // Reserve space for controls + speed/sleep + gaps at the bottom
-        let bottomSectionHeight: CGFloat = 80 + 38 + 36   // controls row + speed/sleep + padding
+        // Reserve space for controls + options + gaps at the bottom
+        let bottomSectionHeight: CGFloat = 72 + 44 + 28
         let topSectionHeight: CGFloat = geo.size.height - bottomSectionHeight
         // Artwork is square, sized to fit the top section height
         let artSize: CGFloat = max(80, topSectionHeight - 16)
         let hPad: CGFloat = 24
 
         VStack(spacing: 0) {
-            // Top section: artwork (left) + title/scrubber (right)
             HStack(alignment: .center, spacing: 0) {
-                // Left: dismiss button overlaid above artwork
                 ZStack(alignment: .topLeading) {
-                    AudioAlbumArtwork(book: displayBook, chapter: displayChapter, translation: audioPlayer.currentTranslation)
-                        .frame(width: artSize, height: artSize)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .shadow(color: Color.black.opacity(0.45), radius: 16, y: 6)
-                        .scaleEffect(audioPlayer.isPlaying ? 1.0 : 0.92)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: audioPlayer.isPlaying)
+                    cover(size: artSize, radius: 12)
 
                     Button { onClose?() ?? dismiss() } label: {
                         Image(systemName: "chevron.down")
@@ -191,24 +161,24 @@ struct NowPlayingView: View {
                             .frame(width: 32, height: 32)
                             .background(Color.black.opacity(0.35))
                             .clipShape(Circle())
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    .padding(8)
+                    .accessibilityLabel("Close player")
                 }
                 .frame(width: artSize)
                 .padding(.leading, hPad)
 
-                // Right: title + scrubber
                 VStack(alignment: .leading, spacing: 0) {
                     Spacer(minLength: 0)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(displayBook.isEmpty ? "—" : "\(displayBook) \(displayChapter)")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
+                        Text(displayBook.isEmpty ? "Audio Bible" : "\(displayBook) \(displayChapter)")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(primary)
                             .lineLimit(1)
                         Text(audioSubtitle)
                             .font(.caption)
-                            .foregroundStyle(Color.white.opacity(0.6))
+                            .foregroundStyle(secondary)
                     }
                     .padding(.horizontal, hPad)
                     Spacer(minLength: 12)
@@ -218,57 +188,71 @@ struct NowPlayingView: View {
             }
             .frame(height: topSectionHeight)
 
-            // Full-width controls row
             controlsRow(isWide: false)
-                .padding(.bottom, 8)
+                .padding(.bottom, 4)
 
-            // Full-width speed + sleep timer
-            HStack(alignment: .center) {
-                speedButton()
-                Spacer()
-                if showsKJVDownload {
-                    kjvDownloadButton()
-                    Spacer()
-                }
-                SleepTimerButtonView(audioPlayer: audioPlayer).equatable()
-            }
-            .padding(.horizontal, hPad)
-            .padding(.bottom, 16)
+            optionsRow
+                .padding(.horizontal, hPad)
+                .padding(.bottom, 12)
         }
     }
 
     // MARK: - Sub-views
 
+    /// Cover art with the warm elevation shadow; it eases back slightly while paused.
+    private func cover(size: CGFloat, radius: CGFloat) -> some View {
+        AudioAlbumArtwork(book: displayBook, chapter: displayChapter, translation: audioPlayer.currentTranslation)
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: radius))
+            .shadow(color: Color.black.opacity(0.16), radius: 24, y: 12)
+            .scaleEffect(audioPlayer.isPlaying ? 1.0 : 0.94)
+            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: audioPlayer.isPlaying)
+            .accessibilityHidden(true)
+    }
+
+    /// Speed, offline download (KJV) and sleep timer: one row of equal secondary controls.
+    private var optionsRow: some View {
+        HStack(alignment: .center) {
+            speedButton()
+            Spacer()
+            if showsKJVDownload {
+                kjvDownloadButton()
+                Spacer()
+            }
+            SleepTimerButtonView(audioPlayer: audioPlayer).equatable()
+        }
+    }
+
     @ViewBuilder
     private func scrubberView(hPad: CGFloat) -> some View {
         Group {
             if audioPlayer.isTTSMode {
-                HStack {
+                HStack(spacing: 8) {
                     Image(systemName: "waveform")
-                        .foregroundStyle(Color.white.opacity(0.5))
-                    Text("Text-to-Speech · \(audioPlayer.currentTranslation.rawValue.uppercased())")
-                        .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.5))
+                    Text("Text-to-Speech \u{00B7} \(audioPlayer.currentTranslation.rawValue.uppercased())")
                 }
+                .font(.footnote)
+                .foregroundStyle(secondary)
                 .padding(.horizontal, hPad)
                 .padding(.vertical, 8)
             } else {
-                ttsHiddenScrubber(hPad: hPad)
+                progressScrubber(hPad: hPad)
             }
         }
     }
 
-    private func ttsHiddenScrubber(hPad: CGFloat) -> some View {
-        VStack(spacing: 6) {
+    private func progressScrubber(hPad: CGFloat) -> some View {
+        VStack(spacing: 2) {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.15))
+                        .fill(secondary.opacity(0.2))
                         .frame(height: 4)
                     Capsule()
-                        .fill(Color.white)
+                        .fill(Color.reforgedCoral)
                         .frame(width: scrubFraction(geo.size.width), height: 4)
                 }
+                .frame(maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 0)
@@ -284,44 +268,51 @@ struct NowPlayingView: View {
                         }
                 )
             }
-            .frame(height: 20)
+            // 44 pt tall touch area around the 4 pt track
+            .frame(height: 44)
             .padding(.horizontal, hPad)
+            .accessibilityElement()
+            .accessibilityLabel("Playback position")
+            .accessibilityValue("\(formatTime(isScrubbing ? scrubPosition : audioPlayer.currentTime)) of \(formatTime(audioPlayer.duration))")
 
             HStack {
                 Text(formatTime(isScrubbing ? scrubPosition : audioPlayer.currentTime))
-                    .font(.caption2)
-                    .foregroundStyle(Color.white.opacity(0.5))
                 Spacer()
                 Text("-\(formatTime(audioPlayer.duration - (isScrubbing ? scrubPosition : audioPlayer.currentTime)))")
-                    .font(.caption2)
-                    .foregroundStyle(Color.white.opacity(0.5))
             }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(secondary)
             .padding(.horizontal, hPad)
         }
         .onChange(of: audioPlayer.currentTime) { newTime in
             if !isScrubbing { scrubPosition = newTime }
         }
-    }  // end ttsHiddenScrubber
+    }
+
+    private func transportButton(_ icon: String, size: CGFloat, label: String,
+                                 action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: size, weight: .regular))
+                .foregroundStyle(primary)
+                .frame(width: 56, height: 56)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
 
     @ViewBuilder
     private func controlsRow(isWide: Bool) -> some View {
-        let btnSpacing: CGFloat = isWide ? 56 : 0
+        let btnSpacing: CGFloat = isWide ? 40 : 0
         HStack(spacing: btnSpacing) {
             if !isWide { Spacer() }
 
-            Button { audioPlayer.playPreviousChapter() } label: {
-                Image(systemName: "backward.fill")
-                    .font(.system(size: 26, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.9))
-            }
+            transportButton("backward.fill", size: 26, label: "Previous chapter") { audioPlayer.playPreviousChapter() }
 
             if !isWide { Spacer() }
 
-            Button { audioPlayer.skipBackward(15) } label: {
-                Image(systemName: "gobackward.15")
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.9))
-            }
+            transportButton("gobackward.15", size: 24, label: "Back 15 seconds") { audioPlayer.skipBackward(15) }
 
             if !isWide { Spacer() }
 
@@ -333,43 +324,36 @@ struct NowPlayingView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Color.white)
+                        .fill(primary)
                         .frame(width: 72, height: 72)
                     if audioPlayer.isLoading {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.08, green: 0.12, blue: 0.22)))
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color.adaptiveBackground(colorScheme)))
                     } else {
                         Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 26, weight: .bold))
-                            .foregroundStyle(Color(red: 0.08, green: 0.12, blue: 0.22))
+                            .foregroundStyle(Color.adaptiveBackground(colorScheme))
                             .offset(x: audioPlayer.isPlaying ? 0 : 2)
                     }
                 }
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(audioPlayer.isPlaying ? "Pause" : "Play")
 
             if !isWide { Spacer() }
 
-            Button { audioPlayer.skipForward(15) } label: {
-                Image(systemName: "goforward.15")
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.9))
-            }
+            transportButton("goforward.15", size: 24, label: "Forward 15 seconds") { audioPlayer.skipForward(15) }
 
             if !isWide { Spacer() }
 
-            Button { audioPlayer.playNextChapter() } label: {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 26, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.9))
-            }
+            transportButton("forward.fill", size: 26, label: "Next chapter") { audioPlayer.playNextChapter() }
 
             if !isWide { Spacer() }
         }
     }
 
-    /// Download affordance for KJV audio — surfaces the offline-download screen and
-    /// reflects the current book's state (available / downloading / saved) so it's
-    /// obvious from the player that chapters can be cached for offline listening.
+    /// Download affordance for KJV audio: opens the offline-download screen and reflects the
+    /// current book's state (available / downloading / saved).
     @ViewBuilder
     private func kjvDownloadButton() -> some View {
         let book = audioPlayer.currentBook
@@ -380,35 +364,22 @@ struct NowPlayingView: View {
         Button {
             showKJVDownloads = true
         } label: {
-            HStack(spacing: 5) {
+            PlayerPill(colorScheme: colorScheme) {
                 if isDownloading {
                     let pct = Int((bookProgress ?? kjvDownloads.allProgress) * 100)
                     Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 13))
-                    Text("\(pct)%")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .monospacedDigit()
+                    Text("\(pct)%").monospacedDigit()
                 } else if isSaved {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 13))
                     Text("Saved")
-                        .font(.caption)
-                        .fontWeight(.medium)
                 } else {
                     Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 13))
                     Text("Download")
-                        .font(.caption)
-                        .fontWeight(.medium)
                 }
             }
-            .foregroundStyle(isSaved ? Color.reforgedGold : Color.white.opacity(0.55))
-            .padding(.horizontal, 13)
-            .padding(.vertical, 7)
-            .background(Color.white.opacity(isSaved ? 0.08 : 0.1))
-            .clipShape(Capsule())
+            .foregroundStyle(isSaved ? Color.reforgedGold : secondary)
         }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -427,20 +398,13 @@ struct NowPlayingView: View {
                 }
             }
         } label: {
-            HStack(spacing: 5) {
+            PlayerPill(colorScheme: colorScheme) {
                 Image(systemName: "gauge.with.dots.needle.67percent")
-                    .font(.system(size: 13))
-                Text(rateLabel(audioPlayer.playbackRate))
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
+                Text(rateLabel(audioPlayer.playbackRate)).monospacedDigit()
             }
-            .foregroundStyle(Color.white.opacity(0.55))
-            .padding(.horizontal, 13)
-            .padding(.vertical, 7)
-            .background(Color.white.opacity(0.1))
-            .clipShape(Capsule())
+            .foregroundStyle(secondary)
         }
+        .accessibilityLabel("Playback speed")
     }
 
     // MARK: - Helpers
@@ -461,13 +425,34 @@ struct NowPlayingView: View {
 
     private func rateLabel(_ rate: Float) -> String {
         switch rate {
-        case 0.75: return "¾×"
-        case 1.0:  return "1×"
-        case 1.25: return "1.25×"
-        case 1.5:  return "1.5×"
-        case 2.0:  return "2×"
-        default:   return String(format: "%.2g×", rate)
+        case 0.75: return "\u{00BE}\u{00D7}"
+        case 1.0:  return "1\u{00D7}"
+        case 1.25: return "1.25\u{00D7}"
+        case 1.5:  return "1.5\u{00D7}"
+        case 2.0:  return "2\u{00D7}"
+        default:   return String(format: "%.2g\u{00D7}", rate)
         }
+    }
+}
+
+// MARK: - Player pill
+
+/// The secondary controls under the transport (speed, download, sleep): a quiet chip with a
+/// 44 pt hit area. Foreground colour comes from the caller.
+struct PlayerPill<Content: View>: View {
+    let colorScheme: ColorScheme
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        HStack(spacing: 6) {
+            content()
+        }
+        .font(.footnote.weight(.semibold))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Capsule().fill(Color.adaptiveChipBackground(colorScheme)))
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
     }
 }
 
@@ -475,6 +460,7 @@ struct NowPlayingView: View {
 
 struct SleepTimerButtonView: View, Equatable {
     @ObservedObject var audioPlayer: BibleAudioPlayer
+    @Environment(\.colorScheme) private var colorScheme
 
     static func == (lhs: SleepTimerButtonView, rhs: SleepTimerButtonView) -> Bool {
         lhs.audioPlayer.sleepTimerRemaining == rhs.audioPlayer.sleepTimerRemaining &&
@@ -483,30 +469,23 @@ struct SleepTimerButtonView: View, Equatable {
 
     var body: some View {
         if audioPlayer.sleepTimerRemaining > 0 || audioPlayer.sleepTimerEndOfChapter {
-            HStack(spacing: 6) {
+            PlayerPill(colorScheme: colorScheme) {
                 Image(systemName: "moon.fill")
-                    .font(.system(size: 13))
                     .foregroundStyle(Color.reforgedGold)
                 Text(audioPlayer.sleepTimerEndOfChapter
                      ? "End of chapter"
                      : sleepTimerLabel(audioPlayer.sleepTimerRemaining))
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.white.opacity(0.8))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
                     .monospacedDigit()
                 Button {
                     audioPlayer.cancelSleepTimer()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 15))
-                        .foregroundStyle(Color.white.opacity(0.35))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Cancel sleep timer")
             }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 7)
-            .background(Color.white.opacity(0.1))
-            .clipShape(Capsule())
         } else {
             Menu {
                 Button("5 minutes")  { audioPlayer.setSleepTimer(minutes: 5) }
@@ -518,19 +497,13 @@ struct SleepTimerButtonView: View, Equatable {
                 Divider()
                 Button("End of chapter") { audioPlayer.setSleepTimerEndOfChapter() }
             } label: {
-                HStack(spacing: 5) {
+                PlayerPill(colorScheme: colorScheme) {
                     Image(systemName: "moon.fill")
-                        .font(.system(size: 13))
                     Text("Sleep")
-                        .font(.caption)
-                        .fontWeight(.medium)
                 }
-                .foregroundStyle(Color.white.opacity(0.55))
-                .padding(.horizontal, 13)
-                .padding(.vertical, 7)
-                .background(Color.white.opacity(0.1))
-                .clipShape(Capsule())
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
             }
+            .accessibilityLabel("Sleep timer")
         }
     }
 
@@ -543,18 +516,28 @@ struct SleepTimerButtonView: View, Equatable {
 
 // MARK: - Album Artwork
 
+/// Cover for the audio player, the lock screen and the mini player. A light, editorial card in
+/// the same family as the shareable verse card: warm paper on a soft rim, the chapter number as
+/// the one large element (it has to read at 44 pt), the book name in the Scripture serif, a gold
+/// divider, and the charcoal mark. Flat on purpose: no gradients, textures or glows.
 struct AudioAlbumArtwork: View {
     let book: String
     let chapter: Int
     var translation: BibleTranslation = .esv
 
-    /// "KJV Audio Bible" / "ESV Audio Bible" — both share the same cover design.
-    private var translationLabel: String {
-        translation == .kjv ? "KJV Audio Bible" : "ESV Audio Bible"
-    }
+    // Fixed brand values, so the cover is the same object in light and dark appearance.
+    private static let rim = Color(red: 0.945, green: 0.933, blue: 0.914)        // #F1EEE9
+    private static let paper = Color(red: 0.980, green: 0.973, blue: 0.961)      // #FAF8F5
+    private static let deepGold = Color(red: 0.690, green: 0.498, blue: 0.306)   // #B07F4E, reads on paper
+
+    private var ink: Color { Color.reforgedCharcoal }
+
+    /// "KJV" / "ESV" in the corner, so the cover says which audio this is.
+    private var translationCode: String { translation.rawValue.uppercased() }
+
     /// KJV is public domain; ESV requires the Crossway notice.
     private var attribution: String {
-        translation == .kjv ? "Public Domain" : "© 2001 Crossway"
+        translation == .kjv ? "Public Domain" : "\u{00A9} 2001 Crossway"
     }
 
     var body: some View {
@@ -562,101 +545,98 @@ struct AudioAlbumArtwork: View {
             let scale = geo.size.width / 300
 
             ZStack {
-                // Base gradient — deep navy to slightly lighter
-                LinearGradient(
-                colors: [
-                    Color(red: 0.10, green: 0.16, blue: 0.30),
-                    Color(red: 0.06, green: 0.09, blue: 0.20)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+                Self.rim
 
-            // Subtle texture rings
-            ForEach(0..<4, id: \.self) { i in
-                Circle()
-                    .strokeBorder(Color.white.opacity(0.04 - Double(i) * 0.008), lineWidth: 1)
-                    .scaleEffect(0.5 + Double(i) * 0.18)
-            }
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Self.paper)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                    )
+                    .padding(10)
 
-            // Cross / ornament
-            VStack(spacing: 0) {
-                Spacer()
-                // Cross shape
-                ZStack {
-                    // Vertical beam
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.87, green: 0.72, blue: 0.42), Color(red: 0.75, green: 0.58, blue: 0.28)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 8, height: 80)
+                VStack(spacing: 0) {
+                    // Eyebrow: what this is, and which translation
+                    HStack {
+                        Text("AUDIO BIBLE")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(3)
+                            .foregroundStyle(Self.deepGold)
+                        Spacer()
+                        Text(translationCode)
+                            .font(.system(size: 10, weight: .semibold))
+                            .tracking(1.5)
+                            .foregroundStyle(ink.opacity(0.45))
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.top, 30)
 
-                    // Horizontal beam
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.87, green: 0.72, blue: 0.42), Color(red: 0.75, green: 0.58, blue: 0.28)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: 52, height: 8)
-                        .offset(y: -14)
+                    Spacer(minLength: 0)
+
+                    if book.isEmpty {
+                        // Nothing loaded yet: the mark stands in for the chapter
+                        Image("ReforgedMark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 84)
+                    } else {
+                        Text("\(chapter)")
+                            .font(Font.custom("LibreBaskerville-Regular", size: 104))
+                            .foregroundStyle(ink)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .padding(.horizontal, 30)
+
+                        Text(book)
+                            .font(Font.custom("LibreBaskerville-Regular", size: 24))
+                            .foregroundStyle(ink)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .padding(.horizontal, 30)
+                            .padding(.top, 2)
+                    }
+
+                    Capsule()
+                        .fill(Color.reforgedGold.opacity(0.8))
+                        .frame(width: 40, height: 3)
+                        .padding(.top, 14)
+
+                    Spacer(minLength: 0)
+
+                    // Footer: mark + wordmark, as on the verse card
+                    HStack(spacing: 8) {
+                        Image("ReforgedMark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 16)
+                        Text("REFORGED")
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(3)
+                            .foregroundStyle(ink)
+                    }
+                    .padding(.bottom, 26)
                 }
-                .shadow(color: Color(red: 0.87, green: 0.72, blue: 0.42).opacity(0.4), radius: 16)
 
-                Spacer()
-            }
-            .padding(.bottom, 16)
-
-            // Branding text overlay
-            VStack(spacing: 0) {
-                Spacer()
-
-                VStack(spacing: 3) {
-                    Text("REFORGED")
-                        .font(.system(size: 22, weight: .black, design: .serif))
-                        .tracking(4)
-                        .foregroundStyle(Color(red: 0.87, green: 0.72, blue: 0.42))
-
-                    Text(translationLabel)
-                        .font(.system(size: 11, weight: .medium))
-                        .tracking(1)
-                        .foregroundStyle(Color.white.opacity(0.5))
-
-                    if !book.isEmpty {
-                        Text("\(book) \(chapter)")
-                            .font(.system(size: 13, weight: .semibold))
-                            .tracking(0.5)
-                            .foregroundStyle(Color.white.opacity(0.75))
-                            .padding(.top, 6)
+                // Copyright (bottom corner)
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Text(attribution)
+                            .font(.system(size: 7.5))
+                            .foregroundStyle(ink.opacity(0.4))
+                            .padding(.trailing, 24)
+                            .padding(.bottom, 14)
                     }
                 }
-                .padding(.bottom, 20)
             }
-
-            // Crossway copyright (bottom corner)
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Text(attribution)
-                        .font(.system(size: 9))
-                        .foregroundStyle(Color.white.opacity(0.2))
-                        .padding(.trailing, 12)
-                        .padding(.bottom, 8)
-                }
-            }
+            // Render at the 300 pt reference size, then scale to the actual container
+            .frame(width: 300, height: 300)
+            .scaleEffect(scale, anchor: .center)
+            .frame(width: geo.size.width, height: geo.size.height)
         }
-        // Render at reference size, then scale to fit the actual container
-        .frame(width: 300, height: 300)
-        .scaleEffect(scale, anchor: .center)
-        .frame(width: geo.size.width, height: geo.size.height)
-        }
+        .environment(\.colorScheme, .light)
+        .accessibilityLabel(book.isEmpty ? "Audio Bible cover" : "\(book) chapter \(chapter), \(translationCode) audio cover")
     }
 }
 
@@ -751,13 +731,9 @@ struct AudioMiniPlayerBar: View {
                     // Progress tint strip at bottom
                     if audioPlayer.duration > 0 {
                         GeometryReader { geo in
-                            LinearGradient(
-                                colors: [Color.reforgedNavy.opacity(0.12), Color.reforgedGold.opacity(0.08)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                            .frame(width: geo.size.width * CGFloat(audioPlayer.currentTime / audioPlayer.duration), height: 2)
-                            .frame(maxHeight: .infinity, alignment: .bottom)
+                            Color.reforgedCoral
+                                .frame(width: geo.size.width * CGFloat(audioPlayer.currentTime / audioPlayer.duration), height: 2)
+                                .frame(maxHeight: .infinity, alignment: .bottom)
                         }
                     }
                 }

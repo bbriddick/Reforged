@@ -38,6 +38,11 @@ struct UserProfile: Codable {
 
     var lifetimeXP: Int { xp + xpSpent }
 
+    /// True from the moment the user edits their name/avatar until that edit has been
+    /// pushed to the cloud. While set, a pull must never overwrite the identity fields,
+    /// otherwise a stale server copy ("Test User") silently undoes the edit.
+    var identityDirty: Bool = false
+
     /// Transient carrier for the synced streak/reading history (see StreakHistory).
     /// It round-trips ONLY through the CloudKit profile record and is then imported
     /// into ReadingStreakManager — it is intentionally excluded from CodingKeys so it
@@ -45,6 +50,10 @@ struct UserProfile: Codable {
     /// App Group persistence). The `= nil` default keeps both inits and Codable valid
     /// without listing it.
     var streakHistory: StreakHistory? = nil
+
+    /// Transient, like `streakHistory`: round-trips through the CloudKit profile record
+    /// only, and is applied once when restoring on a new device.
+    var preferences: SyncedPreferences? = nil
 
     init(id: String, firstName: String, lastName: String, displayName: String, email: String?, avatar: String, goals: [String], xp: Int, level: Int, streak: Int, longestStreak: Int, lastActiveDate: String, badges: [Badge], completedLessons: [String], memoryVerses: [String], onboardingCompleted: Bool, loggedIn: Bool, streakFreezes: Int, freezeUsedDates: [String], lastFreezeReplenishMonth: String = "", activeDates: [String], chaptersRead: [String], weeklyActivity: WeeklyActivity, perks: [Perk] = [], activeProfileBorder: String = "", activeTheme: String = "", profileImagePath: String? = nil) {
         self.id = id
@@ -107,6 +116,7 @@ struct UserProfile: Codable {
         activeTheme = (try? container.decode(String.self, forKey: .activeTheme)) ?? ""
         profileImagePath = try? container.decode(String.self, forKey: .profileImagePath)
         xpSpent = (try? container.decode(Int.self, forKey: .xpSpent)) ?? 0
+        identityDirty = (try? container.decode(Bool.self, forKey: .identityDirty)) ?? false
         cosmetics = (try? container.decode(CosmeticsState.self, forKey: .cosmetics)) ?? CosmeticsState()
     }
 

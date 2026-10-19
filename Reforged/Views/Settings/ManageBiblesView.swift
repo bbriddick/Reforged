@@ -11,6 +11,8 @@ struct ManageBiblesView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var clearTarget: BibleTranslation?
+    /// Reorder mode: drag to set the switcher order, tap the eye to show or hide a Bible.
+    @State private var editMode: EditMode = .inactive
 
     private var englishAndModern: [BibleTranslation] {
         settings.translationOrder.filter { !$0.isOriginalLanguage }
@@ -25,10 +27,18 @@ struct ManageBiblesView: View {
                     ForEach(englishAndModern) { translation in
                         BibleManageRow(translation: translation, clearTarget: $clearTarget)
                     }
+                    .onMove { source, destination in
+                        settings.translationOrder.move(fromOffsets: source, toOffset: destination)
+                        HapticManager.shared.selectionChanged()
+                    }
                 } header: {
                     Text("Bibles")
                 } footer: {
-                    Text("Chapters you read are kept on your device for offline use. Some translations can't be bulk-downloaded because of their publishers' licenses.")
+                    if editMode.isEditing {
+                        Text("Drag to set the order in the switcher. Tap the eye to show or hide a Bible there. Your default Bible always stays.")
+                    } else {
+                        Text("Chapters you read are kept on your device for offline use. Some translations can't be bulk-downloaded because of their publishers' licenses.")
+                    }
                 }
 
                 Section {
@@ -51,7 +61,13 @@ struct ManageBiblesView: View {
             }
             .navigationTitle("Manage Bibles")
             .navigationBarTitleDisplayMode(.inline)
+            .environment(\.editMode, $editMode)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(editMode.isEditing ? "Finish" : "Reorder") {
+                        withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
@@ -119,7 +135,12 @@ private struct BibleManageRow: View {
 
     @StateObject private var downloads = BibleDownloadManager.shared
     @StateObject private var yvSignIn = YouVersionSignIn.shared
+    @StateObject private var settings = SettingsManager.shared
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.editMode) private var editMode
+
+    private var isReordering: Bool { editMode?.wrappedValue.isEditing == true }
+    private var isShown: Bool { settings.isInSwitcher(translation) }
 
     private enum Kind {
         case included      // ships with the app
@@ -155,6 +176,23 @@ private struct BibleManageRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
+                if isReordering {
+                    Button {
+                        HapticManager.shared.selectionChanged()
+                        settings.setInSwitcher(translation, !isShown)
+                    } label: {
+                        Image(systemName: isShown ? "eye.fill" : "eye.slash")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(isShown ? Color.reforgedCoral : Color.adaptiveTextSecondary(colorScheme))
+                            .frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isShown && !settings.canHideFromSwitcher(translation))
+                    .opacity(isShown && !settings.canHideFromSwitcher(translation) ? 0.35 : 1)
+                    .accessibilityLabel(isShown ? "Hide \(translation.rawValue) from the switcher"
+                                                : "Show \(translation.rawValue) in the switcher")
+                }
+
                 Text(translation.compactCode)
                     .font(.caption)
                     .fontWeight(.bold)
@@ -168,15 +206,16 @@ private struct BibleManageRow: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text(statusText)
+                    Text(isReordering && !isShown ? "Hidden from the switcher" : statusText)
                         .font(.caption)
                         .foregroundStyle(statusColor)
                 }
 
                 Spacer(minLength: 8)
 
-                trailingControl
+                if !isReordering { trailingControl }
             }
+            .opacity(isReordering && !isShown ? 0.55 : 1)
 
             if kind == .downloadable, state.isDownloading {
                 ProgressView(value: state.progressFraction)

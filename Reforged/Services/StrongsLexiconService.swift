@@ -10,8 +10,13 @@ private struct StudyBibleConfig {
 
 // MARK: - Strong's Lexicon Service
 
-/// Provides Hebrew and Greek word study via the Complete Study Bible API.
-/// Falls back to bundled Strong's dictionaries when offline or quota exceeded.
+/// Provides Hebrew and Greek word study.
+///
+/// Served from the bundled study database (`LocalStudyDataSource`) when `useLocalStudyData` is on
+/// and the database opened. The Complete Study Bible API code below is the previous
+/// implementation, kept behind the same interface until cutover, and every network call is
+/// gated so it is never reached while the local database is available. Falls back to bundled
+/// Strong's dictionaries when neither source has data.
 class StrongsLexiconService {
     static let shared = StrongsLexiconService()
 
@@ -33,6 +38,12 @@ class StrongsLexiconService {
         loadCachesFromDisk()
     }
 
+    /// False while the local study database serves lookups, so no API request can be made.
+    private func remoteAllowed() async -> Bool {
+        guard StudyDataFlags.useLocal else { return true }
+        return !(await StudyDatabase.shared.isReady())
+    }
+
     // MARK: - Original Language Direct Lookups
 
     /// Looks up a Greek word from the Textus Receptus by its Strong's number.
@@ -49,6 +60,14 @@ class StrongsLexiconService {
         verseNumber: Int,
         isHebrew: Bool
     ) async -> WordLookupResult {
+        if StudyDataFlags.useLocal,
+           let local = await LocalStudyDataSource.shared.lookupByStrongsNumber(
+               strongsNumber, tappedWord: tappedWord, originalForm: originalForm,
+               verseReference: verseReference, bookName: bookName,
+               chapter: chapter, verseNumber: verseNumber) {
+            return local
+        }
+
         // Try API detail first (most complete: Thayer's/BDB, Mounce, usage counts)
         if let detail = await getStrongsDetail(number: strongsNumber) {
             let translationCounts = (detail.translation_counts ?? []).compactMap { tc -> (word: String, count: Int)? in
@@ -147,6 +166,13 @@ class StrongsLexiconService {
         chapter: Int,
         verseNumber: Int
     ) async -> WordLookupResult {
+        if StudyDataFlags.useLocal,
+           let local = await LocalStudyDataSource.shared.lookupWLCWord(
+               hebrewWord, verseReference: verseReference, bookName: bookName,
+               chapter: chapter, verseNumber: verseNumber) {
+            return local
+        }
+
         // Step 1: Use cached verse interlinear (ORIG endpoint has Hebrew words + Strong's numbers)
         if let verseData = await getVerseInterlinear(bookName: bookName, chapter: chapter, verse: verseNumber) {
             let strippedTapped = OriginalLanguageService.stripCantillation(hebrewWord)
@@ -227,6 +253,13 @@ class StrongsLexiconService {
         verseNumber: Int,
         isHebrew: Bool
     ) async -> WordLookupResult {
+        if StudyDataFlags.useLocal,
+           let local = await LocalStudyDataSource.shared.lookupWord(
+               word, verseReference: verseReference, bookName: bookName,
+               chapter: chapter, verseNumber: verseNumber) {
+            return local
+        }
+
         // Step 1: Try API-based interlinear lookup
         if let apiResult = await lookupViaAPI(
             word: word,
@@ -349,6 +382,7 @@ class StrongsLexiconService {
 
     /// Gets interlinear data for a verse, from cache or API.
     private func getVerseInterlinear(bookName: String, chapter: Int, verse: Int) async -> CachedVerseInterlinear? {
+        guard await remoteAllowed() else { return nil }
         let cacheKey = "\(bookName)_\(chapter)_\(verse)"
 
         // Check memory cache
@@ -389,6 +423,8 @@ class StrongsLexiconService {
 
     /// Pre-fetches interlinear data for an entire chapter (2 API calls instead of 2 per verse).
     func prefetchChapter(bookName: String, chapter: Int, totalVerses: Int) async {
+        // Nothing to warm when the local database answers instantly.
+        guard await remoteAllowed() else { return }
         // Guard against empty chapters (e.g. WLC/TR not yet loaded) — 1...0 is a fatal crash
         guard totalVerses > 0 else { return }
         guard let apiBookName = BibleData.books.first(where: { $0.name == bookName })?.studyBibleAPIName else {
@@ -467,6 +503,7 @@ class StrongsLexiconService {
 
     /// Fetches Strong's detail for up to 3 numbers at once.
     func getStrongsDetail(number: String) async -> StudyBibleStrongsDetail? {
+        guard await remoteAllowed() else { return nil }
         // Check cache
         if let cached = strongsDetailCache[number], !cached.isStale {
             return cached.detail
@@ -484,6 +521,8 @@ class StrongsLexiconService {
     }
 
     private func fetchFromAPI<T: Codable>(url urlString: String) async -> T? {
+        // Single choke point for every network call: never reached while the local database is up.
+        guard await remoteAllowed() else { return nil }
         guard let url = URL(string: urlString) else { return nil }
 
         var request = URLRequest(url: url)
@@ -731,6 +770,12 @@ class StrongsLexiconService {
                 let cacheKey = "hebrew:\(mode.rawValue):\(strongsNumber)"
                 if let cached = concordanceCache[cacheKey] {
                     return cached
+                }
+                // One indexed query instead of one API call per Old Testament chapter.
+                if StudyDataFlags.useLocal,
+                   let local = await LocalStudyDataSource.shared.hebrewOccurrences(strongsNumber: strongsNumber) {
+                    concordanceCache[cacheKey] = local
+                    return local
                 }
                 let results = await searchHebrewOccurrencesByStrongs(strongsNumber: strongsNumber)
                 concordanceCache[cacheKey] = results

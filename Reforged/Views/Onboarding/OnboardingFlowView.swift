@@ -3,36 +3,28 @@ import AuthenticationServices
 import PhotosUI
 
 enum OnboardingStep: Int, CaseIterable {
-    case welcome               // 0  — unchanged splash
-    case featureReader         // 1  — Bible reader + hold-to-define
-    case featureMemory         // 2  — spaced repetition + games
-    case featureDiscipleship   // 3  — tracks + XP / levels / streaks
-    case walkTalks             // 4  — Southland / Walk Talks partnership
-    case featureOriginalLang   // 5  — Greek / Hebrew bundled
-    case auth                  // 6  — email tabs + Apple SIWA + skip
-    case name                  // 7  — user's name
-    case avatar                // 8  — emoji / photo
-    case goals                 // 9  — selected goals
-    case versionPicker         // 10 — preferred translation
-    case displayPreferences    // 11 — theme, font, verse format, orig-lang toggles
-    case aiFeatures            // 12 — AI opt-in/out
-    case notifications         // 13 — permission request
-    case studyLibrary          // 14 — optional commentary/tool downloads
-    case final                 // 15 — completion
-
-    /// Steps that can be skipped when the user signs in with Apple
-    static let skippableWithAppleSignIn: Set<OnboardingStep> = [.name]
+    case welcome        // 0 launch screen: Get Started / I already have an account
+    case yourBible      // 1 KJV selected automatically, others one tap away
+    case firstVerse     // 2 pick one verse from the learning path
+    case firstReview    // 3 the real flashcard (the "aha")
+    case firstWin       // 4 celebration
+    case walkTalks      // 5 Southland Christian Camp partnership
+    case reminder       // 6 daily reminder (the one notification prompt)
+    case account        // 7 keep your progress safe (deferred sign-up)
 }
 
 struct OnboardingFlowView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     @State private var currentStep: OnboardingStep = .welcome
-    /// True once the user has signed in with any provider — skips the name step
-    @State private var signedInWithApple = false
-    @State private var signedInWithSupabase = false
-
-    private var anySignIn: Bool { signedInWithApple || signedInWithSupabase }
+    /// Set when we recognise or sign in a returning account: shows the fast lane
+    /// (recognition → "Welcome back" restore) instead of the setup steps.
+    @State private var returning: ReturningStage?
+    /// The verse chosen in the first-verse step, and when the person started (for "You did that in 0:47").
+    @State private var pickedVerse: OnbVerse?
+    @State private var pickedVerseId: String?
+    @State private var startedAt: Date?
+    @State private var elapsedText: String?
 
     var body: some View {
         ZStack {
@@ -45,46 +37,67 @@ struct OnboardingFlowView: View {
 
             switch currentStep {
             case .welcome:
-                WelcomeStepView(onNext: { nextStep() })
-            case .featureReader:
-                FeatureReaderStepView(onNext: { nextStep() })
-            case .featureMemory:
-                FeatureMemoryStepView(onNext: { nextStep() })
-            case .featureDiscipleship:
-                FeatureDiscipleshipStepView(onNext: { nextStep() })
+                WelcomeStepView(onNext: { startedAt = Date(); nextStep() },
+                                onHaveAccount: { withAnimation { returning = .signIn } })
+            case .yourBible:
+                YourBibleStepView(onNext: { nextStep() })
+            case .firstVerse:
+                FirstVerseStepView(onPick: { verse in pickVerse(verse) },
+                                   onSkip: { withAnimation { currentStep = .walkTalks } })
+            case .firstReview:
+                if let verse = pickedVerse {
+                    FirstReviewStepView(verse: verse, onGotIt: { finishFirstReview() })
+                }
+            case .firstWin:
+                FirstWinStepView(verseRef: pickedVerse?.ref ?? "Your verse", elapsed: elapsedText,
+                                 onNext: { nextStep() })
             case .walkTalks:
                 WalkTalksOnboardingStepView(onNext: { nextStep() })
-            case .featureOriginalLang:
-                FeatureOriginalLangStepView(onNext: { nextStep() })
-            case .auth:
+            case .reminder:
+                ReminderStepView(onNext: { nextStep() })
+            case .account:
                 AuthStepView(
-                    onNext: { nextStep() },
-                    onExistingUser: { completeOnboarding() },
-                    onSignedInWithApple: { signedInWithApple = true },
-                    onSignedInWithSupabase: { signedInWithSupabase = true }
+                    onNext: { completeOnboarding() },
+                    onExistingUser: { returning = .restore },
+                    deferred: true
                 )
-            case .name:
-                NameStepView(onNext: { nextStep() })
-            case .avatar:
-                AvatarStepView(onNext: { nextStep() })
-            case .goals:
-                GoalsStepView(onNext: { nextStep() })
-            case .versionPicker:
-                VersionPickerStepView(onNext: { nextStep() })
-            case .displayPreferences:
-                DisplayPreferencesStepView(onNext: { nextStep() })
-            case .aiFeatures:
-                AIFeaturesStepView(onNext: { nextStep() })
-            case .notifications:
-                NotificationsStepView(onNext: { nextStep() })
-            case .studyLibrary:
-                OnboardingStudyLibraryStepView(onNext: { nextStep() })
-            case .final:
-                FinalStepView(onComplete: { tab in completeOnboarding(navigatingTo: tab) })
+            }
+
+            if let stage = returning {
+                ZStack {
+                    Color.adaptiveBackground(colorScheme).ignoresSafeArea()
+                    switch stage {
+                    case .recognized(let name):
+                        RecognizedStepView(name: name,
+                                           onContinue: { withAnimation { returning = .restore } },
+                                           onNotYou: { Task { await switchAccount() } })
+                    case .restore:
+                        RestoreStepView(onFinish: finishRestore)
+                    case .signIn:
+                        ZStack(alignment: .topLeading) {
+                            AuthStepView(
+                                onNext: { withAnimation { returning = nil; currentStep = .yourBible } },
+                                onExistingUser: { returning = .restore }
+                            )
+                            Button { withAnimation { returning = nil } } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.adaptiveChipBackground(colorScheme))
+                                    .clipShape(Circle())
+                            }
+                            .padding(.top, 16).padding(.leading, 20)
+                            .accessibilityLabel("Back")
+                        }
+                    }
+                }
+                .transition(.opacity)
             }
         }
+        .task { await detectReturningUser() }
         .overlay(alignment: .topLeading) {
-            if currentStep != .welcome && currentStep != .final {
+            if currentStep != .welcome && currentStep != .firstWin && returning == nil {
                 Button(action: { previousStep() }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 14, weight: .semibold))
@@ -102,37 +115,98 @@ struct OnboardingFlowView: View {
         .buttonStyle(NoBlobButtonStyle())
     }
 
+    /// A reinstall or restored backup keeps the Keychain: if a valid session is still there
+    /// and its account already exists, greet the person instead of making them start over.
+    private func detectReturningUser() async {
+        guard !appState.user.onboardingCompleted, returning == nil else { return }
+        let supabase = SupabaseAuthService.shared
+        // A saved sign-in plus a profile that is still on this device (onboarding was reset,
+        // or replayed from the debug row) is a returning account. No network needed.
+        let localName = appState.user.firstName.isEmpty ? appState.user.displayName : appState.user.firstName
+        if (supabase.isSignedIn || AppleSignInService.shared.isSignedIn), !localName.isEmpty {
+            withAnimation { returning = .recognized(name: localName) }
+            return
+        }
+        if supabase.isSignedIn, let remote = await supabase.fetchProfile(),
+           !remote.firstName.isEmpty || remote.xp > 0 {
+            let name = remote.firstName.isEmpty ? remote.displayName : remote.firstName
+            withAnimation { returning = .recognized(name: name.isEmpty ? "friend" : name) }
+            return
+        }
+        if AppleSignInService.shared.isSignedIn {
+            await CloudKitSyncService.shared.checkAccountStatus()
+            if let profile = try? await CloudKitSyncService.shared.fetchProfile(), !profile.firstName.isEmpty {
+                withAnimation { returning = .recognized(name: profile.firstName) }
+            }
+        }
+    }
+
+    /// "Not you?": forget the saved sign-in and start from the sign-in screen.
+    private func switchAccount() async {
+        await SupabaseAuthService.shared.signOut()
+        AppleSignInService.shared.signOut()
+        withAnimation { returning = .signIn }
+    }
+
+    /// Restore finished: land on Home with everything in place.
+    private func finishRestore() {
+        appState.isRestoringAccount = false
+        completeOnboarding(navigatingTo: 0)
+    }
+
     func previousStep() {
         withAnimation {
-            var prevRaw = currentStep.rawValue - 1
-            while let candidate = OnboardingStep(rawValue: prevRaw),
-                  anySignIn && OnboardingStep.skippableWithAppleSignIn.contains(candidate) {
-                prevRaw -= 1
-            }
-            if let prevIndex = OnboardingStep(rawValue: prevRaw) {
-                currentStep = prevIndex
-            }
+            guard let prev = OnboardingStep(rawValue: currentStep.rawValue - 1) else { return }
+            // The first win is a one-way moment: back from the walk-through skips over it.
+            currentStep = (prev == .firstWin || prev == .firstReview) ? .firstVerse : prev
         }
     }
 
     func nextStep() {
         withAnimation {
-            var nextRaw = currentStep.rawValue + 1
-            // Skip steps that Apple already provided data for
-            while let candidate = OnboardingStep(rawValue: nextRaw),
-                  anySignIn && OnboardingStep.skippableWithAppleSignIn.contains(candidate) {
-                nextRaw += 1
-            }
-            if let nextIndex = OnboardingStep(rawValue: nextRaw) {
-                currentStep = nextIndex
-            }
+            if let next = OnboardingStep(rawValue: currentStep.rawValue + 1) { currentStep = next }
         }
+    }
+
+    /// Adds the chosen verse to Memory (or reuses the copy already there) and starts the review.
+    private func pickVerse(_ verse: OnbVerse) {
+        pickedVerse = verse
+        if let existing = appState.memoryVerses.first(where: { $0.reference == verse.ref }) {
+            pickedVerseId = existing.id
+        } else {
+            let memoryVerse = MemoryVerse(
+                id: UUID().uuidString, reference: verse.ref, text: verse.text, esvText: nil,
+                category: verse.theme, translation: "KJV",
+                lastFetched: AppDateFormatters.iso8601.string(from: Date()),
+                nextReviewDate: Date(), reviewCount: 0, easeFactor: 2.5, interval: 1,
+                isLearning: true, accuracy: nil, modeStats: nil)
+            appState.addMemoryVerse(memoryVerse)
+            pickedVerseId = memoryVerse.id
+        }
+        withAnimation { currentStep = .firstReview }
+    }
+
+    /// "Got it" on the first flashcard: schedule the next review, award the first XP,
+    /// start the streak, and celebrate.
+    private func finishFirstReview() {
+        if let id = pickedVerseId { appState.updateVerseReview(verseId: id, quality: 4) }
+        appState.addXP(15, source: "first-verse")
+        appState.recordActivity(.memory)
+        if let startedAt {
+            let seconds = Int(Date().timeIntervalSince(startedAt))
+            elapsedText = String(format: "%d:%02d", seconds / 60, seconds % 60)
+        }
+        withAnimation { currentStep = .firstWin }
     }
 
     /// Marks onboarding complete and optionally navigates to a specific tab.
     /// - Parameter tab: The tab index to land on (0=Home, 1=Learn, 2=Bible, 3=Memory). Defaults to Bible.
     func completeOnboarding(navigatingTo tab: Int = 2) {
         appState.user.onboardingCompleted = true
+        // New members get the same "Finish setting up this device" card on Home (widget,
+        // offline Bibles, and bringing verses over from another app). No reminders row:
+        // there is nothing to restore.
+        DeviceSetup.shared.activate(reminders: nil)
         // Seed the current version so What's New doesn't appear on a fresh install.
         AppVersionTracker.seedVersion()
         // Persist new user profile to Supabase if signed in via email/password.
@@ -156,77 +230,75 @@ struct OnboardingFlowView: View {
 
 struct WelcomeStepView: View {
     let onNext: () -> Void
+    var onHaveAccount: (() -> Void)? = nil
     @State private var animate = false
 
-    // Brand colors from the logo
+    // Brand: charcoal launch surface, cream mark, one coral action.
     private let creamColor = Color.reforgedBrandCream
-    private let subtitleColor = Color(red: 0.85, green: 0.83, blue: 0.80)
-    private let mutedColor = Color(red: 0.65, green: 0.63, blue: 0.60)
-    private let buttonBackgroundColor = Color.reforgedBrandCream
-    private let buttonTextColor = Color.reforgedCharcoal
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Main Content - Centered App Icon
-            VStack(spacing: 32) {
-                // App Icon from asset catalog
-                Image("AppIconImage")
+            VStack(spacing: 22) {
+                Image("BrandMarkCream")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 140, height: 140)
-                    .clipShape(RoundedRectangle(cornerRadius: 28))
-                    .shadow(color: Color.black.opacity(0.3), radius: 16, y: 8)
+                    .frame(width: 96, height: 96)
+                    .accessibilityHidden(true)
 
-                // Wordmark
                 Text("Reforged")
-                    .font(.system(size: 42, weight: .bold, design: .default))
-                    .tracking(2)
+                    .font(.custom("ArchivoBlack-Regular", size: 44))
+                    .tracking(0.5)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(creamColor)
 
-                // Quote
-                VStack(spacing: 16) {
-                    Text("\"Your word is a lamp to my feet\nand a light to my path.\"")
-                        .font(.system(size: 18, weight: .regular, design: .serif))
-                        .italic()
-                        .foregroundStyle(subtitleColor)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(6)
-
-                    Text("— Psalm 119:105")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.reforgedGold)
-                }
-                .padding(.top, 8)
+                Text("Read it. Memorize it. Live it.")
+                    .font(.system(size: 18))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(creamColor.opacity(0.72))
             }
+            .padding(.horizontal, 32)
             .opacity(animate ? 1 : 0)
             .offset(y: animate ? 0 : 20)
 
             Spacer()
 
-            // Bottom Section
-            VStack(spacing: 24) {
-                Text("Transform your faith through\nScripture study and memorization")
-                    .font(.subheadline)
-                    .foregroundStyle(mutedColor)
-                    .multilineTextAlignment(.center)
-
+            VStack(spacing: 12) {
                 Button(action: onNext) {
-                    Text("Get Started")
+                    Text("Get started")
                         .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(buttonTextColor)
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(buttonBackgroundColor)
-                        .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                        .frame(height: 54)
+                        .background(Capsule().fill(Color.reforgedCoral))
                 }
-                .padding(.horizontal, 32)
+                .buttonStyle(NoBlobButtonStyle())
+
+                if let onHaveAccount {
+                    Button(action: onHaveAccount) {
+                        Text("Sign in")
+                            .font(.headline)
+                            .foregroundStyle(creamColor)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(Capsule().fill(creamColor.opacity(0.12)))
+                    }
+                    .buttonStyle(NoBlobButtonStyle())
+                    .accessibilityHint("For people who already have a Reforged account")
+                }
+
+                Text("About a minute to set up")
+                    .font(.footnote)
+                    .foregroundStyle(creamColor.opacity(0.55))
+                    .padding(.top, 2)
             }
-            .padding(.bottom, 60)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
             .opacity(animate ? 1 : 0)
         }
+        .frame(maxWidth: 520)
+        .frame(maxWidth: .infinity)
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) {
                 animate = true
@@ -690,7 +762,7 @@ struct WalkTalksOnboardingStepView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 28) {
-                    Spacer().frame(height: 20)
+                    Spacer().frame(height: 64)
 
                     // Podcast artwork
                     AsyncImage(url: artworkURL) { phase in
@@ -718,7 +790,7 @@ struct WalkTalksOnboardingStepView: View {
                             .foregroundStyle(Color.adaptiveText(colorScheme))
                             .multilineTextAlignment(.center)
 
-                        Text("Reforged partners with **Southland Christian Camp** in Ringgold, LA to bring you Walk Talks — short, Scripture-focused episodes from Southland staff designed to strengthen your walk with God every week.")
+                        Text("Reforged partners with **Southland Christian Camp** in Ringgold, LA to bring you Walk Talks: short, Scripture-focused episodes from Southland staff designed to strengthen your walk with God every week.")
                             .font(.body)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                             .multilineTextAlignment(.center)
@@ -769,15 +841,13 @@ struct WalkTalksOnboardingStepView: View {
                 .frame(maxWidth: .infinity)
             }
 
-            Button {
+            ReturningPrimaryButton(title: "Continue") {
                 SettingsManager.shared.podcastNewEpisodeNotifications = notifyNewEpisodes
                 onNext()
-            } label: {
-                Text("Continue")
-                    .reforgedPrimaryButton()
             }
             .padding(.horizontal, 24)
-            .padding(.vertical, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 32)
         }
     }
 
@@ -833,7 +903,7 @@ struct FeatureOriginalLangStepView: View {
                             .foregroundStyle(Color.adaptiveText(colorScheme))
                             .multilineTextAlignment(.center)
 
-                        Text("The complete Greek NT and Hebrew OT are bundled — no download needed. Long-press any word to see its entry from the original text.")
+                        Text("The complete Greek NT and Hebrew OT are bundled, so no download is needed. Long-press any word to see its entry from the original text.")
                             .font(.subheadline)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                             .multilineTextAlignment(.center)
@@ -1166,6 +1236,11 @@ struct AuthStepView: View {
     var onExistingUser: (() -> Void)?
     var onSignedInWithApple: (() -> Void)?
     var onSignedInWithSupabase: (() -> Void)?
+    /// Deferred mode: shown at the END of new-user onboarding, once they have felt the value.
+    var deferred = false
+    /// For features that need a server session (Friends): an Apple sign-in whose Supabase
+    /// exchange fails is reported here instead of closing as if it had worked.
+    var requireSession = false
 
     @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
@@ -1189,14 +1264,23 @@ struct AuthStepView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Spacer().frame(height: 20)
+                Spacer().frame(height: 64)
 
                 // Header
-                Text(selectedTab == .signIn ? "Welcome Back" : "Create Account")
+                Text(deferred ? "Keep your progress safe." : (selectedTab == .signIn ? "Welcome Back" : "Create Account"))
                     .font(.title)
                     .fontWeight(.bold)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(Color.adaptiveText(colorScheme))
                     .animation(.none, value: selectedTab)
+
+                if deferred {
+                    Text("Create an account so your streak, verses and notes follow you to every device. It's free, ad-free, and private.")
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .padding(.horizontal, 32)
+                }
 
                 // Segmented tab
                 Picker("Auth", selection: $selectedTab) {
@@ -1281,8 +1365,13 @@ struct AuthStepView: View {
                     ZStack {
                         Button(action: handleEmailAuth) {
                             Text(selectedTab == .signIn ? "Sign In" : "Create Account")
-                                .reforgedPrimaryButton()
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 54)
+                                .background(Capsule().fill(Color.reforgedCoral))
                         }
+                        .buttonStyle(NoBlobButtonStyle())
                         .disabled(isLoading || email.isEmpty || password.isEmpty)
                         .opacity((isLoading || email.isEmpty || password.isEmpty) ? 0.6 : 1)
                         .padding(.horizontal, 24)
@@ -1312,24 +1401,26 @@ struct AuthStepView: View {
                     handleAppleSignInResult(result)
                 }
                 .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-                .frame(height: 50)
-                .clipShape(RoundedRectangle(cornerRadius: ReforgedTheme.cornerRadiusMedium))
+                .frame(height: 54)
+                .clipShape(Capsule())
                 .padding(.horizontal, 24)
                 .disabled(isLoading)
 
                 // Skip
                 Button(action: onNext) {
-                    Text("Skip for now")
+                    Text(deferred ? "Maybe later" : "Skip for now")
                         .font(.subheadline)
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
                 .disabled(isLoading)
+                .frame(minHeight: 44)
 
                 Spacer().frame(height: 20)
             }
             .frame(maxWidth: 500)
             .frame(maxWidth: .infinity)
         }
+        .onAppear { if deferred { selectedTab = .createAccount } }
     }
 
     // MARK: - Email Auth
@@ -1355,9 +1446,15 @@ struct AuthStepView: View {
             if selectedTab == .signIn {
                 let result = await supabase.signIn(email: email, password: password)
                 if result.success, let uid = result.userId {
-                    appState.signedInWithSupabase(userId: uid, email: email)
+                    // Returning account: skip every setup screen and go straight to restore.
+                    let isReturning = await appState.restoreSupabaseProfile(userId: uid, email: email)
                     onSignedInWithSupabase?()
-                    onNext()
+                    if isReturning {
+                        appState.isRestoringAccount = true
+                        onExistingUser?()
+                    } else {
+                        onNext()
+                    }
                 } else if let msg = result.errorMessage {
                     errorMessage = msg
                 }
@@ -1418,7 +1515,16 @@ struct AuthStepView: View {
                         onSignedInWithSupabase?()
                     } else {
                         debugLog("⚠️ Apple→Supabase exchange failed: \(supaResult.errorMessage ?? "unknown")")
+                        if requireSession {
+                            errorMessage = "Couldn't connect your account: \(supaResult.errorMessage ?? "unknown error")"
+                            isLoading = false
+                            return
+                        }
                     }
+                } else if requireSession {
+                    errorMessage = "Couldn't read your Apple credential. Please try again."
+                    isLoading = false
+                    return
                 }
 
                 let resolvedName  = fullName?.givenName ?? appleSignIn.userName
@@ -1456,10 +1562,15 @@ struct AuthStepView: View {
     private func handleSuccessfulAppleAuth(name: String?, email: String?) async {
         do {
             let cloudProfile = try await cloudKit.fetchProfile()
-            if let profile = cloudProfile, !profile.firstName.isEmpty {
-                await appState.performFullSync()
+            var isReturning = cloudProfile?.firstName.isEmpty == false
+            // iCloud may be empty on this device while the account already exists in Supabase.
+            if !isReturning, supabase.isSignedIn, let uid = supabase.userId {
+                isReturning = await appState.restoreSupabaseProfile(userId: uid, email: email ?? appleSignIn.userEmail ?? "")
+            }
+            if isReturning {
+                // The "Welcome back" screen pulls everything down; no setup questions.
+                appState.isRestoringAccount = true
                 appState.user.loggedIn = true
-                appState.user.onboardingCompleted = true
                 onExistingUser?()
             } else {
                 if let n = name, !n.isEmpty { appState.user.firstName = n; appState.user.displayName = n }
@@ -2175,7 +2286,7 @@ struct AIFeaturesStepView: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundStyle(Color.adaptiveText(colorScheme))
-                        Text("Uses Gemini AI — no data is stored")
+                        Text("Uses Gemini AI. No data is stored")
                             .font(.caption)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }

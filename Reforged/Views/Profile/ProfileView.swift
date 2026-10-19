@@ -92,7 +92,7 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity)
             } else {
                 // iPhone: Single column
-                VStack(spacing: 16) {
+                VStack(spacing: 24) {
                     ProfileHeader(user: appState.user, levelInfo: levelInfo)
                     StatsGrid(user: appState.user)
                     BadgesSection(badges: appState.user.badges)
@@ -134,7 +134,7 @@ struct ProfileHeader: View {
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     Text(user.displayName.isEmpty ? "Friend" : user.displayName)
-                        .font(.title2)
+                        .font(.title)
                         .fontWeight(.bold)
                     // Equipped emblem (crown shop) beside the name.
                     if let emblem = user.cosmetics.equipped[CosmeticCategory.emblem.rawValue]
@@ -177,13 +177,13 @@ struct ProfileHeader: View {
                                              geo.size.width * CGFloat(levelInfo.progress)))
                     }
                 }
-                .frame(height: 8)
+                .frame(height: 6)
 
                 HStack {
                     Text("\(levelInfo.xpInLevel) XP earned")
                         .foregroundStyle(Color.reforgedGold)
                     Spacer()
-                    Text("\(levelInfo.xpForNextLevel) XP to next level")
+                    Text("\(levelInfo.xpForNextLevel) to Level \(levelInfo.level + 1)")
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
                 .font(.caption)
@@ -193,10 +193,10 @@ struct ProfileHeader: View {
             .padding(.top, 2)
         }
         .padding(.horizontal)
-        .padding(.vertical, 20)
+        .padding(.vertical, 28)
         .frame(maxWidth: .infinity)
         .reforgedCard(hasBorder: false)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 }
 
@@ -204,65 +204,80 @@ struct ProfileHeader: View {
 
 struct StatsGrid: View {
     let user: UserProfile
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.colorScheme) var colorScheme
 
-    var columns: [GridItem] {
-        if horizontalSizeClass == .regular {
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        } else {
-            return [GridItem(.flexible()), GridItem(.flexible())]
+    var body: some View {
+        HStack(spacing: 0) {
+            ProfileStat(icon: "flame.fill", tint: .reforgedCoral, value: "\(user.streak)", label: "Streak")
+            statDivider
+            ProfileStat(icon: "trophy.fill", tint: .reforgedGold, value: "\(user.longestStreak)", label: "Best")
+            statDivider
+            ProfileStat(icon: "star.fill", tint: .reforgedGold, value: "\(user.xp)", label: "Total XP")
+            statDivider
+            ProfileStat(icon: "checkmark.circle.fill", tint: .reforgedGold, value: "\(user.completedLessons.count)", label: "Lessons")
         }
+        .padding(.vertical, 18)
+        .reforgedCard(hasBorder: false)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .accessibilityElement(children: .contain)
     }
 
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
-            ProfileStatCard(icon: "flame.fill", iconColor: .reforgedCoral, value: "\(user.streak)", label: "Day Streak")
-            ProfileStatCard(icon: "trophy.fill", iconColor: .reforgedGold, value: "\(user.longestStreak)", label: "Best Streak")
-            ProfileStatCard(icon: "star.fill", iconColor: Color.adaptivePrimaryIcon(colorScheme), value: "\(user.xp)", label: "Total XP")
-            ProfileStatCard(icon: "checkmark.circle.fill", iconColor: Color(red: 0.2, green: 0.6, blue: 0.4), value: "\(user.completedLessons.count)", label: "Lessons Done")
-        }
+    private var statDivider: some View {
+        Rectangle()
+            .fill(Color.adaptiveTextSecondary(colorScheme).opacity(0.15))
+            .frame(width: 1, height: 44)
     }
 }
 
-struct ProfileStatCard: View {
+struct ProfileStat: View {
     let icon: String
-    let iconColor: Color
+    let tint: Color
     let value: String
     let label: String
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        VStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(iconColor.opacity(0.12))
-                    .frame(width: 42, height: 42)
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(iconColor)
-            }
-
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(height: 20)
             Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .monospacedDigit()
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
-
             Text(label)
-                .font(.caption)
+                .font(.caption2)
                 .fontWeight(.medium)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .padding(.horizontal, 8)
-        .reforgedCard(hasBorder: false)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(iconColor.opacity(0.12), lineWidth: 1)
-        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label): \(value)")
+    }
+}
+
+struct ProfileSectionHeader: View {
+    let title: String
+    var trailing: String? = nil
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+            Spacer()
+            if let trailing {
+                Text(trailing)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+        }
+        .padding(.horizontal, 4)
     }
 }
 
@@ -291,8 +306,8 @@ struct BadgesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Badges")
-                .font(.headline)
+            ProfileSectionHeader(title: "Badges",
+                                 trailing: earnedBadges.isEmpty ? nil : "\(earnedBadges.count) of \(badges.count)")
 
             if earnedBadges.isEmpty {
                 Text("Complete lessons and activities to earn badges!")
@@ -301,7 +316,7 @@ struct BadgesSection: View {
                     .padding()
                     .frame(maxWidth: .infinity)
                     .reforgedCard(hasBorder: false)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             } else {
                 LazyVGrid(columns: badgeColumns, spacing: 12) {
                     ForEach(earnedBadges) { badge in
@@ -310,12 +325,13 @@ struct BadgesSection: View {
                 }
                 .padding()
                 .reforgedCard(hasBorder: false)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
 
             if !unearnedBadges.isEmpty {
                 Text("Locked (\(unearnedBadges.count))")
-                    .font(.subheadline)
+                    .font(.footnote).fontWeight(.medium)
+                    .padding(.horizontal, 4)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
                 LazyVGrid(columns: badgeColumns, spacing: 12) {
@@ -325,7 +341,7 @@ struct BadgesSection: View {
                 }
                 .padding()
                 .reforgedCard(hasBorder: false)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
         }
     }
@@ -363,8 +379,7 @@ struct PerksSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Perks")
-                .font(.headline)
+            ProfileSectionHeader(title: "Perks")
 
             if unlockedPerks.isEmpty {
                 Text("Level up and build streaks to unlock perks!")
@@ -373,7 +388,7 @@ struct PerksSection: View {
                     .padding()
                     .frame(maxWidth: .infinity)
                     .reforgedCard(hasBorder: false)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             } else {
                 VStack(spacing: 8) {
                     ForEach(unlockedPerks) { perk in
@@ -384,12 +399,13 @@ struct PerksSection: View {
                 }
                 .padding()
                 .reforgedCard(hasBorder: false)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
 
             if !lockedPerks.isEmpty {
                 Text("Locked (\(lockedPerks.count))")
-                    .font(.subheadline)
+                    .font(.footnote).fontWeight(.medium)
+                    .padding(.horizontal, 4)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
                 VStack(spacing: 8) {
@@ -399,7 +415,7 @@ struct PerksSection: View {
                 }
                 .padding()
                 .reforgedCard(hasBorder: false)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
         }
     }
@@ -475,10 +491,10 @@ struct PerkRow: View {
                         Text(perk.isActive ? "Active" : "Use")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundStyle(perk.isActive ? .white : Color.reforgedNavy)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(perk.isActive ? Color.reforgedNavy : Color.reforgedNavy.opacity(0.1))
+                            .foregroundStyle(perk.isActive ? Color.black : Color.reforgedGold)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(perk.isActive ? Color.reforgedGold : Color.reforgedGold.opacity(0.15))
                             .clipShape(Capsule())
                     }
                 }
@@ -497,25 +513,23 @@ struct ProfileSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Settings")
-                .font(.headline)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
+            ProfileSectionHeader(title: "Settings")
 
             VStack(spacing: 0) {
                 profileNavRow(
                     icon: "gearshape.fill",
-                    iconColor: Color.adaptiveNavyText(colorScheme),
-                    bgColor: Color.reforgedNavy.opacity(0.1),
+                    iconColor: .reforgedGold,
+                    bgColor: Color.reforgedGold,
                     title: "App Settings",
                     destination: AnyView(SettingsView())
                 )
 
-                Divider().padding(.leading, 58)
+                Divider().padding(.leading, 60)
 
                 profileNavRow(
                     icon: "questionmark.circle.fill",
-                    iconColor: .blue,
-                    bgColor: Color.blue.opacity(0.1),
+                    iconColor: .reforgedGold,
+                    bgColor: Color.reforgedGold,
                     title: "Help & Support",
                     destination: AnyView(
                         ScrollView {
@@ -527,27 +541,19 @@ struct ProfileSettingsSection: View {
                     )
                 )
 
-                Divider().padding(.leading, 58)
-
-                Button(action: { showLogoutAlert = true }) {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.red.opacity(0.1))
-                                .frame(width: 32, height: 32)
-                            Image(systemName: "rectangle.portrait.and.arrow.right.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color.red)
-                        }
-                        Text("Sign Out")
-                            .foregroundStyle(Color.red)
-                        Spacer()
-                    }
-                    .padding()
-                }
             }
             .reforgedCard(hasBorder: false)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+            Button(role: .destructive) { showLogoutAlert = true } label: {
+                Text("Sign Out")
+                    .font(.body.weight(.medium))
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.red)
+            .reforgedCard(hasBorder: false)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
 
@@ -556,14 +562,15 @@ struct ProfileSettingsSection: View {
         NavigationLink(destination: destination) {
             HStack(spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(bgColor)
-                        .frame(width: 32, height: 32)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(bgColor.opacity(0.14))
+                        .frame(width: 30, height: 30)
                     Image(systemName: icon)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(iconColor)
                 }
                 Text(title)
+                    .font(.body)
                     .foregroundStyle(Color.adaptiveText(colorScheme))
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -753,6 +760,7 @@ struct EditProfileSheet: View {
         appState.user.lastName = lastName
         appState.user.displayName = displayName
         appState.user.avatar = selectedAvatar
+        appState.user.identityDirty = true
 
         // Save profile image if a new one was selected
         if let image = selectedImage {
@@ -760,6 +768,10 @@ struct EditProfileSheet: View {
                 appState.user.profileImagePath = filename
             }
         }
+
+        // Push now rather than waiting on the debounce, so quitting right after an edit
+        // can't lose it.
+        Task { await appState.syncToCloud() }
     }
 }
 

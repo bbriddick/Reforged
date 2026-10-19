@@ -4,6 +4,9 @@ import Combine
 import WidgetKit
 #endif
 
+/// Milestones reported while pulling a returning user's data (drives the "Welcome back" screen).
+enum RestoreStage { case profile, memory, notes, tracks, unavailable }
+
 // MARK: - App State Manager
 
 @MainActor
@@ -12,6 +15,11 @@ class AppState: ObservableObject {
 
     @Published var user: UserProfile = .empty
     @Published var memoryVerses: [MemoryVerse] = []
+    /// Reference of a verse the member just added, so the Memory journey can expand its
+    /// unit and scroll to it. Cleared by the journey once it has been revealed.
+    @Published var journeyRevealRef: String?
+    /// A "memorize this verse with me" link that was opened; the Memory tab presents it.
+    @Published var pendingChallenge: VerseChallengeInvite?
     @Published var verseCollections: [VerseCollection] = []
     @Published var tracks: [Track] = []
     @Published var dailyInsight: DailyInsight?
@@ -23,6 +31,18 @@ class AppState: ObservableObject {
     @Published var isLoading = true
     @Published var hasSyncedFromCloud = false
     @Published var isSyncing = false
+    /// True while the "Welcome back" screen is restoring an account. Keeps the onboarding
+    /// container on screen even though loading the cloud profile marks onboarding complete.
+    @Published var isRestoringAccount = false
+    /// Preferences found in the cloud profile on the last sync (applied once, on restore).
+    var restoredPreferences: SyncedPreferences?
+
+    /// Anyone signed in with any provider can sync through iCloud (CloudKit), not only
+    /// Sign in with Apple. Email users used to be left out, so their verses, notes and
+    /// highlights never reached a second device.
+    var hasCloudIdentity: Bool {
+        appleSignIn.isSignedIn || SupabaseAuthService.shared.isSignedIn
+    }
     @Published var lastSyncDate: Date?
 
     // MARK: - Gamification Events
@@ -43,6 +63,9 @@ class AppState: ObservableObject {
     /// Set when the "streak unprotected" notification is tapped; the Memory tab
     /// consumes it by opening the streak sheet with the freeze section highlighted.
     @Published var pendingFreezePrompt = false
+    /// Set when the "something was blocked" notification is tapped; ContentView presents
+    /// I'm Being Tempted and clears it. A flag (not just a post) so it survives cold launch.
+    @Published var pendingTemptedSOS = false
     /// Crown award toast (see CrownStore.swift).
     @Published var showCrownGain = false
     @Published var lastCrownGain: Int = 0
@@ -320,8 +343,8 @@ class AppState: ObservableObject {
 
     // MARK: - Full Cloud Sync
 
-    func performFullSync() async {
-        guard appleSignIn.isSignedIn else { return }
+    func performFullSync(progress: ((RestoreStage) -> Void)? = nil) async {
+        guard hasCloudIdentity else { return }
 
         isSyncing = true
         defer { isSyncing = false }
@@ -331,6 +354,7 @@ class AppState: ObservableObject {
         guard cloudKit.isCloudAvailable else {
             debugLog("CloudKit not available, skipping sync")
             hasSyncedFromCloud = true
+            progress?(.unavailable)
             return
         }
 
@@ -344,6 +368,7 @@ class AppState: ObservableObject {
             } catch {
                 debugLog("☁️ Could not fetch cloud profile (\(error)) — skipping sync to avoid overwriting data")
                 hasSyncedFromCloud = true
+                progress?(.unavailable)
                 return
             }
 
@@ -362,10 +387,14 @@ class AppState: ObservableObject {
             } else {
                 // Normal sync: load from cloud
                 await loadProfileFromCloud()
+                progress?(.profile)
                 await loadMemoryVersesFromCloud()
+                progress?(.memory)
                 await loadHighlightsFromCloud()
                 await loadNotesFromCloud()
+                progress?(.notes)
                 await loadTrackProgressFromCloud()
+                progress?(.tracks)
             }
 
             lastSyncDate = Date()
@@ -380,14 +409,16 @@ class AppState: ObservableObject {
     }
 
     func syncToCloud() async {
+        var identityPushed = true
         // Apple Sign-In → CloudKit
-        if appleSignIn.isSignedIn, user.onboardingCompleted, hasSyncedFromCloud,
+        if hasCloudIdentity, user.onboardingCompleted, hasSyncedFromCloud,
            cloudKit.isCloudAvailable {
             do {
                 // Attach the full streak/reading history so it round-trips through the
                 // profile record (kept off `user` itself, which is the local-persisted copy).
                 var profileToSave = user
                 profileToSave.streakHistory = ReadingStreakManager.shared.exportHistory()
+                profileToSave.preferences = SyncedPreferences.capture()
                 try await cloudKit.saveProfile(profileToSave)
                 try await cloudKit.saveMemoryVerses(memoryVerses)
                 try await cloudKit.saveTrackProgress(tracks)
@@ -399,37 +430,53 @@ class AppState: ObservableObject {
                 debugLog("✅ CloudKit sync completed")
             } catch {
                 debugLog("❌ Error syncing to CloudKit: \(error)")
+                identityPushed = false
             }
         }
 
         // Supabase email/password sign-in
         if SupabaseAuthService.shared.isSignedIn, user.onboardingCompleted {
-            await SupabaseAuthService.shared.upsertProfile(user)
+            if await SupabaseAuthService.shared.upsertProfile(user) == false { identityPushed = false }
+            // Best-effort and independent of the main upsert (the column is optional).
+            await SupabaseAuthService.shared.savePreferences(SyncedPreferences.capture())
             lastSyncDate = Date()
         }
+
+        // Both stores now hold the edit, so later pulls may overwrite again.
+        if identityPushed, user.identityDirty { user.identityDirty = false }
     }
 
     // MARK: - Supabase Sign-In
 
     func signedInWithSupabase(userId: String, email: String) {
+        Task { _ = await restoreSupabaseProfile(userId: userId, email: email) }
+    }
+
+    /// Signs the identity into local state and merges the Supabase profile. Returns true
+    /// when this is a RETURNING account (a profile with a name or progress already
+    /// exists), so onboarding can skip every setup question. A brand-new sign-up has an
+    /// empty profile and returns false.
+    @discardableResult
+    func restoreSupabaseProfile(userId: String, email: String) async -> Bool {
         user.id      = userId
         user.email   = email
         user.loggedIn = true
-        Task {
-            if let remote = await SupabaseAuthService.shared.fetchProfile() {
-                if !remote.firstName.isEmpty   { user.firstName   = remote.firstName }
-                if !remote.displayName.isEmpty { user.displayName = remote.displayName }
-                if !remote.avatar.isEmpty      { user.avatar      = remote.avatar }
-                if !remote.goals.isEmpty       { user.goals       = remote.goals }
-                user.xp            = max(user.xp,            remote.xp)
-                user.streak        = max(user.streak,        remote.streak)
-                user.longestStreak = max(user.longestStreak, remote.longestStreak)
-                user.completedLessons = Array(
-                    Set(user.completedLessons).union(Set(remote.completedLessons))
-                )
-            }
-            // New user: profile will be upserted when onboarding completes
+        guard let remote = await SupabaseAuthService.shared.fetchProfile() else { return false }
+        // An unpushed local edit is newer than anything on the server.
+        if !user.identityDirty {
+            if !remote.firstName.isEmpty   { user.firstName   = remote.firstName }
+            if !remote.displayName.isEmpty { user.displayName = remote.displayName }
+            if !remote.avatar.isEmpty      { user.avatar      = remote.avatar }
         }
+        if !remote.goals.isEmpty       { user.goals       = remote.goals }
+        user.xp            = max(user.xp,            remote.xp)
+        user.streak        = max(user.streak,        remote.streak)
+        user.longestStreak = max(user.longestStreak, remote.longestStreak)
+        user.completedLessons = Array(
+            Set(user.completedLessons).union(Set(remote.completedLessons))
+        )
+        // New sign-ups have no first name or XP until onboarding finishes.
+        return !remote.firstName.isEmpty || remote.xp > 0
     }
 
     // MARK: - Profile Sync
@@ -437,11 +484,14 @@ class AppState: ObservableObject {
     private func loadProfileFromCloud() async {
         do {
             if let cloudProfile = try await cloudKit.fetchProfile() {
+                restoredPreferences = cloudProfile.preferences
                 // Update user from cloud data (prefer cloud values)
-                if !cloudProfile.firstName.isEmpty { user.firstName = cloudProfile.firstName }
-                if !cloudProfile.lastName.isEmpty { user.lastName = cloudProfile.lastName }
-                if !cloudProfile.displayName.isEmpty { user.displayName = cloudProfile.displayName }
-                if !cloudProfile.avatar.isEmpty { user.avatar = cloudProfile.avatar }
+                if !user.identityDirty {
+                    if !cloudProfile.firstName.isEmpty { user.firstName = cloudProfile.firstName }
+                    if !cloudProfile.lastName.isEmpty { user.lastName = cloudProfile.lastName }
+                    if !cloudProfile.displayName.isEmpty { user.displayName = cloudProfile.displayName }
+                    if !cloudProfile.avatar.isEmpty { user.avatar = cloudProfile.avatar }
+                }
                 if !cloudProfile.goals.isEmpty { user.goals = cloudProfile.goals }
                 // XP/level is a running counter, not a set: keep the higher total.
                 // Merge lifetime earned and spent separately; the spendable balance is
@@ -1051,6 +1101,8 @@ class AppState: ObservableObject {
             }
             checkUnitCrown(for: verse.reference)
         }
+        // Friends: report progress on verses shared with a friend.
+        SharedVersesStore.shared.didReview(memoryVerseId: verse.id)
     }
 
     /// 5 crowns the first time every verse in a learning-path unit reaches Familiar.
@@ -1143,8 +1195,13 @@ class AppState: ObservableObject {
         memoryVerses[index].modeStats = stats
     }
 
-    func addMemoryVerse(_ verse: MemoryVerse) {
+    /// `revealInJourney` is false for a curriculum lesson committing on completion, where the
+    /// journey should glide to the next step instead of the verse just finished.
+    func addMemoryVerse(_ verse: MemoryVerse, revealInJourney: Bool = true) {
+        FeatureUsage.record(.memoryVerseAdded)
         guard !memoryVerses.contains(where: { $0.reference == verse.reference }) else { return }
+        // Set first so the journey's count-change scroll sees a pending reveal.
+        if revealInJourney { journeyRevealRef = verse.reference }
         memoryVerses.append(verse)
         checkAndAwardBadges()
     }

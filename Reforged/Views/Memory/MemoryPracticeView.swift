@@ -4,6 +4,319 @@ private func normalizedVerseWords(from text: String) -> [String] {
     text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
 }
 
+// MARK: - Hub groups and rows (Home and Discipleship)
+
+/// A labelled group: a small caption above one bordered container of rows.
+struct HubGroup<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .tracking(0.8)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .padding(.leading, 4)
+            VStack(spacing: 0) { content() }
+                .practiceCard(radius: 18)
+        }
+    }
+}
+
+/// Divider that lines up with the text of `HubRowLabel`.
+struct HubDivider: View {
+    var body: some View { Divider().padding(.leading, 66) }
+}
+
+/// One row: icon chip, title, one line of context, optional accessory, chevron.
+struct HubRowLabel<Trailing: View>: View {
+    let icon: String
+    let tint: Color
+    let title: String
+    let subtitle: String
+    var showsChevron = true
+    @ViewBuilder let trailing: () -> Trailing
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 38, height: 38)
+                .background(tint.opacity(colorScheme == .dark ? 0.22 : 0.14),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            trailing()
+
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.6))
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(minHeight: 64)
+        .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Shared practice styling
+//
+// One visual language for every practice mode, matching the Memory tab's path:
+// content sits on bordered adaptive cards, actions are chunky 3D buttons with an
+// extruded lip, progress is a thick capsule bar, and accents are coral (action)
+// and gold (reward). `reforgedNavy` is deliberately avoided: it is charcoal and
+// disappears on dark cards.
+
+extension Color {
+    /// Success green shared with the lesson flow's Continue drawer.
+    static let practiceGreen = Color(red: 0.15, green: 0.65, blue: 0.35)
+
+    /// A deeper shade of this color, used for the extruded lip under 3D buttons and tiles.
+    func practiceBevel() -> Color {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard UIColor(self).getHue(&h, saturation: &s, brightness: &b, alpha: &a) else {
+            return self.opacity(0.7)
+        }
+        return Color(hue: Double(h), saturation: Double(min(1, s * 1.05)),
+                     brightness: Double(b * 0.72), opacity: Double(a))
+    }
+}
+
+/// A bordered card surface (the Memory tab's card treatment).
+private struct PracticeCardModifier: ViewModifier {
+    var radius: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        content
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
+    }
+}
+
+extension View {
+    func practiceCard(radius: CGFloat = 18) -> some View {
+        modifier(PracticeCardModifier(radius: radius))
+    }
+}
+
+/// Compact 3D press style for tiles and rating buttons: a colored face resting on a
+/// deeper lip that the face presses down onto. Unlike `Chunky3DButtonStyle` it adds no
+/// font or padding, so it fits four-across rows and grid cells.
+struct PracticeLipButtonStyle: ButtonStyle {
+    var face: Color
+    var lip: Color
+    var stroke: Color? = nil
+    var cornerRadius: CGFloat = 14
+    var depth: CGFloat = 4
+
+    func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        configuration.label
+            .background(
+                ZStack {
+                    shape.fill(lip).offset(y: pressed ? 1.5 : depth)
+                    shape.fill(face)
+                    if let stroke { shape.strokeBorder(stroke, lineWidth: 1) }
+                }
+            )
+            .offset(y: pressed ? depth : 0)
+            .padding(.bottom, depth)
+            .animation(.spring(response: 0.22, dampingFraction: 0.62), value: pressed)
+    }
+}
+
+/// The primary action in every practice mode. Coral and chunky when active; a flat
+/// gray lip when there is nothing to submit yet.
+struct PracticeButton: View {
+    let title: String
+    var icon: String? = nil
+    var enabled: Bool = true
+    var tint: Color = .reforgedCoral
+    let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let icon { Image(systemName: icon) }
+                Text(title)
+            }
+        }
+        .buttonStyle(Chunky3DButtonStyle(
+            backgroundColor: enabled ? tint : Color.adaptiveBorder(colorScheme),
+            bevelColor: enabled ? tint.practiceBevel() : Color.adaptiveBorder(colorScheme).practiceBevel(),
+            textColor: enabled ? .white : Color.adaptiveTextSecondary(colorScheme)
+        ))
+        .disabled(!enabled)
+        .padding(.horizontal)
+    }
+}
+
+/// Reference title with an optional one-line instruction beneath it.
+struct PracticeHeader: View {
+    let reference: String
+    var prompt: String? = nil
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(reference)
+                .font(.title2.bold())
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+            if let prompt {
+                Text(prompt)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+        .padding(.horizontal)
+    }
+}
+
+/// Thick segmented progress: gold for finished steps, coral for the current one.
+struct PracticeStepBar: View {
+    let total: Int
+    let completed: Int
+    var label: String? = nil
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                ForEach(0..<max(total, 1), id: \.self) { i in
+                    Capsule()
+                        .fill(i < completed ? Color.reforgedGold
+                              : (i == completed ? Color.reforgedCoral : Color.adaptiveBorder(colorScheme)))
+                        .frame(height: 8)
+                }
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: completed)
+
+            if let label {
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
+/// Small uppercase caption above a group, like the Memory tab's section labels.
+struct PracticeSectionLabel: View {
+    let text: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(.caption2.weight(.semibold))
+            .tracking(0.6)
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+    }
+}
+
+/// Outcome summary shown after a round: tinted card with an icon chip and title.
+struct PracticeResultBanner: View {
+    let icon: String
+    let tint: Color
+    let title: String
+    var subtitle: String? = nil
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(tint).frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.headline.bold())
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(tint.opacity(colorScheme == .dark ? 0.20 : 0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .stroke(tint.opacity(0.35), lineWidth: 1))
+        .padding(.horizontal)
+    }
+}
+
+/// "Again / Hard / Good / Easy" self-rating, the closing step of most modes.
+struct PracticeRatingRow: View {
+    var prompt: String? = "How well did you recall?"
+    var subtitled: Bool = false
+    let onRate: (Int) -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(spacing: 12) {
+            if let prompt {
+                Text(prompt)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            HStack(spacing: 10) {
+                RatingButton(label: "Again", color: .red, quality: 1, onRate: rate,
+                             subtitle: subtitled ? "I didn't know it" : nil)
+                RatingButton(label: "Hard", color: .orange, quality: 2, onRate: rate,
+                             subtitle: subtitled ? "I struggled" : nil)
+                RatingButton(label: "Good", color: Color.practiceGreen, quality: 4, onRate: rate,
+                             subtitle: subtitled ? "I knew it" : nil)
+                RatingButton(label: "Easy", color: .blue, quality: 5, onRate: rate,
+                             subtitle: subtitled ? "I knew it cold" : nil)
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private func rate(_ quality: Int) {
+        switch quality {
+        case 1: HapticManager.shared.incorrectAnswer()
+        case 2: HapticManager.shared.lightImpact()
+        default: HapticManager.shared.correctAnswer()
+        }
+        onRate(quality)
+    }
+}
+
 struct MemoryPracticeView: View {
     let verse: MemoryVerse
     let mode: MemoryMode
@@ -138,15 +451,17 @@ struct SwipeableFlashcard: View {
             // Front side (reference + prompt)
             FlashcardFront(verse: verse, colorScheme: colorScheme)
                 .opacity(isFlipped ? 0 : 1)
-
-            // Live swipe stamp
+        }
+        .scaleEffect(cardScale)
+        .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
+        // The stamp sits OUTSIDE the flip rotation: inside it, a flipped card mirrored
+        // the text, so "KNOWN" / "STILL LEARNING" read backward on the verse side.
+        .overlay {
             if let hint = swipeHint {
                 SwipeStamp(kind: hint)
                     .opacity(min(1, Double(abs(dragOffset.width) - 36) / 80))
             }
         }
-        .scaleEffect(cardScale)
-        .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
         .rotationEffect(.degrees(Double(dragOffset.width / 22)))
         .offset(dragOffset)
         .onTapGesture {
@@ -238,51 +553,34 @@ struct FlashcardPracticeView: View {
             })
 
             // Swipe hint
-            HStack(spacing: 16) {
-                Label("Still learning", systemImage: "arrow.left")
-                    .foregroundStyle(.red)
-                HStack(spacing: 4) {
-                    Text("Known")
-                    Image(systemName: "arrow.right")
-                }
-                .foregroundStyle(.green)
+            HStack(spacing: 10) {
+                swipeHintPill(icon: "arrow.left", text: "Still learning", tint: .red, iconLeading: true)
+                swipeHintPill(icon: "arrow.right", text: "Known", tint: Color.practiceGreen, iconLeading: false)
             }
-            .font(.caption)
-            .fontWeight(.medium)
 
             Spacer()
 
             // Optional finer rating once the card has been flipped to reveal the text.
             if hasFlipped {
-                VStack(spacing: 12) {
-                    Text("Or rate how well you recalled")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                    HStack(spacing: 10) {
-                        RatingButton(label: "Again", color: .red, quality: 1, onRate: { quality in
-                            HapticManager.shared.incorrectAnswer()
-                            onComplete(quality)
-                        }, subtitle: "I didn't know it")
-                        RatingButton(label: "Hard", color: .orange, quality: 2, onRate: { quality in
-                            HapticManager.shared.lightImpact()
-                            onComplete(quality)
-                        }, subtitle: "I struggled")
-                        RatingButton(label: "Good", color: .green, quality: 4, onRate: { quality in
-                            HapticManager.shared.correctAnswer()
-                            onComplete(quality)
-                        }, subtitle: "I knew it")
-                        RatingButton(label: "Easy", color: .blue, quality: 5, onRate: { quality in
-                            HapticManager.shared.correctAnswer()
-                            onComplete(quality)
-                        }, subtitle: "I knew it cold")
-                    }
-                }
-                .padding()
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                PracticeRatingRow(prompt: "Or rate how well you recalled", subtitled: true, onRate: onComplete)
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: hasFlipped)
+    }
+
+    private func swipeHintPill(icon: String, text: String, tint: Color, iconLeading: Bool) -> some View {
+        HStack(spacing: 6) {
+            if iconLeading { Image(systemName: icon) }
+            Text(text)
+            if !iconLeading { Image(systemName: icon) }
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(tint)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(tint.opacity(colorScheme == .dark ? 0.22 : 0.13), in: Capsule())
     }
 }
 
@@ -300,47 +598,58 @@ struct FlashcardFront: View {
         + (verse.text.components(separatedBy: " ").count > 8 ? " ..." : "")
     }
 
+    private var scheme: ColorScheme { colorScheme ?? .light }
+
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(Color.reforgedCoral.opacity(scheme == .dark ? 0.22 : 0.13))
+                    .frame(width: 56, height: 56)
+                Image(systemName: "book.closed.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(Color.reforgedCoral)
+            }
+
             Text(verse.reference)
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                .font(.title.bold())
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
 
             if settings.showFirstLetterHints {
-                Divider()
-
-                VStack(spacing: 12) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.title2)
-                        .foregroundStyle(Color.reforgedGold)
-
-                    Text("First letter hint:")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                VStack(spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundStyle(Color.reforgedGold)
+                        Text("FIRST LETTERS")
+                            .tracking(0.6)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    }
+                    .font(.caption2.weight(.semibold))
 
                     Text(firstLetters)
-                        .font(.headline)
-                        .fontWeight(.medium)
+                        .font(.headline.monospaced())
+                        .multilineTextAlignment(.center)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                 }
-                .padding(.vertical, 16)
+                .padding(14)
+                .frame(maxWidth: .infinity)
+                .background(Color.reforgedGold.opacity(scheme == .dark ? 0.16 : 0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             HStack(spacing: 6) {
                 Image(systemName: "hand.tap.fill")
-                    .font(.caption)
                 Text("Tap to flip")
-                    .font(.caption)
             }
+            .font(.caption.weight(.semibold))
             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: 280)
-        .padding(28)
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Color.reforgedNavy.opacity(0.15), radius: 20, y: 10)
+        .padding(24)
+        .practiceCard(radius: 22)
+        .shadow(color: Color.black.opacity(0.08), radius: 16, y: 8)
     }
 }
 
@@ -372,12 +681,12 @@ struct FlashcardBack: View {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "heart.fill")
                         .font(.caption)
-                        .foregroundStyle(Color.reforgedGold.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.9))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Your reflection")
                             .font(.caption2)
                             .fontWeight(.semibold)
-                            .foregroundStyle(Color.reforgedGold.opacity(0.7))
+                            .foregroundStyle(.white.opacity(0.85))
                         Text(note)
                             .font(.caption)
                             .italic()
@@ -390,16 +699,16 @@ struct FlashcardBack: View {
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: 280)
-        .padding(28)
+        .padding(24)
         .background(
             LinearGradient(
-                colors: [Color.reforgedNavy, Color.reforgedDarkBlue],
+                colors: [Color.reforgedCoral, Color.reforgedCoral.practiceBevel()],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Color.reforgedNavy.opacity(0.3), radius: 20, y: 10)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: Color.reforgedCoral.opacity(0.35), radius: 16, y: 8)
         .overlay(
             VStack {
                 Spacer()
@@ -407,7 +716,7 @@ struct FlashcardBack: View {
                     Spacer()
                     Image(systemName: "checkmark.seal.fill")
                         .font(.title2)
-                        .foregroundStyle(Color.reforgedGold.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.45))
                 }
             }
             .padding()
@@ -449,20 +758,9 @@ struct TapToRevealView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 20) {
-                        // Progress indicator
-                        HStack(spacing: 4) {
-                            ForEach(0..<phrases.count, id: \.self) { index in
-                                Circle()
-                                    .fill(index < revealedPhrases ? Color.reforgedGold : Color.adaptiveBorder(colorScheme))
-                                    .frame(width: 8, height: 8)
-                            }
-                        }
-                        .padding(.top)
+                        PracticeHeader(reference: verse.reference, prompt: "Recall each phrase, then reveal it")
 
-                        Text(verse.reference)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        PracticeStepBar(total: phrases.count, completed: revealedPhrases)
 
                         // Phrase container
                         VStack(alignment: .leading, spacing: 8) {
@@ -479,7 +777,7 @@ struct TapToRevealView: View {
                                     HStack(spacing: 4) {
                                         ForEach(0..<phrases[index].components(separatedBy: " ").count, id: \.self) { _ in
                                             RoundedRectangle(cornerRadius: 4)
-                                                .fill(Color.reforgedNavy.opacity(0.2))
+                                                .fill(Color.adaptiveBorder(colorScheme))
                                                 .frame(width: 40, height: 24)
                                         }
                                     }
@@ -488,9 +786,7 @@ struct TapToRevealView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(24)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(color: Color.black.opacity(0.08), radius: 12, y: 6)
+                        .practiceCard(radius: 20)
                         .padding(.horizontal)
                         .id("phraseContainer")
                     }
@@ -505,35 +801,13 @@ struct TapToRevealView: View {
 
             // Sticky bottom action area
             if showRating {
-                VStack(spacing: 12) {
-                    Text("How well did you recall?")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                    HStack(spacing: 10) {
-                        RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
-                        RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
-                        RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
-                        RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
-                    }
-                }
-                .padding()
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                PracticeRatingRow(onRate: onComplete)
+                    .padding(.vertical, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
-                Button(action: revealNextPhrase) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "hand.tap.fill")
-                        Text(revealedPhrases == 0 ? "Tap to Start" : "Reveal Next")
-                    }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .background(Color.reforgedNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 12)
+                PracticeButton(title: revealedPhrases == 0 ? "Tap to Start" : "Reveal Next",
+                               icon: "hand.tap.fill", action: revealNextPhrase)
+                    .padding(.vertical, 8)
             }
         }
     }
@@ -609,28 +883,14 @@ struct DragAndDropView: View {
         ZStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    Text(verse.reference)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                        .padding(.top)
+                    PracticeHeader(
+                        reference: verse.reference,
+                        prompt: hasMultipleSegments ? nil : "Tap words to fill the blanks, or drag them into place"
+                    )
 
                     if hasMultipleSegments {
-                        HStack(spacing: 4) {
-                            ForEach(0..<segments.count, id: \.self) { i in
-                                Capsule()
-                                    .fill(i < currentSegment ? Color.reforgedGold : (i == currentSegment ? Color.reforgedNavy : Color.adaptiveBorder(colorScheme)))
-                                    .frame(width: i == currentSegment ? 20 : 8, height: 8)
-                                    .animation(.spring(response: 0.3), value: currentSegment)
-                            }
-                            Text("Part \(currentSegment + 1) of \(segments.count)")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        }
-                    } else {
-                        Text("Tap words to fill the blanks, or drag them into place")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        PracticeStepBar(total: segments.count, completed: currentSegment,
+                                        label: "Part \(currentSegment + 1) of \(segments.count)")
                     }
 
                     // Verse with blanks
@@ -670,18 +930,14 @@ struct DragAndDropView: View {
                             }
                         }
                     }
-                    .padding()
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(18)
+                    .practiceCard()
                     .padding(.horizontal)
 
                     // Word bank
                     if !showResult {
                         VStack(spacing: 12) {
-                            Text("Word Bank")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            PracticeSectionLabel(text: "Word bank")
 
                             FlowLayout(spacing: 10) {
                                 ForEach(availableWords.filter { !$0.isUsed }) { word in
@@ -735,57 +991,37 @@ struct DragAndDropView: View {
                                 }
                             }
                         }
-                        .padding()
+                        .padding(16)
+                        .frame(maxWidth: .infinity)
                         .background(Color.adaptiveBorder(colorScheme).opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .padding(.horizontal)
                     }
 
                     if showResult {
                         VStack(spacing: 16) {
-                            HStack(spacing: 8) {
-                                Image(systemName: score == blanks.count ? "star.fill" : "checkmark.circle")
-                                    .foregroundStyle(score == blanks.count ? Color.reforgedGold : Color.green)
-                                Text("Score: \(score)/\(blanks.count)")
-                                    .font(.headline)
-                            }
+                            PracticeResultBanner(
+                                icon: score == blanks.count ? "star.fill" : "checkmark",
+                                tint: score == blanks.count ? Color.reforgedGold : Color.practiceGreen,
+                                title: "Score: \(score)/\(blanks.count)"
+                            )
 
                             if !isLastSegment {
-                                Button("Continue to Part \(currentSegment + 2)") {
+                                PracticeButton(title: "Continue to Part \(currentSegment + 2)") {
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                         currentSegment += 1
                                         setupBlanks()
                                     }
                                 }
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(Color.reforgedNavy)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .padding(.horizontal)
                             } else {
-                                HStack(spacing: 10) {
-                                    RatingButton(label: "Again", color: .red, quality: 1, onRate: onComplete)
-                                    RatingButton(label: "Hard", color: .orange, quality: 2, onRate: onComplete)
-                                    RatingButton(label: "Good", color: .green, quality: 4, onRate: onComplete)
-                                    RatingButton(label: "Easy", color: .blue, quality: 5, onRate: onComplete)
-                                }
+                                PracticeRatingRow(prompt: nil, onRate: onComplete)
                             }
                         }
-                        .padding()
+                        .padding(.vertical)
                     } else {
-                        Button("Check Answers") {
+                        PracticeButton(title: "Check Answers", enabled: allBlanksFilled) {
                             checkAnswers()
                         }
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(allBlanksFilled ? Color.reforgedNavy : Color.gray)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal)
-                        .disabled(!allBlanksFilled)
                     }
                 }
                 .padding(.bottom)
@@ -800,9 +1036,9 @@ struct DragAndDropView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(Color.reforgedNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .shadow(color: Color.black.opacity(0.3), radius: 8, y: 4)
+                    .background(Color.reforgedCoral)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .shadow(color: Color.reforgedCoral.opacity(0.4), radius: 8, y: 4)
                     .position(
                         x: dragOrigin.x + dragOffset.width,
                         y: dragOrigin.y + dragOffset.height
@@ -930,18 +1166,24 @@ struct DraggableWordTile: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
+        // Word-bank tile: a card face resting on a lip, like the Memory path's tokens.
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        let face = isSelected ? Color.reforgedCoral : Color.adaptiveCardBackground(colorScheme)
+        let lip = isSelected ? Color.reforgedCoral.practiceBevel() : Color.adaptiveBorder(colorScheme)
+
         Text(word.word)
-            .font(.subheadline)
-            .fontWeight(.medium)
-            .foregroundStyle(isSelected ? .white : Color.adaptiveNavyText(colorScheme))
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(isSelected ? Color.reforgedNavy : Color.reforgedGold.opacity(0.2))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? Color.reforgedNavy : Color.reforgedGold, lineWidth: isSelected ? 2 : 1)
+            .background(
+                ZStack {
+                    shape.fill(lip).offset(y: 3)
+                    shape.fill(face)
+                    shape.strokeBorder(isSelected ? Color.clear : Color.adaptiveBorder(colorScheme), lineWidth: 1)
+                }
             )
+            .padding(.bottom, 3)
             .scaleEffect(isSelected ? 1.05 : 1.0)
             .animation(.spring(response: 0.25), value: isSelected)
     }
@@ -965,10 +1207,11 @@ struct DropZone: View {
                 Text(filled)
                     .font(.body)
                     .fontWeight(.medium)
-                    .foregroundStyle(showResult ? (isCorrect ? .green : .red) : Color.adaptiveNavyText(colorScheme))
+                    .foregroundStyle(showResult ? (isCorrect ? Color.practiceGreen : .red) : Color.adaptiveText(colorScheme))
             } else {
                 Text(String(repeating: "_", count: max(correctWord.count, 4)))
                     .font(.body)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
             }
         }
         .frame(minWidth: CGFloat(max(correctWord.count, 5)) * 10)
@@ -976,17 +1219,17 @@ struct DropZone: View {
         .padding(.vertical, 6)
         .background(
             showResult
-                ? (isCorrect ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
-                : (isHighlighted ? Color.reforgedGold.opacity(0.3) : Color.reforgedNavy.opacity(0.1))
+                ? (isCorrect ? Color.practiceGreen.opacity(0.15) : Color.red.opacity(0.15))
+                : (isHighlighted ? Color.reforgedGold.opacity(0.25) : Color.adaptiveBorder(colorScheme).opacity(0.6))
         )
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(
                     showResult
-                        ? (isCorrect ? Color.green : Color.red)
-                        : (isHighlighted ? Color.reforgedGold : Color.reforgedNavy.opacity(0.3)),
-                    lineWidth: isHighlighted ? 2 : 1
+                        ? (isCorrect ? Color.practiceGreen : Color.red)
+                        : (isHighlighted ? Color.reforgedGold : Color.clear),
+                    lineWidth: 2
                 )
         )
         .contentShape(Rectangle())
@@ -1034,28 +1277,14 @@ struct FillInBlankView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Text(verse.reference)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                    .padding(.top)
+                PracticeHeader(
+                    reference: verse.reference,
+                    prompt: hasMultipleSegments ? nil : "Type the missing words"
+                )
 
                 if hasMultipleSegments {
-                    HStack(spacing: 4) {
-                        ForEach(0..<segments.count, id: \.self) { i in
-                            Capsule()
-                                .fill(i < currentSegment ? Color.reforgedGold : (i == currentSegment ? Color.reforgedNavy : Color.adaptiveBorder(colorScheme)))
-                                .frame(width: i == currentSegment ? 20 : 8, height: 8)
-                                .animation(.spring(response: 0.3), value: currentSegment)
-                        }
-                        Text("Part \(currentSegment + 1) of \(segments.count)")
-                            .font(.caption)
-                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    }
-                } else {
-                    Text("Type the missing words")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    PracticeStepBar(total: segments.count, completed: currentSegment,
+                                    label: "Part \(currentSegment + 1) of \(segments.count)")
                 }
 
                 // Verse with blanks
@@ -1078,46 +1307,31 @@ struct FillInBlankView: View {
                         }
                     }
                 }
-                .padding()
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(18)
+                .practiceCard()
                 .padding(.horizontal)
 
                 if showResult {
                     VStack(spacing: 16) {
-                        HStack(spacing: 8) {
-                            Image(systemName: score == blanks.count ? "star.fill" : "checkmark.circle")
-                                .foregroundStyle(score == blanks.count ? Color.reforgedGold : Color.green)
-                            Text("Score: \(score)/\(blanks.count)")
-                                .font(.headline)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                        }
+                        PracticeResultBanner(
+                            icon: score == blanks.count ? "star.fill" : "checkmark",
+                            tint: score == blanks.count ? Color.reforgedGold : Color.practiceGreen,
+                            title: "Score: \(score)/\(blanks.count)"
+                        )
 
                         if !isLastSegment {
-                            Button("Continue to Part \(currentSegment + 2)") {
+                            PracticeButton(title: "Continue to Part \(currentSegment + 2)") {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                     currentSegment += 1
                                     hintUsed = false
                                     setupBlanks()
                                 }
                             }
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.reforgedNavy)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .padding(.horizontal)
                         } else {
-                            HStack(spacing: 10) {
-                                RatingButton(label: "Again", color: .red, quality: 1, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                                RatingButton(label: "Hard", color: .orange, quality: 2, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                                RatingButton(label: "Good", color: .green, quality: 4, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                                RatingButton(label: "Easy", color: .blue, quality: 5, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                            }
+                            PracticeRatingRow(prompt: nil, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
                         }
                     }
-                    .padding()
+                    .padding(.vertical)
                 } else {
                     HintButton(hintUsed: hintUsed) {
                         if let i = userInputs.indices.first(where: { userInputs[$0].isEmpty }),
@@ -1128,16 +1342,9 @@ struct FillInBlankView: View {
                     }
                     .padding(.horizontal)
 
-                    Button("Check Answers") {
+                    PracticeButton(title: "Check Answers") {
                         checkAnswers()
                     }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.reforgedNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding(.horizontal)
                 }
             }
             .padding(.bottom)
@@ -1198,14 +1405,15 @@ struct BlankField: View {
             .padding(.vertical, 6)
             .background(
                 showResult
-                    ? (isCorrect ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
-                    : Color.adaptiveBorder(colorScheme)
+                    ? (isCorrect ? Color.practiceGreen.opacity(0.15) : Color.red.opacity(0.15))
+                    : Color.adaptiveBorder(colorScheme).opacity(0.6)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(showResult ? (isCorrect ? Color.green : Color.red) : Color.reforgedNavy, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(showResult ? (isCorrect ? Color.practiceGreen : Color.red)
+                            : Color.adaptiveTextSecondary(colorScheme).opacity(0.35), lineWidth: 1.5)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .disabled(showResult)
     }
 }
@@ -1266,7 +1474,7 @@ struct FirstLetterView: View {
     private var gradeColor: Color {
         switch quality {
         case 5: return Color.reforgedGold
-        case 4, 3: return .green
+        case 4, 3: return Color.practiceGreen
         case 2: return .orange
         default: return .red
         }
@@ -1275,25 +1483,20 @@ struct FirstLetterView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                Text(verse.reference)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                    .padding(.top)
+                PracticeHeader(
+                    reference: verse.reference,
+                    prompt: showResult ? nil : "Type the first letter of each word. Every letter reveals the next word."
+                )
 
                 if showResult {
                     resultSection
                 } else {
-                    Text("Type the first letter of each word. Every letter reveals the next word.")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .padding(.horizontal)
-
                     Text("\(min(revealedCount, words.count)) / \(words.count) words")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.reforgedGold)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.reforgedGold.opacity(colorScheme == .dark ? 0.2 : 0.12), in: Capsule())
                 }
 
                 // Word grid — reveals whole words as letters are committed.
@@ -1306,15 +1509,14 @@ struct FirstLetterView: View {
                         )
                     }
                 }
-                .padding()
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(18)
+                .practiceCard()
                 .padding(.horizontal)
                 .contentShape(Rectangle())
                 .onTapGesture { if !showResult { isFocused = true } }
 
                 if showResult {
-                    Button("Continue") {
+                    PracticeButton(title: "Continue") {
                         appState.recordFirstLetterAttempt(
                             verseId: verse.id,
                             correct: correctAttempts,
@@ -1322,13 +1524,6 @@ struct FirstLetterView: View {
                         )
                         onComplete(quality)
                     }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.reforgedNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding(.horizontal)
                 } else {
                     HStack(spacing: 12) {
                         Image(systemName: "keyboard")
@@ -1385,28 +1580,23 @@ struct FirstLetterView: View {
     @ViewBuilder
     private var resultSection: some View {
         VStack(spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: quality >= 5 ? "star.fill" : (quality >= 3 ? "checkmark.circle.fill" : "arrow.counterclockwise.circle.fill"))
-                    .foregroundStyle(gradeColor)
-                Text(gradeLabel)
-                    .font(.headline)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-            }
-
-            Text("\(correctAttempts) correct in \(attempts) attempt\(attempts == 1 ? "" : "s") · \(Int(accuracy * 100))%")
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            PracticeResultBanner(
+                icon: quality >= 5 ? "star.fill" : (quality >= 3 ? "checkmark" : "arrow.counterclockwise"),
+                tint: gradeColor,
+                title: gradeLabel,
+                subtitle: "\(correctAttempts) correct in \(attempts) attempt\(attempts == 1 ? "" : "s") · \(Int(accuracy * 100))%"
+            )
 
             Text("\"\(verse.text)\"")
                 .font(.body)
                 .italic()
+                .lineSpacing(4)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
-                .padding()
+                .padding(16)
                 .frame(maxWidth: .infinity)
-                .background(gradeColor.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .practiceCard(radius: 16)
+                .padding(.horizontal)
         }
-        .padding(.horizontal)
     }
 
     private func chipState(at index: Int) -> WordRevealChip.State {
@@ -1419,7 +1609,7 @@ struct FirstLetterView: View {
     private var inputFeedbackColor: Color {
         switch inputFeedback {
         case .neutral: return Color.adaptiveBorder(colorScheme)
-        case .correct: return Color.green
+        case .correct: return Color.practiceGreen
         case .incorrect: return Color.reforgedCoral
         }
     }
@@ -1489,9 +1679,9 @@ struct WordRevealChip: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(borderColor, lineWidth: state == .current ? 2 : 0)
             )
     }
@@ -1499,8 +1689,8 @@ struct WordRevealChip: View {
     private var foregroundColor: Color {
         switch state {
         case .upcoming: return Color.adaptiveTextSecondary(colorScheme).opacity(0.5)
-        case .current: return Color.adaptivePrimaryIcon(colorScheme)
-        case .correct: return .green
+        case .current: return Color.reforgedCoral
+        case .correct: return Color.practiceGreen
         case .incorrect: return .red
         }
     }
@@ -1508,14 +1698,14 @@ struct WordRevealChip: View {
     private var backgroundColor: Color {
         switch state {
         case .upcoming: return .clear
-        case .current: return Color.adaptivePrimaryIcon(colorScheme).opacity(0.10)
-        case .correct: return Color.green.opacity(0.12)
+        case .current: return Color.reforgedCoral.opacity(0.12)
+        case .correct: return Color.practiceGreen.opacity(0.14)
         case .incorrect: return Color.red.opacity(0.12)
         }
     }
 
     private var borderColor: Color {
-        state == .current ? Color.adaptivePrimaryIcon(colorScheme) : .clear
+        state == .current ? Color.reforgedCoral : .clear
     }
 }
 
@@ -1535,94 +1725,75 @@ struct TypingPracticeView: View {
         return words.prefix(3).joined(separator: " ") + "..."
     }
 
+    private var accuracyTint: Color {
+        accuracy >= 0.9 ? Color.reforgedGold : (accuracy >= 0.7 ? Color.practiceGreen : Color.orange)
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Text(verse.reference)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                    .padding(.top)
-
-                Text("Type the verse from memory")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                PracticeHeader(reference: verse.reference, prompt: "Type the verse from memory")
 
                 if hintUsed {
-                    Text("Starts with: \"\(hintWords)\"")
-                        .font(.caption)
-                        .italic()
-                        .foregroundStyle(Color.reforgedGold)
-                        .padding(.horizontal)
-                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                    HStack(spacing: 8) {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundStyle(Color.reforgedGold)
+                        Text("Starts with: \"\(hintWords)\"")
+                            .italic()
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.reforgedGold.opacity(colorScheme == .dark ? 0.2 : 0.12), in: Capsule())
+                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
                 }
 
                 TextEditor(text: $userText)
                     .frame(minHeight: 180)
-                    .padding()
+                    .padding(14)
                     .scrollContentBackground(.hidden)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-                    )
+                    .practiceCard(radius: 18)
                     .disabled(showResult)
                     .padding(.horizontal)
 
                 if showResult {
                     VStack(spacing: 16) {
-                        HStack(spacing: 8) {
-                            Image(systemName: accuracy >= 0.9 ? "star.fill" : "checkmark.circle")
-                                .foregroundStyle(accuracy >= 0.9 ? Color.reforgedGold : (accuracy >= 0.7 ? Color.green : Color.orange))
-                            Text("Accuracy: \(Int(accuracy * 100))%")
-                                .font(.headline)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                        }
+                        PracticeResultBanner(
+                            icon: accuracy >= 0.9 ? "star.fill" : "checkmark",
+                            tint: accuracyTint,
+                            title: "Accuracy: \(Int(accuracy * 100))%"
+                        )
 
-                        VStack(spacing: 8) {
-                            Text("Correct verse:")
-                                .font(.caption)
-                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        VStack(alignment: .leading, spacing: 8) {
+                            PracticeSectionLabel(text: "Correct verse")
 
                             Text("\"\(verse.text)\"")
                                 .font(.body)
                                 .italic()
+                                .lineSpacing(4)
                                 .foregroundStyle(Color.adaptiveText(colorScheme))
-                                .padding()
-                                .background(Color.green.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .practiceCard(radius: 16)
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
 
-                    HStack(spacing: 10) {
-                        RatingButton(label: "Again", color: .red, quality: 1, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                        RatingButton(label: "Hard", color: .orange, quality: 2, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                        RatingButton(label: "Good", color: .green, quality: 4, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                        RatingButton(label: "Easy", color: .blue, quality: 5, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
-                    }
-                    .padding()
+                    PracticeRatingRow(prompt: nil, onRate: { onComplete(hintUsed ? min($0, 2) : $0) })
+                        .padding(.vertical, 4)
                 } else {
                     HintButton(hintUsed: hintUsed) {
                         withAnimation(.easeIn(duration: 0.2)) { hintUsed = true }
                     }
                     .padding(.horizontal)
 
-                    Button("Check Answer") {
+                    PracticeButton(title: "Check Answer", enabled: !userText.isEmpty) {
                         calculateAccuracy()
                         withAnimation {
                             showResult = true
                         }
                     }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(userText.isEmpty ? Color.gray : Color.reforgedNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding(.horizontal)
-                    .disabled(userText.isEmpty)
                 }
             }
             .padding(.bottom)
@@ -1654,23 +1825,22 @@ struct TypingPracticeView: View {
 struct HintButton: View {
     let hintUsed: Bool
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: hintUsed ? {} : action) {
             HStack(spacing: 6) {
                 Image(systemName: hintUsed ? "lightbulb.fill" : "lightbulb")
                     .font(.subheadline)
-                    .foregroundStyle(hintUsed ? Color.reforgedGold : Color.secondary)
                 Text(hintUsed ? "Hint used — max rating: Hard" : "Get a Hint")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(hintUsed ? Color.reforgedGold : Color.secondary)
+                    .font(.caption.weight(.semibold))
             }
+            .foregroundStyle(hintUsed ? Color.reforgedGold : Color.adaptiveTextSecondary(colorScheme))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(hintUsed ? Color.reforgedGold.opacity(0.1) : Color.secondary.opacity(0.08))
+            .background(hintUsed ? Color.reforgedGold.opacity(0.12) : Color.adaptiveCardBackground(colorScheme))
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(hintUsed ? Color.reforgedGold.opacity(0.4) : Color.secondary.opacity(0.25), lineWidth: 1))
+            .overlay(Capsule().stroke(hintUsed ? Color.reforgedGold.opacity(0.45) : Color.adaptiveBorder(colorScheme), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .disabled(hintUsed)
@@ -1691,12 +1861,12 @@ struct RatingButton: View {
             VStack(spacing: 2) {
                 Text(label)
                     .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                     .foregroundStyle(.white)
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.85))
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1704,9 +1874,8 @@ struct RatingButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, subtitle != nil ? 10 : 14)
-            .background(color)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
+        .buttonStyle(PracticeLipButtonStyle(face: color, lip: color.practiceBevel(), depth: 4))
     }
 }
 

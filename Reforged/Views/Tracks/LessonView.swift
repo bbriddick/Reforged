@@ -23,15 +23,25 @@ struct LessonView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Progress Bar
-            ProgressView(value: progress)
-                .tint(Color.reforgedGold)
-                .padding(.horizontal)
-                .padding(.top, 8)
-            
             if lessonComplete {
                 LessonCompleteView(lesson: lesson, onDismiss: { dismiss() })
             } else if let content = currentContent {
+            // Progress bar: the same thick gold bar as the daily memory lesson.
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.adaptiveBorder(colorScheme)).frame(height: 12)
+                    Capsule()
+                        .fill(LinearGradient(colors: [Color.reforgedGold, Color.orange],
+                                             startPoint: .leading, endPoint: .trailing))
+                        .frame(width: geo.size.width * CGFloat(progress), height: 12)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: progress)
+                }
+            }
+            .frame(height: 12)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+            
                 ScrollView {
                     VStack(spacing: 24) {
                         contentView(for: content)
@@ -39,36 +49,45 @@ struct LessonView: View {
                     .padding()
                 }
                 
-                // Navigation Buttons
-                HStack(spacing: 16) {
+                // Navigation buttons: chunky 3D, like the rest of Memory.
+                HStack(spacing: 12) {
                     if currentContentIndex > 0 {
-                        Button(action: previousContent) {
-                            HStack {
-                                Image(systemName: "chevron.left")
-                                Text("Back")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.adaptiveCardBackground(colorScheme))
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        Button {
+                            HapticManager.shared.buttonTap()
+                            previousContent()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.headline.bold())
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                                .padding(.vertical, 16)
+                                .padding(.horizontal, 22)
                         }
+                        .buttonStyle(PracticeLipButtonStyle(
+                            face: Color.adaptiveCardBackground(colorScheme),
+                            lip: Color.adaptiveBorder(colorScheme),
+                            stroke: Color.adaptiveBorder(colorScheme),
+                            cornerRadius: 16, depth: 5))
+                        .accessibilityLabel("Back")
                     }
-                    
-                    Button(action: nextContent) {
-                        HStack {
+
+                    Button {
+                        HapticManager.shared.buttonTap()
+                        nextContent()
+                    } label: {
+                        HStack(spacing: 8) {
                             Text(currentContentIndex == lesson.content.count - 1 ? "Complete" : "Continue")
                             Image(systemName: "chevron.right")
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(canProceed ? Color.reforgedNavy : Color.adaptiveBorder(colorScheme))
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .buttonStyle(Chunky3DButtonStyle(
+                        backgroundColor: canProceed ? Color.reforgedCoral : Color.adaptiveBorder(colorScheme),
+                        bevelColor: canProceed ? Color.reforgedCoral.practiceBevel()
+                            : Color.adaptiveBorder(colorScheme).practiceBevel(),
+                        textColor: canProceed ? .white : Color.adaptiveTextSecondary(colorScheme)))
                     .disabled(!canProceed)
                 }
-                .padding()
+                .padding(.horizontal)
+                .padding(.vertical, 8)
             }
         }
         .background(Color.adaptiveBackground(colorScheme))
@@ -175,25 +194,29 @@ struct ScriptureContentView: View {
     private var displayText: String { fetchedText ?? content.text }
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "book.fill")
-                .font(.largeTitle)
-                .foregroundStyle(Color.reforgedGold)
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(Color.reforgedCoral.opacity(colorScheme == .dark ? 0.22 : 0.13))
+                    .frame(width: 60, height: 60)
+                Image(systemName: "book.closed.fill")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(Color.reforgedCoral)
+            }
 
             Text(content.reference)
-                .font(.headline)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .font(.title3.bold())
+                .foregroundStyle(Color.adaptiveText(colorScheme))
 
             ZStack {
-                Text("\"\(displayText)\"")
-                    .font(.title3)
-                    .italic()
+                Text("\u{201C}\(displayText)\u{201D}")
+                    .font(Font.custom("LibreBaskerville-Italic", size: 19))
+                    .lineSpacing(9)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color.adaptiveText(colorScheme).opacity(isFetching ? 0.4 : 1))
-                    .padding()
+                    .padding(24)
                     .frame(maxWidth: .infinity)
-                    .background(Color.adaptiveCardBackground(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .practiceCard(radius: 22)
 
                 if isFetching {
                     ProgressView()
@@ -202,10 +225,14 @@ struct ScriptureContentView: View {
             }
 
             Text(settings.defaultTranslation.rawValue)
-                .font(.caption)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .font(.caption.bold())
+                .tracking(0.6)
+                .foregroundStyle(Color.reforgedGold)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.reforgedGold.opacity(0.12), in: Capsule())
         }
-        .padding()
+        .padding(.vertical)
         .task(id: settings.defaultTranslation) {
             await fetchVerse(translation: settings.defaultTranslation)
         }
@@ -258,9 +285,9 @@ struct ExplanationContentView: View {
                 .lineSpacing(6)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
         }
-        .padding()
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .practiceCard(radius: 20)
     }
 }
 
@@ -278,10 +305,9 @@ struct QuestionContentView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 22) {
             Text(content.question)
-                .font(.title3)
-                .fontWeight(.semibold)
+                .font(.title3.bold())
                 .foregroundStyle(Color.adaptiveText(colorScheme))
 
             if !shuffledOptions.isEmpty {
@@ -295,6 +321,11 @@ struct QuestionContentView: View {
                         ) {
                             if !showExplanation {
                                 selectedAnswer = option.id
+                                if option.id == content.correctAnswer {
+                                    HapticManager.shared.correctAnswer()
+                                } else {
+                                    HapticManager.shared.incorrectAnswer()
+                                }
                                 withAnimation(.easeInOut(duration: 0.3)) {
                                     showExplanation = true
                                 }
@@ -305,27 +336,32 @@ struct QuestionContentView: View {
             }
 
             if showExplanation {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundStyle(isCorrect ? Color.green : Color.red)
+                let tint = isCorrect ? Color.practiceGreen : Color.red
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: isCorrect ? "checkmark" : "xmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(tint, in: Circle())
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(isCorrect ? "Correct!" : "Not quite")
-                            .fontWeight(.semibold)
-                            .foregroundStyle(isCorrect ? Color.green : Color.red)
+                            .font(.headline.bold())
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text(content.explanation)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
-
-                    Text(content.explanation)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    Spacer(minLength: 0)
                 }
-                .padding()
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(tint.opacity(colorScheme == .dark ? 0.20 : 0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(tint.opacity(0.35), lineWidth: 1))
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .padding()
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
         .onAppear {
             if shuffledOptions.isEmpty, let options = content.options {
                 shuffledOptions = options.shuffled()
@@ -339,6 +375,7 @@ struct QuestionContentView: View {
     }
 }
 
+/// An answer choice: a card on a lip that presses down, tinted green or red once answered.
 struct AnswerButton: View {
     let option: AnswerChoice
     let isSelected: Bool
@@ -347,52 +384,22 @@ struct AnswerButton: View {
     let action: () -> Void
     @Environment(\.colorScheme) var colorScheme
 
-    var backgroundColor: Color {
-        if !showResult {
-            return isSelected ? Color.reforgedNavy.opacity(0.1) : Color.adaptiveCardBackground(colorScheme)
+    private var tint: Color? {
+        if showResult {
+            if isCorrect { return Color.practiceGreen }
+            if isSelected { return Color.red }
+            return nil
         }
-        if isCorrect {
-            return Color.green.opacity(0.1)
-        }
-        if isSelected && !isCorrect {
-            return Color.red.opacity(0.1)
-        }
-        return Color.adaptiveCardBackground(colorScheme)
-    }
-
-    var borderColor: Color {
-        if !showResult {
-            return isSelected ? Color.reforgedNavy : .clear
-        }
-        if isCorrect {
-            return .green
-        }
-        if isSelected && !isCorrect {
-            return .red
-        }
-        return .clear
+        return isSelected ? Color.reforgedCoral : nil
     }
 
     var radioIcon: String {
         if showResult {
-            if isCorrect {
-                return "checkmark.circle.fill"
-            }
-            if isSelected {
-                return "xmark.circle.fill"
-            }
+            if isCorrect { return "checkmark.circle.fill" }
+            if isSelected { return "xmark.circle.fill" }
             return "circle"
         }
         return isSelected ? "largecircle.fill.circle" : "circle"
-    }
-
-    var radioColor: Color {
-        if showResult {
-            if isCorrect { return .green }
-            if isSelected { return .red }
-            return Color.adaptiveTextSecondary(colorScheme)
-        }
-        return isSelected ? Color.reforgedNavy : Color.adaptiveTextSecondary(colorScheme)
     }
 
     var body: some View {
@@ -400,23 +407,30 @@ struct AnswerButton: View {
             HStack(spacing: 14) {
                 Image(systemName: radioIcon)
                     .font(.title3)
-                    .foregroundStyle(radioColor)
+                    .foregroundStyle(tint ?? Color.adaptiveTextSecondary(colorScheme))
 
                 Text(option.text)
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.adaptiveText(colorScheme))
                     .multilineTextAlignment(.leading)
 
-                Spacer()
+                Spacer(minLength: 0)
             }
-            .padding()
-            .background(backgroundColor)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background((tint ?? .clear).opacity(colorScheme == .dark ? 0.20 : 0.12),
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(borderColor, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(tint ?? .clear, lineWidth: 2)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        .buttonStyle(PracticeLipButtonStyle(
+            face: Color.adaptiveCardBackground(colorScheme),
+            lip: tint?.opacity(0.55) ?? Color.adaptiveBorder(colorScheme),
+            stroke: tint == nil ? Color.adaptiveBorder(colorScheme) : nil,
+            cornerRadius: 16, depth: 4))
         .disabled(showResult)
     }
 }
@@ -430,97 +444,64 @@ struct ReflectionContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
+            HStack(spacing: 12) {
                 Image(systemName: "pencil.line")
-                    .foregroundStyle(Color.reforgedGold)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(Color.reforgedCoral, in: Circle())
                 Text("Reflection")
-                    .font(.headline)
+                    .font(.title3.bold())
                     .foregroundStyle(Color.adaptiveText(colorScheme))
             }
 
             Text(content.prompt)
                 .font(.body)
+                .lineSpacing(4)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
             TextEditor(text: $text)
                 .frame(minHeight: 150)
-                .padding(8)
+                .padding(10)
                 .scrollContentBackground(.hidden)
                 .background(Color.adaptiveBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
         }
-        .padding()
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(20)
+        .practiceCard(radius: 20)
     }
 }
 
 // MARK: - Lesson Complete View
+//
+// The same full-screen reward stage the daily memory lesson ends on.
 
 struct LessonCompleteView: View {
     let lesson: Lesson
     let onDismiss: () -> Void
-    @Environment(\.colorScheme) var colorScheme
-    @State private var showConfetti = false
-    @State private var sealScale: CGFloat = 0.6
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(Color.reforgedGold)
-                .scaleEffect(sealScale)
-
-            Text("Lesson Complete!")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
-
-            Text("You've completed \"\(lesson.title)\"")
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                .multilineTextAlignment(.center)
-
-            HStack(spacing: 24) {
-                VStack {
-                    Text("+\(lesson.xpReward)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.reforgedGold)
-                    Text("XP Earned")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                }
-            }
-            .padding()
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-
-            Spacer()
-
-            Button(action: onDismiss) {
-                Text("Continue")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.reforgedNavy)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .padding(.horizontal)
-        }
-        .padding()
-        .confetti(isActive: $showConfetti, intensity: .medium)
-        .onAppear {
-            // The seal springs in under the falling confetti; ConfettiView fires the
-            // achievement haptic itself, so don't double it here.
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) {
-                sealScale = 1.0
-            }
-            showConfetti = true
-        }
+        JackpotStage(
+            config: JackpotConfig(
+                hero: .symbol("checkmark.seal.fill"),
+                headline: "Lesson complete",
+                title: "You finished \u{201C}\(lesson.title)\u{201D}.",
+                accent: .gold,
+                reels: [
+                    JackpotReel(icon: "star.fill", label: "XP earned", value: lesson.xpReward, tint: .reforgedGold),
+                    JackpotReel(icon: "flame.fill", label: "Day streak", value: appState.user.streak,
+                                prefix: "", tint: .reforgedCoral),
+                ],
+                cta: "Continue",
+                intensity: .max
+            ),
+            onDismiss: onDismiss
+        )
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
     }
 }
 

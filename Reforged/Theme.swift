@@ -380,6 +380,45 @@ class BibleReadingSettings: ObservableObject {
         return min(max(raw, 8), 22)
     }
 
+    // MARK: - System Dynamic Type (TextKit reader)
+
+    /// Multiplier for the system "Larger Text" setting relative to the default size (1.0 at the
+    /// default category). The TextKit reader lays out fixed-size `UIFont`s, so it applies this
+    /// itself; the SwiftUI FlowLayout reader scales through its own `Font`s and does not use it.
+    /// Updated live from `UIContentSizeCategory.didChangeNotification`.
+    @Published private(set) var systemTextScale: CGFloat = BibleReadingSettings.measureSystemTextScale()
+
+    private static func measureSystemTextScale() -> CGFloat {
+        UIFontMetrics(forTextStyle: .body).scaledValue(for: 100) / 100
+    }
+
+    /// Verse body size for the TextKit reader: the in-app size choice, scaled by the system text
+    /// size. Capped so the largest accessibility step stays laid out sanely.
+    var readerFontSize: CGFloat {
+        min(effectiveFontSize * systemTextScale, 64)
+    }
+
+    /// Verse-number size for the TextKit reader, scaled the same way as `readerFontSize`.
+    var readerVerseNumberSize: CGFloat {
+        min(effectiveVerseNumberSize * systemTextScale, 36)
+    }
+
+    /// Chapter titles / headings scale less aggressively than body text so "Psalm 119" still fits
+    /// on one line at accessibility sizes.
+    var readerHeadingScale: CGFloat { min(systemTextScale, 2.0) }
+
+    private func observeSystemTextSize() {
+        NotificationCenter.default.addObserver(
+            forName: UIContentSizeCategory.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            let scale = Self.measureSystemTextScale()
+            if abs(scale - self.systemTextScale) > 0.001 { self.systemTextScale = scale }
+        }
+    }
+
     enum FontSize: String, CaseIterable {
         case tiny, extraSmall, small, medium, large, extraLarge, huge, massive
 
@@ -519,6 +558,8 @@ class BibleReadingSettings: ObservableObject {
         lastScrollPosition = CGFloat(defaults.float(forKey: "bible_scroll_position"))
         let savedVerse = defaults.integer(forKey: "bible_last_verse")
         lastVerse = savedVerse == 0 ? 1 : savedVerse
+
+        observeSystemTextSize()
     }
 
     private func save() {

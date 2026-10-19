@@ -50,8 +50,18 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
     @Published var overrideStartVerse: Int? = nil
     @Published var overrideEndVerse: Int? = nil
     @Published var overrideTranslation: String? = nil
+    /// Loop the entire chapter instead of just the verse range. ESV and KJV then play their
+    /// narrated chapter audio; the KJV narration only exists per chapter, not per verse.
+    @Published var overrideWholeChapter = false
+    /// True right after a KJV verse loop starts, so the bar can point out the narrated option.
+    @Published var showKJVChapterHint = false
 
     private var player: AVPlayer?
+    /// Invalidated on every stop so a slow KJV file lookup can't start after the loop was cancelled.
+    private var loadToken = UUID()
+    /// The utterance this player is currently speaking. A finish callback for any other
+    /// utterance (one cancelled by a restart or a switch to narrated audio) is ignored.
+    private var activeUtterance: AVSpeechUtterance?
     private var timeObserver: Any?
     private var loopObserver: Any?
     private let synthesizer = AVSpeechSynthesizer()
@@ -61,6 +71,7 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
               let parsed = MemoryVerseReference.parse(verse.reference) else {
             return currentVerse?.reference ?? ""
         }
+        if overrideWholeChapter { return parsed.chapterLabel }
         let start = overrideStartVerse ?? parsed.verseStart
         let end = max(overrideEndVerse ?? parsed.verseEnd, start)
         return parsed.buildReference(start: start, end: end)
@@ -75,12 +86,26 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
         synthesizer.delegate = self
     }
 
+    /// ESV always streams narrated audio. KJV does too, but only for whole-chapter loops.
+    private var usesNarratedAudio: Bool {
+        activeTranslation == "ESV" || (activeTranslation == "KJV" && overrideWholeChapter)
+    }
+
     func play(verse: MemoryVerse) {
         stopAudio()
+        if currentVerse?.id != verse.id { overrideWholeChapter = false }
         currentVerse = verse
         loopCount = 1
         isPlaying = false
+        showKJVChapterHint = activeTranslation == "KJV" && !overrideWholeChapter
         startAudio()
+    }
+
+    /// Switches a KJV verse loop to the narrated KJV chapter audio.
+    func loopWholeChapter() {
+        overrideWholeChapter = true
+        showKJVChapterHint = false
+        restart()
     }
 
     func restart() {
@@ -98,6 +123,8 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
 
         if activeTranslation == "ESV" {
             playESV()
+        } else if usesNarratedAudio {
+            playKJV()
         } else {
             playTTS()
         }
@@ -105,6 +132,8 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
     }
 
     private func stopAudio() {
+        loadToken = UUID()
+        activeUtterance = nil
         player?.pause()
         if let obs = timeObserver { player?.removeTimeObserver(obs); timeObserver = nil }
         if let obs = loopObserver { NotificationCenter.default.removeObserver(obs); loopObserver = nil }
@@ -116,13 +145,13 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
     }
 
     func pause() {
-        if activeTranslation == "ESV" { player?.pause() }
+        if player != nil { player?.pause() }
         else { synthesizer.pauseSpeaking(at: .word) }
         isPlaying = false
     }
 
     func resume() {
-        if activeTranslation == "ESV" { player?.play() }
+        if player != nil { player?.play() }
         else { synthesizer.continueSpeaking() }
         isPlaying = true
     }
@@ -135,6 +164,8 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
         overrideStartVerse = nil
         overrideEndVerse = nil
         overrideTranslation = nil
+        overrideWholeChapter = false
+        showKJVChapterHint = false
         targetLoopCount = nil
     }
 
@@ -147,9 +178,47 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
 
     private func playESV() {
         guard let url = ESVService.shared.getAudioURL(reference: activeReference) else { return }
-        isLoading = true
+        startNarratedPlayback(
+            url: url,
+            options: ["AVURLAssetHTTPHeaderFieldsKey": ["Authorization": "Token \(ESVConfig.apiKey)"]]
+        )
+    }
 
-        let options = ["AVURLAssetHTTPHeaderFieldsKey": ["Authorization": "Token \(ESVConfig.apiKey)"]]
+    // MARK: - KJV Chapter Audio
+
+    /// KJV narration (the same source as the Bible reader, or the offline download when
+    /// present). Falls back to the on-device voice if the chapter can't be resolved.
+    private func playKJV() {
+        guard let parsed = currentVerse.flatMap({ MemoryVerseReference.parse($0.reference) }),
+              let book = Self.kjvAudioBook(parsed.book) else {
+            playTTS()
+            return
+        }
+        isLoading = true
+        let token = loadToken
+        Task { @MainActor in
+            do {
+                let url = try await KJVAudioService.shared.getAudioURL(book: book, chapter: parsed.chapter)
+                guard token == self.loadToken else { return }
+                self.startNarratedPlayback(url: url, options: nil)
+            } catch {
+                debugLog("MemoryAudioPlayer KJV audio error: \(error)")
+                guard token == self.loadToken else { return }
+                self.isLoading = false
+                self.playTTS()
+            }
+        }
+    }
+
+    /// Maps memory-verse book names onto the KJV audio manifest's names (e.g. "Psalm" → "Psalms").
+    private static func kjvAudioBook(_ book: String) -> String? {
+        let aliases = ["Psalm": "Psalms", "Song of Songs": "Song of Solomon", "Songs of Solomon": "Song of Solomon"]
+        let name = aliases[book] ?? book
+        return KJVAudioService.shared.chapterCount(book: name) > 0 ? name : nil
+    }
+
+    private func startNarratedPlayback(url: URL, options: [String: Any]?) {
+        isLoading = true
         let asset = AVURLAsset(url: url, options: options)
         let item = AVPlayerItem(asset: asset)
         player = AVPlayer(playerItem: item)
@@ -184,18 +253,24 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
         let translation = activeTranslation
         let start = overrideStartVerse ?? parsed.verseStart
         let end = max(overrideEndVerse ?? parsed.verseEnd, start)
+        let wholeChapter = overrideWholeChapter
+        // The chapter-text fetch is async. If the loop is restarted or switched to narrated
+        // audio before it returns, the stale fetch must not start speaking over the new audio.
+        let token = loadToken
 
         Task { @MainActor in
             do {
                 let verses = try await self.fetchVerses(book: parsed.book, chapter: parsed.chapter, translation: translation)
+                guard token == self.loadToken else { return }
                 let text = verses
-                    .filter { $0.number >= start && $0.number <= end }
+                    .filter { wholeChapter || ($0.number >= start && $0.number <= end) }
                     .map { $0.text }
                     .joined(separator: " ")
                 self.isLoading = false
                 self.speakText(text.isEmpty ? verse.text : text)
             } catch {
                 debugLog("MemoryAudioPlayer TTS fetch error: \(error)")
+                guard token == self.loadToken else { return }
                 self.isLoading = false
                 self.speakText(verse.text)
             }
@@ -203,7 +278,10 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
     }
 
     private func speakText(_ text: String) {
+        // Narrated audio owns playback; never speak over it.
+        guard player == nil else { return }
         let utterance = TTSVoiceService.shared.makeUtterance(text: text, rate: playbackRate)
+        activeUtterance = utterance
         synthesizer.speak(utterance)
     }
 
@@ -237,12 +315,15 @@ class MemoryAudioPlayer: NSObject, ObservableObject, AVSpeechSynthesizerDelegate
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        guard isPlaying else { return }
+        guard isPlaying, utterance === activeUtterance else { return }
         if let target = targetLoopCount, loopCount >= target {
             DispatchQueue.main.async { self.stop() }
             return
         }
+        let token = loadToken
         DispatchQueue.main.async {
+            // Dropped if the loop was stopped/restarted between the finish and this hop.
+            guard token == self.loadToken, self.player == nil else { return }
             self.loopCount += 1
             self.playTTS()
         }
@@ -258,6 +339,43 @@ struct MemoryAudioBar: View {
 
     private var iconColor: Color { Color.adaptivePrimaryIcon(colorScheme) }
 
+    /// Verse loops can't use the KJV narration (it only exists per chapter), so point out
+    /// the whole-chapter option when a KJV verse loop starts.
+    private var kjvChapterHint: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "waveform")
+                .font(.subheadline.bold())
+                .foregroundStyle(Color.reforgedGold)
+
+            Text("Verse loops use the on-device voice. Loop the whole chapter to hear the narrated KJV.")
+                .font(.caption2)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            Button("Use it") { player.loopWholeChapter() }
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.reforgedCoral, in: Capsule())
+
+            Button { player.showKJVChapterHint = false } label: {
+                Image(systemName: "xmark")
+                    .font(.caption2.bold())
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.reforgedGold.opacity(colorScheme == .dark ? 0.16 : 0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal)
+        .padding(.top, 10)
+    }
+
     private var repeatLabel: String {
         if let target = player.targetLoopCount {
             return "× \(player.loopCount) of \(target)"
@@ -268,7 +386,11 @@ struct MemoryAudioBar: View {
     var body: some View {
         if player.currentVerse != nil {
             VStack(spacing: 6) {
-                // Progress bar (visible when ESV duration is known)
+                if player.showKJVChapterHint {
+                    kjvChapterHint
+                }
+
+                // Progress bar (visible when narrated-audio duration is known)
                 if player.duration > 0 {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
@@ -395,6 +517,7 @@ struct MemoryAudioSettingsSheet: View {
     @State private var repeatCount: Int? = nil
     @State private var translation: String = "ESV"
     @State private var voiceIdentifier: String? = nil
+    @State private var wholeChapter = false
 
     private let speedOptions: [Float] = [0.75, 1.0, 1.25, 1.5, 2.0]
     private let repeatOptions: [(String, Int?)] = [
@@ -442,6 +565,21 @@ struct MemoryAudioSettingsSheet: View {
                             }
                             .padding(.bottom, 2)
 
+                            Toggle(isOn: $wholeChapter.animation()) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Loop the whole chapter")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                                    Text("Plays the narrated chapter audio for ESV and KJV")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                }
+                            }
+                            .tint(Color.reforgedCoral)
+
+                            Divider()
+
+                            Group {
                             Stepper(value: $startVerse, in: 1...200) {
                                 HStack {
                                     Text("From verse")
@@ -472,6 +610,9 @@ struct MemoryAudioSettingsSheet: View {
                             .onChange(of: startVerse) { newVal in
                                 if endVerse < newVal { endVerse = newVal }
                             }
+                            }
+                            .disabled(wholeChapter)
+                            .opacity(wholeChapter ? 0.4 : 1)
                         }
                     }
 
@@ -526,7 +667,7 @@ struct MemoryAudioSettingsSheet: View {
                                         Text(t)
                                             .font(.subheadline).fontWeight(.semibold)
                                             .foregroundStyle(selected ? .white : Color.adaptiveText(colorScheme))
-                                        Text(t == "ESV" ? "audio" : "TTS")
+                                        Text(t == "ESV" || (t == "KJV" && wholeChapter) ? "audio" : "TTS")
                                             .font(.system(size: 9))
                                             .foregroundStyle(selected ? .white.opacity(0.65) : Color.adaptiveTextSecondary(colorScheme))
                                     }
@@ -536,6 +677,22 @@ struct MemoryAudioSettingsSheet: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
                             }
+                        }
+
+                        if translation == "KJV" && !wholeChapter {
+                            Button {
+                                withAnimation { wholeChapter = true }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "waveform")
+                                        .foregroundStyle(Color.reforgedGold)
+                                    Text("Narrated KJV audio is only available when looping a whole chapter. Tap to switch.")
+                                        .font(.caption)
+                                        .multilineTextAlignment(.leading)
+                                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -586,6 +743,7 @@ struct MemoryAudioSettingsSheet: View {
         speed = player.playbackRate
         repeatCount = player.targetLoopCount
         translation = player.overrideTranslation ?? player.currentVerse?.translation ?? "ESV"
+        wholeChapter = player.overrideWholeChapter
         voiceIdentifier = TTSVoiceService.shared.selectedVoiceIdentifier
     }
 
@@ -594,6 +752,8 @@ struct MemoryAudioSettingsSheet: View {
             player.overrideStartVerse = startVerse == parsed.verseStart ? nil : startVerse
             player.overrideEndVerse = endVerse == parsed.verseEnd ? nil : endVerse
         }
+        player.overrideWholeChapter = wholeChapter
+        player.showKJVChapterHint = false
         player.targetLoopCount = repeatCount
         player.setRate(speed)
         player.overrideTranslation = (translation == (player.currentVerse?.translation ?? "ESV")) ? nil : translation

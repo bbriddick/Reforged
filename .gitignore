@@ -31,3 +31,10 @@ Pods/
 # Large SWORD commentary JSONs — host on CDN, do not commit to app repo
 Scripts/dist/
 Scripts/.sword-work/
+
+# Study-data build pipeline: downloaded sources and build outputs
+tools/study-db/sources/
+tools/study-db/out/*.sqlite
+tools/study-db/__pycache__/
+# Live-API snapshots contain third-party lexicon text (Mounce, Thayer's); never commit them
+tools/study-db/snapshots/

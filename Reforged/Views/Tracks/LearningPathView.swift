@@ -103,12 +103,9 @@ struct LearningPathView: View {
         }
     }
 
-    /// S-curve x-offset: repeating [center, left, center, right, center]
+    /// The Memory journey's gentle sine winding, so both paths feel like one system.
     func xOffset(for globalIndex: Int, containerWidth: CGFloat) -> CGFloat {
-        let pattern: [CGFloat] = [0, -1, 0, 1, 0]
-        let direction = pattern[globalIndex % pattern.count]
-        let maxSwing = (containerWidth / 2) - 54
-        return direction * maxSwing
+        CGFloat(sin(Double(globalIndex) * .pi / 3.0)) * 66
     }
 
     var body: some View {
@@ -128,6 +125,7 @@ struct LearningPathView: View {
                                         phaseNumber: phaseNum,
                                         phaseName: phaseName
                                     )
+                                    .padding(.horizontal, 16)
                                     .padding(.top, index == 0 ? 8 : 28)
                                     .padding(.bottom, 12)
 
@@ -138,11 +136,11 @@ struct LearningPathView: View {
                                     // Connector line to previous lesson node
                                     if let prevOffset = previousLessonOffset(before: index, in: items, containerWidth: effectiveWidth(from: outerGeo.size.width)) {
                                         let prevCompleted = isPreviousLessonCompleted(before: index, in: items)
-                                        PathSegmentLine(
-                                            fromXOffset: prevOffset,
-                                            toXOffset: offset,
-                                            isCompleted: prevCompleted,
-                                            trackColor: track.displayColor
+                                        JourneyConnector(
+                                            fromX: prevOffset,
+                                            toX: offset,
+                                            tint: prevCompleted ? track.displayColor
+                                                : Color.adaptiveTextSecondary(colorScheme).opacity(0.5)
                                         )
                                     }
 
@@ -150,15 +148,18 @@ struct LearningPathView: View {
                                         lesson: lesson,
                                         track: track,
                                         state: state,
-                                        xOffset: offset
+                                        xOffset: offset,
+                                        onTap: {
+                                            guard state != .locked else {
+                                                HapticManager.shared.buttonTap()
+                                                return
+                                            }
+                                            HapticManager.shared.cardFlipEdgeThud()
+                                            selectedLesson = lesson
+                                            navigateToLesson = true
+                                        }
                                     )
                                     .id(lesson.id)
-                                    .onTapGesture {
-                                        guard state != .locked else { return }
-                                        HapticManager.shared.lightImpact()
-                                        selectedLesson = lesson
-                                        navigateToLesson = true
-                                    }
                                 }
                             }
 
@@ -223,7 +224,7 @@ struct LearningPathView: View {
     }
 }
 
-// MARK: - Section Header
+// MARK: - Section Header (banner, like the Memory journey's unit headers)
 
 struct PathSectionHeader: View {
     let track: Track
@@ -231,182 +232,154 @@ struct PathSectionHeader: View {
     let phaseName: String
     @Environment(\.colorScheme) var colorScheme
 
+    private var completed: Int { track.lessons.filter { $0.isCompleted }.count }
+
     var body: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 12) {
-                Rectangle()
-                    .fill(track.displayColor.opacity(0.3))
-                    .frame(height: 2)
-
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [track.displayColor, track.displayColor.opacity(0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 44, height: 44)
-                        .shadow(color: track.displayColor.opacity(0.3), radius: 6, y: 3)
-
-                    Image(systemName: track.icon.isEmpty ? "book.fill" : track.icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-
-                Rectangle()
-                    .fill(track.displayColor.opacity(0.3))
-                    .frame(height: 2)
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.white.opacity(0.18))
+                    .frame(width: 48, height: 48)
+                Image(systemName: track.icon.isEmpty ? "book.fill" : track.icon)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
             }
-            .padding(.horizontal, 32)
 
-            Text(track.name)
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(track.name.uppercased())
+                    .font(.headline.bold())
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Phase \(phaseNumber): \(phaseName)")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
 
-            Text("Phase \(phaseNumber): \(phaseName)")
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundStyle(track.displayColor)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(track.displayColor.opacity(0.1))
-                .clipShape(Capsule())
+            Spacer(minLength: 8)
+
+            Text("\(completed)/\(track.lessons.count)")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.white.opacity(0.18), in: Capsule())
         }
-        .frame(maxWidth: .infinity)
+        .padding(16)
+        .background(
+            LinearGradient(colors: [track.displayColor, track.displayColor.opacity(0.7)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(colorScheme == .dark ? 0.12 : 0), lineWidth: 1)
+        )
+        .shadow(color: track.displayColor.opacity(0.3), radius: 10, y: 5)
     }
 }
 
-// MARK: - Lesson Node
+// MARK: - Lesson Node (extruded token, like the Memory journey's verse nodes)
 
 struct PathLessonNode: View {
     let lesson: Lesson
     let track: Track
     let state: LessonNodeState
     let xOffset: CGFloat
+    let onTap: () -> Void
     @Environment(\.colorScheme) var colorScheme
+    @State private var pressed = false
 
-    private let nodeSize: CGFloat = 60
+    private static let faceDiameter: CGFloat = 72
+    private static let depth: CGFloat = 7
+
+    private var tint: Color {
+        switch state {
+        case .completed: return track.displayColor
+        case .current: return Color.reforgedGold
+        case .locked: return Color.adaptiveTextSecondary(colorScheme).opacity(0.5)
+        }
+    }
+
+    private var bevel: Color {
+        state == .locked ? Color.adaptiveTextSecondary(colorScheme).opacity(0.3) : tint.practiceBevel()
+    }
+
+    private var icon: String {
+        switch state {
+        case .completed: return "checkmark"
+        case .current: return "play.fill"
+        case .locked: return "lock.fill"
+        }
+    }
+
+    private var caption: String {
+        switch state {
+        case .completed: return "Completed"
+        case .current: return "Tap to start"
+        case .locked: return "Locked"
+        }
+    }
 
     var body: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                // Static glow for current node
-                if state == .current {
-                    Circle()
-                        .fill(Color.reforgedGold.opacity(0.25))
-                        .frame(width: nodeSize + 24, height: nodeSize + 24)
-                        .blur(radius: 10)
-                }
-
-                // Main circle
-                circleView
-
-                // Icon
-                nodeIcon
-            }
-
-            // Show title only on current node
+        VStack(spacing: 8) {
             if state == .current {
-                Text(lesson.title)
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .frame(width: 110)
+                startBubble
             }
+
+            Button(action: onTap) {
+                ZStack {
+                    Circle().fill(bevel)
+                        .frame(width: Self.faceDiameter, height: Self.faceDiameter)
+                        .offset(y: Self.depth)
+                    Circle().fill(tint)
+                        .frame(width: Self.faceDiameter, height: Self.faceDiameter)
+                        .overlay(Circle().stroke(Color.white.opacity(colorScheme == .dark && state == .completed ? 0.15 : 0), lineWidth: 1))
+                        .overlay(
+                            Image(systemName: icon)
+                                .font(.system(size: 26, weight: .bold))
+                                .foregroundStyle(.white)
+                        )
+                        .offset(y: pressed ? Self.depth : 0)
+                }
+                .frame(width: 100, height: 100)
+                .contentShape(Circle())
+                .scaleEffect(pressed && state != .locked ? 0.965 : 1)
+                .shadow(color: tint.opacity(pressed ? 0.1 : (state == .locked ? 0.15 : 0.3)),
+                        radius: pressed ? 3 : 8, y: pressed ? 2 : 5)
+                .animation(.spring(response: 0.33, dampingFraction: 0.5), value: pressed)
+            }
+            .buttonStyle(PressReportingStyle(isPressed: $pressed))
+            .accessibilityLabel("\(lesson.title), \(caption)")
+
+            VStack(spacing: 1) {
+                Text(lesson.title)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(state == .locked ? Color.adaptiveTextSecondary(colorScheme)
+                                     : Color.adaptiveText(colorScheme))
+                    .lineLimit(2)
+                Text(caption)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .multilineTextAlignment(.center)
+            .frame(width: 170)
         }
+        .padding(.vertical, 6)
         .offset(x: xOffset)
     }
 
-    @ViewBuilder
-    var circleView: some View {
-        switch state {
-        case .completed:
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [track.displayColor, track.displayColor.opacity(0.8)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: nodeSize, height: nodeSize)
-                .shadow(color: track.displayColor.opacity(0.3), radius: 8, y: 4)
-        case .current:
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.reforgedGold, Color.reforgedGold.opacity(0.85)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: nodeSize, height: nodeSize)
-                .shadow(color: Color.reforgedGold.opacity(0.4), radius: 10, y: 4)
-        case .locked:
-            Circle()
-                .fill(Color.adaptiveTextSecondary(colorScheme).opacity(0.25))
-                .frame(width: nodeSize, height: nodeSize)
-                .overlay(
-                    Circle()
-                        .stroke(Color.adaptiveTextSecondary(colorScheme).opacity(0.3), lineWidth: 2)
-                )
-        }
-    }
-
-    @ViewBuilder
-    var nodeIcon: some View {
-        switch state {
-        case .completed:
-            Image(systemName: "checkmark")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.white)
-        case .current:
-            Image(systemName: "play.fill")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.white)
-        case .locked:
-            Image(systemName: "lock.fill")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.6))
-        }
-    }
-}
-
-// MARK: - Connector Line Between Nodes
-
-struct PathSegmentLine: View {
-    let fromXOffset: CGFloat
-    let toXOffset: CGFloat
-    let isCompleted: Bool
-    let trackColor: Color
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        GeometryReader { geo in
-            Path { path in
-                let centerX = geo.size.width / 2
-                let startX = centerX + fromXOffset
-                let endX = centerX + toXOffset
-                let height = geo.size.height
-
-                path.move(to: CGPoint(x: startX, y: 0))
-                let midY = height / 2
-                path.addCurve(
-                    to: CGPoint(x: endX, y: height),
-                    control1: CGPoint(x: startX, y: midY),
-                    control2: CGPoint(x: endX, y: midY)
-                )
+    private var startBubble: some View {
+        Text("START")
+            .font(.caption.bold()).tracking(1.0).foregroundStyle(tint)
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .background(Color.adaptiveCardBackground(colorScheme))
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(tint, lineWidth: 2))
+            .overlay(alignment: .bottom) {
+                Triangle().fill(tint).frame(width: 12, height: 7)
+                    .rotationEffect(.degrees(180)).offset(y: 6)
             }
-            .stroke(
-                isCompleted ? trackColor.opacity(0.5) : Color.adaptiveTextSecondary(colorScheme).opacity(0.25),
-                style: StrokeStyle(lineWidth: 4, lineCap: .round)
-            )
-        }
-        .frame(height: 28)
+            .shadow(color: tint.opacity(0.25), radius: 6, y: 3)
     }
 }

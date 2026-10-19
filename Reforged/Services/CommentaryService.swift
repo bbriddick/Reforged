@@ -72,6 +72,13 @@ struct CommentaryEntry: Identifiable, Equatable {
     var id: String { source.rawValue }
 }
 
+struct CommentarySearchHit: Identifiable {
+    let id = UUID()
+    let source: CommentarySource
+    let reference: String
+    let snippet: String
+}
+
 /// Verse-keyed commentary lookup across bundled + downloaded public-domain commentaries
 /// (CrossWire SWORD modules, extracted offline). Mirrors `CrossReferenceService`: synchronous,
 /// cached, empty-fallback. Scripture references inside the text are plain readable strings so
@@ -110,6 +117,35 @@ final class CommentaryService {
             if let best { results.append(CommentaryEntry(source: source, text: best)) }
         }
         return results
+    }
+
+    // MARK: - Full-text search
+
+    /// Plain-text search across every commentary available on this device (bundled or
+    /// downloaded). Up to `perSource` hits from each, in canonical-key order so results are stable.
+    func search(_ query: String, perSource: Int = 2) -> [CommentarySearchHit] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard needle.count >= 3 else { return [] }
+        var hits: [CommentarySearchHit] = []
+        for source in CommentarySource.allCases {
+            ensureLoaded(source)
+            guard let chapters = indexBySource[source] else { continue }
+            var found = 0
+            outer: for key in chapters.keys.sorted() {
+                for entry in chapters[key] ?? [] {
+                    guard let range = entry.text.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) else { continue }
+                    let start = entry.text.index(range.lowerBound, offsetBy: -40, limitedBy: entry.text.startIndex) ?? entry.text.startIndex
+                    let end = entry.text.index(range.upperBound, offsetBy: 110, limitedBy: entry.text.endIndex) ?? entry.text.endIndex
+                    let snippet = entry.text[start..<end]
+                        .replacingOccurrences(of: "\n", with: " ")
+                        .trimmingCharacters(in: .whitespaces)
+                    hits.append(CommentarySearchHit(source: source, reference: "\(key):\(entry.verse)", snippet: "…\(snippet)…"))
+                    found += 1
+                    if found >= perSource { break outer }
+                }
+            }
+        }
+        return hits
     }
 
     // MARK: - Browsing

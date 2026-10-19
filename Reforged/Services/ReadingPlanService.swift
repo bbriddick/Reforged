@@ -74,6 +74,21 @@ final class ReadingPlanService: ObservableObject {
         return plan.entries.first { $0.day == currentDay(for: plan.id) }
     }
 
+    /// The chapter to open for `entry`: the first required chapter not yet read, so a multi-chapter
+    /// day ("John 4-6") resumes where the reader stopped. Nil when the entry has no whole-chapter
+    /// list (verse ranges) or every chapter is already read.
+    func firstUnreadChapter(in entry: BiblePlanEntry) -> (book: String, chapter: Int)? {
+        entry.requiredChapters.first { !readChapters.contains("\($0.book) \($0.chapter)") }
+    }
+
+    /// True when some, but not all, of the entry's chapters have been read.
+    func isPartiallyRead(_ entry: BiblePlanEntry) -> Bool {
+        let required = entry.requiredChapters
+        guard required.count > 1 else { return false }
+        let done = required.filter { readChapters.contains("\($0.book) \($0.chapter)") }.count
+        return done > 0 && done < required.count
+    }
+
     // MARK: - Mutations
 
     func markDayComplete(_ day: Int, planId: String) {
@@ -94,6 +109,17 @@ final class ReadingPlanService: ObservableObject {
         if isNewlyComplete {
             AppState.shared.recordActivity(.reading)
         }
+    }
+
+    /// Marks every day before `nextDay` as read, for someone switching from another app who
+    /// is partway through a plan. Deliberately skips streak credit: nothing was read today.
+    func catchUp(planId: String, nextDay: Int) {
+        guard nextDay > 1 else { return }
+        var done = completedDaysMap[planId] ?? []
+        for day in 1..<nextDay { done.insert(day) }
+        completedDaysMap[planId] = done
+        if startDates[planId] == nil { startDates[planId] = Date() }
+        save()
     }
 
     func toggleDay(_ day: Int, planId: String) {
@@ -121,6 +147,8 @@ final class ReadingPlanService: ObservableObject {
     /// Checks whether any active plan day now has all its chapters read, and if so
     /// auto-marks it complete — continuing the plan streak automatically.
     func notifyChapterRead(bookName: String, chapter: Int) {
+        // Friends: shared plans count only chapters read from now on.
+        SharedReadingsStore.shared.chapterRead(book: bookName, chapter: chapter)
         let key = "\(bookName) \(chapter)"
         readChapters.insert(key)
 

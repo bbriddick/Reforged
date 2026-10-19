@@ -101,7 +101,7 @@ enum FormationFeedAction: String, Codable, CaseIterable, Hashable {
         switch self {
         case .readContext: return "Read in context"
         case .pray: return "Pray"
-        case .journal: return "Journal"
+        case .journal: return "Notes"
         case .save: return "Save"
         case .startTimer: return "Start timer"
         case .setReminder: return "Remind me"

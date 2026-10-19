@@ -12,7 +12,12 @@ struct MemoryView: View {
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.isSidebarNavigation) var isSidebarNavigation
     @AppStorage("hasSeenMemoryWalkthrough") private var hasSeenWalkthrough = false
+    @State private var stickyUnit: StickyUnit?
     @State private var showAddVerse = false
+    /// Shows the Southland camp-verse track in place of the main journey.
+    @State private var showSouthlandTrack = false
+    /// A camp day or the whole week just finished (or a manual share): shows the poster sheet.
+    @State private var southlandMilestone: SouthlandMilestone?
     @State private var verseToDelete: MemoryVerse?
     @State private var showDeleteConfirmation = false
     @State private var showHowItWorks = false
@@ -30,8 +35,16 @@ struct MemoryView: View {
     @State private var activeLessonVerse: MemoryVerse? = nil
     @State private var showSayItBackUtility = false
     @State private var sayItBackUtilityVerse: MemoryVerse? = nil
-    @State private var showReviewSession = false
+    /// Which verses the review session covers, set just before `showReviewSession` is raised.
     @State private var reviewUnitRefs: Set<String>? = nil
+    /// The review is presented from an item that carries its own verse scope, so the session
+    /// can never pick up a stale scope (and fall back to the global due queue) from state that
+    /// changed in the same update as the presentation.
+    @State private var reviewRequest: ReviewRequest?
+    private var showReviewSession: Bool {
+        get { reviewRequest != nil }
+        nonmutating set { reviewRequest = newValue ? ReviewRequest(refs: reviewUnitRefs) : nil }
+    }
     @State private var showPracticeOptions = false
     @State private var practiceVerse: MemoryVerse? = nil
     @State private var showToolbarVersePicker = false
@@ -92,6 +105,23 @@ struct MemoryView: View {
         .sheet(isPresented: $showAddVerse) {
             AddVerseSheet()
         }
+        .sheet(item: $appState.pendingChallenge) { invite in
+            VerseChallengeSheet(invite: invite) { verse in
+                // Let the sheet finish dismissing before the lesson cover rises.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { activeLessonVerse = verse }
+            }
+            .environmentObject(appState)
+        }
+        .sheet(item: $southlandMilestone) { milestone in
+            SouthlandRewardSheet(milestone: milestone)
+                .environmentObject(appState)
+        }
+        .onChange(of: activeLessonVerse?.id) { id in
+            if id == nil { checkSouthlandMilestone() }
+        }
+        .onChange(of: showReviewSession) { showing in
+            if !showing { checkSouthlandMilestone() }
+        }
         .sheet(isPresented: $showHowItWorks) {
             SpacedRepetitionInfoSheet()
         }
@@ -110,6 +140,12 @@ struct MemoryView: View {
         // "Streak unprotected" notification (or the freeze-saved card's "Get another")
         // lands here: open the streak sheet with the freeze section pulsing.
         .onAppear(perform: consumeFreezePrompt)
+        .onAppear { FeatureUsage.record(.memoryTab) }
+        .onReceive(NotificationCenter.default.publisher(for: .openMemoryVerse)) { note in
+            guard let reference = note.userInfo?[AppNotificationUserInfoKey.reference] as? String,
+                  let verse = appState.memoryVerses.first(where: { $0.reference == reference }) else { return }
+            activeLessonVerse = verse
+        }
         .onChange(of: appState.pendingFreezePrompt) { _ in consumeFreezePrompt() }
         .sheet(isPresented: $showWalkthrough) {
             MemoryWalkthroughSheet(onAddVerse: {
@@ -136,14 +172,14 @@ struct MemoryView: View {
             }
             .environmentObject(appState)
         }
-        .fullScreenCover(isPresented: $showReviewSession) {
+        .fullScreenCover(item: $reviewRequest) { request in
             NavigationStack {
-                MemoryReviewView(restrictReferences: reviewUnitRefs)
+                MemoryReviewView(restrictReferences: request.refs)
                     .environmentObject(appState)
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
-                            Button("Done") { showReviewSession = false }
+                            Button("Done") { reviewRequest = nil }
                         }
                     }
             }
@@ -216,6 +252,7 @@ struct MemoryView: View {
     }
 
     var memoryContent: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(spacing: ReforgedTheme.spacingL) {
                 // Compact status band: title + glanceable stat pills + help. Frees
@@ -272,6 +309,17 @@ struct MemoryView: View {
             .frame(maxWidth: horizontalSizeClass == .regular ? 1200 : .infinity)
             .frame(maxWidth: .infinity)
         }
+        .coordinateSpace(name: MemoryJourneyAnchor.scrollSpace)
+        .overlay(alignment: .top) {
+            if let unit = stickyUnit {
+                StickyUnitBar(unit: unit)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: stickyUnit)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 8) {
                 MemoryAudioBar()
@@ -279,6 +327,27 @@ struct MemoryView: View {
             }
         }
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        // Open on the member's next step instead of the top of a long path, and glide
+        // there again after a lesson moves the frontier.
+        .onAppear { scrollToCurrentNode(proxy, animated: false, delay: 0.45) }
+        .onChange(of: appState.memoryVerses.count) { _ in
+            // A verse the member just added is revealed by the journey itself.
+            guard appState.journeyRevealRef == nil else { return }
+            scrollToCurrentNode(proxy, animated: true, delay: 0.6)
+        }
+        }
+    }
+
+    private func scrollToCurrentNode(_ proxy: ScrollViewProxy, animated: Bool, delay: Double) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            if animated {
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    proxy.scrollTo(MemoryJourneyAnchor.current, anchor: .center)
+                }
+            } else {
+                proxy.scrollTo(MemoryJourneyAnchor.current, anchor: .center)
+            }
+        }
     }
 
     // MARK: - Empty State Layout (no verses yet)
@@ -286,6 +355,7 @@ struct MemoryView: View {
 
     @ViewBuilder
     private var emptyStateContent: some View {
+
 
         // Single-row "Add your first verse" card
         Button(action: { showAddVerse = true }) {
@@ -364,29 +434,78 @@ struct MemoryView: View {
 
     @ViewBuilder
     private var populatedContent: some View {
+
         // 1. THE JOURNEY — unified Duolingo-style path (HUD + review-first banner + winding nodes)
-        MemoryJourneyView(
-            launchLesson: { verse in
-                activeLessonVerse = verse
-            },
-            reviewAll: {
-                reviewUnitRefs = nil
-                showReviewSession = true
-            },
-            reviewUnit: { unit in
-                reviewUnitRefs = Set(unit.verses.map { $0.reference })
-                showReviewSession = true
-            },
-            onPractice: { verse in
-                practiceVerse = verse
-                showPracticeOptions = true
-            },
-            onAddCustom: { showAddVerse = true }
-        )
-        .environmentObject(appState)
+        let southlandLearned = appState.memoryVerses
+            .filter { SouthlandCurriculum.references.contains($0.reference) }.count
+
+        if showSouthlandTrack {
+            SouthlandTrackHeader(
+                learned: southlandLearned,
+                xp: appState.southlandPointsEarned,
+                onBack: { switchSouthlandTrack(to: false) },
+                onShare: { southlandMilestone = SouthlandMilestone(kind: .progress) }
+            )
+
+            MemoryJourneyView(
+                launchLesson: { verse in
+                    activeLessonVerse = verse
+                },
+                reviewAll: {
+                    reviewUnitRefs = Set(appState.memoryVerses
+                        .filter { $0.isDueForReview && SouthlandCurriculum.references.contains($0.reference) }
+                        .map { $0.reference })
+                    showReviewSession = true
+                },
+                reviewUnit: { unit in
+                    // Track reviews stay on the camp verses, never the main path.
+                    reviewUnitRefs = Set(unit.verses.map { $0.reference })
+                        .intersection(SouthlandCurriculum.references)
+                    showReviewSession = true
+                },
+                onPractice: { verse in
+                    practiceVerse = verse
+                    showPracticeOptions = true
+                },
+                onAddCustom: { showAddVerse = true },
+                stickyUnit: $stickyUnit,
+                units: SouthlandCurriculum.units,
+                openAccess: true,
+                trackRefs: SouthlandCurriculum.references,
+                onReviewVerse: { verse in
+                    reviewUnitRefs = [verse.reference]
+                    showReviewSession = true
+                }
+            )
+            .environmentObject(appState)
+        } else {
+            SouthlandPromoCard(learned: southlandLearned) { switchSouthlandTrack(to: true) }
+
+            MemoryJourneyView(
+                launchLesson: { verse in
+                    activeLessonVerse = verse
+                },
+                reviewAll: {
+                    reviewUnitRefs = nil
+                    showReviewSession = true
+                },
+                reviewUnit: { unit in
+                    reviewUnitRefs = Set(unit.verses.map { $0.reference })
+                    showReviewSession = true
+                },
+                onPractice: { verse in
+                    practiceVerse = verse
+                    showPracticeOptions = true
+                },
+                onAddCustom: { showAddVerse = true },
+                stickyUnit: $stickyUnit
+            )
+            .environmentObject(appState)
+        }
 
         // Collections live below the journey; global practice tools now float in a
         // bottom toolbar (see memoryFloatingToolbar).
+        if !showSouthlandTrack {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "Collections", actionTitle: "New") {
                 showCollectionBuilder = true
@@ -429,6 +548,22 @@ struct MemoryView: View {
                 }
             }
         }
+        }
+    }
+
+    /// Swaps between the main journey and the Southland camp-verse track.
+    /// After a lesson or review closes, shows a poster for any camp day newly finished.
+    private func checkSouthlandMilestone() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            guard southlandMilestone == nil, activeLessonVerse == nil, !showReviewSession,
+                  let next = SouthlandMilestones.pending(appState) else { return }
+            southlandMilestone = next
+        }
+    }
+
+    private func switchSouthlandTrack(to on: Bool) {
+        stickyUnit = nil
+        withAnimation(.easeInOut(duration: 0.3)) { showSouthlandTrack = on }
     }
 
     // MARK: - Floating Memory Tools Toolbar
@@ -2037,7 +2172,13 @@ struct PracticeOptionsSheet: View {
                             NavigationLink(destination: MemoryPracticeView(verse: verse, mode: mode)) {
                                 PracticeModeTile(mode: mode)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PracticeLipButtonStyle(
+                                face: Color.adaptiveCardBackground(colorScheme),
+                                lip: Color.adaptiveBorder(colorScheme),
+                                stroke: Color.adaptiveBorder(colorScheme),
+                                cornerRadius: 16,
+                                depth: 4
+                            ))
                         }
                     }
 
@@ -2091,6 +2232,32 @@ struct PracticeOptionsSheet: View {
                         ListenOnLoopCard()
                     }
                     .buttonStyle(.plain)
+
+                    ShareLink(item: VerseChallenge.message(reference: verse.reference,
+                                                           from: appState.user.firstName)) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "person.2.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 40, height: 40)
+                                .background(Color.reforgedCoral, in: Circle())
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Challenge a friend")
+                                    .font(.headline.bold())
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                                Text("Send this verse and memorize it together")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            }
+                            Spacer()
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                        .padding(14)
+                        .practiceCard(radius: 14)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding()
             }
@@ -2117,14 +2284,15 @@ struct PracticeModeTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            // Rounded-square icon chip, the same shape the Memory path uses for unit icons.
             ZStack {
-                Circle()
-                    .fill(colorScheme == .dark ? Color.white.opacity(0.10) : Color.reforgedNavy.opacity(0.10))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.reforgedCoral)
                     .frame(width: 44, height: 44)
 
                 Image(systemName: mode.icon)
-                    .font(.title3)
-                    .foregroundStyle(Color.adaptivePrimaryIcon(colorScheme))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.white)
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -2144,12 +2312,6 @@ struct PracticeModeTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
         .padding(14)
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-        )
     }
 }
 
@@ -3020,238 +3182,449 @@ struct SpacedRepetitionInfoSheet: View {
 struct MemoryWalkthroughSheet: View {
     var onAddVerse: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) var colorScheme
-    @State private var currentPage = 0
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var page = 0
 
-    struct WalkthroughPage {
-        let icon: String
-        let iconColor: Color
-        let iconBgColor: Color
-        let title: String
-        let body: String
-        let extras: [Extra]
-
-        struct Extra {
-            let icon: String
-            let color: Color
-            let label: String
-        }
-
-        init(icon: String, iconColor: Color, iconBgColor: Color,
-             title: String, body: String, extras: [Extra] = []) {
-            self.icon = icon
-            self.iconColor = iconColor
-            self.iconBgColor = iconBgColor
-            self.title = title
-            self.body = body
-            self.extras = extras
-        }
-    }
-
-    // Computed so it can reference colorScheme for dark-mode adaptive icon colours
-    private var pages: [WalkthroughPage] {
-        let navyIcon = Color.adaptivePrimaryIcon(colorScheme)
-        let navyIconBg = navyIcon.opacity(0.12)
-        return [
-            WalkthroughPage(
-                icon: "brain.head.profile",
-                iconColor: .reforgedCoral,
-                iconBgColor: Color.reforgedCoral.opacity(0.12),
-                title: "Scripture Memory",
-                body: "Hide God's Word in your heart using spaced repetition — the same science-backed technique used by memory champions and language learners worldwide.",
-                extras: []
-            ),
-            WalkthroughPage(
-                icon: "plus.circle.fill",
-                iconColor: navyIcon,
-                iconBgColor: navyIconBg,
-                title: "Add Your Verses",
-                body: "Tap the Add button to search for any Bible verse and add it to your memory list. Start with 1–3 verses you already feel comfortable with.",
-                extras: [
-                    .init(icon: "magnifyingglass", color: navyIcon, label: "Search by reference or keyword"),
-                    .init(icon: "book.fill", color: .reforgedGold, label: "Verses from your Bible reading auto-suggest"),
-                ]
-            ),
-            WalkthroughPage(
-                icon: "arrow.triangle.2.circlepath",
-                iconColor: .reforgedCoral,
-                iconBgColor: Color.reforgedCoral.opacity(0.12),
-                title: "Review When Due",
-                body: "The app tracks each verse individually. When one is due, it appears in Verses Due. Tap it to start a session — after each verse, rate how well you knew it.",
-                extras: [
-                    .init(icon: "arrow.counterclockwise.circle.fill", color: .reforgedCoral, label: "Again — resets to day 1"),
-                    .init(icon: "minus.circle.fill", color: .orange, label: "Hard — review again soon"),
-                    .init(icon: "checkmark.circle.fill", color: Color(red: 0.2, green: 0.7, blue: 0.4), label: "Good — interval grows"),
-                    .init(icon: "star.circle.fill", color: .blue, label: "Easy — you're mastering it"),
-                ]
-            ),
-            WalkthroughPage(
-                icon: "gamecontroller.fill",
-                iconColor: .reforgedGold,
-                iconBgColor: Color.reforgedGold.opacity(0.12),
-                title: "Practice With Games",
-                body: "Beyond reviews, two games help the verses stick. Both earn XP toward your level.",
-                extras: [
-                    .init(icon: "square.grid.2x2.fill", color: navyIcon, label: "Matching Game — pair references to text"),
-                    .init(icon: "pencil.and.outline", color: .reforgedGold, label: "Complete the Verse — fill in missing words"),
-                ]
-            ),
-            WalkthroughPage(
-                icon: "checkmark.seal.fill",
-                iconColor: Color(red: 0.2, green: 0.7, blue: 0.4),
-                iconBgColor: Color(red: 0.2, green: 0.7, blue: 0.4).opacity(0.12),
-                title: "One Verse at a Time",
-                body: "Start small. Add one verse, review it for a few days, then add another. Consistent short sessions beat marathon study every time. You've got this.",
-                extras: []
-            ),
-        ]
-    }
-
-    var isLastPage: Bool { currentPage == pages.count - 1 }
+    private let pageCount = 6
+    private var isLast: Bool { page == pageCount - 1 }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Dismiss handle
-            Capsule()
-                .fill(Color.adaptiveBorder(colorScheme))
-                .frame(width: 36, height: 4)
-                .padding(.top, 12)
-                .padding(.bottom, 4)
+            OnbDots(index: page, count: pageCount).padding(.top, 24)
 
-            // Page content
-            TabView(selection: $currentPage) {
-                ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
-                    WalkthroughPageView(page: page, colorScheme: colorScheme)
-                        .tag(index)
+            TabView(selection: $page) {
+                ForEach(0..<pageCount, id: \.self) { i in
+                    MemoryTourPage(index: i).tag(i)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.25), value: currentPage)
 
-            // Dot indicator
-            HStack(spacing: 8) {
-                ForEach(0..<pages.count, id: \.self) { i in
-                    Capsule()
-                        .fill(i == currentPage
-                              ? Color.reforgedGold
-                              : Color.adaptiveBorder(colorScheme))
-                        .frame(width: i == currentPage ? 20 : 8, height: 8)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
+            VStack(spacing: 4) {
+                ReturningPrimaryButton(title: isLast ? "Start my path" : "Next") {
+                    if isLast {
+                        dismiss()
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.25)) { page += 1 }
+                    }
                 }
-            }
-            .padding(.vertical, 12)
-
-            // Action buttons
-            VStack(spacing: 12) {
-                if isLastPage {
-                    Button {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            onAddVerse?()
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Add My First Verse")
-                        }
-                        .reforgedPrimaryButton()
+                Button {
+                    dismiss()
+                    if isLast {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onAddVerse?() }
                     }
-
-                    Button("Maybe Later") {
-                        dismiss()
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                } else {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            currentPage += 1
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text("Next")
-                            Image(systemName: "arrow.right")
-                        }
-                        .reforgedPrimaryButton()
-                    }
-
-                    Button("Skip") {
-                        dismiss()
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                } label: {
+                    Text(isLast ? "Add a verse of my own" : "Skip")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .frame(maxWidth: .infinity, minHeight: 46)
                 }
+                .buttonStyle(NoBlobButtonStyle())
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 36)
+            .padding(.horizontal, 28)
+            .padding(.top, 8)
+            .padding(.bottom, 28)
         }
+        .frame(maxWidth: 520)
+        .frame(maxWidth: .infinity)
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
     }
 }
 
-struct WalkthroughPageView: View {
-    let page: MemoryWalkthroughSheet.WalkthroughPage
-    let colorScheme: ColorScheme
+// MARK: - Tour pages
+
+private struct MemoryTourPage: View {
+    let index: Int
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var title: String {
+        ["Scripture, by heart.", "Follow your path.", "A short review each time.",
+         "Review when ready.", "Practice anytime.", "One verse at a time."][index]
+    }
+
+    private var lead: String {
+        [
+            "Learn one verse at a time. Each one gets a short lesson, then comes back right before you would forget it.",
+            "Verses are grouped by theme, from Faith to Eternity. Tap START to learn the next one. Later verses unlock as you go.",
+            "Each verse is practiced in five quick steps, and you earn XP when you finish.",
+            "When verses are due, a coral banner appears on your path. Swipe through a quick deck, then try harder exercises as a verse gets stronger.",
+            "The toolbar at the bottom of the Memory tab has extra practice for any verse you have learned.",
+            "Start small, come back tomorrow, and let reviews do the heavy lifting. Each review pushes the next one further out."
+        ][index]
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(title)
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(lead)
+                        .font(.body)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 32)
+
+                visual
+                    .padding(.top, 32)
+            }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 24)
+        }
+    }
+
+    @ViewBuilder private var visual: some View {
+        switch index {
+        case 0: TourVerseVisual()
+        case 1: TourPathVisual()
+        case 2: TourLessonVisual()
+        case 3: TourReviewVisual()
+        case 4: TourToolsVisual()
+        default: TourSpacingVisual()
+        }
+    }
+}
+
+private let tourGreen = Color(red: 0.20, green: 0.65, blue: 0.40)
+private let tourGreenBevel = Color(red: 0.13, green: 0.48, blue: 0.28)
+private let tourGoldBevel = Color(red: 0.75, green: 0.58, blue: 0.10)
+
+private extension View {
+    /// The soft white card used across the new onboarding.
+    func tourCard(_ scheme: ColorScheme, radius: CGFloat = 20) -> some View {
+        self
+            .background(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(Color.adaptiveCardBackground(scheme))
+                    .shadow(color: .black.opacity(scheme == .dark ? 0 : 0.06), radius: 14, y: 6)
+            )
+    }
+}
+
+// MARK: Page 1: a verse with blanks
+
+private struct TourVerseVisual: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private func blank(_ word: String) -> Text {
+        Text(word).foregroundColor(.clear).underline(true, color: Color.reforgedCoral)
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("JOHN 3:16")
+                    .font(.caption.weight(.bold)).tracking(1.2)
+                    .foregroundStyle(Color.reforgedGold)
+                (Text("For God so loved the ") + blank("world") + Text(", that he gave his only ") +
+                 blank("begotten") + Text(" Son, that whosoever ") + blank("believeth") +
+                 Text(" in him should not perish, but have ") + blank("everlasting") + Text(" life."))
+                    .font(.custom("LibreBaskerville-Regular", size: 17))
+                    .lineSpacing(6)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(22)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .tourCard(colorScheme)
+
+            HStack(spacing: 8) {
+                stage("book.fill", "Learn", .reforgedGold)
+                chevron
+                stage("arrow.triangle.2.circlepath", "Review", .reforgedCoral)
+                chevron
+                stage("crown.fill", "Remember", tourGreen)
+            }
+        }
+    }
+
+    private var chevron: some View {
+        Image(systemName: "chevron.right")
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.5))
+    }
+
+    private func stage(_ icon: String, _ label: String, _ color: Color) -> some View {
+        VStack(spacing: 8) {
+            Circle().fill(color).frame(width: 48, height: 48)
+                .overlay(Image(systemName: icon).font(.system(size: 20, weight: .bold)).foregroundStyle(.white))
+            Text(label).font(.footnote.weight(.semibold)).foregroundStyle(Color.adaptiveText(colorScheme))
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: Page 2: the path
+
+/// A live crop of the real path: the same banner, nodes and connectors the Memory tab uses,
+/// fed from the first curriculum unit, so the tour can never drift from what users see.
+private struct TourPathVisual: View {
+    private let unit = MemoryCurriculum.units[0]
+
+    var body: some View {
+        VStack(spacing: 6) {
+            UnitHeaderBanner(unit: unit, isStarted: true, isCollapsed: false, onToggle: {})
+            CurriculumVerseNode(verse: unit.verses[0], unit: unit, status: .available, locked: false,
+                                level: 0, isCurrent: true, xOffset: 0, prevOffset: nil, bounce: true,
+                                onTap: {}, onPractice: {}, onRemove: nil)
+            CurriculumVerseNode(verse: unit.verses[1], unit: unit, status: .available, locked: true,
+                                level: 0, isCurrent: false, xOffset: 57, prevOffset: 0, bounce: false,
+                                onTap: {}, onPractice: {}, onRemove: nil)
+            CheckpointNode(unit: unit, kind: .quickRecall, unlocked: false, xOffset: 0, prevOffset: 57, onTap: {})
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 400, alignment: .top)
+        .clipped()
+        .mask(LinearGradient(stops: [.init(color: .black, location: 0.72), .init(color: .clear, location: 1)],
+                             startPoint: .top, endPoint: .bottom))
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("A preview of your memory path")
+    }
+}
+
+// MARK: Page 3: lesson steps
+
+private struct TourLessonVisual: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let steps: [(String, String, String, Color)] = [
+        ("headphones", "Listen", "Hear the verse read aloud", .reforgedCoral),
+        ("hand.tap.fill", "Tap it together", "Build it phrase by phrase", Color(red: 0.40, green: 0.24, blue: 0.52)),
+        ("hand.draw.fill", "Drag the words", "Put each word in its place", Color(red: 0.06, green: 0.45, blue: 0.58)),
+        ("text.badge.plus", "Fill the blanks", "Recall the missing words", tourGreen),
+        ("mic.fill", "Say it back", "Recite it into the mic", .reforgedGold),
+    ]
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
-
-            // Icon
-            ZStack {
-                Circle()
-                    .fill(page.iconBgColor)
-                    .frame(width: 100, height: 100)
-                Image(systemName: page.icon)
-                    .font(.system(size: 44))
-                    .foregroundStyle(page.iconColor)
-            }
-            .padding(.bottom, 28)
-
-            // Title + body
-            VStack(spacing: 12) {
-                Text(page.title)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                    .multilineTextAlignment(.center)
-
-                Text(page.body)
-                .font(.body)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                .multilineTextAlignment(.center)
-                .lineSpacing(3)
-                .padding(.horizontal, 8)
-            }
-            .padding(.horizontal, 24)
-
-            // Extras list
-            if !page.extras.isEmpty {
-                VStack(spacing: 10) {
-                    ForEach(Array(page.extras.enumerated()), id: \.offset) { _, extra in
-                        HStack(spacing: 12) {
-                            Image(systemName: extra.icon)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(extra.color)
-                                .frame(width: 24)
-                            Text(extra.label)
-                                .font(.subheadline)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                            Spacer()
+            VStack(spacing: 0) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { i, s in
+                    HStack(spacing: 14) {
+                        VStack(spacing: 0) {
+                            Circle().fill(s.3).frame(width: 40, height: 40)
+                                .overlay(Image(systemName: s.0).font(.system(size: 17, weight: .bold)).foregroundStyle(.white))
+                            if i < steps.count - 1 {
+                                Rectangle().fill(Color.adaptiveBorder(colorScheme)).frame(width: 2, height: 18)
+                            }
                         }
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 10)
-                        .background(Color.adaptiveCardBackground(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(s.1).font(.subheadline.bold()).foregroundStyle(Color.adaptiveText(colorScheme))
+                            Text(s.2).font(.footnote).foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                        .padding(.bottom, i < steps.count - 1 ? 18 : 0)
+                        Spacer(minLength: 0)
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
+            }
+            .padding(20)
+            .tourCard(colorScheme)
+
+            HStack(spacing: 8) {
+                Image(systemName: "star.fill").foregroundStyle(Color.reforgedGold)
+                Text("XP when you finish")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .background(Capsule().fill(Color.reforgedGold.opacity(0.15)))
+            .padding(.top, 16)
+        }
+    }
+}
+
+// MARK: Page 4: the swipe deck
+
+private struct TourReviewVisual: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @State private var dragX: CGFloat = 0
+    @State private var cardOpacity: Double = 1
+    @State private var stampOpacity: Double = 0
+    @State private var known = true
+
+    private let ladder: [(String, String)] = [
+        ("rectangle.on.rectangle.angled", "Cards"), ("hand.tap.fill", "Tap"), ("hand.draw.fill", "Drag"),
+        ("a.circle", "Letters"), ("keyboard", "Type"),
+    ]
+
+    var body: some View {
+        VStack(spacing: 28) {
+            VStack(spacing: 14) {
+                ZStack {
+                    card.scaleEffect(0.90).offset(y: 22).opacity(0.5)
+                    card.scaleEffect(0.95).offset(y: 11).opacity(0.8)
+                    card
+                        .overlay(stamp)
+                        .rotationEffect(.degrees(Double(dragX) / 16))
+                        .offset(x: dragX)
+                        .opacity(cardOpacity)
+                }
+                .frame(height: 190)
+
+                HStack {
+                    Label("Still learning", systemImage: "arrow.left").foregroundStyle(.red)
+                    Spacer()
+                    HStack(spacing: 4) { Text("Known"); Image(systemName: "arrow.right") }.foregroundStyle(.green)
+                }
+                .font(.footnote.weight(.semibold))
+                .padding(.horizontal, 6)
             }
 
-            Spacer()
+            VStack(alignment: .leading, spacing: 12) {
+                Text("STRONGER VERSES GRADUATE")
+                    .font(.caption.weight(.bold)).tracking(1.2)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                HStack(spacing: 0) {
+                    ForEach(Array(ladder.enumerated()), id: \.offset) { i, s in
+                        VStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.adaptiveChipBackground(colorScheme))
+                                .frame(width: 42, height: 42)
+                                .overlay(Image(systemName: s.0).font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(i == ladder.count - 1 ? Color.reforgedCoral
+                                                                           : Color.adaptivePrimaryIcon(colorScheme)))
+                            Text(s.1).font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .task { await loop() }
+    }
+
+    private var card: some View {
+        VStack(spacing: 10) {
+            Text("ROMANS 8:28")
+                .font(.caption.weight(.bold)).tracking(1.2)
+                .foregroundStyle(Color.reforgedGold)
+            Text("Tap to flip, then swipe")
+                .font(.custom("LibreBaskerville-Regular", size: 17))
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+        }
+        .frame(maxWidth: .infinity, minHeight: 150)
+        .tourCard(colorScheme, radius: 22)
+    }
+
+    private var stamp: some View {
+        Text(known ? "KNOWN" : "STILL LEARNING")
+            .font(.system(size: known ? 28 : 18, weight: .heavy))
+            .foregroundStyle(known ? Color.green : Color.red)
+            .padding(.horizontal, 14).padding(.vertical, 6)
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(known ? Color.green : Color.red, lineWidth: 3))
+            .rotationEffect(.degrees(known ? -14 : 14))
+            .opacity(stampOpacity)
+    }
+
+    @MainActor private func loop() async {
+        if reduceMotion { dragX = 40; stampOpacity = 1; return }
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 1_100_000_000)
+            let dir: CGFloat = known ? 1 : -1
+            withAnimation(.easeOut(duration: 0.45)) { dragX = 70 * dir; stampOpacity = 1 }
+            try? await Task.sleep(nanoseconds: 750_000_000)
+            withAnimation(.easeIn(duration: 0.3)) { dragX = 380 * dir; cardOpacity = 0; stampOpacity = 0 }
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            known.toggle()
+            var t = Transaction(); t.disablesAnimations = true
+            withTransaction(t) { dragX = 0 }
+            withAnimation(.easeOut(duration: 0.3)) { cardOpacity = 1 }
+        }
+    }
+}
+
+// MARK: Page 5: practice tools
+
+private struct TourToolsVisual: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var tools: [(String, String, String, Color)] {
+        [
+            ("brain.head.profile", "Practice", "Flip and recite", Color.adaptivePrimaryIcon(colorScheme)),
+            ("mic.fill", "Speak", "Say it aloud", .reforgedGold),
+            ("headphones", "Loop", "Listen on repeat", .reforgedCoral),
+            ("square.grid.2x2.fill", "Match", "Pair refs to text", Color.adaptivePrimaryIcon(colorScheme)),
+            ("pencil.and.outline", "Fill", "Missing words", tourGreen),
+            ("rectangle.stack.fill", "Sets", "Your collections", .blue),
+        ]
+    }
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+            ForEach(Array(tools.enumerated()), id: \.offset) { _, t in
+                HStack(spacing: 12) {
+                    Circle().fill(t.3.opacity(0.14)).frame(width: 42, height: 42)
+                        .overlay(Image(systemName: t.0).font(.system(size: 17, weight: .semibold)).foregroundStyle(t.3))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(t.1).font(.subheadline.bold()).foregroundStyle(Color.adaptiveText(colorScheme))
+                        Text(t.2).font(.caption).foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                            .lineLimit(1).minimumScaleFactor(0.85)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .tourCard(colorScheme, radius: 16)
+            }
+        }
+    }
+}
+
+// MARK: Page 6: spaced reviews
+
+private struct TourSpacingVisual: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    // Gaps grow as the verse sticks.
+    private let stops: [CGFloat] = [0, 0.09, 0.26, 0.55, 1]
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 12) {
+                GeometryReader { geo in
+                    let w = geo.size.width - 40
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.adaptiveBorder(colorScheme)).frame(height: 4).padding(.horizontal, 20)
+                        ForEach(Array(stops.enumerated()), id: \.offset) { i, f in
+                            let last = i == stops.count - 1
+                            Circle()
+                                .fill(i == 0 ? Color.reforgedGold : (last ? tourGreen : Color.reforgedCoral))
+                                .frame(width: last ? 40 : 30, height: last ? 40 : 30)
+                                .overlay(Image(systemName: i == 0 ? "book.fill" : (last ? "crown.fill" : "arrow.triangle.2.circlepath"))
+                                    .font(.system(size: last ? 16 : 12, weight: .bold)).foregroundStyle(.white))
+                                .position(x: 20 + w * f, y: geo.size.height / 2)
+                        }
+                    }
+                }
+                .frame(height: 44)
+                HStack {
+                    Text("Learned").font(.footnote.weight(.semibold))
+                    Spacer()
+                    Text("Remembered").font(.footnote.weight(.semibold))
+                }
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+            .padding(20)
+            .tourCard(colorScheme)
+
+            HStack(spacing: 12) {
+                Circle().fill(Color.adaptivePrimaryIcon(colorScheme).opacity(0.12)).frame(width: 40, height: 40)
+                    .overlay(Image(systemName: "plus").font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.adaptivePrimaryIcon(colorScheme)))
+                Text("Want a verse that is not on your path? Add your own any time.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 4)
         }
     }
 }
@@ -3270,4 +3643,11 @@ private struct ChipPressStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
             .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
+}
+
+
+/// A review session request: nil `refs` means the global due queue.
+private struct ReviewRequest: Identifiable {
+    let id = UUID()
+    let refs: Set<String>?
 }

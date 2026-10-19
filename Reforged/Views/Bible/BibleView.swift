@@ -31,6 +31,8 @@ enum BibleToolPanelKind: String, Identifiable {
     case navigation, search, audio, display
     case notes, highlights, info
     case study, noteEditor
+    /// A tapped word's study, docked beside the reader instead of covering it with a sheet.
+    case wordStudy
 
     var id: String { rawValue }
 
@@ -45,6 +47,7 @@ enum BibleToolPanelKind: String, Identifiable {
         case .info:       return "Passage Info"
         case .study:      return "Verse Study"
         case .noteEditor: return "Take Note"
+        case .wordStudy:  return "Word Study"
         }
     }
 
@@ -167,6 +170,8 @@ struct BibleView: View {
 
     // iPad/Mac: which study-tools-rail panel is expanded (nil = rail collapsed to icons)
     @State private var activeToolPanel: BibleToolPanelKind?
+    /// The panel Word Study was opened from (Verse Study), so "back" can return to it.
+    @State private var wordStudyOrigin: BibleToolPanelKind?
     /// Binding to the NavigationSplitView column visibility (iPad/Mac only; nil on
     /// iPhone). `setToolPanel` collapses this in the SAME action that opens a panel so
     /// the nav-out and panel-in land in one frame — the reader shifts over, keeps its
@@ -175,7 +180,9 @@ struct BibleView: View {
     /// Full-screen reading: hides the entire tools sidebar (rail + any panel) so the
     /// reader takes the whole width. Persisted so the choice sticks across launches.
     @AppStorage("bible.readerFullScreen") private var readerFullScreen = false
-    @State private var toolPanelTransitionID = UUID()
+    /// The nav sidebar's visibility before a panel opened, so closing the panel restores exactly
+    /// what the user had (including a sidebar they had collapsed by hand).
+    @State private var savedNavVisibility: NavigationSplitViewVisibility?
     /// When pinned, the panel stays put while the user works in the Bible —
     /// verse Study/Note actions fall back to sheets instead of replacing it.
     @State private var toolPanelPinned = false
@@ -216,7 +223,10 @@ struct BibleView: View {
 
     /// All verses across every loaded chapter — used by selection actions that may span chapters.
     private var allLoadedVerses: [ParsedVerse] {
-        coordinator.orderedLoadedChapters.flatMap { $0.verses }
+        if readingSettings.useTextKitReader {
+            return windowController.allLoadedVerses
+        }
+        return coordinator.orderedLoadedChapters.flatMap { $0.verses }
     }
 
     /// Stable scroll-target id for a chapter's header (present in both reading modes).
@@ -378,7 +388,7 @@ struct BibleView: View {
                 readingState.removeBookmark(reference: bookmark.reference)
             },
             translation: currentTranslation,
-            translationOrder: settingsManager.translationOrder,
+            translationOrder: settingsManager.switcherTranslations,
             focusSearch: focusSearch ?? navFocusSearch,
             onDismiss: close,
             usesSheetPresentation: usesSheetPresentation
@@ -401,61 +411,33 @@ struct BibleView: View {
         }
     }
 
-    /// Single choke point for changing the active tool panel. Sets `activeToolPanel`
-    /// AND collapses/restores the left nav sidebar in the SAME synchronous step, so
-    /// SwiftUI lays out the reader once with both the panel inset applied and the nav
-    /// gone — net-zero reading width, no intermediate squeeze, no spine reflow/jump.
-    /// The nav change is instant (its own animation would gradually resize the reader).
+    /// Single choke point for changing the active tool panel. The study panel is a native
+    /// trailing inspector, so the system sizes the reader beside it. While a panel is open the
+    /// nav sidebar steps aside (the reader keeps a comfortable measure), and it returns to
+    /// exactly the state the user had it in when the panel closes.
     private func setToolPanel(_ kind: BibleToolPanelKind?) {
-        let transitionID = UUID()
-        toolPanelTransitionID = transitionID
-        // Freeze the reader at its CURRENT width across the transition. The nav collapse
-        // momentarily changes the available width, and a flexible reader would reflow the
-        // whole-Bible spine and jump the scroll; pinned, it can't. The width is held
-        // constant, so the panel-in / nav-out can ANIMATE smoothly and the reader just
-        // glides in place. It returns to flexible afterward, so rotation still resizes it.
-        // Hold the reader's measured width constant across the transition (the nav
-        // collapse changes the pane, and we must not let that reflow the spine).
-        suppressPaneMeasure = true
-        // Snap the panel + nav in ONE animation-disabled step. Animating the nav
-        // collapse re-lays-out the detail pane every frame, which the whole-Bible spine
-        // can't survive (the scroll drifts a chapter). Snapping avoids that.
-        var txn = Transaction()
-        txn.disablesAnimations = true
-        withTransaction(txn) {
-            activeToolPanel = kind
-            if isSidebarNavigation, let nav = navColumnVisibility {
-                nav.wrappedValue = navVisibility(forToolPanel: kind)
+        if isSidebarNavigation, let nav = navColumnVisibility {
+            if kind != nil, activeToolPanel == nil {
+                savedNavVisibility = nav.wrappedValue
+                if !readerFullScreen { nav.wrappedValue = .detailOnly }
+            } else if kind == nil, activeToolPanel != nil {
+                nav.wrappedValue = savedNavVisibility ?? .doubleColumn
+                savedNavVisibility = nil
             }
         }
-        // Resume measuring once the layout has settled (so rotations resize the reader).
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            guard toolPanelTransitionID == transitionID else { return }
-            suppressPaneMeasure = false
-            if let width = deferredPaneMeasureWidth {
-                deferredPaneMeasureWidth = nil
-                measurePane(width)
-            }
-        }
-    }
-
-    private func navVisibility(forToolPanel kind: BibleToolPanelKind?) -> NavigationSplitViewVisibility {
-        (kind != nil && usesToolSidebar && !readerFullScreen) ? .detailOnly : .doubleColumn
+        activeToolPanel = kind
     }
 
     /// Clears Bible-only sidebar state when the system sidebar needs to come back.
     private func resetToolPanelAndRestoreNavSidebar() {
-        toolPanelTransitionID = UUID()
-        suppressPaneMeasure = false
-        deferredPaneMeasureWidth = nil
-        var txn = Transaction()
-        txn.disablesAnimations = true
-        withTransaction(txn) {
-            activeToolPanel = nil
-            if let nav = navColumnVisibility {
-                nav.wrappedValue = .doubleColumn
-            }
+        if activeToolPanel == .wordStudy {
+            wordLookupResult = nil
+            wordStudyOrigin = nil
+            highlightedWord = nil
         }
+        activeToolPanel = nil
+        savedNavVisibility = nil
+        navColumnVisibility?.wrappedValue = .doubleColumn
         toolPanelPinned = false
         panelVerse = nil
     }
@@ -643,7 +625,7 @@ struct BibleView: View {
 
             // Translation dropdown menu
             Menu {
-                ForEach(settingsManager.translationOrder) { t in
+                ForEach(settingsManager.switcherTranslations) { t in
                     Button { onTranslationSelect(t) } label: {
                         HStack {
                             Text(t.rawValue)
@@ -689,23 +671,8 @@ struct BibleView: View {
 
     // MARK: - Study Tools Sidebar (iPad/Mac)
 
-    /// Panel width. Collapsed is a comfortable reading column (audio gets a touch
-    /// more for the player); widened caps at half the window so the reader keeps
-    /// enough room. 0 when no panel is open.
-    private var toolPanelWidth: CGFloat {
-        guard activeToolPanel != nil else { return 0 }
-        // Uniform width so the nav-sidebar collapse (AdaptiveLayout.bibleNavSidebarWidth)
-        // frees exactly this footprint on the left — the reader keeps its width.
-        return AdaptiveLayout.bibleToolPanelWidth
-    }
-
-    /// The trailing study-tools region: a floating, rounded panel (when a tool is
-    /// open) beside the floating icon rail. Sized by `safeAreaInset`, so the reader
-    /// reflows to the space that's left.
-    /// The trailing RAIL column only (icons + optional audio pill), kept a CONSTANT
-    /// width — the sole thing the reader's `safeAreaInset` reserves, so opening a panel
-    /// never resizes the reader (which would re-lay-out the whole-Bible spine and jump
-    /// the scroll). The panel floats as `bibleToolPanelOverlay`.
+    /// The trailing tool RAIL (icons + optional audio pill), a constant-width column reserved by
+    /// the reader's `safeAreaInset`. The open panel itself is the system inspector (`body`).
     @ViewBuilder
     private var bibleToolsSidebar: some View {
         VStack(spacing: 10) {
@@ -718,27 +685,6 @@ struct BibleView: View {
         .frame(maxHeight: .infinity)
         .padding(.trailing, 12)
         .padding(.vertical, 12)
-    }
-
-    /// The docked study-tools panel, floated as a trailing overlay so opening/closing it
-    /// leaves the reader's frame untouched — no reflow, no scroll jump.
-    @ViewBuilder
-    private var bibleToolPanelOverlay: some View {
-        if let panel = activeToolPanel {
-            bibleToolPanel(panel)
-                .frame(width: toolPanelWidth)
-                .frame(maxHeight: .infinity)
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5)
-                )
-                .shadow(color: Color.black.opacity(0.18), radius: 20, x: -4, y: 8)
-                .padding(.vertical, 12)
-                .padding(.trailing, 78)
-                .transition(.move(edge: .trailing).combined(with: .opacity))
-        }
     }
 
     /// Collapsed-audio control pill that sits above the rail while a chapter is
@@ -996,11 +942,36 @@ struct BibleView: View {
     /// Closes the tools panel and resets its transient state. `readerFullScreen`
     /// is a separate, persisted mode and is not touched here.
     private func closeToolPanel() {
+        // A docked Word Study owns the lookup result and the reader's word highlight.
+        if activeToolPanel == .wordStudy {
+            wordLookupResult = nil
+            wordStudyOrigin = nil
+            withAnimation(.easeInOut(duration: 0.15)) { highlightedWord = nil }
+        }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
             setToolPanel(nil)
         }
         toolPanelPinned = false
         panelVerse = nil
+    }
+
+    /// Docks Word Study beside the reader (iPad/Mac rail) so the verse stays in view while studying.
+    private func openWordStudyPanel(returnTo origin: BibleToolPanelKind? = nil) {
+        wordStudyOrigin = origin
+        toolPanelPinned = false
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            setToolPanel(.wordStudy)
+        }
+    }
+
+    /// Back from a docked Word Study to the Verse Study it was opened from.
+    private func returnToVerseStudyPanel() {
+        wordLookupResult = nil
+        wordStudyOrigin = nil
+        withAnimation(.easeInOut(duration: 0.15)) { highlightedWord = nil }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            setToolPanel(.study)
+        }
     }
 
     /// The content for an open panel tool. Study and note-taking host their own
@@ -1024,7 +995,12 @@ struct BibleView: View {
                     chapter: selectedChapter,
                     translation: currentTranslation,
                     readingState: readingState,
-                    onClose: { closeToolPanel() }
+                    onClose: { closeToolPanel() },
+                    // Word chips dock their study beside the reader rather than opening a sheet.
+                    onOpenWordStudy: { result in
+                        wordLookupResult = result
+                        openWordStudyPanel(returnTo: .study)
+                    }
                 )
                 // Rebuild the study view when the selected verse changes so ALL of its
                 // data reloads — the async word study and study questions (loaded in
@@ -1035,6 +1011,21 @@ struct BibleView: View {
                 toolPanelChrome(title: kind.title) {
                     toolPanelEmptyState(icon: "sparkles.rectangle.stack",
                                         message: "Select a verse, then tap Study to explore it here.")
+                }
+            }
+
+        case .wordStudy:
+            if let result = wordLookupResult {
+                StrongsDefinitionSheet(
+                    result: result,
+                    onClose: { closeToolPanel() },
+                    onBack: wordStudyOrigin == .study ? { returnToVerseStudyPanel() } : nil
+                )
+                .id(result.id)
+            } else {
+                toolPanelChrome(title: kind.title) {
+                    toolPanelEmptyState(icon: "character.book.closed",
+                                        message: "Press and hold a word to study it here.")
                 }
             }
 
@@ -1274,80 +1265,48 @@ struct BibleView: View {
         .padding(.top, 40)
     }
 
-    /// The reader is ALWAYS given an explicit fixed width (never switched between
-    /// flexible and fixed — that switch alone disturbs the whole-Bible spine and jumps
-    /// the scroll). The width is measured from the actual detail pane so it's correct in
-    /// Split View / Slide Over, and recomputed on rotation. It is held constant ONLY
-    /// across a panel open/close (`suppressPaneMeasure`), when the nav collapse
-    /// momentarily changes the pane, so the reader can't reflow during the toggle.
-    @State private var readerPaneWidth: CGFloat = 0
-    @State private var suppressPaneMeasure = false
-    @State private var deferredPaneMeasureWidth: CGFloat?
-
-    private var readerColumnWidth: CGFloat? {
-        guard usesToolSidebar, !readerFullScreen, readerPaneWidth > 0 else { return nil }
-        return readerPaneWidth
+    /// The sheet only presents the Word Study when it is not docked in the tools rail.
+    private var wordStudySheetItem: Binding<WordLookupResult?> {
+        Binding(
+            get: { usesToolSidebar ? nil : wordLookupResult },
+            set: { wordLookupResult = $0 }
+        )
     }
 
-    var body: some View {
-        HStack(spacing: 0) {
-            // The docked panel takes the LEFT slot — the space the nav sidebar frees
-            // when it collapses (setToolPanel). The reader keeps its fixed measured
-            // width and screen position, so it never reflows: true side-by-side, no jump.
-            bibleToolPanelLeft
-            readerBody
-                .frame(width: readerColumnWidth, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            GeometryReader { geo in
-                Color.clear
-                    .onAppear { measurePane(geo.size.width) }
-                    .onChange(of: geo.size.width) { measurePane($0) }
+    /// Presentation binding for the study-tools inspector (iPad/Mac with the rail). Swiping the
+    /// inspector away or tapping outside it routes back through `closeToolPanel`.
+    private var toolInspectorPresented: Binding<Bool> {
+        Binding(
+            get: { usesToolSidebar && !readerFullScreen && activeToolPanel != nil },
+            set: { presented in
+                if !presented, activeToolPanel != nil { closeToolPanel() }
             }
         )
     }
 
-    /// Recompute the reader's fixed width from the CURRENT pane. With a panel open the
-    /// nav is collapsed, so the pane is the full width and the reader is that minus the
-    /// panel slot; with no panel the reader is the whole pane. Computing from the live
-    /// pane keeps it correct across rotations and multitasking resizes — even with a
-    /// panel open. Suppressed only during a panel open/close so the reader width stays
-    /// constant across that transition (no reflow/jump).
-    private func measurePane(_ width: CGFloat) {
-        guard width > 0 else { return }
-        guard !suppressPaneMeasure else {
-            deferredPaneMeasureWidth = width
-            return
-        }
-        let target = (activeToolPanel == nil)
-            ? width
-            : max(320, width - AdaptiveLayout.bibleNavSidebarWidth)
-        if abs(target - readerPaneWidth) > 0.5 {
-            readerPaneWidth = target
-        }
-    }
-
-    /// The docked study-tools panel in the left slot (iPad/Mac). It fills the slot
-    /// edge-to-edge — no floating-card rounding/shadow/inset — with a hairline trailing
-    /// divider, so it reads as PART of the sidebar (replacing the nav) rather than a
-    /// card overlaid on it. Its width equals the nav sidebar's, so opening it (with the
-    /// nav collapsing) leaves the reader put.
-    @ViewBuilder
-    private var bibleToolPanelLeft: some View {
-        if usesToolSidebar, !readerFullScreen, let panel = activeToolPanel {
-            bibleToolPanel(panel)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Color.adaptiveCardBackground(colorScheme))
-                .overlay(alignment: .trailing) {
+    var body: some View {
+        // The study panel is a system inspector: it takes the trailing column and the system
+        // resizes the reader beside it, on every rotation and multitasking size. The reader
+        // (TextKit) keeps its top verse in place across that resize.
+        readerBody
+            .inspector(isPresented: toolInspectorPresented) {
+                Group {
+                    if let panel = activeToolPanel {
+                        bibleToolPanel(panel)
+                    }
+                }
+                // Blends into the reader: the same canvas the panels' own content sits on, with one
+                // hairline seam. (A different fill read as a slab bolted onto the page, and the
+                // sheets hosted here paint the canvas colour anyway.)
+                .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+                .overlay(alignment: .leading) {
                     Rectangle()
                         .fill(Color.adaptiveBorder(colorScheme))
-                        .frame(width: 0.5)
+                        .frame(width: 1)
                         .ignoresSafeArea()
                 }
-                .frame(width: AdaptiveLayout.bibleNavSidebarWidth)
-                .transition(.move(edge: .leading).combined(with: .opacity))
-        }
+                .inspectorColumnWidth(min: 320, ideal: AdaptiveLayout.bibleToolPanelWidth, max: 480)
+            }
     }
 
     private var readerBody: some View {
@@ -1365,7 +1324,7 @@ struct BibleView: View {
                         book: selectedBook,
                         chapter: selectedChapter,
                         translation: currentTranslation,
-                        translationOrder: settingsManager.translationOrder,
+                        translationOrder: settingsManager.switcherTranslations,
                         originalLanguagesInSwitcher: settingsManager.enabledOriginalLanguages,
                         showAudioPlayer: showAudioPlayer,
                         audioPlayer: audioPlayer,
@@ -1784,7 +1743,7 @@ struct BibleView: View {
         .sheet(item: $verseShareSelection) { selection in
             VerseShareSheet(selection: selection)
         }
-        .sheet(item: $wordLookupResult, onDismiss: {
+        .sheet(item: wordStudySheetItem, onDismiss: {
             withAnimation(.easeInOut(duration: 0.15)) {
                 highlightedWord = nil
             }
@@ -2089,6 +2048,7 @@ struct BibleView: View {
             controller: windowController,
             onVerseTap: { hit in
                 guard let reference = hit.reference else { return }
+                FeatureUsage.record(.verseSelect)
                 withAnimation(.easeInOut(duration: 0.15)) { readingState.toggleSelection(reference) }
             },
             onWordLookup: { hit in
@@ -2244,6 +2204,8 @@ struct BibleView: View {
         }
         .buttonStyle(ReaderPressButtonStyle())
         .disabled(isRead)
+        // Floats over the text between the prev/next buttons; keep it from growing into them.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     /// Loading / error states for the windowed reader (its own overlay, replacing `focusOverlay`).
@@ -2269,7 +2231,7 @@ struct BibleView: View {
     /// in place, keeping the same verse at the top. (Light/dark is handled separately by the
     /// reader itself, since a color change doesn't move the layout.)
     private var readerPresentationKey: String {
-        "\(readingSettings.verseByVerse)|\(readingSettings.showPoetryLayout)|\(readingSettings.fontType.rawValue)|\(readingSettings.fontSize.rawValue)|\(readingSettings.lineSpacing.rawValue)"
+        "\(readingSettings.verseByVerse)|\(readingSettings.showPoetryLayout)|\(readingSettings.fontType.rawValue)|\(readingSettings.fontSize.rawValue)|\(readingSettings.lineSpacing.rawValue)|\(readingSettings.systemTextScale)"
     }
 
     /// Cheap change-signature for the interactive overlay, so the reader re-renders only when
@@ -2667,6 +2629,7 @@ struct BibleView: View {
                 highlightedWord: highlightedWord,
                 wocSegmentsMap: woc,
                 onVerseTap: { verse in
+                    FeatureUsage.record(.verseSelect)
                     withAnimation(.easeInOut(duration: 0.15)) {
                         readingState.toggleSelection(verse.reference)
                     }
@@ -2681,6 +2644,7 @@ struct BibleView: View {
     // MARK: - Strong's Word Lookup
 
     func performWordLookup(word: String, verse: ParsedVerse) {
+        FeatureUsage.record(.wordLookup)
         isLoadingWordLookup = true
         // Highlight the tapped word. For English, normalize to lowercase; for Greek/Hebrew
         // keep the original form since matching is done by exact word string.
@@ -2751,6 +2715,8 @@ struct BibleView: View {
             await MainActor.run {
                 isLoadingWordLookup = false
                 wordLookupResult = result
+                // With the tools rail the study docks beside the reader; otherwise it is a sheet.
+                if usesToolSidebar { openWordStudyPanel() }
             }
         }
     }
@@ -3472,6 +3438,7 @@ struct BibleTopBar: View {
                         .fontWeight(.bold)
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
 
                     Image(systemName: "chevron.down")
                         .font(.caption2)
@@ -3485,7 +3452,11 @@ struct BibleTopBar: View {
                 .shadow(color: Color.black.opacity(0.06), radius: 4, y: 2)
             }
             .buttonStyle(NoBlobButtonStyle())
-            .fixedSize()                          // ← never shrinks or clips
+            // Must stay compressible. This bar sits in the same VStack as the reader, and a
+            // `.fixedSize()` button that outgrows the screen (larger text sizes) makes the whole
+            // VStack wider than the screen, which widens the text view and reflows the scripture
+            // every time the chapter label changes width.
+            .layoutPriority(2)
             .accessibilityLabel("\(displayBookName) \(chapter)")
             .accessibilityHint("Choose a book and chapter")
 
@@ -3495,7 +3466,7 @@ struct BibleTopBar: View {
             Spacer(minLength: 4)
 
             // Search button
-            Button(action: onSearchTap) {
+            Button(action: { FeatureUsage.record(.search); onSearchTap() }) {
                 Image(systemName: "magnifyingglass")
                     .font(.body)
                     .fontWeight(.semibold)
@@ -3511,7 +3482,7 @@ struct BibleTopBar: View {
             .accessibilityHint("Search the Bible")
 
             // Audio button
-            Button(action: onAudioTap) {
+            Button(action: { FeatureUsage.record(.audio); onAudioTap() }) {
                 ZStack {
                     Circle()
                         .fill(!audioPlayer.currentBook.isEmpty || audioPlayer.isPlaying ? Color.reforgedNavy : Color.adaptiveCardBackground(colorScheme))
@@ -3530,7 +3501,7 @@ struct BibleTopBar: View {
             .accessibilityHint("Listen to this chapter")
 
             // Formatting button
-            Button(action: onFormatTap) {
+            Button(action: { FeatureUsage.record(.textOptions); onFormatTap() }) {
                 Image(systemName: "textformat.size")
                     .font(.body)
                     .fontWeight(.semibold)
@@ -3545,6 +3516,9 @@ struct BibleTopBar: View {
             .accessibilityLabel("Text options")
             .accessibilityHint("Change font, size, and reading layout")
         }
+        // Chrome, not reading text: cap Dynamic Type so the single-row bar keeps a stable height
+        // and width at accessibility sizes (the scripture itself is sized in the display settings).
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(.horizontal, horizontalSizeClass == .regular ? 20 : 16)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
@@ -3568,6 +3542,7 @@ struct BibleTopBar: View {
         Menu {
             ForEach(translationOrder) { t in
                 Button {
+                    FeatureUsage.record(.translationSwitch)
                     onTranslationSelect(t)
                 } label: {
                     HStack {
@@ -3668,13 +3643,14 @@ struct BibleAudioSidebarPanel: View {
                         .frame(width: 28, height: 28)
                         .background(Color.adaptiveChipBackground(colorScheme))
                         .clipShape(Circle())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Collapse audio player")
 
-                Text("NOW PLAYING")
-                    .font(.caption2).fontWeight(.semibold)
-                    .tracking(1.5)
+                Text("Now playing")
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
 
                 Spacer()
@@ -3690,6 +3666,8 @@ struct BibleAudioSidebarPanel: View {
                         .frame(width: 28, height: 28)
                         .background(Color.adaptiveChipBackground(colorScheme))
                         .clipShape(Circle())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Stop and close audio")
@@ -3704,6 +3682,8 @@ struct BibleAudioSidebarPanel: View {
                 .frame(maxWidth: 220)
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: Color.black.opacity(0.12), radius: 16, y: 8)
+                .accessibilityHidden(true)
 
             // Title + version switcher
             HStack(spacing: 10) {
@@ -3731,6 +3711,7 @@ struct BibleAudioSidebarPanel: View {
                             Capsule().fill(Color.adaptiveTextSecondary(colorScheme).opacity(0.2)).frame(height: 4)
                             Capsule().fill(Color.reforgedCoral).frame(width: geo.size.width * progressFraction, height: 4)
                         }
+                        .frame(maxHeight: .infinity)
                         .contentShape(Rectangle())
                         .gesture(
                             DragGesture(minimumDistance: 0)
@@ -3745,7 +3726,7 @@ struct BibleAudioSidebarPanel: View {
                                 }
                         )
                     }
-                    .frame(height: 16)
+                    .frame(height: 36)
                     HStack {
                         Text(timeString(isScrubbing ? scrubPosition : audioPlayer.currentTime))
                         Spacer()
@@ -3820,10 +3801,12 @@ struct BibleAudioSidebarPanel: View {
                     .font(.subheadline).fontWeight(.semibold)
                 Image(systemName: "chevron.up.chevron.down").font(.caption2)
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .background(Color.reforgedNavy)
+            .foregroundStyle(Color.adaptiveBackground(colorScheme))
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(Color.adaptiveNavyText(colorScheme))
             .clipShape(Capsule())
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
     }
 
@@ -3856,9 +3839,11 @@ struct BibleAudioSidebarPanel: View {
                     .font(.caption).fontWeight(.semibold).monospacedDigit()
             }
             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            .padding(.horizontal, 13).padding(.vertical, 7)
+            .padding(.horizontal, 14).padding(.vertical, 8)
             .background(Color.adaptiveChipBackground(colorScheme))
             .clipShape(Capsule())
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
     }
 
@@ -3927,6 +3912,7 @@ struct FloatingChapterNav: View {
             .accessibilityLabel("Next chapter")
         }
         .padding(.horizontal, 16)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 }
 
@@ -4082,9 +4068,9 @@ private struct FormattingPanelScrollContent: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
-                // Text: the controls the preview above responds to most directly
-                FormattingCard {
+            VStack(spacing: 24) {
+                // The controls the pinned preview responds to most directly
+                FormattingGroup("Text") {
                     FormattingFontSizeSection(settings: settings)
                     Divider()
                     FormattingFontTypeSection(settings: settings)
@@ -4092,48 +4078,108 @@ private struct FormattingPanelScrollContent: View {
                     FormattingLineSpacingSection(settings: settings)
                 }
 
-                // Layout + red letter — also reflected in the preview
-                FormattingCard {
-                    FormattingVerseLayoutSection(settings: settings)
-                    Divider()
-                    FormattingRedLetterSection(isOn: $settingsManager.showRedLetterText)
-                }
-
-                // Theme
-                FormattingCard {
+                // Light / dark / system — the biggest visible change, so it comes early
+                FormattingGroup("Appearance") {
                     FormattingThemeSection(themeManager: themeManager)
                 }
 
-                // Crown-shop extras the reader owns: theme, highlighters,
-                // illuminated capitals, ambient sound + volume.
-                FormattingCard {
-                    ReaderCrownExtrasSection()
+                FormattingGroup("Layout") {
+                    FormattingToggleRow(
+                        title: "One Verse per Line",
+                        subtitle: "Start every verse on a new line",
+                        isOn: $settings.verseByVerse)
+                    Divider()
+                    FormattingToggleRow(
+                        title: "Poetry Line Breaks",
+                        subtitle: "Show Psalms and prophecy as verse lines",
+                        isOn: $settings.showPoetryLayout)
+                    Divider()
+                    FormattingToggleRow(
+                        title: "Words of Jesus in Red",
+                        subtitle: "In the Gospels",
+                        isOn: $settingsManager.showRedLetterText)
                 }
 
-                // Reading mode — affects the reader chrome, not the text
-                FormattingCard {
-                    FormattingReadingModeSection(isOn: $settingsManager.readingMode)
+                FormattingGroup("Reading") {
+                    FormattingToggleRow(
+                        title: "Full Screen",
+                        subtitle: "Hide the bars while you read. Scroll up to bring them back.",
+                        isOn: $settingsManager.readingMode)
+                }
+
+                // Crown-shop extras the reader owns: highlighters, illuminated
+                // capitals, ambient sound + volume. Last: optional, not needed to start.
+                FormattingGroup("Extras") {
+                    ReaderCrownExtrasSection()
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 4)
-            .padding(.bottom, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
         }
     }
 }
 
-private struct FormattingCard<Content: View>: View {
-    @Environment(\.colorScheme) var colorScheme
+/// A titled group: the label sits above the card (like an inset-grouped list),
+/// so controls inside don't each need their own heading.
+private struct FormattingGroup<Content: View>: View {
+    let title: String
     @ViewBuilder let content: Content
+    @Environment(\.colorScheme) var colorScheme
+
+    init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            content
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .padding(.horizontal, 4)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: 16) {
+                content
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.adaptiveBackground(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
-        .padding(16)
-        .background(Color.adaptiveBackground(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
+}
+
+private struct FormattingToggleRow: View {
+    let title: String
+    let subtitle: String
+    @Binding var isOn: Bool
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+        }
+        .tint(Color.reforgedGold)
+        .onChange(of: isOn) { _ in HapticManager.shared.lightImpact() }
+    }
+}
+
+/// Selected-state colors for the segmented-style option buttons. Dark text on
+/// gold (white on gold is ~2:1); white on navy in light mode.
+private func formattingSelectedFill(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? Color.reforgedGold : Color.reforgedNavy
+}
+private func formattingSelectedText(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? Color.black.opacity(0.88) : .white
 }
 
 // MARK: - Theme Section
@@ -4144,11 +4190,6 @@ private struct FormattingThemeSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Theme")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
             HStack(spacing: 10) {
                 ForEach(ThemeMode.allCases, id: \.self) { mode in
                     FormattingThemeButton(mode: mode, isSelected: themeManager.currentMode == mode) {
@@ -4176,7 +4217,7 @@ private struct FormattingThemeSection: View {
                     .font(.caption)
                     .fontWeight(.medium)
             }
-            .foregroundStyle(isSelected ? .white : Color.adaptiveText(colorScheme))
+            .foregroundStyle(isSelected ? formattingSelectedText(colorScheme) : Color.adaptiveText(colorScheme))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(isSelected
@@ -4219,15 +4260,13 @@ private struct FormattingFontSizeSection: View {
         VStack(alignment: .leading, spacing: 10) {
             // Label row: title on left, current size name on right
             HStack {
-                Text("Font Size")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                Text("Size")
+                    .font(.body)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
                 Spacer()
                 Text(settings.fontSize.displayName)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Color.reforgedGold)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     .animation(.easeInOut(duration: 0.15), value: settings.fontSize)
             }
 
@@ -4262,10 +4301,9 @@ private struct FormattingFontTypeSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Font Type")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            Text("Font")
+                .font(.body)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
 
             HStack(spacing: 10) {
                 ForEach(BibleReadingSettings.FontType.allCases, id: \.self) { fontType in
@@ -4276,7 +4314,7 @@ private struct FormattingFontTypeSection: View {
                         Text(fontType.displayName)
                             .font(.system(size: 15, design: fontType.design))
                             .fontWeight(.medium)
-                            .foregroundStyle(settings.fontType == fontType ? .white : Color.adaptiveText(colorScheme))
+                            .foregroundStyle(settings.fontType == fontType ? formattingSelectedText(colorScheme) : Color.adaptiveText(colorScheme))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .background(settings.fontType == fontType
@@ -4303,9 +4341,8 @@ private struct FormattingLineSpacingSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Line Spacing")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .font(.body)
+                .foregroundStyle(Color.adaptiveText(colorScheme))
 
             HStack(spacing: 6) {
                 ForEach(BibleReadingSettings.LineSpacingOption.allCases, id: \.self) { spacing in
@@ -4369,107 +4406,7 @@ private struct FormattingLineSpacingButton: View {
     }
 
     private var foreground: Color {
-        isSelected ? .white : Color.adaptiveText(colorScheme)
-    }
-}
-
-// MARK: - Verse Layout Section
-
-private struct FormattingVerseLayoutSection: View {
-    @ObservedObject var settings: BibleReadingSettings
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Verse Layout")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-            Toggle(isOn: $settings.verseByVerse) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Verse-by-Verse")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text("Each verse on its own line")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                }
-            }
-            .tint(Color.reforgedGold)
-            .onChange(of: settings.verseByVerse) { _ in HapticManager.shared.lightImpact() }
-
-            Toggle(isOn: $settings.showPoetryLayout) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Poetry Layout")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text("Show Psalms and prophecy line by line")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                }
-            }
-            .tint(Color.reforgedGold)
-            .onChange(of: settings.showPoetryLayout) { _ in HapticManager.shared.lightImpact() }
-        }
-    }
-}
-
-// MARK: - Reading Mode Section
-
-private struct FormattingReadingModeSection: View {
-    @Binding var isOn: Bool
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Reading Mode")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-            Toggle(isOn: $isOn) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Full Screen")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text("Hide navigation bars. Tap or scroll to top to reveal.")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                }
-            }
-            .tint(Color.reforgedGold)
-            .onChange(of: isOn) { _ in HapticManager.shared.lightImpact() }
-        }
-    }
-}
-
-// MARK: - Red Letter Section
-
-private struct FormattingRedLetterSection: View {
-    @Binding var isOn: Bool
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Red Letter")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-            Toggle(isOn: $isOn) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Words of Christ")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text("Display the words of Jesus in red throughout the Gospels.")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                }
-            }
-            .tint(Color(red: 0.75, green: 0.1, blue: 0.1))
-            .onChange(of: isOn) { _ in HapticManager.shared.lightImpact() }
-        }
+        isSelected ? formattingSelectedText(colorScheme) : Color.adaptiveText(colorScheme)
     }
 }
 

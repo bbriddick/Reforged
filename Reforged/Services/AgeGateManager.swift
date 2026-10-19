@@ -28,6 +28,7 @@ final class AgeGateManager: ObservableObject {
 
     private let kStatus = "reforged.ageGate.status"
     private let kBirthDate = "reforged.ageGate.birthDate"       // ISO-8601, day precision
+    private let kBirthDateSynced = "reforged.ageGate.birthDateSynced"
     private let keychainRestrictedKey = "reforged.ageGate.restricted"
     private let keychainService = "com.reforged.app"
 
@@ -69,6 +70,7 @@ final class AgeGateManager: ObservableObject {
         if status == .restricted { return .restricted }
 
         UserDefaults.standard.set(Self.dayFormatter.string(from: birthDate), forKey: kBirthDate)
+        UserDefaults.standard.set(false, forKey: kBirthDateSynced)
 
         let newStatus: AgeGateStatus = Self.age(from: birthDate) >= Self.minimumAge ? .allowed : .restricted
         status = newStatus
@@ -95,22 +97,45 @@ final class AgeGateManager: ObservableObject {
 
     // MARK: - Profile Sync
 
+    /// Uploads the stored birth date via `set_my_birth_date` (set-once, 13+).
+    /// Profile birth_date can't be written directly, and `upgrade_to_leader`
+    /// is 18+ and grants a role, so this dedicated RPC is the only path.
+    /// Safe to call repeatedly; it retries until the server accepts it.
+    func syncPendingBirthDate() async {
+        guard status == .allowed,
+              !UserDefaults.standard.bool(forKey: kBirthDateSynced),
+              let birthDate = storedBirthDate else { return }
+        await syncBirthDateToProfile(birthDate)
+    }
+
     private func syncBirthDateToProfile(_ birthDate: Date) async {
         guard let token = await SupabaseAuthService.shared.validAccessToken(),
-              let uid = SupabaseAuthService.shared.userId,
-              let base = SettingsManager.shared.supabaseProjectURL else { return }
+              let base = SettingsManager.shared.supabaseProjectURL,
+              let url = URL(string: "\(base.absoluteString)/rest/v1/rpc/set_my_birth_date") else { return }
         let anon = SettingsManager.shared.supabaseAnonKey
-        guard let url = URL(string: "\(base.absoluteString)/rest/v1/profiles?user_id=eq.\(uid)") else { return }
 
         var req = URLRequest(url: url)
-        req.httpMethod = "PATCH"
+        req.httpMethod = "POST"
         req.setValue(anon, forHTTPHeaderField: "apikey")
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("return=minimal", forHTTPHeaderField: "Prefer")
         req.httpBody = try? JSONSerialization.data(
-            withJSONObject: ["birth_date": Self.dayFormatter.string(from: birthDate)])
-        _ = try? await URLSession.shared.data(for: req)
+            withJSONObject: ["_birth_date": Self.dayFormatter.string(from: birthDate)])
+
+        guard let (data, response) = try? await URLSession.shared.data(for: req),
+              let http = response as? HTTPURLResponse else { return }
+
+        if (200..<300).contains(http.statusCode) {
+            UserDefaults.standard.set(true, forKey: kBirthDateSynced)
+            return
+        }
+        // 'already_set' means the server holds a different date. Don't retry
+        // forever; the server's value is authoritative and can't be changed.
+        let message = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["message"] as? String
+        if message?.contains("already_set") == true {
+            UserDefaults.standard.set(true, forKey: kBirthDateSynced)
+        }
+        debugLog("set_my_birth_date failed (\(http.statusCode)): \(message ?? "no message")")
     }
 
     // MARK: - Formatters

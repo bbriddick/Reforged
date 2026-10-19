@@ -23,6 +23,10 @@ struct CurriculumUnit: Identifiable {
     let icon: String
     let accent: PlanAccent
     let verses: [CurriculumVerse]
+    /// XP paid once per verse on a themed track (Southland camp). nil on the main curriculum.
+    var pointsPerVerse: Int? = nil
+    /// A review-only unit that repeats earlier verses (Southland Friday).
+    var isReview = false
 }
 
 enum MemoryCurriculum {

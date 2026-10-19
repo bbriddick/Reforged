@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.isSidebarNavigation) var isSidebarNavigation
+    @State private var showSetupConfirmation = false
 
     var body: some View {
         Group {
@@ -48,64 +49,109 @@ struct SettingsView: View {
                 sectionNavRow(.widgets,       hint: AppState.shared.equippedItem(.widget)?.name)
             }
 
+            Section("Friends and switching") {
+                NavigationLink { SwitchFromYouVersionView() } label: {
+                    switchRow(icon: "arrow.triangle.swap", title: "Coming from YouVersion?",
+                              subtitle: "Bring your verses and plan progress")
+                }
+                NavigationLink { SwitchKitView() } label: {
+                    switchRow(icon: "paperplane.fill", title: "Send the switch kit",
+                              subtitle: "A poster and note for friends who haven't switched")
+                }
+            }
+
             Section {
                 sectionNavRow(.about)
+            }
+
+            Section {
+                Button {
+                    HapticManager.shared.buttonTap()
+                    AppTour.shared.start()
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "lightbulb.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.reforgedGold)
+                            .frame(width: 30, height: 30)
+                            .background(Color.reforgedGold.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                        Text("Take the app tour")
+                            .font(.body)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        Spacer()
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                Button {
+                    HapticManager.shared.buttonTap()
+                    DeviceSetup.shared.activate(reminders: DeviceSetup.shared.reminders)
+                    showSetupConfirmation = true
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "checklist")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.reforgedCoral)
+                            .frame(width: 30, height: 30)
+                            .background(Color.reforgedCoral.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                        Text("Show setup checklist")
+                            .font(.body)
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+
+                        Spacer()
+                    }
+                    .padding(.vertical, 2)
+                }
+            } footer: {
+                Text("A quick walkthrough of the main features, or bring back the setup checklist on Home.")
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
         .navigationTitle("Settings")
+        .alert("Checklist added to Home", isPresented: $showSetupConfirmation) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("The \u{201C}Finish setting up this device\u{201D} card is back at the top of Home.")
+        }
     }
 
     private var accountRow: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 16) {
             if AppleSignInService.shared.isSignedIn {
-                ProfileAvatarView(size: 50)
+                ProfileAvatarView(size: 60)
             } else {
-                ZStack {
-                    Circle()
-                        .fill(Color.teal.opacity(0.12))
-                        .frame(width: 50, height: 50)
-                    Image(systemName: "person.circle")
-                        .font(.title2)
-                        .foregroundStyle(Color.teal)
-                }
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Color.reforgedGold)
+                    .frame(width: 60, height: 60)
             }
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 if AppleSignInService.shared.isSignedIn {
                     Text(appState.user.displayName.isEmpty
                          ? appState.user.firstName
                          : appState.user.displayName)
-                        .font(.headline)
+                        .font(.title3.weight(.semibold))
                     Text(AppleSignInService.shared.userEmail ?? "Apple ID")
                         .font(.subheadline)
                         .foregroundStyle(Color.secondary)
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                        Text("Signed in with Apple")
-                            .font(.caption2)
-                            .foregroundStyle(Color.green)
-                    }
                 } else {
                     Text("Sign in to Reforged")
-                        .font(.headline)
+                        .font(.title3.weight(.semibold))
                     Text("Sync progress across your devices")
                         .font(.subheadline)
                         .foregroundStyle(Color.secondary)
-                    Text("Tap to get started →")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.teal)
                 }
             }
 
             Spacer()
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
     }
 
     private func sectionNavRow(_ section: SettingsSection, hint: String? = nil) -> some View {
@@ -114,36 +160,43 @@ struct SettingsView: View {
                 sectionContent(section)
             }
         } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(section.color.opacity(0.15))
-                        .frame(width: 34, height: 34)
-                    Image(systemName: section.icon)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(section.color)
-                }
+            HStack(spacing: 14) {
+                // One quiet brand tint for every row: gold glyph on a soft gold wash.
+                Image(systemName: section.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.reforgedGold)
+                    .frame(width: 30, height: 30)
+                    .background(Color.reforgedGold.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(section.rawValue)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text(section.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
-                }
+                Text(section.rawValue)
+                    .font(.body)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
 
                 Spacer()
 
                 if let hint {
                     Text(hint)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(Color.secondary)
                 }
             }
-            .padding(.vertical, 3)
+            .padding(.vertical, 2)
         }
+    }
+
+    private func switchRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.reforgedCoral)
+                .frame(width: 30, height: 30)
+                .background(Color.reforgedCoral.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.body).foregroundStyle(Color.adaptiveText(colorScheme))
+                Text(subtitle).font(.caption).foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            }
+        }
+        .padding(.vertical, 2)
     }
 
     @ViewBuilder

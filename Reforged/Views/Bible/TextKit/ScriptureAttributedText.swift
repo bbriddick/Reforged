@@ -118,7 +118,7 @@ extension VerseHighlight {
 enum ReaderFonts {
     /// Body verse text for an English translation.
     static func body(_ settings: BibleReadingSettings, italic: Bool) -> UIFont {
-        font(for: settings.fontType, size: settings.effectiveFontSize, italic: italic)
+        font(for: settings.fontType, size: settings.readerFontSize, italic: italic)
     }
 
     static func font(for type: BibleReadingSettings.FontType, size: CGFloat, italic: Bool) -> UIFont {
@@ -161,19 +161,25 @@ enum ReaderFonts {
         }
     }
 
-    static func sectionHeading() -> UIFont {
-        UIFont(name: "LibreBaskerville-Italic", size: 13)
+    /// `scale` is `BibleReadingSettings.readerHeadingScale` (system text size), 1.0 by default.
+    static func sectionHeading(scale: CGFloat = 1) -> UIFont {
+        let size = 13 * scale
+        return UIFont(name: "LibreBaskerville-Italic", size: size)
             ?? {
-                let base = UIFont.systemFont(ofSize: 13)
+                let base = UIFont.systemFont(ofSize: size)
                 if let d = base.fontDescriptor.withSymbolicTraits(.traitItalic) {
-                    return UIFont(descriptor: d, size: 13)
+                    return UIFont(descriptor: d, size: size)
                 }
                 return base
             }()
     }
 
-    static func chapterBookEyebrow() -> UIFont { UIFont.systemFont(ofSize: 12, weight: .medium) }
-    static func chapterTitle() -> UIFont { UIFont.systemFont(ofSize: 28, weight: .bold) }
+    static func chapterBookEyebrow(scale: CGFloat = 1) -> UIFont {
+        UIFont.systemFont(ofSize: 12 * scale, weight: .medium)
+    }
+    static func chapterTitle(scale: CGFloat = 1) -> UIFont {
+        UIFont.systemFont(ofSize: 28 * scale, weight: .bold)
+    }
 }
 
 // MARK: - Interactive Render State

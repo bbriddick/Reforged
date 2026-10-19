@@ -7,7 +7,10 @@ import Foundation
 /// so chapters are read online and only the most recently read ones are kept.
 struct NLTConfig {
     static let baseURL = "https://api.nlt.to/api/passages"
-    static var apiKey: String { ApiBibleConfig.apiKeyOverrides[.nlt] ?? "" }
+    /// ▶︎ PASTE YOUR api.nlt.to LICENSE KEY HERE (https://api.nlt.to/Documentation).
+    static let apiKey = "ecba831f-f0a9-434a-9676-0b6cddcfd380"
+    /// Always request American-English NLT explicitly (the API also serves NTV/Spanish, NLTUK, KJV).
+    static let version = "NLT"
     /// Maximum verses of NLT text kept on disk. Least recently read chapters go first.
     static let maxStoredVerses = 500
 }
@@ -39,6 +42,13 @@ final class NLTService {
         if !UserDefaults.standard.bool(forKey: flag) {
             ApiBibleService.shared.clearLegacyCache(for: .nlt)
             UserDefaults.standard.set(true, forKey: flag)
+        }
+        // One-time: drop any NLT chapters stored before the version was requested explicitly
+        // (a wrong-language chapter would otherwise be served from disk for up to 30 days).
+        let versionFlag = "nlt_explicit_version_cache_purged"
+        if !UserDefaults.standard.bool(forKey: versionFlag) {
+            NLTChapterStore.shared.clear()
+            UserDefaults.standard.set(true, forKey: versionFlag)
         }
     }
 
@@ -80,6 +90,7 @@ final class NLTService {
         var components = URLComponents(string: NLTConfig.baseURL)
         components?.queryItems = [
             URLQueryItem(name: "ref", value: "\(Self.apiBookName(book)).\(chapter)"),
+            URLQueryItem(name: "version", value: NLTConfig.version),
             URLQueryItem(name: "key", value: NLTConfig.apiKey)
         ]
         guard let url = components?.url else { throw NLTServiceError.badReference }

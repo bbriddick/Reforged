@@ -47,7 +47,7 @@ struct WhatsNewView: View {
                 .font(.system(size: 34, weight: .bold, design: .serif))
                 .foregroundStyle(Color.adaptiveText(colorScheme))
 
-            Text("Memorizing Scripture just got a lot more fun, plus more to help you read, study, and walk with God each day.")
+            Text("Read, memorize, and grow alongside your friends, with a smoother start and study tools that work anywhere.")
                 .font(.subheadline)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 .lineSpacing(2)
@@ -229,52 +229,52 @@ struct WhatsNewFeature {
 
     static let currentVersion: [WhatsNewFeature] = [
         WhatsNewFeature(
-            icon: "sun.max.fill",
+            icon: "arrow.right.circle.fill",
             accent: .gold,
-            title: "Morning Routine",
-            description: "A guided start to your day from Home — Scripture, prayer, gratitude, and a quick memory review, saved to your journal."
+            title: "Pick Up Where You Left Off",
+            description: "Home and the Bible navigator now share one Continue button that takes you to your next reading plan entry, or your last place in the Bible."
         ),
         WhatsNewFeature(
-            icon: "books.vertical.fill",
+            icon: "sparkles",
             accent: .coral,
-            title: "Study Library",
-            description: "Open a verse alongside trusted commentaries, the Tyndale Open Study Notes, and a Bible dictionary — with the larger classics available to download for offline study."
+            title: "A Faster Start",
+            description: "New onboarding has you learning a real verse in about a minute, with a short guided tour of each tab as you go."
         ),
         WhatsNewFeature(
-            icon: "checklist",
+            icon: "wifi.slash",
             accent: .purple,
-            title: "My Rhythm",
-            description: "Build your own daily rule of life: habits to keep, temptations to avoid, custom reading plans, and real reminders."
+            title: "Study Tools That Work Offline",
+            description: "Original-language word studies and lexicons are built into the app, so they open instantly with no connection."
         ),
         WhatsNewFeature(
-            icon: "moon.stars.fill",
+            icon: "arrow.triangle.2.circlepath",
             accent: .navy,
-            title: "Morning & Evening",
-            description: "Walk through Spurgeon's classic daily devotional right inside your reading plans, one reflection each morning and evening."
+            title: "Coming From YouVersion?",
+            description: "Bring your saved verses over as memory verses and set your place in a reading plan, so switching costs you nothing."
         ),
         WhatsNewFeature(
-            icon: "note.text",
+            icon: "iphone.and.arrow.forward",
             accent: .gold,
-            title: "A Richer Notes Library",
-            description: "Your journal and Bible notes now live together in folders, with checklists, highlights, colors, and pinning."
+            title: "A New Device Feels Like Home",
+            description: "Your reading and display choices follow you to a new device, and a short setup card helps you turn reminders, widgets, and focus protection back on."
         ),
         WhatsNewFeature(
-            icon: "magnifyingglass",
-            accent: .purple,
-            title: "Search From Home",
-            description: "Look up any word, verse, or passage from the Home screen and jump straight to it — no need to open the reader first."
-        ),
-        WhatsNewFeature(
-            icon: "icloud.fill",
+            icon: "shield.lefthalf.filled",
             accent: .coral,
-            title: "Synced Across Your Devices",
-            description: "Your streak, reading history, memory progress, and journal now stay perfectly in step across every device signed in to your iCloud."
+            title: "A Fuller SOS for Temptation",
+            description: "Slow down, name what is pulling at you, fight with Scripture, take one concrete step, and pray. If you stumbled, a path to confession and grace is there too."
         ),
         WhatsNewFeature(
-            icon: "ipad.landscape",
+            icon: "tent.fill",
+            accent: .purple,
+            title: "Southland Camp Verses",
+            description: "The Southland 2026 \"Take Courage\" camp verses now have their own track in the Memory tab."
+        ),
+        WhatsNewFeature(
+            icon: "wand.and.stars",
             accent: .navy,
-            title: "Rebuilt for iPad",
-            description: "Read with study tools open right beside the text, and enjoy Home and the discipleship tools laid out for the bigger screen."
+            title: "Polish Throughout",
+            description: "Refreshed study sheets, notes, search, and the memory path, plus a round of reliability and performance fixes."
         ),
     ]
 }
@@ -293,15 +293,15 @@ struct WhatsNewSpotlight {
     let highlights: [Highlight]
 
     static let current = WhatsNewSpotlight(
-        icon: "book.closed.fill",
-        eyebrow: "All-new Scripture Memory",
-        title: "Hide His Word in Your Heart",
-        description: "The Memory tab is now a fun, guided journey through 150 verses in 15 themes, from the foundations of faith to peace, hope, and prayer. Tap the next step on the path and start learning.",
+        icon: "person.2.fill",
+        eyebrow: "Better Together",
+        title: "Walk With Friends",
+        description: "Scripture sticks when you share it. Add friends, memorize verses together, read side by side, and cheer each other on, all without a single chat message to manage.",
         highlights: [
-            Highlight(icon: "map.fill", text: "Follow a winding path of verse lessons, quick recall checkpoints, and unit reviews"),
-            Highlight(icon: "puzzlepiece.fill", text: "Bite-sized daily lessons: listen, tap phrases in order, drag and drop words, and fill in the blanks"),
-            Highlight(icon: "mic.fill", text: "Say It Back: recite the verse out loud and watch each word light up as you get it right"),
-            Highlight(icon: "star.fill", text: "Swipe through flashcards, earn XP, level up, and celebrate every verse you memorize"),
+            Highlight(icon: "qrcode", text: "Add friends with an invite code, a QR scan, or by finding people from your contacts"),
+            Highlight(icon: "book.closed.fill", text: "Memorize a verse together, take quizzes, and build a shared streak"),
+            Highlight(icon: "book.pages.fill", text: "Read a plan or passage together and see when your friend has read today"),
+            Highlight(icon: "paperplane.fill", text: "Challenge a friend with a link that opens straight to the verse"),
         ]
     )
 }

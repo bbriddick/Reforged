@@ -15,6 +15,10 @@ struct RhythmHubView: View {
     @State private var showItemEditor = false
     @State private var editingItem: RhythmItem?
     @State private var showPlanBuilder = false
+    /// Edit mode shows a delete button on every checklist item and custom plan.
+    @State private var isEditing = false
+    @State private var itemToDelete: RhythmItem?
+    @State private var planToDelete: CustomReadingPlanSpec?
 
     var body: some View {
         ScrollView {
@@ -34,11 +38,45 @@ struct RhythmHubView: View {
         .navigationTitle("My Disciplines")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
+            if !store.items.isEmpty || !planStore.specs.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(isEditing ? "Done" : "Edit") {
+                        HapticManager.shared.buttonTap()
+                        withAnimation(.easeInOut(duration: 0.2)) { isEditing.toggle() }
+                    }
+                    .fontWeight(isEditing ? .semibold : .regular)
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button { HapticManager.shared.buttonTap(); showItemEditor = true } label: {
                     Image(systemName: "plus")
                 }
             }
+        }
+        .alert("Delete this discipline?", isPresented: Binding(
+            get: { itemToDelete != nil }, set: { if !$0 { itemToDelete = nil } }
+        ), presenting: itemToDelete) { item in
+            Button("Delete", role: .destructive) {
+                HapticManager.shared.mediumImpact()
+                withAnimation { store.delete(item) }
+                if store.items.isEmpty && planStore.specs.isEmpty { isEditing = false }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { item in
+            Text("\u{201C}\(item.title)\u{201D} and its reminder will be removed.")
+        }
+        .alert("Delete this reading plan?", isPresented: Binding(
+            get: { planToDelete != nil }, set: { if !$0 { planToDelete = nil } }
+        ), presenting: planToDelete) { spec in
+            Button("Delete", role: .destructive) {
+                HapticManager.shared.mediumImpact()
+                ReadingPlanService.shared.resetPlan(spec.id)
+                withAnimation { planStore.delete(id: spec.id) }
+                if store.items.isEmpty && planStore.specs.isEmpty { isEditing = false }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { spec in
+            Text("\u{201C}\(spec.name)\u{201D} and your progress in it will be removed.")
         }
         .sheet(isPresented: $showItemEditor) {
             RhythmItemEditorView().environmentObject(appState)
@@ -158,17 +196,27 @@ struct RhythmHubView: View {
 
             Spacer()
 
-            Button { HapticManager.shared.buttonTap(); editingItem = item } label: {
-                Image(systemName: "pencil")
+            Button {
+                HapticManager.shared.buttonTap()
+                if isEditing { itemToDelete = item } else { editingItem = item }
+            } label: {
+                Image(systemName: isEditing ? "trash" : "pencil")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .foregroundStyle(isEditing ? Color.red : Color.adaptiveTextSecondary(colorScheme))
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(isEditing ? "Delete \(item.title)" : "Edit \(item.title)")
         }
         .padding(14)
         .background(Color.adaptiveCardBackground(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.05), radius: 6, y: 2)
+        .contextMenu {
+            Button { editingItem = item } label: { Label("Edit", systemImage: "pencil") }
+            Button(role: .destructive) { itemToDelete = item } label: { Label("Delete", systemImage: "trash") }
+        }
     }
 
     // MARK: - All disciplines (manage / edit / delete)
@@ -185,7 +233,7 @@ struct RhythmHubView: View {
                         manageRow(item)
                     }
                 }
-                Text("Tap any discipline to edit it or delete it.")
+                Text(isEditing ? "Tap a discipline to delete it." : "Tap a discipline to edit it, or press and hold to delete it.")
                     .font(.caption2)
                     .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
             }
@@ -195,7 +243,7 @@ struct RhythmHubView: View {
     private func manageRow(_ item: RhythmItem) -> some View {
         Button {
             HapticManager.shared.buttonTap()
-            editingItem = item
+            if isEditing { itemToDelete = item } else { editingItem = item }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: item.iconName)
@@ -220,9 +268,9 @@ struct RhythmHubView: View {
                         .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                 }
                 Spacer()
-                Image(systemName: "pencil")
+                Image(systemName: isEditing ? "trash" : "pencil")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .foregroundStyle(isEditing ? Color.red : Color.adaptiveTextSecondary(colorScheme))
             }
             .padding(14)
             .background(Color.adaptiveCardBackground(colorScheme))
@@ -230,6 +278,10 @@ struct RhythmHubView: View {
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.05), radius: 6, y: 2)
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            Button { editingItem = item } label: { Label("Edit", systemImage: "pencil") }
+            Button(role: .destructive) { itemToDelete = item } label: { Label("Delete", systemImage: "trash") }
+        }
     }
 
     private var emptyChecklist: some View {
@@ -254,12 +306,24 @@ struct RhythmHubView: View {
             sectionLabel("Bible Reading")
 
             ForEach(planStore.specs) { spec in
-                NavigationLink {
-                    ReadingPlanDetailView(plan: BibleReadingPlan(spec: spec))
-                } label: {
-                    planRow(spec)
+                Group {
+                    if isEditing {
+                        Button {
+                            HapticManager.shared.buttonTap()
+                            planToDelete = spec
+                        } label: { planRow(spec) }
+                    } else {
+                        NavigationLink {
+                            ReadingPlanDetailView(plan: BibleReadingPlan(spec: spec))
+                        } label: { planRow(spec) }
+                    }
                 }
                 .buttonStyle(.plain)
+                .contextMenu {
+                    Button(role: .destructive) { planToDelete = spec } label: {
+                        Label("Delete Plan", systemImage: "trash")
+                    }
+                }
             }
 
             Button { HapticManager.shared.buttonTap(); showPlanBuilder = true } label: {
@@ -297,8 +361,9 @@ struct RhythmHubView: View {
                 }
             }
             Spacer()
-            Image(systemName: "chevron.right").font(.caption)
-                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            Image(systemName: isEditing ? "trash" : "chevron.right")
+                .font(isEditing ? .system(size: 14, weight: .semibold) : .caption)
+                .foregroundStyle(isEditing ? Color.red : Color.adaptiveTextSecondary(colorScheme))
         }
         .padding(14)
         .background(Color.adaptiveCardBackground(colorScheme))

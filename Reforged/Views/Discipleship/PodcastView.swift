@@ -180,6 +180,8 @@ final class PodcastPlayerViewModel: ObservableObject {
 struct PodcastView: View {
     @StateObject private var service = PodcastService.shared
     @StateObject private var playerVM = PodcastPlayerViewModel()
+    /// Set by search results: load this episode and open its player on arrival.
+    var initialEpisodeID: String? = nil
     @State private var selectedEpisode: PodcastEpisode?
     @State private var selectedCategory: String? = nil
     @State private var searchText = ""
@@ -257,7 +259,14 @@ struct PodcastView: View {
             }
         }
         .searchable(text: $searchText, prompt: "Search episodes")
-        .task { await service.loadEpisodes() }
+        .task {
+            await service.loadEpisodes()
+            if let id = initialEpisodeID, selectedEpisode == nil,
+               let episode = service.feed?.episodes.first(where: { $0.id == id }) {
+                selectEpisode(episode)
+                showExpandedPlayer = true
+            }
+        }
         .animation(.easeInOut(duration: 0.3), value: selectedEpisode?.id)
         .animation(.easeInOut(duration: 0.2), value: selectedCategory)
         .alert("Get Notified About New Episodes?", isPresented: $showNotificationPrompt) {

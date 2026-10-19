@@ -321,16 +321,28 @@ final class GeminiService {
         Generate exactly 6 reflective journal prompts for a Christian reader studying \(reference): "\(verseText)". \
         Each prompt must be under 90 characters. \
         Cover distinct angles: observation, personal application, prayer, character of God, challenge to act, and surrender. \
+        Do not use double quotes inside a prompt; use single quotes if you must quote words. \
         Return only a valid JSON array of 6 strings with no markdown or extra text. Example: ["Prompt 1","Prompt 2","Prompt 3","Prompt 4","Prompt 5","Prompt 6"]
         """
 
-        let raw = try await generate(prompt: prompt, maxTokens: 300)
+        let raw = try await generate(prompt: prompt, maxTokens: 400)
         let prompts = parseJSONStringArray(from: raw)
         guard prompts.count >= 3 else { throw GeminiError.decodingError("Not enough prompts returned") }
 
         journalPromptCache[reference] = prompts
         return prompts
     }
+
+    /// General reflection prompts shown when personalised ones cannot be loaded (offline, AI
+    /// service down), so the note sheet and verse study always have something to start from.
+    static let fallbackJournalPrompts: [String] = [
+        "What does this passage say about who God is?",
+        "What stands out to you, and why?",
+        "How does this verse change how you see today?",
+        "What is one thing you could do because of this verse?",
+        "What would you like to say to God about this?",
+        "What do you need to let go of or trust Him with?"
+    ]
 
     // MARK: - Feature 2b: Gratitude Prompts (Morning Routine)
 
@@ -715,18 +727,53 @@ final class GeminiService {
 
     // MARK: - Parsing Helpers
 
+    /// Parses the array of strings a prompt asked for. Models often put an unescaped quote inside
+    /// an item (`"What does "evening and morning" teach?"`), which is not valid JSON and used to
+    /// discard the whole answer, so this falls back to splitting on the item separators.
     private func parseJSONStringArray(from text: String) -> [String] {
-        let cleaned = text
+        var cleaned = text
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "```json", with: "")
             .replacingOccurrences(of: "```", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard let data = cleaned.data(using: .utf8),
-              let array = try? JSONDecoder().decode([String].self, from: data) else {
+        // Keep only the outermost [ ... ] if the model added prose around it; no array, no answer.
+        guard let start = cleaned.firstIndex(of: "["), let end = cleaned.lastIndex(of: "]"), start < end else {
             return []
         }
-        return array
+        cleaned = String(cleaned[start...end])
+
+        if let data = cleaned.data(using: .utf8),
+           let array = try? JSONDecoder().decode([String].self, from: data) {
+            return array
+        }
+
+        // Lenient: strip the brackets and outer quotes, split where one item ends and the next
+        // begins ("," with optional spacing/newlines), and leave inner quotes alone.
+        var inner = cleaned
+        if inner.hasPrefix("[") { inner.removeFirst() }
+        if inner.hasSuffix("]") { inner.removeLast() }
+        inner = inner.trimmingCharacters(in: .whitespacesAndNewlines)
+        if inner.hasPrefix("\"") { inner.removeFirst() }
+        if inner.hasSuffix("\"") { inner.removeLast() }
+
+        return splitOnItemBoundaries(inner)
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "\" \n\t,")) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// Splits `a", "b", "c` on the `", "` joints between items (whitespace and newlines allowed).
+    private func splitOnItemBoundaries(_ s: String) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: #""\s*,\s*""#) else { return [s] }
+        let ns = s as NSString
+        var out: [String] = []
+        var last = 0
+        for m in regex.matches(in: s, range: NSRange(location: 0, length: ns.length)) {
+            out.append(ns.substring(with: NSRange(location: last, length: m.range.location - last)))
+            last = m.range.location + m.range.length
+        }
+        out.append(ns.substring(from: last))
+        return out
     }
 
     private func parseVerseWordTags(from text: String) -> [VerseWordTag] {

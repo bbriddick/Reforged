@@ -243,11 +243,12 @@ struct DailyLessonRunnerView: View {
             // committed to memory now (see MemoryJourneyView.startOrOpen), so it
             // joins the review queue and unlocks the next node only on completion.
             if !appState.memoryVerses.contains(where: { $0.id == verse.id }) {
-                appState.addMemoryVerse(verse)
+                appState.addMemoryVerse(verse, revealInJourney: false)
             }
             // Grant the full lesson's XP now — the only place XP is awarded, so it
             // always means a completed lesson.
             appState.addXP(earnedXPSoFar, source: "memory-daily-lesson")
+            appState.awardSouthlandLearnPoints(reference: verse.reference)
             DailyMemoryPlanManager.shared.markTodayCompleted(verseId: verse.id)
             appState.updateVerseReview(verseId: verse.id, quality: max(3, currentStageQuality))
             SocialLimitService.shared.grantForMemoryActivity()

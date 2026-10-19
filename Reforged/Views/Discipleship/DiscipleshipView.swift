@@ -19,33 +19,41 @@ struct DiscipleshipView: View {
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 16) {
-                    headerSection
-                    protectionGroup
-                    learningPathCard
-                    rhythmCard
+                VStack(alignment: .leading, spacing: 32) {
+                    // One clear next step, then everything else in quiet, labelled groups.
+                    continueCard
 
-                    // iPad / regular width: Resources and Tools sit side by side so the
-                    // wide canvas is used deliberately instead of one stretched column
-                    // trailing a tall band of empty space. iPhone keeps the single stack.
-                    if horizontalSizeClass == .regular {
-                        HStack(alignment: .top, spacing: 20) {
-                            resourcesSection
-                                .frame(maxWidth: .infinity, alignment: .top)
-                            toolsSection
-                                .frame(maxWidth: .infinity, alignment: .top)
-                        }
-                    } else {
-                        resourcesSection
-                        toolsSection
+                    group("Protection") {
+                        shieldRow
+                        divider
+                        temptedRow
+                    }
+
+                    group("Daily") {
+                        disciplinesRow
+                        divider
+                        journalRow
+                    }
+
+                    group("Learn") {
+                        readingPlansRow
+                        divider
+                        tracksRow
+                        divider
+                        studyLibraryRow
+                        divider
+                        walkTalksRow
+                    }
+
+                    group("Share") {
+                        shareGospelRow
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
-                .padding(.bottom, 40)
-                // Cap the content on iPad/Mac so it stays a legible column block,
-                // centered, rather than spanning the full width of a large display.
-                .frame(maxWidth: horizontalSizeClass == .regular ? 1080 : .infinity)
+                .padding(.bottom, 48)
+                // A readable column on iPad/Mac instead of a stretched one.
+                .frame(maxWidth: horizontalSizeClass == .regular ? 720 : .infinity)
                 .frame(maxWidth: .infinity)
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
@@ -74,396 +82,206 @@ struct DiscipleshipView: View {
         }
     }
 
-    // MARK: - Grouped Sections
-    // Grouped so the regular-width layout can place Resources and Tools side by
-    // side while iPhone stacks them; the inner 16pt rhythm matches the old flat stack.
+    // MARK: - Building blocks
 
-    private var resourcesSection: some View {
-        VStack(spacing: 16) {
-            sectionLabel("Resources")
-            resourcesGrid
-        }
-    }
-
-    private var toolsSection: some View {
-        VStack(spacing: 16) {
-            sectionLabel("Share")
-            ShareGospelCard()
-        }
-    }
-
-    // MARK: - Section Label
-
-    private func sectionLabel(_ title: String) -> some View {
-        HStack {
+    /// A labelled group: small caption above, one bordered container of rows below.
+    private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption.weight(.semibold))
+                .tracking(0.8)
                 .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                .tracking(1.0)
-            Spacer()
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) { content() }
+                .practiceCard(radius: 18)
         }
-        .padding(.top, 4)
-        .padding(.bottom, -4)
     }
 
-    // MARK: - Header
-
-    private var headerSection: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                let name = appState.user.firstName
-                Text(name.isEmpty ? "Grow in Faith" : "Growing in Christ, \(name)")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                Text(progressSubtitle)
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.7))
-            }
-
-            Spacer()
-
-            HStack(spacing: 8) {
-                statBadge(icon: "flame.fill", value: "\(appState.user.streak)", color: .orange)
-                statBadge(icon: "star.fill", value: "\(appState.user.xp) XP", color: Color.reforgedGold)
-            }
-        }
-        .padding(.top, 4)
+    private var divider: some View {
+        Divider().padding(.leading, 66)
     }
 
-    private var progressSubtitle: String {
-        let total = appState.tracks.reduce(0) { $0 + $1.totalLessons }
-        let completed = appState.tracks.reduce(0) { $0 + $1.completedLessons }
-        guard total > 0 else { return "Begin your journey" }
-        let pct = Int((Double(completed) / Double(total)) * 100)
-        return "\(pct)% of learning path complete"
-    }
-
-    private func statBadge(icon: String, value: String, color: Color) -> some View {
-        HStack(spacing: 4) {
+    /// One row: icon chip, title, one line of context, and a trailing accessory.
+    private func rowLabel<Trailing: View>(icon: String, tint: Color, title: String, subtitle: String,
+                                          @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(color)
-            Text(value)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.adaptiveText(colorScheme))
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 38, height: 38)
+                .background(tint.opacity(colorScheme == .dark ? 0.22 : 0.14),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            trailing()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme).opacity(0.6))
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color.adaptiveCardBackground(colorScheme))
-        .clipShape(Capsule())
-        .shadow(color: Color.black.opacity(0.07), radius: 4, y: 2)
+        .padding(.horizontal, 16)
+        .frame(minHeight: 64)
+        .contentShape(Rectangle())
     }
 
-    // MARK: - Learning Path Card
+    private func statusPill(_ text: String, tint: Color) -> some View {
+        Text(text)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(tint.opacity(colorScheme == .dark ? 0.22 : 0.14), in: Capsule())
+    }
 
-    private var learningPathCard: some View {
-        NavigationLink(destination: LearningPathView()) {
-            ZStack(alignment: .bottomLeading) {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.10, green: 0.18, blue: 0.38),
-                        Color(red: 0.18, green: 0.28, blue: 0.52)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+    // MARK: - The one primary action
 
-                Circle()
-                    .fill(Color.white.opacity(0.06))
-                    .frame(width: 160, height: 160)
-                    .offset(x: 220, y: -60)
-
-                Circle()
-                    .fill(Color.white.opacity(0.04))
-                    .frame(width: 100, height: 100)
-                    .offset(x: 260, y: 20)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "map.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(Color.reforgedGold)
-                        Text("My Learning Path")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                    }
-
-                    if let currentLesson = currentLesson {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Next up")
-                                .font(.caption)
-                                .foregroundStyle(Color.white.opacity(0.65))
-                            Text(currentLesson.title)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white)
-                                .lineLimit(2)
-                        }
-
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(Color.white.opacity(0.20))
-                                    .frame(height: 6)
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(Color.reforgedGold)
-                                    .frame(width: geo.size.width * overallProgress, height: 6)
-                            }
-                        }
-                        .frame(height: 6)
-                    } else {
-                        Text("Start your discipleship journey")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.white.opacity(0.80))
-                    }
-
-                    HStack {
-                        Text("Continue →")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.reforgedGold)
-                        Spacer()
-                        Text(progressLabel)
-                            .font(.caption)
-                            .foregroundStyle(Color.white.opacity(0.60))
-                    }
-                }
-                .padding(20)
+    private var continueCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(currentLesson == nil ? "YOUR LEARNING PATH" : "NEXT LESSON")
+                    .font(.caption.weight(.bold))
+                    .tracking(1.0)
+                    .foregroundStyle(Color.reforgedCoral)
+                Text(currentLesson?.title ?? "Start your discipleship journey")
+                    .font(.title3.bold())
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(progressSubtitle)
+                    .font(.footnote)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
             }
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .frame(height: 165)
+
+            if currentLesson != nil {
+                VStack(alignment: .leading, spacing: 6) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.adaptiveBorder(colorScheme)).frame(height: 10)
+                            Capsule()
+                                .fill(LinearGradient(colors: [Color.reforgedGold, Color.orange],
+                                                     startPoint: .leading, endPoint: .trailing))
+                                .frame(width: max(10, geo.size.width * overallProgress), height: 10)
+                        }
+                    }
+                    .frame(height: 10)
+                    Text(progressLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+            }
+
+            NavigationLink(destination: LearningPathView()) {
+                Text(currentLesson == nil ? "Start" : "Continue")
+            }
+            .buttonStyle(Chunky3DButtonStyle(
+                backgroundColor: Color.reforgedCoral,
+                bevelColor: Color.reforgedCoral.practiceBevel()))
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .practiceCard(radius: 22)
+        .shadow(color: .black.opacity(colorScheme == .dark ? 0 : 0.05), radius: 12, y: 6)
+    }
+
+    // MARK: - Protection
+
+    private var shieldRow: some View {
+        let active = focusService.isAnyBlockingActive
+        return NavigationLink(destination: FocusBlockingView()) {
+            rowLabel(icon: active ? "checkmark.shield.fill" : "shield.lefthalf.filled",
+                     tint: shieldIconColor,
+                     title: "Focus & Purity Shield",
+                     subtitle: active ? focusService.statusDescription : "Block adult content and distracting apps") {
+                statusPill(active ? "On" : "Set up", tint: shieldIconColor)
+            }
         }
         .buttonStyle(.plain)
-        .shadow(color: Color.black.opacity(0.22), radius: 12, y: 5)
+        .simultaneousGesture(TapGesture().onEnded { FeatureUsage.record(.shield) })
     }
 
-    // MARK: - My Rhythm Card
+    private var temptedRow: some View {
+        Button {
+            HapticManager.shared.buttonTap()
+            showTemptedSOS = true
+        } label: {
+            rowLabel(icon: "hand.raised.brakesignal", tint: Color.reforgedCoral,
+                     title: "I'm Being Tempted",
+                     subtitle: "Pause, breathe, and take hold of a way out") { EmptyView() }
+        }
+        .buttonStyle(.plain)
+    }
 
-    /// The member's self-built rule of life: a daily checklist (habits to keep,
-    /// temptations to avoid), custom reading plans, and social-media time-off.
-    /// Sits under the learning path as the "how I'm walking day to day" surface.
-    private var rhythmCard: some View {
+    // MARK: - Daily
+
+    private var disciplinesRow: some View {
         NavigationLink(destination: RhythmHubView()) {
-            HStack(spacing: 16) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.reforgedGold.opacity(0.15))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                }
+            rowLabel(icon: "calendar.badge.clock", tint: Color.reforgedGold,
+                     title: "My Disciplines", subtitle: rhythmSubtitle) { EmptyView() }
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture().onEnded { FeatureUsage.record(.disciplines) })
+    }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("My Disciplines")
-                        .font(.headline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text(rhythmSubtitle)
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            }
-            .padding(16)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
+    private var journalRow: some View {
+        NavigationLink(destination: JournalView()) {
+            rowLabel(icon: "pencil.line", tint: Color(red: 0.20, green: 0.65, blue: 0.40),
+                     title: "Notes", subtitle: "Reflections, prayers and Bible notes") { EmptyView() }
         }
         .buttonStyle(.plain)
     }
 
     private var rhythmSubtitle: String {
         let due = rhythmStore.todayDueCount
-        guard due > 0 else { return "Build your daily checklist, reminders & plans" }
+        guard due > 0 else { return "Daily checklist, reminders and plans" }
         return "Today: \(rhythmStore.todayCompletedCount) of \(due) done"
     }
 
-    // MARK: - Resources Grid
+    // MARK: - Learn
 
-    private var resourcesGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
-                            GridItem(.flexible(), spacing: 12)], spacing: 12) {
-            readingPlansMiniCard
-            tracksMiniCard
-            studyLibraryMiniCard
-            walkTalksMiniCard
-        }
-    }
-
-    private var walkTalksMiniCard: some View {
-        NavigationLink(destination: PodcastView()) {
-            VStack(alignment: .leading, spacing: 10) {
-                AsyncImage(url: PodcastService.shared.feed?.artworkURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                            .frame(width: 40, height: 40)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    default:
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.walkTalksTeal.opacity(0.15))
-                                .frame(width: 40, height: 40)
-                            Image(systemName: "headphones")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(Color.walkTalksTeal)
-                        }
-                    }
-                }
-                .frame(width: 40, height: 40)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Walk Talks")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                        .lineLimit(1)
-                    Text(podcastSubtitle)
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
+    private var readingPlansRow: some View {
+        NavigationLink(destination: ReadingPlansView()) {
+            rowLabel(icon: "calendar.badge.checkmark", tint: Color(red: 0.1, green: 0.65, blue: 0.8),
+                     title: "Reading Plans", subtitle: readingPlansSubtitle) { EmptyView() }
         }
         .buttonStyle(.plain)
     }
 
-    private var studyLibraryMiniCard: some View {
-        let accent = Color(red: 0.55, green: 0.35, blue: 0.7)
-        return NavigationLink(destination: StudyLibraryHubView()) {
-            VStack(alignment: .leading, spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(accent.opacity(0.15))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "building.columns.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(accent)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Study Library")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                        .lineLimit(1)
-                    Text("Atlas, commentaries, dictionaries & devotionals")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var readingPlansMiniCard: some View {
-        let accent = Color(red: 0.1, green: 0.65, blue: 0.8)
-        return NavigationLink(destination: ReadingPlansView()) {
-            VStack(alignment: .leading, spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(accent.opacity(0.15))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "calendar.badge.checkmark")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(accent)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Reading Plans")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                        .lineLimit(1)
-                    Text(readingPlansSubtitle)
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var tracksMiniCard: some View {
+    private var tracksRow: some View {
         NavigationLink(destination: TracksView()) {
-            VStack(alignment: .leading, spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.reforgedGold.opacity(0.15))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "books.vertical.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.reforgedGold)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Tracks")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                        .lineLimit(1)
-                    Text(tracksSubtitle)
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer()
-
-                if overallProgress > 0 {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.adaptiveTextSecondary(colorScheme).opacity(0.2))
-                                .frame(height: 4)
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.reforgedGold)
-                                .frame(width: geo.size.width * overallProgress, height: 4)
-                        }
-                    }
-                    .frame(height: 4)
-                }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
+            rowLabel(icon: "books.vertical.fill", tint: Color.reforgedGold,
+                     title: "Tracks", subtitle: tracksSubtitle) { EmptyView() }
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Podcast Card
+    private var studyLibraryRow: some View {
+        NavigationLink(destination: StudyLibraryHubView()) {
+            rowLabel(icon: "building.columns.fill", tint: Color(red: 0.55, green: 0.35, blue: 0.7),
+                     title: "Study Library",
+                     subtitle: "Atlas, commentaries, dictionaries") { EmptyView() }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var walkTalksRow: some View {
+        NavigationLink(destination: PodcastView()) {
+            rowLabel(icon: "headphones", tint: Color.walkTalksTeal,
+                     title: "Walk Talks", subtitle: podcastSubtitle) { EmptyView() }
+        }
+        .buttonStyle(.plain)
+    }
 
     private var podcastSubtitle: String {
         if let latest = PodcastService.shared.feed?.episodes.first?.title {
@@ -472,119 +290,12 @@ struct DiscipleshipView: View {
         return "Southland Christian Ministries"
     }
 
-    // MARK: - Focus Shield Card
+    // MARK: - Share
 
-    /// The shield leads the screen: status first, then the emergency action
-    /// directly beneath it so protection and "I'm struggling now" read as one unit.
-    private var protectionGroup: some View {
-        VStack(spacing: 8) {
-            focusShieldCard
-            temptedSOSCard
-        }
-    }
-
-    private var focusShieldCard: some View {
-        let active = focusService.isAnyBlockingActive
-        let tint = shieldIconColor
-        return NavigationLink(destination: FocusBlockingView()) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .center, spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(tint.opacity(0.18))
-                            .frame(width: 60, height: 60)
-                        Image(systemName: active ? "checkmark.shield.fill" : "shield.lefthalf.filled")
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundStyle(tint)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(active ? "PROTECTED" : "NOT SET UP")
-                            .font(.system(size: 11, weight: .bold))
-                            .tracking(1.0)
-                            .foregroundStyle(tint)
-                        Text("Focus & Purity Shield")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-                    }
-                    Spacer(minLength: 0)
-                }
-
-                Text(active ? focusService.statusDescription
-                            : "Block adult content and distracting apps so the right choice is the easy one.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 6) {
-                    Text(active ? "Manage shield" : "Set up protection")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(active ? Color.adaptiveText(colorScheme) : Color.white)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .background(active ? Color.adaptiveBorder(colorScheme).opacity(0.5) : tint)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .padding(18)
-            .background(
-                ZStack {
-                    Color.adaptiveCardBackground(colorScheme)
-                    tint.opacity(colorScheme == .dark ? 0.10 : 0.07)
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(tint.opacity(0.35), lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-    }
-
-    // MARK: - Tempted SOS Card
-
-    private var temptedSOSCard: some View {
-        Button {
-            HapticManager.shared.buttonTap()
-            showTemptedSOS = true
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.reforgedCoral.opacity(0.15))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "hand.raised.brakesignal")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.reforgedCoral)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("I'm Being Tempted")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Text("Pause, breathe, and take hold of a way out")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-            }
-            .padding(16)
-            .background(Color.adaptiveCardBackground(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 8, y: 3)
+    private var shareGospelRow: some View {
+        NavigationLink(destination: ShareGospelDetailView()) {
+            rowLabel(icon: "person.2.fill", tint: Color.reforgedGold,
+                     title: "Share the Gospel", subtitle: "The Four P's") { EmptyView() }
         }
         .buttonStyle(.plain)
     }
@@ -598,6 +309,16 @@ struct DiscipleshipView: View {
             }
         }
         return nil
+    }
+
+    private var progressSubtitle: String {
+        let total = appState.tracks.reduce(0) { $0 + $1.totalLessons }
+        let completed = appState.tracks.reduce(0) { $0 + $1.completedLessons }
+        guard total > 0 else { return "Begin your journey" }
+        let pct = Int((Double(completed) / Double(total)) * 100)
+        let name = appState.user.firstName
+        let lead = name.isEmpty ? "" : "Growing in Christ, \(name). "
+        return "\(lead)\(pct)% of the learning path complete"
     }
 
     private var overallProgress: CGFloat {

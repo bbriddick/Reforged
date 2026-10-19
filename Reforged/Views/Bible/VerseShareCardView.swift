@@ -42,7 +42,7 @@ struct UnsplashThumbnail: Identifiable {
 // MARK: - Shareable Verse Card
 
 /// Renders in two styles: the default "classic" editorial card (cream, serif,
-/// gold accents — no photo), or the photo style when a background is selected.
+/// gold accents, no photo), or the photo style when a background is selected.
 struct VerseShareCard: View {
     let verseText: String
     let reference: String
@@ -136,7 +136,7 @@ struct VerseShareCard: View {
                         .foregroundStyle(Color.reforgedCharcoal.opacity(0.5))
                 }
 
-                // Note section — shown when a note is attached
+                // Note section, shown when a note is attached
                 if let note = noteText, !note.isEmpty {
                     Spacer().frame(height: 48)
 
@@ -257,7 +257,7 @@ struct VerseShareCard: View {
                     .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
                 }
 
-                // Note section — shown when a note is attached
+                // Note section, shown when a note is attached
                 if let note = noteText, !note.isEmpty {
                     Spacer().frame(height: 40)
 
@@ -372,227 +372,31 @@ struct VerseShareSheet: View {
         selectedImage == nil
     }
 
+    // MARK: Body
+
+    /// Preview on top and actions at the bottom stay put; only the choices scroll between them, so
+    /// the card always shows what the current background and style will produce.
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 16) {
-                        Spacer().frame(height: 8)
+            GeometryReader { geo in
+                VStack(spacing: 0) {
+                    previewArea(height: previewHeight(in: geo.size.height), width: geo.size.width - 40)
 
-                        // Preview card
-                        shareCard
-                            .scaleEffect(0.3)
-                            .frame(
-                                width: shareCard.cardSize.width * 0.3,
-                                height: shareCard.cardSize.height * 0.3
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
-
-                        // Unsplash attribution link
-                        if let attribution = currentAttribution {
-                            HStack(spacing: 4) {
-                                Text("Photo by")
-                                    .font(.caption2)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                                if let profileURL = URL(string: attribution.profileURL) {
-                                    Link(attribution.name, destination: profileURL)
-                                        .font(.caption2)
-                                        .fontWeight(.medium)
-                                } else {
-                                    Text(attribution.name)
-                                        .font(.caption2)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                                }
-
-                                Text("on")
-                                    .font(.caption2)
-                                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-
-                                if let unsplashURL = URL(string: "https://unsplash.com/?utm_source=reforged&utm_medium=referral") {
-                                    Link("Unsplash", destination: unsplashURL)
-                                        .font(.caption2)
-                                        .fontWeight(.medium)
-                                } else {
-                                    Text("Unsplash")
-                                        .font(.caption2)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                                }
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            if !isClassicSelected && ownedCardStyles.count > 1 {
+                                styleSection
                             }
+                            backgroundSection
+                            unsplashSection
                         }
-
-                        // MARK: - Card styles (crown shop) — photo cards only
-                        if !isClassicSelected && ownedCardStyles.count > 1 {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Style")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                                    .padding(.horizontal, 24)
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
-                                        ForEach(ownedCardStyles) { item in
-                                            let isOn = item.value == cardStyle
-                                            Button {
-                                                cardStyle = item.value
-                                                renderedImage = nil
-                                            } label: {
-                                                Text(item.name)
-                                                    .font(.subheadline.weight(isOn ? .semibold : .regular))
-                                                    .foregroundStyle(isOn ? Color.adaptiveCardBackground(colorScheme) : Color.adaptiveText(colorScheme))
-                                                    .padding(.horizontal, 14)
-                                                    .frame(height: 34)
-                                                    .background(Capsule().fill(isOn ? Color.adaptiveNavyText(colorScheme) : Color.adaptiveChipBackground(colorScheme)))
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    }
-                                    .padding(.horizontal, 24)
-                                }
-                            }
-                        }
-
-                        // MARK: - Bundled Backgrounds
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Backgrounds")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.adaptiveText(colorScheme))
-                                .padding(.horizontal, 24)
-
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 10) {
-                                    Button {
-                                        selectClassicStyle()
-                                    } label: {
-                                        classicThumbnailView(isSelected: isClassicSelected)
-                                    }
-
-                                    ForEach(bundledImages, id: \.name) { item in
-                                        Button {
-                                            selectBundledImage(item.image)
-                                        } label: {
-                                            thumbnailView(image: item.image, isSelected: selectedUnsplashId == nil && selectedImage === item.image)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 24)
-                            }
-                        }
-
-                        // MARK: - Unsplash Images
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "photo.on.rectangle.angled")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
-                                    Text("Unsplash")
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                                }
-
-                                Spacer()
-
-                                // Load More button
-                                Button {
-                                    loadMoreUnsplashImages()
-                                } label: {
-                                    HStack(spacing: 5) {
-                                        if isLoadingMore {
-                                            ProgressView()
-                                                .scaleEffect(0.7)
-                                        } else {
-                                            Image(systemName: "arrow.clockwise")
-                                                .font(.system(size: 12, weight: .semibold))
-                                        }
-                                        Text("Load More")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                    }
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 7)
-                                    .background(Color.adaptiveNavyText(colorScheme))
-                                    .clipShape(Capsule())
-                                }
-                                .disabled(isLoadingMore || isLoadingInitial)
-                            }
-                            .padding(.horizontal, 24)
-
-                            if isLoadingInitial && unsplashThumbnails.isEmpty {
-                                // Initial loading state
-                                HStack {
-                                    Spacer()
-                                    VStack(spacing: 8) {
-                                        ProgressView()
-                                        Text("Loading images...")
-                                            .font(.caption)
-                                            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
-                                    }
-                                    .padding(.vertical, 20)
-                                    Spacer()
-                                }
-                            } else {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 10) {
-                                        ForEach(unsplashThumbnails) { item in
-                                            Button {
-                                                selectUnsplashImage(item)
-                                            } label: {
-                                                if let thumb = item.thumbnail {
-                                                    thumbnailView(image: thumb, isSelected: selectedUnsplashId == item.id)
-                                                } else {
-                                                    // Placeholder while loading thumbnail
-                                                    RoundedRectangle(cornerRadius: 10)
-                                                        .fill(Color.gray.opacity(0.2))
-                                                        .frame(width: 64, height: 64)
-                                                        .overlay(
-                                                            ProgressView()
-                                                                .scaleEffect(0.6)
-                                                        )
-                                                }
-                                            }
-                                            .disabled(item.thumbnail == nil)
-                                        }
-                                    }
-                                    .padding(.horizontal, 24)
-                                }
-                            }
-                        }
-
-                        Spacer().frame(height: 8)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        .padding(.bottom, 24)
                     }
+
+                    actionBar
                 }
-
-                // Action buttons
-                VStack(spacing: 12) {
-                    Button {
-                        HapticManager.shared.mediumImpact()
-                        trackUnsplashDownload()
-                        renderImage()
-                        showShareSheet = true
-                    } label: {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                            .reforgedPrimaryButton()
-                    }
-
-                    Button {
-                        HapticManager.shared.lightImpact()
-                        trackUnsplashDownload()
-                        saveToPhotos()
-                    } label: {
-                        Label("Save to Photos", systemImage: "photo.on.rectangle")
-                            .reforgedSecondaryButton()
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 20)
-                .padding(.top, 12)
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle("Share Verse")
@@ -618,6 +422,258 @@ struct VerseShareSheet: View {
                 loadInitialUnsplashImages()
             }
         }
+    }
+
+    // MARK: Preview
+
+    /// About 40% of the sheet, capped so a tall iPad sheet does not give the card the whole screen
+    /// and a short one still leaves room for the choices.
+    private func previewHeight(in sheetHeight: CGFloat) -> CGFloat {
+        min(max(sheetHeight * 0.4, 200), 360)
+    }
+
+    private func previewArea(height: CGFloat, width: CGFloat) -> some View {
+        let card = shareCard
+        let size = card.cardSize
+        let creditHeight: CGFloat = currentAttribution == nil ? 0 : 24
+        let available = max(height - 16 - creditHeight, 120)
+        let scale = min(available / size.height, width / size.width)
+
+        return VStack(spacing: 8) {
+            card
+                .scaleEffect(scale)
+                .frame(width: size.width * scale, height: size.height * scale)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
+                .animation(.easeInOut(duration: 0.2), value: size.height)
+                .accessibilityLabel("Preview of the verse card")
+
+            if let attribution = currentAttribution {
+                attributionLine(attribution)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+    }
+
+    private func attributionLine(_ attribution: UnsplashService.PhotographerAttribution) -> some View {
+        HStack(spacing: 4) {
+            Text("Photo by")
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            if let profileURL = URL(string: attribution.profileURL) {
+                Link(attribution.name, destination: profileURL)
+                    .fontWeight(.medium)
+            } else {
+                Text(attribution.name)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+            }
+
+            Text("on")
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+
+            if let unsplashURL = URL(string: "https://unsplash.com/?utm_source=reforged&utm_medium=referral") {
+                Link("Unsplash", destination: unsplashURL)
+                    .fontWeight(.medium)
+            } else {
+                Text("Unsplash")
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+            }
+        }
+        .font(.caption)
+        .frame(height: 16)
+    }
+
+    // MARK: Choices
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .padding(.leading, 4)
+    }
+
+    /// Crown-shop text styles; only offered for photo cards.
+    private var styleSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Text style")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(ownedCardStyles) { item in
+                        let isOn = item.value == cardStyle
+                        Button {
+                            cardStyle = item.value
+                            renderedImage = nil
+                        } label: {
+                            Text(item.name)
+                                .font(.subheadline.weight(isOn ? .semibold : .regular))
+                                .foregroundStyle(isOn ? Color.adaptiveCardBackground(colorScheme) : Color.adaptiveText(colorScheme))
+                                .padding(.horizontal, 16)
+                                .frame(minHeight: 44)
+                                .background(Capsule().fill(isOn ? Color.adaptiveNavyText(colorScheme) : Color.adaptiveChipBackground(colorScheme)))
+                                .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isOn ? .isSelected : [])
+                    }
+                }
+            }
+        }
+    }
+
+    private var backgroundSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Background")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    Button {
+                        selectClassicStyle()
+                    } label: {
+                        classicThumbnailView(isSelected: isClassicSelected)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Classic card, no photo")
+                    .accessibilityAddTraits(isClassicSelected ? .isSelected : [])
+
+                    ForEach(Array(bundledImages.enumerated()), id: \.element.name) { index, item in
+                        let isSelected = selectedUnsplashId == nil && selectedImage === item.image
+                        Button {
+                            selectBundledImage(item.image)
+                        } label: {
+                            thumbnailView(image: item.image, isSelected: isSelected)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Background \(index + 1)")
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    private var unsplashSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center) {
+                sectionHeader("Photos from Unsplash")
+
+                Spacer()
+
+                Button {
+                    loadMoreUnsplashImages()
+                } label: {
+                    HStack(spacing: 6) {
+                        if isLoadingMore {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        Text("Load more")
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                    .padding(.horizontal, 4)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(isLoadingMore || isLoadingInitial)
+            }
+            .frame(minHeight: 28)
+
+            if isLoadingInitial && unsplashThumbnails.isEmpty {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Loading photos\u{2026}")
+                        .font(.footnote)
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                .frame(maxWidth: .infinity, minHeight: 72)
+            } else if unsplashThumbnails.isEmpty {
+                Text("Photos are unavailable right now. The classic card and the backgrounds above still work.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+                    .padding(.leading, 4)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(unsplashThumbnails) { item in
+                            Button {
+                                selectUnsplashImage(item)
+                            } label: {
+                                if let thumb = item.thumbnail {
+                                    thumbnailView(image: thumb, isSelected: selectedUnsplashId == item.id)
+                                } else {
+                                    // Placeholder while the thumbnail loads
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.adaptiveChipBackground(colorScheme))
+                                        .frame(width: 64, height: 64)
+                                        .overlay(ProgressView().scaleEffect(0.6))
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(item.thumbnail == nil)
+                            .accessibilityLabel("Photo by \(item.attribution.name)")
+                            .accessibilityAddTraits(selectedUnsplashId == item.id ? .isSelected : [])
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+    }
+
+    // MARK: Actions
+
+    private var actionBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            HStack(spacing: 12) {
+                Button {
+                    HapticManager.shared.mediumImpact()
+                    trackUnsplashDownload()
+                    renderImage()
+                    showShareSheet = true
+                } label: {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveBackground(colorScheme))
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(Color.adaptiveNavyText(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .contentShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    HapticManager.shared.lightImpact()
+                    trackUnsplashDownload()
+                    saveToPhotos()
+                } label: {
+                    Label("Save to Photos", systemImage: "photo.on.rectangle")
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.adaptiveNavyText(colorScheme), lineWidth: 1.5)
+                        )
+                        .contentShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
+        }
+        .background(Color.adaptiveBackground(colorScheme))
     }
 
     // MARK: - Thumbnail View
@@ -704,7 +760,7 @@ struct VerseShareSheet: View {
     // MARK: - Image Loading
 
     private func loadBundledImages() {
-        // No auto-selection — the classic editorial style (no photo) is the default.
+        // No auto-selection: the classic editorial style (no photo) is the default.
         bundledImages = UnsplashService.shared.allBundledImages()
     }
 
@@ -779,7 +835,7 @@ struct VerseShareSheet: View {
                 }
             }
         } catch {
-            // Silently fail — bundled images still available
+            // Silently fail; bundled images are still available
         }
     }
 

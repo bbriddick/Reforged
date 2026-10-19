@@ -24,6 +24,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             _ = WordsOfChristData.shared
         }
 
+        // Expand/verify the bundled study database (Word Study data) off the main thread, so the
+        // first word lookup is instant. Only does real work on first launch or a data update.
+        StudyDatabase.shared.warmUp()
+
         // Silently warm the disk cache around the user's last-read position for
         // their default translation. Runs at .background priority with 100 ms pacing
         // between requests so it never competes with UI or the KJV bundle load.
@@ -171,8 +175,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                     object: nil,
                     userInfo: [AppNotificationUserInfoKey.tab: 1]
                 )
+            case "tempted":
+                // Tapped the "something was blocked" notification → open I'm Being Tempted.
+                // The flag survives a cold launch, before ContentView is listening.
+                Task { @MainActor in AppState.shared.pendingTemptedSOS = true }
+                NotificationCenter.default.post(name: .showTemptedSOS, object: nil)
             case "refocus":
-                // Tapped a "you hit a block" notification → show the verse passage.
+                // Older "you hit a block" notifications → show the verse passage.
                 var info: [String: Any] = [:]
                 if let text = userInfo["verseText"] as? String { info[AppNotificationUserInfoKey.verseText] = text }
                 if let ref = userInfo["verseReference"] as? String { info[AppNotificationUserInfoKey.reference] = ref }
