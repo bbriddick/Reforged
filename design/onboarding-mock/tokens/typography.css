@@ -1,0 +1,81 @@
+/* ===========================================================================
+   Reforged — Typography tokens
+   Three roles:
+   - DISPLAY  → Archivo (heavy/black) for marketing headlines & posters.
+   - UI       → system (SF Pro) → Roboto Flex. App chrome, titles, labels.
+   - SCRIPTURE→ Libre Baskerville. Verse text, quotes, devotional copy.
+   =========================================================================== */
+
+:root {
+  /* ---- Families ---- */
+  --font-display:    "Archivo", system-ui, sans-serif;
+  --font-ui:         system-ui, -apple-system, "Roboto Flex", "Segoe UI", sans-serif;
+  --font-scripture:  "Libre Baskerville", Georgia, "Times New Roman", serif;
+
+  /* ---- Weights ---- */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-black:    900;
+
+  /* ---- Type scale (px) ---- */
+  --text-display-xl: 64px;   /* poster hero, e.g. "INSPIRATION" */
+  --text-display-l:  44px;
+  --text-display-m:  32px;
+  --text-title-xl:   34px;   /* screen title "Scripture Memory" */
+  --text-title-l:    28px;
+  --text-title-m:    22px;   /* card headline */
+  --text-title-s:    18px;
+  --text-body-l:     18px;   /* scripture reading default */
+  --text-body:       16px;
+  --text-body-s:     14px;
+  --text-caption:    13px;
+  --text-micro:      11px;   /* tab labels, XP counters */
+
+  /* ---- Line heights ---- */
+  --leading-tight:   1.05;   /* display headlines */
+  --leading-snug:    1.2;    /* titles */
+  --leading-normal:  1.4;    /* UI body */
+  --leading-relaxed: 1.65;   /* scripture reading */
+
+  /* ---- Tracking ---- */
+  --tracking-display: -0.02em;
+  --tracking-tight:   -0.01em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.04em;  /* eyebrow labels e.g. "JOHN" */
+  --tracking-eyebrow: 0.12em;
+}
+
+/* Optional helper classes (components mostly use the vars directly). */
+.rf-display {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+}
+.rf-title {
+  font-family: var(--font-ui);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+}
+.rf-eyebrow {
+  font-family: var(--font-ui);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-reference);
+}
+.rf-scripture {
+  font-family: var(--font-scripture);
+  line-height: var(--leading-relaxed);
+  color: var(--text-scripture);
+}
+.rf-reference {
+  font-family: var(--font-ui);
+  font-weight: var(--weight-semibold);
+  color: var(--text-reference);
+}

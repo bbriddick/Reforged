@@ -1,0 +1,118 @@
+/* ===========================================================================
+   Reforged — Color tokens
+   Derived from Reforged/Theme.swift (SwiftUI Color definitions).
+   Brand is built from the logo: charcoal + cream, with a coral action accent
+   and a warm gold reward/Scripture accent. Backgrounds are warm off-white.
+   =========================================================================== */
+
+:root {
+  /* ---- Brand primitives (from the logo) ---- */
+  --reforged-charcoal:    #333333;  /* logo mark, hero surfaces */
+  --reforged-cream:       #E8E4DC;  /* logo cream */
+  --reforged-coral:       #E94560;  /* primary action / streak / memory */
+  --reforged-gold:        #D4A574;  /* level / reward / verse references */
+
+  /* Coral + gold tints/shades */
+  --coral-700:            #C32C45;
+  --coral-600:            #E94560;
+  --coral-100:            #FBE0E5;  /* streak-card wash */
+  --coral-050:            #FDF1F3;
+  --gold-700:            #B07F4E;
+  --gold-600:            #D4A574;
+  --gold-100:            #F3E7D6;  /* level-card wash */
+  --gold-050:            #FAF3E9;
+
+  /* ---- Track / category accents (from Track.displayColor) ---- */
+  --track-blue:           #33333A;  /* "blue" maps to charcoal-navy */
+  --track-red:            #E94560;
+  --track-green:          #339966;
+  --track-purple:         #804D99;
+  --track-indigo:         #4D4D99;
+  --track-orange:         #D4A574;
+
+  /* ---- Neutrals ---- */
+  --gray-950:             #1C1C1F;
+  --gray-900:             #2D2D2D;
+  --gray-700:             #4A4A4A;
+  --gray-600:             #666666;
+  --gray-400:             #9A9A9C;
+  --gray-300:             #C7C7C9;
+  --gray-200:             #E5E5E5;
+  --gray-100:             #EFEDE9;
+  --cream-bg:             #FAF8F5;  /* warm app background */
+  --white:                #FFFFFF;
+
+  /* ---- Semantic status ---- */
+  --success:              #339966;
+  --warning:              #D4A574;
+  --error:                #E94560;
+  --info:                 #4D4D99;
+
+  /* =====================================================================
+     Semantic aliases — LIGHT (default). Reference these in components.
+     ===================================================================== */
+  --surface-app:          var(--cream-bg);
+  --surface-card:         var(--white);
+  --surface-hero:         var(--reforged-charcoal);   /* dark greeting card */
+  --surface-sunken:       var(--gray-100);            /* inset / quote blocks */
+  --surface-chip:         rgba(51, 51, 58, 0.08);
+
+  --text-primary:         #2D2D2D;
+  --text-secondary:       #666666;
+  --text-tertiary:        #9A9A9C;
+  --text-on-hero:         var(--reforged-cream);
+  --text-on-accent:       var(--white);
+  --text-scripture:       #2D2D2D;
+  --text-reference:       var(--gold-700);            /* "— Romans 6:23" */
+
+  --accent:               var(--reforged-coral);
+  --accent-hover:         var(--coral-700);
+  --reward:               var(--reforged-gold);
+
+  --border-card:          var(--gray-200);
+  --border-strong:        var(--gray-300);
+  --border-subtle:        rgba(0, 0, 0, 0.06);
+
+  --tabbar-bg:            rgba(250, 248, 245, 0.92);
+  --tabbar-active:        var(--reforged-charcoal);
+  --tabbar-inactive:      var(--gray-400);
+}
+
+/* =====================================================================
+   DARK theme scope. Apply to a container: <div data-theme="dark">…</div>
+   Matches Theme.swift adaptive* dark values.
+   ===================================================================== */
+[data-theme="dark"] {
+  --surface-app:          #1C1C1F;
+  --surface-card:         #2B2B2E;
+  --surface-hero:         #2B2B2E;
+  --surface-sunken:       #242427;
+  --surface-chip:         rgba(255, 255, 255, 0.10);
+
+  --text-primary:         #EDEDF0;
+  --text-secondary:       #9A9A9E;
+  --text-tertiary:        #6E6E73;
+  --text-on-hero:         var(--reforged-cream);
+  --text-scripture:       #EDEDF0;
+  --text-reference:       var(--gold-600);
+
+  --border-card:          #404043;
+  --border-strong:        #4A4A4D;
+  --border-subtle:        rgba(255, 255, 255, 0.08);
+
+  --tabbar-bg:            rgba(28, 28, 31, 0.92);
+  --tabbar-active:        #F5F5F7;
+}
+
+/* AMOLED — pure-black variant (Theme.swift isAMOLEDActive). */
+[data-theme="amoled"] {
+  --surface-app:          #000000;
+  --surface-card:         #141416;
+  --surface-hero:         #141416;
+  --surface-sunken:       #0E0E10;
+  --text-primary:         #F5F5F7;
+  --text-secondary:       #9A9A9E;
+  --border-card:          #2E2E30;
+  --tabbar-bg:            rgba(0, 0, 0, 0.92);
+  --tabbar-active:        #F5F5F7;
+}

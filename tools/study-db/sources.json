@@ -1,0 +1,46 @@
+{
+  "_comment": "Pinned build inputs for reforged-study.sqlite. Change a pin deliberately, then re-run fetch.py to refresh sources.lock.json.",
+  "git": {
+    "tr": {
+      "repo": "byztxt/greektext-textus-receptus",
+      "commit": "7fd4d02c3e5adebd379ebfbc824040820dde10fc"
+    },
+    "robinson": {
+      "repo": "byztxt/robinson-documentation",
+      "commit": "3bc6f03e4dca60bf0fd17848aa3771c43394d3c7"
+    },
+    "strongs_grk": {
+      "repo": "morphgnt/strongs-dictionary-xml",
+      "commit": "dd6758b82f46b620804a8ea677d715844679eea1"
+    },
+    "strongs_js": {
+      "repo": "openscriptures/strongs",
+      "commit": "0acd2f251c2d35ff8db2dece4e0593979d3ac223"
+    },
+    "hebrewlex": {
+      "repo": "openscriptures/HebrewLexicon",
+      "commit": "21c9add13bc727d3a951361778e97e3ff7afd1ce"
+    },
+    "morphhb": {
+      "repo": "openscriptures/morphhb",
+      "commit": "3d15126fb1ef74867fc1434be1942e837932691f"
+    },
+    "abbott": {
+      "repo": "translatable-exegetical-tools/Abbott-Smith",
+      "commit": "8c00cb244761aa23659421a8cbbbf7a3b27b7d59"
+    },
+    "stepbible": {
+      "repo": "STEPBible/STEPBible-Data",
+      "commit": "aca7d691414e00b0d669157d98bfd68195e64e1e",
+      "sparse": [
+        "Lexicons",
+        "Translators Amalgamated OT+NT/TAGNT*"
+      ]
+    }
+  },
+  "crosswire": {
+    "KJV": {
+      "url": "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/KJV.zip"
+    }
+  }
+}

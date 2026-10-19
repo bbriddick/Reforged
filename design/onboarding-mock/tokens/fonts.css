@@ -1,0 +1,42 @@
+/* ===========================================================================
+   Reforged — Webfonts
+   - Libre Baskerville: Scripture / verse text (bundled from the app)
+   - Roboto: cross-platform UI fallback (bundled from the app)
+   - Archivo: heavy display headlines for marketing/poster contexts
+     (Google Fonts SUBSTITUTE for the app's proprietary marketing display —
+      flagged to the user; swap in the real face if provided.)
+   The app's own UI chrome uses the Apple system font (SF Pro); the --font-ui
+   stack leads with system-ui so it matches on Apple devices and falls back to
+   Roboto everywhere else.
+   =========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&display=swap");
+
+@font-face {
+  font-family: "Libre Baskerville";
+  src: url("../assets/fonts/LibreBaskerville.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Libre Baskerville";
+  src: url("../assets/fonts/LibreBaskerville-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Roboto Flex";
+  src: url("../assets/fonts/Roboto.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Roboto Flex";
+  src: url("../assets/fonts/Roboto-Italic.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}

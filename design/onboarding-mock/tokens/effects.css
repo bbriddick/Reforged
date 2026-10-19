@@ -1,0 +1,45 @@
+/* ===========================================================================
+   Reforged — Effects: radii, shadows, motion
+   Matches ReforgedTheme corner-radius and shadow constants in Theme.swift.
+   Reforged's elevation is SOFT and warm — low-opacity black shadows, never
+   harsh. Colored cards (streak/level) carry a faint same-hue glow.
+   =========================================================================== */
+
+:root {
+  /* ---- Corner radii ---- */
+  --radius-xs:    8px;    /* chips, small controls */
+  --radius-s:    12px;
+  --radius-m:    16px;    /* default card */
+  --radius-l:    20px;
+  --radius-xl:   24px;    /* hero card, sheets */
+  --radius-pill: 999px;   /* tab pill, badges, FAB */
+
+  /* ---- Shadows ---- */
+  /* Resting card: soft, barely-there. */
+  --shadow-card:     0 4px 8px rgba(0, 0, 0, 0.06);
+  /* Elevated card / sheet / popover. */
+  --shadow-elevated: 0 8px 16px rgba(0, 0, 0, 0.12);
+  /* Floating action / nav buttons. */
+  --shadow-float:    0 6px 16px rgba(0, 0, 0, 0.16);
+  /* Colored-card glows (accent shadow ~0.25 opacity). */
+  --shadow-coral:    0 6px 18px rgba(233, 69, 96, 0.22);
+  --shadow-gold:     0 6px 18px rgba(212, 165, 116, 0.22);
+  /* Inset for sunken quote blocks. */
+  --shadow-inset:    inset 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* ---- Borders ---- */
+  --border-w:        1px;
+  --hairline:        1px solid var(--border-card);
+
+  /* ---- Motion (Theme.swift animation durations) ---- */
+  --ease-standard:   cubic-bezier(0.4, 0.0, 0.2, 1); /* @kind other */
+  --ease-spring:     cubic-bezier(0.34, 1.4, 0.64, 1); /* @kind other */
+  --dur-fast:        0.2s; /* @kind other */
+  --dur-medium:      0.3s; /* @kind other */
+  --dur-slow:        0.5s; /* @kind other */
+
+  /* Interaction conventions:
+     hover  → background darkens ~6% / lifts shadow
+     press  → scale(0.97) + shadow collapses (tactile, gamified) */
+  --press-scale:     0.97; /* @kind other */
+}

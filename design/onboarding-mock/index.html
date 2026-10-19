@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reforged onboarding mock</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  @font-face { font-family: 'Archivo Black'; src: url('assets/fonts/ArchivoBlack-Regular.ttf') format('truetype'); font-weight: 400; }
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font-ui);
+    background: #ECE8E1;
+    color: #2D2D2D;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: 100vh;
+  }
+  @media (max-width: 900px) { body { grid-template-columns: 1fr; } }
+
+  /* ============ Review panel (not part of the app) ============ */
+  .panel {
+    padding: 28px 24px 40px;
+    border-right: 1px solid rgba(0,0,0,.08);
+    background: #F6F3EE;
+    overflow-y: auto;
+    max-height: 100vh;
+    position: sticky; top: 0;
+  }
+  @media (max-width: 900px) { .panel { position: static; max-height: none; border-right: 0; border-bottom: 1px solid rgba(0,0,0,.08);} }
+  .panel h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .panel p.sub { margin: 0 0 20px; color: #666; font-size: 13px; line-height: 1.45; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: rgba(0,0,0,.06); padding: 4px; border-radius: 12px; margin-bottom: 18px; }
+  .seg button { border: 0; background: transparent; padding: 9px 4px; border-radius: 9px; font: inherit; font-size: 13px; font-weight: 600; color: #555; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #fff; color: #2D2D2D; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .steps { list-style: none; margin: 0 0 18px; padding: 0; }
+  .steps button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; padding: 9px 10px; border-radius: 10px; font: inherit; font-size: 14px; color: #444; cursor: pointer; }
+  .steps button:hover { background: rgba(0,0,0,.05); }
+  .steps button[aria-current="step"] { background: #fff; font-weight: 700; color: #1d1d1f; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .steps .n { width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.08); font-size: 11px; font-weight: 700; display: grid; place-items: center; flex: none; }
+  .steps button[aria-current="step"] .n { background: var(--reforged-coral); color: #fff; }
+  .why { background: #fff; border-radius: 14px; padding: 14px 16px; font-size: 13px; line-height: 1.5; color: #444; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 18px; }
+  .why b { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-700); margin-bottom: 4px; }
+  .toggles { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .toggles button { border: 1px solid rgba(0,0,0,.12); background: #fff; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; color: #333; }
+  .toggles button[aria-pressed="true"] { background: #2D2D2D; color: #fff; border-color: #2D2D2D; }
+  .timer { font-size: 13px; color: #555; margin: 0 0 4px; font-variant-numeric: tabular-nums; }
+  .timer strong { color: #1d1d1f; }
+  .foot { font-size: 11.5px; color: #8a8a8a; line-height: 1.5; margin-top: 14px; }
+
+  /* ============ Stage + device ============ */
+  .stage { display: grid; place-items: center; padding: 24px; overflow: hidden; min-height: 100vh; }
+  .scaler { transform-origin: top center; }
+  .device {
+    width: 414px; height: 868px; padding: 12px; border-radius: 62px; background: #111;
+    box-shadow: 0 30px 60px rgba(0,0,0,.28), 0 0 0 2px #2a2a2a inset;
+    position: relative;
+    transition: width .35s var(--ease-standard), height .35s var(--ease-standard), border-radius .35s;
+  }
+  .device.ipad { width: 800px; height: 1060px; border-radius: 38px; padding: 16px; }
+  .screen {
+    width: 100%; height: 100%; border-radius: 50px; overflow: hidden; position: relative;
+    background: var(--surface-app); color: var(--text-primary);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+  }
+  .ipad .screen { border-radius: 26px; }
+  .island { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 118px; height: 34px; border-radius: 20px; background: #000; z-index: 30; }
+  .ipad .island { display: none; }
+  .statusbar { position: absolute; top: 0; left: 0; right: 0; height: 54px; padding: 18px 32px 0; display: flex; justify-content: space-between; font-size: 15px; font-weight: 600; z-index: 25; pointer-events: none; }
+  .statusbar .right { display: flex; gap: 6px; align-items: center; }
+  .battery { width: 25px; height: 12px; border: 1.5px solid currentColor; border-radius: 4px; position: relative; opacity: .9; }
+  .battery::after { content: ""; position: absolute; inset: 1.5px; right: 5px; background: currentColor; border-radius: 1.5px; }
+  .home-indicator { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 140px; height: 5px; border-radius: 3px; background: currentColor; opacity: .35; z-index: 40; pointer-events: none; }
+
+  /* ============ App screens ============ */
+  .view { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 64px 0 34px; animation: fadeUp .38s var(--ease-standard) both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .view, * { animation: none !important; transition: none !important; } }
+  .col { width: 100%; max-width: 440px; margin: 0 auto; padding: 0 24px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .ipad .col { max-width: 540px; padding: 0 32px; }
+  .scroll { overflow-y: auto; flex: 1; min-height: 0; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+  .topbar { height: 44px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex: none; }
+  .back { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--surface-chip); display: grid; place-items: center; cursor: pointer; color: var(--text-secondary); }
+  .dots { display: flex; gap: 6px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); transition: all .3s; }
+  .dots i.on { background: var(--reforged-coral); width: 22px; border-radius: 4px; }
+  .dots i.done { background: var(--reforged-coral); opacity: .5; }
+  .spacer36 { width: 36px; }
+
+  h2.t { font-size: 30px; line-height: 1.12; letter-spacing: -.02em; font-weight: 800; margin: 14px 0 8px; }
+  p.lead { font-size: 16px; line-height: 1.45; color: var(--text-secondary); margin: 0 0 20px; }
+
+  .cta { margin-top: auto; padding-top: 14px; display: flex; flex-direction: column; gap: 6px; align-items: stretch; flex: none; }
+  .btn { border: 0; font: inherit; cursor: pointer; border-radius: 999px; height: 54px; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .15s var(--ease-standard), filter .15s; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--reforged-coral); color: #fff; box-shadow: var(--shadow-coral); }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.apple { background: #000; color: #fff; }
+  [data-theme="dark"] .btn.apple { background: #fff; color: #000; }
+  .btn.secondary { background: var(--surface-chip); color: var(--text-primary); }
+  .btn.ghost { background: transparent; color: var(--text-secondary); height: 46px; font-size: 15px; font-weight: 600; }
+  .btn:disabled { opacity: .4; cursor: default; box-shadow: none; }
+  .link { background: none; border: 0; font: inherit; color: var(--text-secondary); font-size: 15px; font-weight: 600; cursor: pointer; padding: 12px; text-align: center; }
+
+  .card { background: var(--surface-card); border-radius: var(--radius-l); box-shadow: var(--shadow-card); border: 1px solid var(--border-subtle); }
+  .opt { display: flex; align-items: center; gap: 14px; padding: 16px; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; border: 2px solid transparent; transition: border-color .2s, transform .15s; }
+  .opt:active { transform: scale(.98); }
+  .opt.sel { border-color: var(--reforged-coral); }
+  .opt .ic { width: 42px; height: 42px; border-radius: 12px; background: var(--coral-050); color: var(--reforged-coral); display: grid; place-items: center; flex: none; }
+  [data-theme="dark"] .opt .ic { background: rgba(233,69,96,.16); }
+  .opt .tx b { display: block; font-size: 16px; font-weight: 700; }
+  .opt .tx span { font-size: 13.5px; color: var(--text-secondary); }
+  .opt .chk { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border-strong); display: grid; place-items: center; color: #fff; flex: none; transition: all .2s; }
+  .opt.sel .chk { background: var(--reforged-coral); border-color: var(--reforged-coral); }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .scripture { font-family: var(--font-scripture); line-height: 1.65; color: var(--text-scripture); }
+  .ref { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-reference); font-weight: 700; }
+  .tr-row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; width: 100%; border: 0; background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; border-bottom: 1px solid var(--border-subtle); }
+  .tr-row:last-child { border-bottom: 0; }
+  .tr-row .code { font-weight: 800; width: 62px; font-size: 15px; }
+  .tr-row .nm { font-size: 14px; color: var(--text-secondary); flex: 1; }
+  .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-strong); display: grid; place-items: center; flex: none; }
+  .tr-row[aria-checked="true"] .radio { border-color: var(--reforged-coral); }
+  .tr-row[aria-checked="true"] .radio::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--reforged-coral); }
+  .preview { padding: 20px; margin-top: 16px; min-height: 138px; }
+  .preview .scripture { font-size: 16px; margin: 8px 0 0; animation: fadeUp .3s both; }
+  .switchrow { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px 0; font-size: 14.5px; color: var(--text-secondary); }
+  .sw { width: 51px; height: 31px; border-radius: 999px; background: var(--border-strong); border: 0; position: relative; cursor: pointer; transition: background .2s; flex: none; }
+  .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .2s; }
+  .sw[aria-checked="true"] { background: #34C759; }
+  .sw[aria-checked="true"]::after { transform: translateX(20px); }
+
+  .vcard { padding: 18px; display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; border: 2px solid transparent; transition: transform .15s, border-color .2s; }
+  .vcard:hover { border-color: var(--gold-600); }
+  .vcard:active { transform: scale(.98); }
+  .vcard .tag { font-size: 12px; font-weight: 700; color: var(--gold-700); background: var(--gold-050); padding: 3px 10px; border-radius: 999px; display: inline-block; margin-top: 6px; }
+  [data-theme="dark"] .vcard .tag { background: rgba(212,165,116,.16); color: var(--gold-600); }
+  .vcard b { font-size: 19px; font-weight: 700; }
+  .plus { margin-left: auto; color: var(--reforged-gold); }
+
+  .flash { flex: 1; min-height: 0; margin: 4px 0 8px; padding: 28px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; position: relative; }
+  .flash .big { font-size: 28px; font-weight: 800; letter-spacing: -.01em; margin: 10px 0; }
+  .flash .hint { color: var(--text-tertiary); font-size: 14px; border: 1.5px dashed var(--border-strong); border-radius: 999px; padding: 7px 16px; margin-top: 18px; }
+  .flash .scripture { font-size: 19px; animation: fadeUp .35s both; }
+
+  .win { align-items: center; text-align: center; justify-content: center; }
+  .ring { width: 112px; height: 112px; border-radius: 50%; background: var(--gold-100); color: var(--gold-700); display: grid; place-items: center; margin: 0 auto 22px; box-shadow: var(--shadow-gold); animation: pop .6s var(--ease-spring) both; }
+  [data-theme="dark"] .ring { background: rgba(212,165,116,.18); color: var(--gold-600); }
+  @keyframes pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .xp { display: inline-flex; gap: 6px; align-items: center; background: var(--gold-100); color: var(--gold-700); font-weight: 800; border-radius: 999px; padding: 7px 16px; font-size: 15px; margin: 6px 0 12px; }
+  [data-theme="dark"] .xp { background: rgba(212,165,116,.18); color: var(--gold-600); }
+
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 6px; }
+  .chip { border: 0; font: inherit; font-size: 16px; font-weight: 700; padding: 14px 18px; text-align: center; border-radius: 999px; background: var(--surface-chip); color: var(--text-primary); cursor: pointer; transition: all .2s; }
+  .chip[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-app); }
+  .bigtime { font-size: 56px; font-weight: 800; letter-spacing: -.03em; text-align: center; margin: 22px 0 4px; font-variant-numeric: tabular-nums; }
+  .bigtime small { font-size: 22px; font-weight: 700; margin-left: 4px; color: var(--text-secondary); }
+  .center { text-align: center; }
+
+  .benefit { display: flex; gap: 14px; align-items: flex-start; padding: 10px 2px; }
+  .benefit .ic { width: 38px; height: 38px; border-radius: 11px; background: var(--gold-050); color: var(--gold-700); display: grid; place-items: center; flex: none; }
+  [data-theme="dark"] .benefit .ic { background: rgba(212,165,116,.16); color: var(--gold-600); }
+  .benefit b { font-size: 15.5px; display: block; }
+  .benefit span { font-size: 13.5px; color: var(--text-secondary); line-height: 1.4; }
+  .input { width: 100%; height: 52px; border-radius: 14px; border: 1.5px solid var(--border-card); background: var(--surface-card); font: inherit; font-size: 16px; padding: 0 16px; color: inherit; }
+  .input:focus { outline: none; border-color: var(--reforged-coral); }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--text-tertiary); font-size: 13px; margin: 16px 0; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--border-card); }
+
+  /* Welcome (always charcoal, like the real launch screen) */
+  .welcome { background: var(--reforged-charcoal); color: var(--reforged-cream); text-align: center; padding-top: 0; }
+  .welcome .col { justify-content: center; }
+  .welcome .mark { width: 96px; height: 96px; margin: 0 auto 26px; }
+  .welcome h1 { font-family: 'Archivo Black', 'Archivo', var(--font-ui); font-size: 44px; line-height: 1.05; letter-spacing: .01em; font-weight: 400; margin: 0 0 12px; }
+  .welcome p { color: rgba(232,228,220,.72); font-size: 17px; line-height: 1.45; margin: 0; }
+  .welcome .cta { margin-top: 48px; }
+  .welcome .small { color: rgba(232,228,220,.55); font-size: 13px; margin-top: 4px; }
+  .welcome .link { color: var(--reforged-cream); text-decoration: underline; text-underline-offset: 4px; }
+
+  /* Restore */
+  .rows { margin-top: 8px; }
+  .rrow { display: flex; align-items: center; gap: 14px; padding: 15px 4px; border-bottom: 1px solid var(--border-subtle); opacity: .45; transition: opacity .3s; }
+  .rrow.on { opacity: 1; }
+  .rrow b { font-size: 16px; font-weight: 600; flex: 1; }
+  .rrow em { font-style: normal; color: var(--text-secondary); font-size: 14px; }
+  .spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--border-strong); border-top-color: var(--reforged-coral); animation: rot .8s linear infinite; flex: none; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  .tick { width: 22px; height: 22px; border-radius: 50%; background: var(--success); color: #fff; display: grid; place-items: center; flex: none; animation: pop .35s var(--ease-spring) both; }
+  .tick .svg { width: 14px; height: 14px; stroke-width: 3; }
+  .pend { width: 22px; height: 22px; border-radius: 50%; border: 2px dashed var(--border-strong); flex: none; }
+  .bar { height: 6px; border-radius: 3px; background: var(--surface-chip); overflow: hidden; margin: 8px 0 4px; }
+  .bar i { display: block; height: 100%; background: var(--reforged-coral); width: 0; transition: width .5s var(--ease-standard); }
+  .avatar { width: 96px; height: 96px; border-radius: 50%; background: var(--gold-100); color: var(--gold-700); display: grid; place-items: center; font-size: 40px; font-weight: 800; margin: 0 auto 18px; box-shadow: var(--shadow-gold); }
+
+  /* Home */
+  .tabbar { position: absolute; left: 12px; right: 12px; bottom: 26px; height: 64px; border-radius: 32px; background: var(--tabbar-bg); backdrop-filter: blur(20px); box-shadow: var(--shadow-float); display: flex; align-items: center; justify-content: space-around; z-index: 10; border: 1px solid var(--border-subtle); }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; font-weight: 600; color: var(--tabbar-inactive); padding: 6px 12px; border-radius: 20px; position: relative; }
+  .tab.active { color: var(--tabbar-active); background: var(--surface-chip); }
+  .tab .svg { width: 22px; height: 22px; }
+  .hero { background: var(--surface-hero); color: var(--text-on-hero); border-radius: var(--radius-xl); padding: 22px; box-shadow: var(--shadow-elevated); }
+  .hero small { opacity: .7; font-size: 13px; }
+  .hero h3 { margin: 4px 0 14px; font-size: 24px; letter-spacing: -.01em; }
+  .stats { display: flex; gap: 10px; }
+  .stat { flex: 1; border-radius: 16px; padding: 12px 14px; }
+  .stat b { font-size: 22px; display: block; }
+  .stat span { font-size: 12.5px; opacity: .85; }
+  .stat.coral { background: var(--coral-100); color: #8a1f33; }
+  .stat.gold { background: var(--gold-100); color: #7a5427; }
+  .sectitle { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); margin: 20px 4px 8px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .row + .row { border-top: 1px solid var(--border-subtle); }
+  .row .ic { width: 34px; height: 34px; border-radius: 10px; background: var(--surface-chip); display: grid; place-items: center; flex: none; color: var(--text-secondary); }
+  .row b { font-size: 15px; display: block; }
+  .row span { font-size: 12.5px; color: var(--text-secondary); }
+  .pillbtn { margin-left: auto; border: 0; font: inherit; font-size: 13px; font-weight: 700; padding: 7px 14px; border-radius: 999px; background: var(--reforged-coral); color: #fff; cursor: pointer; flex: none; }
+  .pillbtn.soft { background: var(--surface-chip); color: var(--text-primary); }
+  .x { margin-left: auto; border: 0; background: none; color: var(--text-tertiary); cursor: pointer; font-size: 18px; padding: 4px 8px; }
+  .checkhead { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px; }
+  .checkhead b { font-size: 16px; }
+  .checkhead span { font-size: 13px; color: var(--text-secondary); display: block; }
+
+  /* Tour coach mark */
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.42); z-index: 15; animation: fadeUp .3s both; }
+  .coach { position: absolute; left: 20px; right: 20px; bottom: 104px; z-index: 20; background: var(--surface-card); border-radius: 20px; padding: 18px 18px 14px; box-shadow: var(--shadow-float); animation: fadeUp .35s both; }
+  .coach::after { content: ""; position: absolute; bottom: -9px; width: 20px; height: 20px; background: var(--surface-card); transform: rotate(45deg); border-radius: 4px; left: var(--arrow, 50%); margin-left: -10px; }
+  .coach b { font-size: 17px; display: block; margin-bottom: 4px; }
+  .coach p { margin: 0 0 12px; font-size: 14.5px; line-height: 1.45; color: var(--text-secondary); }
+  .coach .acts { display: flex; justify-content: space-between; align-items: center; }
+  .coach .acts .pillbtn { margin: 0; padding: 9px 20px; font-size: 14px; }
+  .coach .acts .link { padding: 6px 4px; font-size: 14px; }
+  .tab.hl { color: var(--reforged-coral); z-index: 21; background: var(--surface-card); box-shadow: 0 0 0 4px rgba(233,69,96,.25); }
+
+  /* iOS permission alert */
+  .modal { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 50; display: grid; place-items: center; animation: fadeUp .2s both; }
+  .alert { width: 270px; background: rgba(250,250,252,.96); color: #000; border-radius: 14px; text-align: center; overflow: hidden; }
+  [data-theme="dark"] .alert { background: rgba(44,44,46,.96); color: #fff; }
+  .alert .body { padding: 18px 16px 16px; }
+  .alert b { font-size: 17px; display: block; margin-bottom: 4px; }
+  .alert p { margin: 0; font-size: 13px; line-height: 1.35; }
+  .alert .row2 { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid rgba(60,60,67,.29); }
+  .alert .row2 button { border: 0; background: none; font: inherit; font-size: 17px; color: #0a84ff; height: 44px; cursor: pointer; }
+  .alert .row2 button + button { border-left: 1px solid rgba(60,60,67,.29); font-weight: 600; }
+
+  .banner { display: flex; gap: 10px; align-items: center; background: var(--surface-card); border: 1px solid var(--border-card); border-radius: 999px; padding: 8px 16px; font-size: 13px; color: var(--text-secondary); width: max-content; margin: 0 auto 14px; }
+  .sheet { margin-top: auto; background: var(--surface-card); border-radius: 28px 28px 0 0; padding: 12px 24px 28px; box-shadow: 0 -10px 30px rgba(0,0,0,.14); }
+  .sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--border-strong); margin: 0 auto 14px; }
+</style>
+</head>
+<body>
+
+<aside class="panel">
+  <h1>Reforged onboarding</h1>
+  <p class="sub">Interactive mock. Click through it like the real app. Nothing here is saved or sent anywhere.</p>
+
+  <div class="seg" role="group" aria-label="Flow">
+    <button data-flow="new" aria-pressed="true">New user</button>
+    <button data-flow="ret" aria-pressed="false">Returning</button>
+    <button data-flow="edge" aria-pressed="false">Edge cases</button>
+  </div>
+
+  <ol class="steps" id="steps"></ol>
+
+  <div class="why" id="why"></div>
+
+  <div class="toggles">
+    <button id="tDark" aria-pressed="false">Dark mode</button>
+    <button id="tPad" aria-pressed="false">iPad</button>
+    <button id="tRestart">Restart</button>
+  </div>
+  <p class="timer" id="timer">Stopwatch: starts when you tap <strong>Get started</strong>.</p>
+  <p class="foot">Mock notes: Scripture shown is a single verse per translation for preview. The first-verse cards use the KJV here; the real app uses the translation you pick. Real names, counts and times are sample data.</p>
+</aside>
+
+<main class="stage">
+  <div class="scaler" id="scaler">
+    <div class="device" id="device">
+      <div class="screen" id="screen" data-theme="light">
+        <div class="island"></div>
+        <div class="statusbar" id="status"><span>9:41</span><span class="right"><span>5G</span><span class="battery"></span></span></div>
+        <div id="view"></div>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ---------- tiny helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const ic = {
+  back: '<path d="m15 5-7 7 7 7"/>',
+  check: '<path d="m5 12 5 5 9-10"/>',
+  flame: '<path d="M12 3c1 4-3 5-3 9a5 5 0 0 0 10 0c0-2-1-3.5-2-4.5 0 2-1 3-2 3 1-3 0-6-3-7.5z"/>',
+  brain: '<rect x="7" y="3" width="13" height="13" rx="2.5"/><path d="M4 8v10a2.5 2.5 0 0 0 2.5 2.5H16"/>',
+  headphones: '<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.5"/>',
+  wave: '<path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/>',
+  book: '<path d="M12 6c-1.5-1.3-3.5-2-6-2H3v14h3c2.5 0 4.5.7 6 2m0-14c1.5-1.3 3.5-2 6-2h3v14h-3c-2.5 0-4.5.7-6 2m0-14v14"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.8 0 4.5 1.9 4.5 4.5"/>',
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  shield: '<path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z"/>',
+  plus: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  bell: '<path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7zm4 10a2 2 0 0 0 4 0"/>',
+  cloud: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 9.5 4 4 0 0 1 17.5 18z"/>',
+  sync: '<path d="M20 11a8 8 0 0 0-14-4M4 5v4h4M4 13a8 8 0 0 0 14 4m2 2v-4h-4"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  wifi: '<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/>',
+  download: '<path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/>',
+  widget: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>'
+};
+const svg = (n, cls = '') => `<svg class="svg ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ic[n]}</svg>`;
+
+/* ---------- content ---------- */
+const TR = {
+  ESV:  ['English Standard Version', 'For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.'],
+  KJV:  ['King James Version', 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.'],
+  CSB:  ['Christian Standard Bible', 'For God loved the world in this way: He gave His one and only Son, so that everyone who believes in Him will not perish but have eternal life.'],
+  NKJV: ['New King James Version', 'For God so loved the world that He gave His only begotten Son, that whoever believes in Him should not perish but have everlasting life.'],
+  NASB: ['New American Standard Bible', 'For God so loved the world, that He gave His only Son, so that everyone who believes in Him will not perish, but have eternal life.']
+};
+const VERSES = [
+  { ref: 'John 3:16', theme: 'Salvation', text: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.' },
+  { ref: 'Philippians 4:6', theme: 'Peace', text: 'Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God.' },
+  { ref: 'Jeremiah 29:11', theme: 'Hope', text: 'For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end.' }
+];
+
+/* ---------- state ---------- */
+let S;
+function fresh() {
+  S = { flow: 'new', screen: 'welcome', tr: 'KJV', wt: false, comfort: false, verse: null, revealed: false,
+        time: '7:30 AM', remind: false, tour: 0, checklist: true, devRemind: false, modal: null, t0: null, elapsed: null, restore: 0, gate: null };
+  clearTimeout(S.rt);
+}
+fresh();
+
+/* Screen registry: id -> { flow, label, why, render } */
+const SCREENS = {};
+const FLOWS = {
+  new:  ['welcome', 'translation', 'firstVerse', 'flashcard', 'win', 'walkTalks', 'reminder', 'account', 'homeNew'],
+  ret:  ['welcome', 'signin', 'recognized', 'restore', 'homeBack'],
+  edge: ['emailConfirm', 'offline', 'expired']
+};
+const LABELS = {
+  welcome: 'Welcome', translation: 'Your Bible', firstVerse: 'Pick a verse', flashcard: 'First review',
+  win: 'First win', walkTalks: 'Walk Talks', reminder: 'Daily reminder', account: 'Keep it safe', homeNew: 'Bible + tour',
+  signin: 'Sign in', recognized: 'Recognized (reinstall)', restore: 'Welcome back', homeBack: 'Home + device setup',
+  emailConfirm: 'Check your email', offline: 'Offline first launch', expired: 'Session expired'
+};
+const WHY = {
+  welcome: ['One promise, one action', 'The only choices are "Get started" and "Sign in". Returning users never wade through feature slides to reach sign-in. Charcoal and the cream R keep the launch screen they already know.'],
+  translation: ['Decided for you', 'King James is selected automatically (public domain, bundled, works offline), so most people just tap Continue. Anyone can switch, and the John 3:16 preview shows each translation in the Scripture serif.'],
+  firstVerse: ['Toward the aha', 'No feature slideshow. The user picks a real verse from the learning path and starts using the real memory feature immediately.'],
+  flashcard: ['The real thing', 'This is the actual flashcard, not a tutorial. Tap to reveal, then say how it went. That honest answer is what schedules the next review.'],
+  win: ['A small, true celebration', 'One pop, one number, one promise ("it comes back tomorrow"). The stopwatch in the panel is the target: first verse in about 90 seconds.'],
+  walkTalks: ['A partner, kept', 'Reforged partners with Southland Christian Camp, so Walk Talks stays in onboarding. Its notification toggle is off by default and does not trigger a prompt by itself: one system permission prompt covers everything they said yes to.'],
+  reminder: ['Opt-in, no guilt', '"Not now" has equal weight. The one system permission prompt appears only after a clear yes here (or on Walk Talks), with a time they chose. Defaults stay off.'],
+  account: ['Earned, not demanded', 'Asked only after the first verse, once the user has felt the value. Sign in with Apple leads. "Maybe later" is a real option; sync and Friends are the reasons, not a wall.'],
+  homeNew: ['Bible first, then the tour', 'First-timers land in the Bible, and the app tour starts there with word study, then walks on to Memory, Discipleship and Home, one tab at a time, exactly as it does today.'],
+  signin: ['The fast lane, step 1', 'Apple is one tap. Email is there but quiet. If an account exists, the next stop is restore, and never goals, avatar, translation, or any other setup.'],
+  recognized: ['Zero-tap recognition', 'After a reinstall or on a restored backup, the Keychain still knows who you are. One confident button and an escape ("Not you?").'],
+  restore: ['Honest, calm progress', 'Shows exactly what is coming back. "Continue now" appears as soon as the profile is in; the rest finishes in the background. The old app made email users redo setup here; this removes that.'],
+  homeBack: ['Only what is per-device', 'Permissions, widgets and downloads are tied to the device, so they live in one dismissible card. Preferences (translation, theme, font, reminder time) were restored silently. No tour replays.'],
+  emailConfirm: ['No dead ends', 'Email confirmation resumes exactly where the user left off, with Open Mail and a resend.'],
+  offline: ['Works without a connection', 'First launch offline still gets the bundled Bible and learning path. The account restores when the connection returns.'],
+  expired: ['Sign in again, keep everything', 'A lapsed session never routes back through onboarding. Local data stays; one sheet signs back in.']
+};
+
+/* ---------- screen builders ---------- */
+function dots(i, n) { return `<div class="dots">${Array.from({ length: n }, (_, k) => `<i class="${k === i ? 'on' : k < i ? 'done' : ''}"></i>`).join('')}</div>`; }
+function topBar(back, i, n) {
+  return `<div class="topbar">${back ? `<button class="back" data-a="back" aria-label="Back">${svg('back')}</button>` : '<span class="spacer36"></span>'}${n ? dots(i, n) : ''}<span class="spacer36"></span></div>`;
+}
+const R = (inner, cls = '') => `<div class="view ${cls}"><div class="col">${inner}</div></div>`;
+
+SCREENS.welcome = () => `<div class="view welcome"><div class="col">
+  <img class="mark" src="assets/logo/mark-cream.png" alt="Reforged">
+  <h1>Reforged</h1>
+  <p>Read it. Memorize it. Live it.</p>
+  <div class="cta">
+    <button class="btn primary" data-a="start">Get started</button>
+    <button class="btn" style="background:rgba(232,228,220,.12);color:var(--reforged-cream)" data-a="haveAccount">Sign in</button>
+    <div class="small">About a minute to set up</div>
+  </div></div></div>`;
+
+SCREENS.translation = () => R(`${topBar(true, 0, 5)}
+  <h2 class="t">Your Bible.</h2>
+  <p class="lead">King James Version is selected. You can change it any time.</p>
+  <div class="scroll">
+  <div class="chips" role="radiogroup" style="margin:26px 0 8px;gap:10px">${Object.keys(TR).map(k => `<button class="chip" role="radio" aria-checked="${S.tr === k}" aria-pressed="${S.tr === k}" data-a="tr" data-k="${k}" style="${S.tr === k ? 'background:var(--reforged-coral);color:#fff' : ''}">${k}</button>`).join('')}</div>
+  <div class="card preview" style="margin-top:26px;padding:24px;min-height:180px"><div class="ref">John 3:16 · ${S.tr}</div><p class="scripture" id="pv">${TR[S.tr][1]}</p></div>
+  </div>
+  <div class="cta"><button class="btn primary" data-a="next">Continue</button></div>`);
+
+SCREENS.firstVerse = () => R(`${topBar(true, 1, 5)}
+  <h2 class="t">Start with one verse.</h2>
+  <p class="lead">Pick one. We'll bring it back right before you'd forget it.</p>
+  <div class="stack scroll">${VERSES.map((v, k) => `<button class="card vcard" data-a="pick" data-k="${k}"><span><span class="ref">${v.theme}</span><br><b>${v.ref}</b></span><span class="plus">${svg('plus')}</span></button>`).join('')}</div>
+  <div class="cta"><button class="btn ghost" data-a="skipVerse">Skip for now</button></div>`);
+
+SCREENS.flashcard = () => { const v = S.verse; return R(`${topBar(true, 1, 5)}
+  <div class="ref center" style="margin-top:6px">Your first review</div>
+  <div class="card flash" data-a="reveal" role="button" tabindex="0" aria-label="Tap to reveal the verse">
+    <div class="ref">KJV</div>
+    <div class="big">${v.ref}</div>
+    ${S.revealed ? `<p class="scripture">${v.text}</p>` : `<div class="hint">Try saying it, then tap to check</div>`}
+  </div>
+  <div class="cta">${S.revealed ? `<div style="display:flex;gap:10px"><button class="btn secondary" style="flex:1" data-a="notYet">Not yet</button><button class="btn primary" style="flex:1" data-a="gotIt">Got it</button></div><div class="center" style="font-size:13px;color:var(--text-tertiary);padding-top:6px">How it went decides when it comes back.</div>` : `<button class="btn primary" data-a="reveal">Show the verse</button>`}</div>`); };
+
+SCREENS.win = () => R(`<div class="win" style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+  <div class="ring">${svg('check').replace('class="svg "', 'class="svg" style="width:54px;height:54px;stroke-width:2.6"')}</div>
+  <h2 class="t" style="margin-top:0">Your first verse.</h2>
+  <div><span class="xp">${svg('sparkle').replace('class="svg "','class="svg" style="width:16px;height:16px"')} +15 XP</span></div>
+  <p class="lead" style="margin:0 auto;max-width:300px">${S.verse.ref} is yours to keep. It comes back tomorrow, right when you're about to forget it.</p>
+  ${S.elapsed ? `<p class="center" style="color:var(--text-tertiary);font-size:13px;margin-top:18px">You did that in ${S.elapsed}.</p>` : ''}
+  </div><div class="cta"><button class="btn primary" data-a="next">Continue</button></div>`);
+
+SCREENS.walkTalks = () => R(`${topBar(true, 2, 5)}
+  <div class="scroll">
+  <div style="display:flex;gap:14px;align-items:center;margin:8px 0 14px">
+    <div style="width:84px;height:84px;border-radius:20px;background:linear-gradient(135deg,#4D4D99,#804D99);color:#fff;display:grid;place-items:center;flex:none;box-shadow:var(--shadow-card)">${svg('headphones').replace('class="svg "','class="svg" style="width:38px;height:38px"')}</div>
+    <div><div class="ref">Our partner</div><h2 class="t" style="margin:2px 0 0;font-size:25px">Walk Talks Podcast</h2></div>
+  </div>
+  <p class="lead" style="margin-bottom:12px">Reforged partners with <b>Southland Christian Camp</b> in Ringgold, LA to bring you Walk Talks: short, Scripture-focused episodes from Southland staff to strengthen your walk with God every week.</p>
+  <div class="card">
+    <div class="row"><span class="ic" style="color:#804D99">${svg('wave')}</span><div><b>Weekly episodes</b><span>New content every week on one Scriptural theme</span></div></div>
+    <div class="row"><span class="ic" style="color:var(--reforged-gold)">${svg('users')}</span><div><b>Southland staff</b><span>From the full-time team at Southland Christian Camp</span></div></div>
+    <div class="row"><span class="ic" style="color:var(--success)">${svg('book')}</span><div><b>Practical application</b><span>Short episodes for everyday believers of all ages</span></div></div>
+  </div>
+  <div class="switchrow" style="padding-top:16px"><span style="color:var(--text-primary)"><b style="display:block;font-size:15px">Notify me about new episodes</b><span style="font-size:13px;color:var(--text-secondary)">Change this any time in Settings.</span></span><button class="sw" role="switch" aria-checked="${S.wt}" data-a="wt" aria-label="Notify me about new episodes"></button></div>
+  </div>
+  <div class="cta"><button class="btn primary" data-a="next">Continue</button></div>`);
+
+SCREENS.reminder = () => R(`${topBar(true, 3, 5)}
+  <h2 class="t">Set a daily reminder.</h2>
+  <p class="lead">Pick a time that fits your day. Change it or turn it off any time.</p>
+  <div class="bigtime">${S.time.replace(/ (AM|PM)/, '<small>$1</small>')}</div>
+  <div class="chips" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 6px">${['6:30 AM', '7:30 AM', '12:00 PM', 'Custom'].map(t => `<button class="chip" data-a="time" data-k="${t}" aria-pressed="${S.time === t}">${t}</button>`).join('')}</div>
+  <div class="cta"><button class="btn primary" data-a="remindYes">Remind me at ${S.time}</button><button class="btn ghost" data-a="remindNo">Not now</button></div>`);
+
+SCREENS.account = () => R(`${topBar(true, 4, 5)}
+  <h2 class="t">Keep your progress safe.</h2>
+  <p class="lead">Create an account so nothing you build is ever lost.</p>
+  <div class="scroll">
+    <div class="benefit"><span class="ic">${svg('sync')}</span><div><b>Every device, same you</b><span>Your streak, verses and notes follow you to a new phone or iPad.</span></div></div>
+    <div class="benefit"><span class="ic">${svg('cloud')}</span><div><b>Backed up privately</b><span>Stored in your own iCloud. Free, ad-free, and yours.</span></div></div>
+    <div class="benefit"><span class="ic">${svg('users')}</span><div><b>Read with friends</b><span>Optional. Nothing is shared unless you choose.</span></div></div>
+  </div>
+  <div class="cta"><button class="btn apple" data-a="apple">&#63743; Continue with Apple</button><button class="btn secondary" data-a="email">Use email instead</button><button class="btn ghost" data-a="later">Maybe later</button></div>`);
+
+function tabbar(active, hl) {
+  const t = [['home', 'Home'], ['shield', 'Discipleship'], ['book', 'Bible'], ['brain', 'Memory'], ['users', 'Friends']];
+  return `<div class="tabbar">${t.map(([i, n]) => `<div class="tab ${n === active ? 'active' : ''} ${n === hl ? 'hl' : ''}">${svg(i)}<span>${n}</span></div>`).join('')}</div>`;
+}
+
+SCREENS.homeNew = () => {
+  const steps = [
+    { hl: 'Bible', arrow: '50%', t: 'Hold any word to define it', p: 'Press and hold a word in the text for its meaning, and the Greek or Hebrew behind it.' },
+    { hl: 'Memory', arrow: '66%', t: 'Your verse is waiting here', p: `${S.verse ? S.verse.ref : 'Your verse'} comes back tomorrow. Practice it here, in six different ways.` }
+  ];
+  const c = steps[S.tour];
+  const word = w => `<span style="${S.tour === 0 && w === 'beginning' ? 'background:var(--gold-100);border-radius:6px;padding:0 3px;box-shadow:0 0 0 3px rgba(212,165,116,.35)' : ''}">${w}</span>`;
+  return `<div class="view" style="padding-top:60px"><div class="col"><div class="scroll" style="padding-bottom:110px">
+    <div class="topbar" style="margin-bottom:10px"><div style="display:flex;gap:8px"><span class="chip" style="padding:9px 14px;font-size:14px;background:var(--surface-card)">Genesis 1</span><span class="chip" style="padding:9px 14px;font-size:14px;background:var(--surface-card)">KJV</span></div><div style="display:flex;gap:8px;color:var(--text-secondary)">${svg('book')}${svg('sparkle')}</div></div>
+    <div class="ref center" style="margin:10px 0 4px">Genesis</div><div class="center" style="font-size:28px;font-weight:800;margin-bottom:16px">Chapter 1</div>
+    <p class="scripture" style="font-size:17px;margin:0"><sup style="color:var(--reforged-gold);font-size:11px;font-family:var(--font-ui);font-weight:700">1</sup> In the ${word('beginning')} God created the heaven and the earth. <sup style="color:var(--reforged-gold);font-size:11px;font-family:var(--font-ui);font-weight:700">2</sup> And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters. <sup style="color:var(--reforged-gold);font-size:11px;font-family:var(--font-ui);font-weight:700">3</sup> And God said, Let there be light: and there was light.</p>
+  </div></div></div>${tabbar('Bible', c ? c.hl : null)}
+  ${c ? `<div class="scrim"></div><div class="coach" style="--arrow:${c.arrow}"><b>${c.t}</b><p>${c.p}</p><div class="acts"><button class="link" data-a="tourSkip">Skip tour</button><button class="pillbtn" data-a="tourNext">${S.tour === steps.length - 1 ? 'Done' : 'Next'}</button></div></div>` : ''}`;
+};
+
+SCREENS.signin = () => R(`${topBar(true)}
+  <h2 class="t">Welcome back.</h2>
+  <p class="lead">Sign in and everything comes back: your streak, verses, notes and settings.</p>
+  <button class="btn apple" data-a="apple" style="width:100%">&#63743; Continue with Apple</button>
+  <div class="or">or use email</div>
+  <div class="stack"><input class="input" placeholder="Email" value="sam@example.com" aria-label="Email"><input class="input" type="password" placeholder="Password" value="••••••••" aria-label="Password"></div>
+  <div class="cta"><button class="btn secondary" data-a="toRestore">Sign in</button><button class="link" data-a="reset">Forgot password?</button><button class="link" data-a="newHere">New here? Get started</button></div>`);
+
+SCREENS.recognized = () => R(`<div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center">
+  <div class="avatar">S</div><h2 class="t" style="margin-top:0">Welcome back, Sam.</h2>
+  <p class="lead" style="max-width:300px;margin:0 auto">We found your Reforged account on this Apple ID.</p></div>
+  <div class="cta"><button class="btn primary" data-a="toRestore">Continue as Sam</button><button class="btn ghost" data-a="signinOther">Not you?</button></div>`);
+
+const RESTORE = [['Your profile', 'Sam'], ['Reading streak', '14 days'], ['Memory verses', '23 verses'], ['Notes and highlights', '41 items'], ['Reading plans', '2 plans'], ['Friends', '3 friends']];
+SCREENS.restore = () => { const done = S.restore; const pct = Math.round(done / RESTORE.length * 100); return R(`<div style="padding-top:44px">
+  <div class="avatar" style="width:72px;height:72px;font-size:30px;margin-left:0">S</div>
+  <h2 class="t" style="margin-top:0">Welcome back, Sam.</h2><p class="lead" style="margin-bottom:6px">Getting everything ready.</p>
+  <div class="bar"><i style="width:${pct}%"></i></div>
+  <div class="rows">${RESTORE.map(([a, b], k) => `<div class="rrow ${k <= done ? 'on' : ''}"><b>${a}</b><em>${k < done ? b : ''}</em>${k < done ? `<span class="tick">${svg('check')}</span>` : k === done ? '<span class="spin"></span>' : '<span class="pend"></span>'}</div>`).join('')}</div></div>
+  <div class="cta"><button class="btn primary" data-a="toHomeBack" ${done >= 1 ? '' : 'disabled'}>${done >= RESTORE.length ? 'Go to Home' : 'Continue now'}</button><div class="center" style="font-size:13px;color:var(--text-tertiary)">${done >= RESTORE.length ? 'All set.' : 'The rest finishes in the background.'}</div></div>`); };
+
+SCREENS.homeBack = () => `<div class="view" style="padding-top:60px"><div class="col"><div class="scroll" style="padding-bottom:110px">
+  <div class="hero"><small>Good morning, Sam</small><h3>Keep it going</h3>
+    <div class="stats"><div class="stat coral"><b>14</b><span>day streak</span></div><div class="stat gold"><b>5</b><span>verses due</span></div></div></div>
+  ${S.checklist ? `<div class="sectitle">Finish setting up this device</div><div class="card">
+    <div class="checkhead"><div><b>Three quick things</b><span>Your settings are already here</span></div><button class="x" data-a="hideCheck" aria-label="Dismiss">&times;</button></div>
+    <div class="row"><span class="ic">${svg('bell')}</span><div><b>Daily reminder, 7:30 AM</b><span>Needs permission on this device</span></div>${S.devRemind ? `<span class="tick">${svg('check')}</span>` : `<button class="pillbtn" data-a="devRemind">Turn on</button>`}</div>
+    <div class="row"><span class="ic">${svg('widget')}</span><div><b>Home-screen widget</b><span>See your streak at a glance</span></div><button class="pillbtn soft">Show me</button></div>
+    <div class="row"><span class="ic">${svg('download')}</span><div><b>Read offline</b><span>Download ESV · 84 MB</span></div><button class="pillbtn soft">Download</button></div>
+  </div><div class="center" style="margin-top:10px"><button class="link" style="font-size:13.5px">New to this device? Take a 60-second tour</button></div>` : ''}
+  <div class="sectitle">Today</div>
+  <div class="card"><div class="row"><span class="ic">${svg('brain')}</span><div><b>5 verses ready to review</b><span>About 4 minutes</span></div><button class="pillbtn">Review</button></div>
+    <div class="row"><span class="ic">${svg('users')}</span><div><b>Maria read today</b><span>Nudge her to keep going?</span></div></div></div>
+  </div></div></div>${tabbar('Home')}`;
+
+SCREENS.emailConfirm = () => R(`${topBar(true)}<div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center">
+  <div class="ring" style="background:var(--coral-050);color:var(--reforged-coral);box-shadow:var(--shadow-coral)">${svg('mail').replace('class="svg "', 'class="svg" style="width:50px;height:50px"')}</div>
+  <h2 class="t" style="margin-top:0">Check your email.</h2><p class="lead" style="max-width:310px;margin:0 auto">We sent a link to <b>sam@example.com</b>. Tap it and you'll come right back here.</p></div>
+  <div class="cta"><button class="btn primary">Open Mail</button><button class="btn ghost">Resend email</button><button class="link">Use a different email</button></div>`);
+
+SCREENS.offline = () => R(`<div class="banner">${svg('wifi').replace('class="svg "', 'class="svg" style="width:16px;height:16px"')} You're offline</div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center">
+  <h2 class="t" style="margin-top:0">You can start right now.</h2><p class="lead" style="max-width:320px;margin:0 auto">The Bible and your first verses are already on this device. We'll bring your account back when you're online.</p></div>
+  <div class="cta"><button class="btn primary">Continue without internet</button><button class="btn ghost">Try again</button></div>`);
+
+SCREENS.expired = () => `<div class="view" style="padding-top:60px"><div class="col"><div class="scroll" style="opacity:.35;pointer-events:none"><div class="hero"><small>Good morning, Sam</small><h3>Keep it going</h3><div class="stats"><div class="stat coral"><b>14</b><span>day streak</span></div><div class="stat gold"><b>5</b><span>verses due</span></div></div></div></div></div>
+  <div class="scrim" style="z-index:5"></div>
+  <div class="sheet" style="position:absolute;left:0;right:0;bottom:0;z-index:20"><div class="grab"></div>
+  <h2 class="t" style="margin:4px 0 6px;font-size:24px">Sign in again.</h2><p class="lead" style="margin-bottom:16px">Your session ended. Everything on this device is safe.</p>
+  <button class="btn apple" style="width:100%;margin-bottom:10px">&#63743; Continue with Apple</button><button class="btn secondary" style="width:100%">Use email</button></div></div>`;
+
+/* ---------- render ---------- */
+function render() {
+  const sc = $('#screen');
+  sc.dataset.theme = S.dark ? 'dark' : 'light';
+  const id = S.screen;
+  const html = SCREENS[id]();
+  $('#view').innerHTML = html;
+  $('#status').style.color = id === 'welcome' ? '#E8E4DC' : 'var(--text-primary)';
+  $('.home-indicator').style.color = id === 'welcome' ? '#E8E4DC' : 'var(--text-primary)';
+  if (S.modal === 'notif') {
+    $('#view').insertAdjacentHTML('beforeend', `<div class="modal"><div class="alert"><div class="body"><b>"Reforged" Would Like to Send You Notifications</b><p>Notifications may include alerts, sounds and icon badges. These can be configured in Settings.</p></div><div class="row2"><button data-a="modalDeny">Don't Allow</button><button data-a="modalAllow">Allow</button></div></div></div>`);
+  }
+  renderPanel();
+  if (id === 'restore') runRestore();
+}
+function renderPanel() {
+  const list = FLOWS[S.flow];
+  $('#steps').innerHTML = list.map((id, i) => `<li><button data-jump="${id}" ${id === S.screen ? 'aria-current="step"' : ''}><span class="n">${i + 1}</span>${LABELS[id]}</button></li>`).join('');
+  const w = WHY[S.screen]; $('#why').innerHTML = `<b>${w[0]}</b>${w[1]}`;
+  document.querySelectorAll('[data-flow]').forEach(b => b.setAttribute('aria-pressed', b.dataset.flow === S.flow));
+}
+function go(id) { S.screen = id; if (FLOWS.new.includes(id)) S.flow = 'new'; else if (FLOWS.ret.includes(id) && id !== 'welcome') S.flow = 'ret'; else if (FLOWS.edge.includes(id)) S.flow = 'edge'; S.revealed = id === 'flashcard' ? S.revealed : false; render(); }
+function runRestore() {
+  clearTimeout(S.rt);
+  if (S.restore >= RESTORE.length) return;
+  S.rt = setTimeout(() => { S.restore++; if (S.screen === 'restore') { render(); if (S.restore >= RESTORE.length) S.rt = setTimeout(() => S.screen === 'restore' && go('homeBack'), 1400); } }, 650);
+}
+const fmt = ms => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+let tick;
+function startTimer() { S.t0 = Date.now(); S.elapsed = null; clearInterval(tick); tick = setInterval(() => { if (S.t0 && !S.elapsed) $('#timer').innerHTML = `Stopwatch: <strong>${fmt(Date.now() - S.t0)}</strong> · target 1:30`; }, 500); }
+function stopTimer() { if (S.t0 && !S.elapsed) { S.elapsed = fmt(Date.now() - S.t0); clearInterval(tick); $('#timer').innerHTML = `First verse learned in <strong>${S.elapsed}</strong> · target 1:30`; } }
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const j = e.target.closest('[data-jump]'); if (j) { const id = j.dataset.jump; if (id === 'flashcard' && !S.verse) S.verse = VERSES[0]; if ((id === 'win' || id === 'homeNew') && !S.verse) S.verse = VERSES[0]; if (id === 'restore') S.restore = 0; S.tour = 0; go(id); return; }
+  const f = e.target.closest('[data-flow]'); if (f) { const first = FLOWS[f.dataset.flow][0]; S.flow = f.dataset.flow; if (first === 'restore') S.restore = 0; go(first === 'welcome' && f.dataset.flow === 'ret' ? 'welcome' : first); return; }
+  const a = e.target.closest('[data-a]'); if (!a) return;
+  const k = a.dataset.k; const act = a.dataset.a;
+  const order = FLOWS.new;
+  switch (act) {
+    case 'start': startTimer(); go('translation'); break;
+    case 'haveAccount': S.flow = 'ret'; go('signin'); break;
+    case 'next': { const i = order.indexOf(S.screen); go(order[i + 1]); break; }
+    case 'back': { if (S.flow === 'ret') { go(S.screen === 'restore' ? 'signin' : 'welcome'); } else { const i = order.indexOf(S.screen); go(order[Math.max(0, i - 1)]); } break; }
+    case 'wt': S.wt = !S.wt; a.setAttribute('aria-checked', S.wt); break;
+    case 'tr': S.tr = k; { const p = $('#pv'); if (p) { document.querySelectorAll('.chips .chip').forEach(r => { const on = r.dataset.k === k; r.setAttribute('aria-pressed', on); r.style.background = on ? 'var(--reforged-coral)' : ''; r.style.color = on ? '#fff' : ''; }); p.textContent = TR[k][1]; p.style.animation = 'none'; p.offsetHeight; p.style.animation = ''; document.querySelector('.preview .ref').textContent = `John 3:16 · ${k}`; } } break;
+    case 'comfort': S.comfort = !S.comfort; a.setAttribute('aria-checked', S.comfort); $('#screen').style.setProperty('--font-scripture', S.comfort ? '"Roboto", system-ui, sans-serif' : '"Libre Baskerville", Georgia, serif'); break;
+    case 'pick': S.verse = VERSES[+k]; S.revealed = false; go('flashcard'); break;
+    case 'skipVerse': go('walkTalks'); break;
+    case 'reveal': S.revealed = true; render(); break;
+    case 'notYet': S.revealed = false; render(); break;
+    case 'gotIt': stopTimer(); go('win'); break;
+    case 'time': S.time = k; render(); break;
+    case 'remindYes': S.modal = 'notif'; render(); break;
+    case 'remindNo': if (S.wt) { S.modal = 'notif'; render(); } else go('account'); break;
+    case 'modalAllow': case 'modalDeny': S.modal = null; if (S.screen === 'homeBack') { S.devRemind = act === 'modalAllow'; render(); } else go('account'); break;
+    case 'apple': case 'later': case 'email': if (S.flow === 'ret' || S.screen === 'signin') { S.restore = 0; go('restore'); } else { S.tour = 0; go('homeNew'); } break;
+    case 'toRestore': S.restore = 0; go('restore'); break;
+    case 'toHomeBack': clearTimeout(S.rt); go('homeBack'); break;
+    case 'signinOther': go('signin'); break;
+    case 'newHere': S.flow = 'new'; go('welcome'); break;
+    case 'tourNext': if (S.tour < 1) { S.tour++; render(); } else { S.tour = 2; render(); } break;
+    case 'tourSkip': S.tour = 2; render(); break;
+    case 'hideCheck': S.checklist = false; render(); break;
+    case 'devRemind': S.modal = 'notif'; render(); break;
+  }
+});
+$('#tDark').onclick = e => { S.dark = !S.dark; e.target.setAttribute('aria-pressed', S.dark); render(); };
+$('#tPad').onclick = e => { const p = $('#device').classList.toggle('ipad'); e.target.setAttribute('aria-pressed', p); fit(); setTimeout(fit, 420); };
+$('#tRestart').onclick = () => { const d = S.dark; clearInterval(tick); fresh(); S.dark = d; $('#timer').innerHTML = 'Stopwatch: starts when you tap <strong>Get started</strong>.'; render(); };
+
+/* Scale the device to fit the window */
+function fit() {
+  const d = $('#device'); const sc = $('#scaler');
+  const w = d.offsetWidth, h = d.offsetHeight;
+  const avail = innerHeight - 48, availW = (document.body.clientWidth > 900 ? innerWidth - 340 : innerWidth) - 48;
+  const s = Math.min(1, avail / h, availW / w);
+  sc.style.transform = `scale(${s})`; sc.style.width = w + 'px'; sc.style.height = h + 'px'; sc.style.marginBottom = (h * s - h) + 'px'; sc.style.marginRight = (w * s - w) + 'px';
+}
+addEventListener('resize', fit);
+$('#device').addEventListener('transitionend', fit);
+render(); fit();
+</script>
+</body>
+</html>

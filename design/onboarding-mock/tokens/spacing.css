@@ -1,0 +1,32 @@
+/* ===========================================================================
+   Reforged — Spacing & layout tokens
+   Base-8 scale, matching ReforgedTheme spacing constants in Theme.swift
+   (XS 4, S 8, M 16, L 24, XL 32, XXL 48).
+   =========================================================================== */
+
+:root {
+  --space-0:   0;
+  --space-1:   4px;    /* XS */
+  --space-2:   8px;    /* S  */
+  --space-3:   12px;
+  --space-4:   16px;   /* M  — default card padding */
+  --space-5:   20px;
+  --space-6:   24px;   /* L  — screen gutter */
+  --space-8:   32px;   /* XL */
+  --space-10:  40px;
+  --space-12:  48px;   /* XXL */
+  --space-16:  64px;
+
+  /* Semantic */
+  --gutter-screen:   var(--space-6);   /* horizontal screen padding */
+  --gap-card:        var(--space-3);   /* gap between stacked cards */
+  --pad-card:        var(--space-4);   /* inner card padding */
+  --pad-card-lg:     var(--space-5);
+
+  /* Component sizing */
+  --control-h:       52px;   /* primary buttons / inputs */
+  --control-h-sm:    40px;
+  --tabbar-h:        84px;
+  --touch-min:       44px;   /* iOS minimum hit target */
+  --max-content:     440px;  /* phone canvas width */
+}

@@ -1,0 +1,64 @@
+{
+  "built_at": "2026-10-11T00:25:57Z",
+  "bytes": 68472832,
+  "coverage": {
+    "NT": {
+      "exact": 144597,
+      "exact_pct": 99.86,
+      "matched_pct": 99.94,
+      "none": 80,
+      "strongs_only": 120,
+      "total": 144797
+    },
+    "OT": {
+      "exact": 185806,
+      "exact_pct": 81.12,
+      "matched_pct": 99.35,
+      "none": 1482,
+      "strongs_only": 41756,
+      "total": 229044
+    }
+  },
+  "data_version": "2026.10.2",
+  "schema_version": 1,
+  "sha256": "8f4957f6e86b5d4b86af52d245ccf314e1b22fe44c1c8960088b829e7ff41d88",
+  "sources": {
+    "abbott": {
+      "commit": "8c00cb244761aa23659421a8cbbbf7a3b27b7d59",
+      "repo": "translatable-exegetical-tools/Abbott-Smith"
+    },
+    "crosswire-KJV": {
+      "bytes": 4026621,
+      "sha256": "873815aa4b4123025616d1f41eae75f412111275f4c3884e36f92d4f46dcba1d",
+      "url": "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/KJV.zip"
+    },
+    "hebrewlex": {
+      "commit": "21c9add13bc727d3a951361778e97e3ff7afd1ce",
+      "repo": "openscriptures/HebrewLexicon"
+    },
+    "morphhb": {
+      "commit": "3d15126fb1ef74867fc1434be1942e837932691f",
+      "repo": "openscriptures/morphhb"
+    },
+    "robinson": {
+      "commit": "3bc6f03e4dca60bf0fd17848aa3771c43394d3c7",
+      "repo": "byztxt/robinson-documentation"
+    },
+    "stepbible": {
+      "commit": "aca7d691414e00b0d669157d98bfd68195e64e1e",
+      "repo": "STEPBible/STEPBible-Data"
+    },
+    "strongs_grk": {
+      "commit": "dd6758b82f46b620804a8ea677d715844679eea1",
+      "repo": "morphgnt/strongs-dictionary-xml"
+    },
+    "strongs_js": {
+      "commit": "0acd2f251c2d35ff8db2dece4e0593979d3ac223",
+      "repo": "openscriptures/strongs"
+    },
+    "tr": {
+      "commit": "7fd4d02c3e5adebd379ebfbc824040820dde10fc",
+      "repo": "byztxt/greektext-textus-receptus"
+    }
+  }
+}
