@@ -2,6 +2,7 @@ import SwiftUI
 import StoreKit
 
 struct ContentView: View {
+    @StateObject private var honorLink = HonorLink.shared
     @StateObject private var appState = AppState.shared
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var settingsManager = SettingsManager.shared
@@ -40,6 +41,7 @@ struct ContentView: View {
         .environmentObject(themeManager)
         .environmentObject(settingsManager)
         .onAppear {
+            honorLink.start()
             // First time in the main app: walk the user through it, starting in the Bible.
             // Delayed so launch-time tab selection (e.g. "focus Home on first open of day")
             // settles first.
@@ -55,6 +57,8 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
+                honorLink.reload()
+                honorLink.publishReading()
                 // Re-check Screen Time authorization (can read stale right at launch)
                 FocusBlockingService.shared.refreshAuthorizationStatus()
                 // Re-apply Focus Shield blocking rules every time app foregrounds
@@ -116,18 +120,31 @@ struct ContentView: View {
             )
         }
         .onReceive(NotificationCenter.default.publisher(for: .showTemptedSOS)) { _ in
-            showTemptedSOS = true
+            showTemptedSOS = !honorLink.handOffSOS()
         }
         .onChange(of: appState.pendingTemptedSOS) { pending in
             if pending && appState.user.onboardingCompleted {
-                showTemptedSOS = true
+                showTemptedSOS = !honorLink.handOffSOS()
                 appState.pendingTemptedSOS = false
             }
         }
         .onAppear {
             if appState.pendingTemptedSOS && appState.user.onboardingCompleted {
-                showTemptedSOS = true
+                showTemptedSOS = !honorLink.handOffSOS()
                 appState.pendingTemptedSOS = false
+            }
+        }
+        .alert(item: $honorLink.prompt) { prompt in
+            switch prompt {
+            case .handoff:
+                return Alert(title: Text("Reforged Honor is protecting this phone. Let it handle app blocking?"),
+                    primaryButton: .default(Text("Yes")) { honorLink.acceptHandoff() },
+                    secondaryButton: .cancel(Text("No")) { honorLink.declineHandoff() })
+            case .restore:
+                return Alert(title: Text("Reforged Honor protection has stopped"),
+                    message: Text("Turn Reforged Bible’s blocking back on using your saved settings?"),
+                    primaryButton: .default(Text("Turn Blocking Back On")) { honorLink.restoreBlocking() },
+                    secondaryButton: .cancel(Text("Keep Paused")))
             }
         }
         .sheet(item: $refocusVerse) { verse in

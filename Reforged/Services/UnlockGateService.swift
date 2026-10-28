@@ -149,6 +149,7 @@ final class UnlockGateService: ObservableObject {
 
     /// Applies or lifts the shield to match today's cleared state.
     private func applyGate() {
+        guard !HonorLink.blockingIsPaused else { pauseForHonor(); return }
         guard isEnabled, hasSelection else { return }
         if isClearedToday {
             clearGateShield()
@@ -215,7 +216,14 @@ final class UnlockGateService: ObservableObject {
     /// Arms the daily schedule whose `intervalDidStart` re-locks the gate at midnight.
     /// Unlike the daily limit, this registers no threshold events, so a redundant
     /// restart is harmless — but skip it anyway when already armed.
+    func pauseForHonor() {
+        stopMonitoring()
+        store.clearAllSettings()
+        defaults?.set(false, forKey: UnlockGateKeys.pending)
+    }
+
     private func startMonitoring() {
+        guard !HonorLink.blockingIsPaused else { return }
         guard hasSelection else { stopMonitoring(); return }
         shareSelection()
 
@@ -253,6 +261,7 @@ final class UnlockGateService: ObservableObject {
     }
 
     private func applyGateShield() {
+        guard !HonorLink.blockingIsPaused else { return }
         let sel = selection
         store.shield.applications = sel.applicationTokens.isEmpty ? nil : sel.applicationTokens
         store.shield.applicationCategories = sel.categoryTokens.isEmpty ? nil : .specific(sel.categoryTokens)

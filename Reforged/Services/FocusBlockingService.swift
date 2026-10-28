@@ -97,6 +97,7 @@ final class FocusBlockingService: ObservableObject {
     }
 
     private func applyBlocking() {
+        guard !HonorLink.blockingIsPaused else { return }
         // --- Web content filter (Safari) ---
         // Adult content uses Apple's built-in automatic adult-web filter (far more
         // comprehensive than a hardcoded list); social websites are layered on top.

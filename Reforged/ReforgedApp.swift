@@ -38,6 +38,7 @@ struct ReforgedApp: App {
         guard url.scheme?.lowercased() == "reforged" else { return }
 
         if url.host?.lowercased() == "panic" {
+            if HonorLink.shared.handOffSOS() { return }
             NotificationCenter.default.post(name: .showTemptedSOS, object: nil)
             return
         }

@@ -250,7 +250,13 @@ final class SocialLimitService: ObservableObject {
         return "\(limitMinutes)|\(selData.base64EncodedString())"
     }
 
+    func pauseForHonor() {
+        stopMonitoring()
+        ManagedSettingsStore(named: .init(SocialLimitKeys.storeName)).clearAllSettings()
+    }
+
     private func startMonitoring(force: Bool = false) {
+        guard !HonorLink.blockingIsPaused else { stopMonitoring(); return }
         guard hasSelection else { stopMonitoring(); return }
 
         // Share the social selection so the monitor can apply the shield.

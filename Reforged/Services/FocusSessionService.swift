@@ -87,7 +87,7 @@ final class FocusSessionService: ObservableObject {
     // MARK: - Lifecycle
 
     func start(durationMinutes: Int, difficulty: FocusSessionDifficulty, selection: FamilyActivitySelection) {
-        guard !isSessionActive else { return }
+        guard !HonorLink.blockingIsPaused, !isSessionActive else { return }
         let minutes = max(FocusSessionKeys.durationsMinutes.first ?? 15, durationMinutes)
         let now = Date()
         guard let end = Calendar.current.date(byAdding: .minute, value: minutes, to: now) else { return }
@@ -151,6 +151,11 @@ final class FocusSessionService: ObservableObject {
     }
 
     // MARK: - Private
+
+    func pauseForHonor() {
+        tearDown()
+        store.clearAllSettings()
+    }
 
     private func tearDown() {
         center.stopMonitoring([DeviceActivityName(FocusSessionKeys.activityName)])

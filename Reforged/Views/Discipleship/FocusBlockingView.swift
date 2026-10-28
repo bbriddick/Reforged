@@ -45,6 +45,7 @@ struct FocusBlockingView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 20) {
+                HonorLinkStatusCard()
                 statusCard
 
                 temptedButton
@@ -239,7 +240,7 @@ struct FocusBlockingView: View {
     private var temptedButton: some View {
         Button {
             HapticManager.shared.buttonTap()
-            showTemptedSOS = true
+            showTemptedSOS = !HonorLink.shared.handOffSOS()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "hand.raised.brakesignal")

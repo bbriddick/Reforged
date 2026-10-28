@@ -14,7 +14,9 @@ class AppState: ObservableObject {
     static let shared = AppState()
 
     @Published var user: UserProfile = .empty
-    @Published var memoryVerses: [MemoryVerse] = []
+    @Published var memoryVerses: [MemoryVerse] = [] {
+        didSet { HonorLink.shared.publishMemoryVerses(memoryVerses) }
+    }
     /// Reference of a verse the member just added, so the Memory journey can expand its
     /// unit and scroll to it. Cleared by the journey once it has been revealed.
     @Published var journeyRevealRef: String?

@@ -178,8 +178,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             case "tempted":
                 // Tapped the "something was blocked" notification → open I'm Being Tempted.
                 // The flag survives a cold launch, before ContentView is listening.
-                Task { @MainActor in AppState.shared.pendingTemptedSOS = true }
-                NotificationCenter.default.post(name: .showTemptedSOS, object: nil)
+                Task { @MainActor in
+                    if !HonorLink.shared.handOffSOS() {
+                        AppState.shared.pendingTemptedSOS = true
+                    }
+                }
             case "refocus":
                 // Older "you hit a block" notifications → show the verse passage.
                 var info: [String: Any] = [:]

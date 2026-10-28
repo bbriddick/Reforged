@@ -188,6 +188,7 @@ final class ReadingPlanService: ObservableObject {
     }
 
     private func save() {
+        HonorLink.shared.publishReading()
         let flat = completedDaysMap.mapValues { Array($0) }
         if let data = try? JSONEncoder().encode(flat) {
             UserDefaults.standard.set(data, forKey: kCompletedDays)

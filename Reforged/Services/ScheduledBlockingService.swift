@@ -144,7 +144,17 @@ final class ScheduledBlockingService: ObservableObject {
     /// this is the foreground backstop for reboots, missed callbacks, and edits
     /// made mid-window. Also re-arms any enabled schedule whose monitoring got
     /// dropped (e.g. after the user revoked and re-granted authorization).
+    func pauseForHonor() {
+        schedules.forEach {
+            disarm($0)
+            ManagedSettingsStore(named: .init(ScheduledBlockingKeys.storeName($0.id))).clearAllSettings()
+        }
+        activeIds = []
+        defaults?.set([String](), forKey: ScheduledBlockingKeys.activeIds)
+    }
+
     func reconcileNow() {
+        guard !HonorLink.blockingIsPaused else { pauseForHonor(); return }
         let now = Date()
         var live: Set<UUID> = []
         let running = Set(center.activities.map(\.rawValue))
@@ -176,6 +186,7 @@ final class ScheduledBlockingService: ObservableObject {
     }
 
     private func arm(_ schedule: BlockSchedule) {
+        guard !HonorLink.blockingIsPaused else { disarm(schedule); return }
         guard schedule.isEnabled, schedule.hasSelection else {
             disarm(schedule)
             return

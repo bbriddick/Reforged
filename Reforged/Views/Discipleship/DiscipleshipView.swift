@@ -23,6 +23,8 @@ struct DiscipleshipView: View {
                     // One clear next step, then everything else in quiet, labelled groups.
                     continueCard
 
+                    HonorLinkStatusCard()
+
                     group("Protection") {
                         shieldRow
                         divider
@@ -214,7 +216,7 @@ struct DiscipleshipView: View {
     private var temptedRow: some View {
         Button {
             HapticManager.shared.buttonTap()
-            showTemptedSOS = true
+            showTemptedSOS = !HonorLink.shared.handOffSOS()
         } label: {
             rowLabel(icon: "hand.raised.brakesignal", tint: Color.reforgedCoral,
                      title: "I'm Being Tempted",
@@ -375,3 +377,38 @@ struct DiscipleshipView: View {
         .environmentObject(AppState.shared)
 }
 #endif
+
+
+/// Shared status in Discipleship and the shield screen, including a way to revisit restoration.
+struct HonorLinkStatusCard: View {
+    @ObservedObject private var link = HonorLink.shared
+
+    var body: some View {
+        if link.isHonorInstalled || HonorLink.blockingIsPaused {
+            VStack(alignment: .leading, spacing: 8) {
+                if link.isHonorInstalled {
+                    Text(link.protection?.active == true
+                         ? "Protected by Reforged Honor" : "Reforged Honor protection is paused")
+                        .font(.headline)
+                    if let since = link.protection?.since {
+                        Text("Protection started \(since.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.subheadline)
+                    }
+                    Text("\(link.faithfulDays.count) faithful days in the last 90 days")
+                        .font(.subheadline)
+                    Button("Open Reforged Honor") { link.openHonor() }
+                }
+                if HonorLink.blockingIsPaused {
+                    Text("Reforged Bible’s blocking is paused.")
+                        .font(.subheadline)
+                    if !link.isHonorInstalled || link.protection?.active == false {
+                        Button("Turn Reforged Bible Blocking Back On") { link.prompt = .restore }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .practiceCard(radius: 18)
+        }
+    }
+}

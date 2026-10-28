@@ -95,6 +95,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
+        guard defaults?.bool(forKey: "honorOwnsBlocking") != true else { return }
         guard activity.rawValue == Keys.socialActivity else { return }
 
         // Ignore the spurious burst of callbacks iOS fires immediately after
@@ -130,6 +131,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
+        guard defaults?.bool(forKey: "honorOwnsBlocking") != true else { return }
         let name = activity.rawValue
 
         if name == Keys.socialActivity {

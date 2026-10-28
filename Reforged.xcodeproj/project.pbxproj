@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		484F4E4F524C494E4B000002 /* HonorLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484F4E4F524C494E4B000001 /* HonorLink.swift */; };
 		SWVW0000227A1B0E0000000001 /* SwitchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SWVW0000127A1B0E0000000001 /* SwitchViews.swift */; };
 		VCHL0000227A1B0E0000000001 /* VerseChallenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = VCHL0000127A1B0E0000000001 /* VerseChallenge.swift */; };
 		SRWD0000227A1B0E0000000001 /* SouthlandRewardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRWD0000127A1B0E0000000001 /* SouthlandRewardViews.swift */; };
@@ -344,6 +345,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		484F4E4F524C494E4B000001 /* HonorLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HonorLink.swift; sourceTree = "<group>"; };
 		SWVW0000127A1B0E0000000001 /* SwitchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwitchViews.swift; sourceTree = "<group>"; };
 		VCHL0000127A1B0E0000000001 /* VerseChallenge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseChallenge.swift; sourceTree = "<group>"; };
 		SRWD0000127A1B0E0000000001 /* SouthlandRewardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SouthlandRewardViews.swift; sourceTree = "<group>"; };
@@ -913,6 +915,7 @@
 				APS00001279B9E0000000001 /* AccountabilityPartnerService.swift */,
 				SSS00001279B9E0000000001 /* ShieldStreakService.swift */,
 				BRP00005279B9E0000000001 /* ReadingPlanService.swift */,
+				484F4E4F524C494E4B000001 /* HonorLink.swift */,
 				YV00000D2F0000000000A001 /* ContinueReading.swift */,
 				YV00000D2F0000000000A002 /* AppTour.swift */,
 				B1A00003279B9E0000000001 /* StrongsLexiconService.swift */,
@@ -1608,6 +1611,7 @@
 				BRP00002279B9E0000000001 /* BibleReadingPlan.swift in Sources */,
 				BRP00004279B9E0000000001 /* BibleReadingPlanData.swift in Sources */,
 				BRP00006279B9E0000000001 /* ReadingPlanService.swift in Sources */,
+				484F4E4F524C494E4B000002 /* HonorLink.swift in Sources */,
 				YV00000C2F0000000000A001 /* ContinueReading.swift in Sources */,
 				YV00000C2F0000000000A002 /* AppTour.swift in Sources */,
 				BRP00008279B9E0000000001 /* ReadingPlansView.swift in Sources */,

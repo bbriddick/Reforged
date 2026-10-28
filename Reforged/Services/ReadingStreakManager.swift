@@ -488,6 +488,7 @@ class ReadingStreakManager: ObservableObject {
     }
 
     private func saveToStorage() {
+        HonorLink.publishActivity(activityKindsByDate.mapValues { $0.map(\.rawValue) })
         userDefaults.set(Array(readingDates), forKey: readingDatesKey)
         userDefaults.set(Array(activityDates), forKey: activityDatesKey)
         userDefaults.set(Array(frozenDates), forKey: frozenDatesKey)

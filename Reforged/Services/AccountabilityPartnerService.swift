@@ -73,13 +73,17 @@ final class AccountabilityPartnerService: ObservableObject {
     @Published var partnerName: String = "" {
         didSet {
             defaults?.set(partnerName, forKey: AccountabilityPartnerKeys.partnerName)
+            publishHonorPartner()
             // The reminder body names the partner, and clearing the name drops the
             // reminder entirely — so it has to be rebuilt when the name changes.
             rescheduleReminder()
         }
     }
     @Published var partnerPhone: String = "" {
-        didSet { defaults?.set(partnerPhone, forKey: AccountabilityPartnerKeys.partnerPhone) }
+        didSet {
+            defaults?.set(partnerPhone, forKey: AccountabilityPartnerKeys.partnerPhone)
+            publishHonorPartner()
+        }
     }
     @Published private(set) var tamperLog: [TamperEvent] = []
 
@@ -130,6 +134,19 @@ final class AccountabilityPartnerService: ObservableObject {
 
         loadLog()
         isLoading = false
+    }
+
+    private func publishHonorPartner() {
+        guard !isLoading else { return }
+        HonorLink.shared.publishPartner(name: partnerName, phone: partnerPhone)
+    }
+
+    func adoptHonorPartner(_ partner: LinkPartner) {
+        isLoading = true
+        partnerName = partner.name
+        partnerPhone = partner.phone
+        isLoading = false
+        rescheduleReminder()
     }
 
     var hasPartner: Bool { !partnerName.trimmingCharacters(in: .whitespaces).isEmpty }
