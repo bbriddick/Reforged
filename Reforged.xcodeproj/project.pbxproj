@@ -70,6 +70,7 @@
 		A1000038279B9E0000000001 /* MemoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000039279B9E0000000001 /* MemoryView.swift */; };
 		A100003A279B9E0000000001 /* MemoryReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003B279B9E0000000001 /* MemoryReviewView.swift */; };
 		A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003D279B9E0000000001 /* MemoryPracticeView.swift */; };
+		RV0000012F00000000000001 /* RecitationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = RV0000022F00000000000001 /* RecitationViews.swift */; };
 		A100003E279B9E0000000001 /* BibleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100003F279B9E0000000001 /* BibleView.swift */; };
 		A1000040279B9E0000000001 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000041279B9E0000000001 /* ProfileView.swift */; };
 		SHVW0001279B9E0000000001 /* ShopViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHVW0002279B9E0000000001 /* ShopViews.swift */; };
@@ -419,6 +420,7 @@
 		A1000039279B9E0000000001 /* MemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryView.swift; sourceTree = "<group>"; };
 		A100003B279B9E0000000001 /* MemoryReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReviewView.swift; sourceTree = "<group>"; };
 		A100003D279B9E0000000001 /* MemoryPracticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPracticeView.swift; sourceTree = "<group>"; };
+		RV0000022F00000000000001 /* RecitationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecitationViews.swift; sourceTree = "<group>"; };
 		A100003F279B9E0000000001 /* BibleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleView.swift; sourceTree = "<group>"; };
 		A1000041279B9E0000000001 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		SHVW0002279B9E0000000001 /* ShopViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopViews.swift; sourceTree = "<group>"; };
@@ -1001,6 +1003,7 @@
 				A1000039279B9E0000000001 /* MemoryView.swift */,
 				A100003B279B9E0000000001 /* MemoryReviewView.swift */,
 				A100003D279B9E0000000001 /* MemoryPracticeView.swift */,
+				RV0000022F00000000000001 /* RecitationViews.swift */,
 				A10000E4279B9E0000000001 /* MemoryAudioPlayer.swift */,
 				RF0000A2279B9E0000000001 /* ReflectionNoteSheet.swift */,
 				RF0000A4279B9E0000000001 /* DeepDrillView.swift */,
@@ -1459,6 +1462,7 @@
 				A1000038279B9E0000000001 /* MemoryView.swift in Sources */,
 				A100003A279B9E0000000001 /* MemoryReviewView.swift in Sources */,
 				A100003C279B9E0000000001 /* MemoryPracticeView.swift in Sources */,
+				RV0000012F00000000000001 /* RecitationViews.swift in Sources */,
 				A10000E3279B9E0000000001 /* MemoryAudioPlayer.swift in Sources */,
 				RF0000A1279B9E0000000001 /* ReflectionNoteSheet.swift in Sources */,
 				RF0000A3279B9E0000000001 /* DeepDrillView.swift in Sources */,

@@ -47,6 +47,15 @@ struct MemoryView: View {
     }
     @State private var showPracticeOptions = false
     @State private var practiceVerse: MemoryVerse? = nil
+    /// Verse for a stand-alone Recite test ("Test me").
+    @State private var reciteVerse: MemoryVerse? = nil
+    /// Verse whose progress detail sheet is open (My Verses).
+    @State private var detailVerseId: String? = nil
+    /// The bottom Practice pill expands in place into a row of tool bubbles.
+    @State private var practiceExpanded = false
+    /// Journey path vs. the member's own verses. Remembered between launches.
+    @AppStorage("memory.segment") private var segmentRaw = MemorySegment.journey.rawValue
+    private var segment: MemorySegment { MemorySegment(rawValue: segmentRaw) ?? .journey }
     @State private var showToolbarVersePicker = false
     @State private var toolbarVerseAction: MemoryToolbarVerseAction = .practice
     @ObservedObject private var dailyPlanManager = DailyMemoryPlanManager.shared
@@ -184,6 +193,25 @@ struct MemoryView: View {
                     }
             }
         }
+        .sheet(item: Binding(get: { detailVerseId.map(IdentifiedString.init) },
+                             set: { detailVerseId = $0?.id })) { item in
+            VerseDetailSheet(
+                verseId: item.id,
+                onPractice: { verse in
+                    practiceVerse = verse
+                    showPracticeOptions = true
+                },
+                onRemove: { verse in
+                    verseToDelete = verse
+                    showDeleteConfirmation = true
+                }
+            )
+            .environmentObject(appState)
+        }
+        .sheet(item: $reciteVerse) { verse in
+            RecitationTestSheet(verse: verse)
+                .environmentObject(appState)
+        }
         .sheet(isPresented: $showPracticeOptions) {
             if let verse = practiceVerse ?? appState.memoryVerses.first {
                 PracticeOptionsSheet(verse: verse)
@@ -274,15 +302,6 @@ struct MemoryView: View {
                     .accessibilityLabel("\(streakManager.currentStreak) day streak")
                     .accessibilityHint("Shows your streak and streak freezes")
 
-                    // currentLevel, not user.level: the stored field is only a sync
-                    // mirror and used to sit at 1 forever.
-                    Button { showLevelSheet = true } label: {
-                        HeaderStatChip(icon: "star.fill", value: "Lv \(appState.user.currentLevel)",
-                                       tint: .reforgedGold)
-                    }
-                    .buttonStyle(ChipPressStyle())
-                    .accessibilityLabel("Level \(appState.user.currentLevel), \(LevelProgression.title(for: appState.user.currentLevel))")
-                    .accessibilityHint("Shows your level progression")
                     // Crowns: the spendable reward for effort — opens the shop.
                     Button { showCrownShop = true } label: {
                         HeaderStatChip(icon: "crown.fill", value: "\(appState.crownBalance)",
@@ -292,17 +311,47 @@ struct MemoryView: View {
                     .accessibilityLabel("\(appState.crownBalance) crowns")
                     .accessibilityHint("Opens the crown shop")
 
-                    Button(action: { showHowItWorks = true }) {
-                        Image(systemName: "questionmark.circle")
+                    // Secondary destinations live behind one menu so the header stays calm.
+                    // currentLevel, not user.level: the stored field is only a sync mirror.
+                    Menu {
+                        Button { showLevelSheet = true } label: {
+                            Label("Level \(appState.user.currentLevel)", systemImage: "star.fill")
+                        }
+                        Button { showHowItWorks = true } label: {
+                            Label("How it works", systemImage: "questionmark.circle")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                             .font(.title3)
                             .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
                     }
-                    .accessibilityLabel("How it works")
+                    .accessibilityLabel("More")
                 }
 
-                // The themed curriculum journey is the home for everyone — a new
-                // member sees the whole path (all nodes "available") and taps in.
-                populatedContent
+                // Journey | My Verses. Hidden on the camp track, which is its own path.
+                if !showSouthlandTrack {
+                    MemorySegmentSlider(
+                        selection: Binding(get: { segment }, set: { segmentRaw = $0.rawValue }),
+                        myVersesDue: customMemoryVerses.filter(\.isDueForReview).count
+                    )
+                }
+
+                if segment == .myVerses && !showSouthlandTrack {
+                    MyVersesListView(
+                        verses: customMemoryVerses,
+                        onSelect: { detailVerseId = $0.id },
+                        onAdd: { showAddVerse = true },
+                        onReview: { refs in
+                            reviewUnitRefs = refs
+                            showReviewSession = true
+                        }
+                    )
+                    collectionsSection
+                } else {
+                    // The themed curriculum journey is the home for everyone: a new
+                    // member sees the whole path (all nodes "available") and taps in.
+                    populatedContent
+                }
             }
             .responsivePadding(.horizontal)
             .padding(.vertical)
@@ -320,6 +369,16 @@ struct MemoryView: View {
             }
         }
         .animation(.easeOut(duration: 0.15), value: stickyUnit)
+        // Dim + tap-anywhere-to-close while the practice bubbles are open.
+        .overlay {
+            if practiceExpanded {
+                Color.black.opacity(colorScheme == .dark ? 0.35 : 0.12)
+                    .ignoresSafeArea()
+                    .onTapGesture { setPracticeExpanded(false) }
+                    .transition(.opacity)
+                    .accessibilityHidden(true)
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 8) {
                 MemoryAudioBar()
@@ -334,6 +393,14 @@ struct MemoryView: View {
             // A verse the member just added is revealed by the journey itself.
             guard appState.journeyRevealRef == nil else { return }
             scrollToCurrentNode(proxy, animated: true, delay: 0.6)
+        }
+        // A verse the member added themselves lives in My Verses: switch there.
+        .onChange(of: appState.journeyRevealRef) { ref in
+            guard let ref, customMemoryVerses.contains(where: { $0.reference == ref }) else { return }
+            appState.journeyRevealRef = nil
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                segmentRaw = MemorySegment.myVerses.rawValue
+            }
         }
         }
     }
@@ -475,12 +542,11 @@ struct MemoryView: View {
                 onReviewVerse: { verse in
                     reviewUnitRefs = [verse.reference]
                     showReviewSession = true
-                }
+                },
+                onRecite: { reciteVerse = $0 }
             )
             .environmentObject(appState)
         } else {
-            SouthlandPromoCard(learned: southlandLearned) { switchSouthlandTrack(to: true) }
-
             MemoryJourneyView(
                 launchLesson: { verse in
                     activeLessonVerse = verse
@@ -498,14 +564,19 @@ struct MemoryView: View {
                     showPracticeOptions = true
                 },
                 onAddCustom: { showAddVerse = true },
-                stickyUnit: $stickyUnit
+                stickyUnit: $stickyUnit,
+                onRecite: { reciteVerse = $0 }
             )
             .environmentObject(appState)
-        }
 
-        // Collections live below the journey; global practice tools now float in a
-        // bottom toolbar (see memoryFloatingToolbar).
-        if !showSouthlandTrack {
+            SouthlandPromoCard(learned: southlandLearned) { switchSouthlandTrack(to: true) }
+        }
+    }
+
+    // Collections live in My Verses: they are the member's own sets.
+    @ViewBuilder
+    private var collectionsSection: some View {
+
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "Collections", actionTitle: "New") {
                 showCollectionBuilder = true
@@ -548,7 +619,6 @@ struct MemoryView: View {
                 }
             }
         }
-        }
     }
 
     /// Swaps between the main journey and the Southland camp-verse track.
@@ -569,58 +639,54 @@ struct MemoryView: View {
     // MARK: - Floating Memory Tools Toolbar
     // A translucent, floating bar of global practice tools pinned directly
     // above the tab bar while the journey scrolls behind it.
+    /// One quiet entry point for every practice mode, so the path stays the clear next step.
+    /// Tapping the pill expands it in place into a bubble toolbar of every tool.
     private var memoryFloatingToolbar: some View {
-        HStack(spacing: 10) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
-                    floatingTool(icon: "brain.head.profile", title: "Practice",
-                                 color: Color.adaptivePrimaryIcon(colorScheme)) {
-                        chooseVerse(for: .practice)
+        HStack(spacing: practiceExpanded ? 2 : 0) {
+            if practiceExpanded {
+                ForEach(Array(PracticeTool.allCases.enumerated()), id: \.element) { index, tool in
+                    PracticeBubble(tool: tool) {
+                        setPracticeExpanded(false)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { openPracticeTool(tool) }
                     }
-                    floatingTool(icon: "mic.fill", title: "Speak", color: .reforgedGold) {
-                        chooseVerse(for: .speak)
-                    }
-                    floatingTool(icon: "square.grid.2x2.fill", title: "Match",
-                                 color: Color.adaptivePrimaryIcon(colorScheme)) {
-                        showMatchingGame = true
-                    }
-                    floatingTool(icon: "pencil.and.outline", title: "Fill",
-                                 color: Color(red: 0.2, green: 0.7, blue: 0.4)) {
-                        showCompleteTheVerse = true
-                    }
-                    floatingTool(icon: "headphones", title: "Loop", color: .reforgedCoral) {
-                        chooseVerse(for: .loop)
-                    }
-                    floatingTool(icon: "rectangle.stack.fill", title: "Sets", color: .blue) {
-                        showCollectionBuilder = true
-                    }
+                    .transition(.scale(scale: 0.4).combined(with: .opacity)
+                        .animation(.spring(response: 0.38, dampingFraction: 0.7).delay(Double(index) * 0.03)))
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
+                Button { setPracticeExpanded(false) } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                        .frame(width: 36, height: 36)
+                        .background(Color.adaptiveBorder(colorScheme).opacity(0.7), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 2)
+                .accessibilityLabel("Close practice tools")
+            } else {
+                Button { setPracticeExpanded(true) } label: {
+                    Label("Practice", systemImage: "square.grid.2x2")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .padding(.horizontal, 20)
+                        .frame(height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Shows all practice modes")
             }
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.adaptiveBorder(colorScheme).opacity(0.6), lineWidth: 0.5)
-            )
-
-            Button {
-                HapticManager.shared.buttonTap()
-                showAddVerse = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 48, height: 48)
-                    .background(Color.reforgedCoral, in: Circle())
-                    .shadow(color: Color.reforgedCoral.opacity(0.28), radius: 8, y: 4)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Add custom verse")
         }
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.16), radius: 16, y: 6)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, practiceExpanded ? 8 : 0)
+        .padding(.vertical, practiceExpanded ? 8 : 0)
+        .background(Color.adaptiveCardBackground(colorScheme),
+                    in: RoundedRectangle(cornerRadius: practiceExpanded ? 26 : 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: practiceExpanded ? 26 : 22, style: .continuous)
+            .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 0.5))
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.14), radius: 14, y: 5)
         .padding(.bottom, 6)
+    }
+
+    private func setPracticeExpanded(_ on: Bool) {
+        HapticManager.shared.buttonTap()
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) { practiceExpanded = on }
     }
 
     private func consumeFreezePrompt() {
@@ -632,14 +698,25 @@ struct MemoryView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showStreakSheet = true }
     }
 
+    /// Verses the member chose themselves (see `MemoryVerse.isUserChosen`).
     private var customMemoryVerses: [MemoryVerse] {
-        let curriculumReferences = Set(MemoryCurriculum.allVerses.map(\.reference))
-        return appState.memoryVerses.filter { !curriculumReferences.contains($0.reference) }
+        appState.memoryVerses.filter(\.isUserChosen)
     }
 
     private var journeyMemoryVerses: [MemoryVerse] {
         let customIDs = Set(customMemoryVerses.map(\.id))
         return appState.memoryVerses.filter { !customIDs.contains($0.id) }
+    }
+
+    private func openPracticeTool(_ tool: PracticeTool) {
+        switch tool {
+        case .practice: chooseVerse(for: .practice)
+        case .speak: chooseVerse(for: .speak)
+        case .match: showMatchingGame = true
+        case .fill: showCompleteTheVerse = true
+        case .loop: chooseVerse(for: .loop)
+        case .sets: showCollectionBuilder = true
+        }
     }
 
     private func chooseVerse(for action: MemoryToolbarVerseAction) {
@@ -785,17 +862,13 @@ struct MemoryView: View {
                 .fontWeight(.bold)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
             Spacer()
+            // Plain text action, same weight as "Your verses  + Add", so section
+            // actions never compete with the screen's primary button.
             Button(action: action) {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus").font(.caption.bold())
-                    Text(actionTitle).font(.subheadline).fontWeight(.semibold)
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Color.reforgedNavy)
-                .clipShape(Capsule())
+                Label(actionTitle, systemImage: "plus")
+                    .font(.subheadline.weight(.semibold))
             }
+            .foregroundStyle(Color.adaptiveNavyText(colorScheme))
         }
     }
 }
@@ -1028,6 +1101,7 @@ struct ReviewCard: View {
 enum VerseCardSheet: Identifiable {
     case practiceOptions
     case reflectionEditor
+    case reciteTest
     var id: Int { hashValue }
 }
 
@@ -1121,9 +1195,9 @@ struct VerseCard: View {
 
                     Divider()
 
-                    if verse.level < 5 {
-                        Button(action: { appState.markVerseAsMastered(verse.id) }) {
-                            Label("Mark as Mastered", systemImage: "checkmark.seal.fill")
+                    if !verse.status.isMemorized {
+                        Button(action: { activeSheet = .reciteTest }) {
+                            Label("I know this, test me", systemImage: "checkmark.seal")
                         }
                     }
 
@@ -1161,28 +1235,16 @@ struct VerseCard: View {
                             .frame(width: CGFloat(masteryPercent) * 0.4, height: 6)
                     }
 
-                    // Level name instead of raw percentage
-                    Text(verse.levelName)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(verse.level == 5 ? Color.green : Color.adaptiveTextSecondary(colorScheme))
-
-                    // Mastered star badge
-                    if verse.level == 5 {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.caption)
-                            .foregroundStyle(Color.green)
-                    }
+                    VerseStatusBadge(status: verse.status)
                 }
 
-                // Status badge
-                Text(verse.level == 5 ? "Mastered" : statusText)
+                Text(statusText)
                     .font(.caption2)
                     .fontWeight(.semibold)
-                    .foregroundStyle(verse.level == 5 ? Color.green : statusColor)
+                    .foregroundStyle(statusColor)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background((verse.level == 5 ? Color.green : statusColor).opacity(0.12))
+                    .background(statusColor.opacity(0.12))
                     .clipShape(Capsule())
 
                 Spacer()
@@ -1225,6 +1287,9 @@ struct VerseCard: View {
                     .environmentObject(appState)
             case .reflectionEditor:
                 ReflectionNoteSheet(verse: verse)
+                    .environmentObject(appState)
+            case .reciteTest:
+                RecitationTestSheet(verse: verse)
                     .environmentObject(appState)
             }
         }
@@ -3650,4 +3715,290 @@ private struct ChipPressStyle: ButtonStyle {
 private struct ReviewRequest: Identifiable {
     let id = UUID()
     let refs: Set<String>?
+}
+
+// MARK: - Journey / My Verses slider
+
+enum MemorySegment: String, CaseIterable, Identifiable {
+    case journey
+    case myVerses
+
+    var id: String { rawValue }
+    var title: String { self == .journey ? "Journey" : "My Verses" }
+    var icon: String { self == .journey ? "map.fill" : "star.fill" }
+}
+
+/// Two-tab pill slider at the top of the Memory tab. The gold thumb slides under
+/// the selected tab; tapping or swiping across it switches.
+struct MemorySegmentSlider: View {
+    @Binding var selection: MemorySegment
+    /// Custom verses due for review; shown as a small coral count so it's noticed.
+    let myVersesDue: Int
+    @Environment(\.colorScheme) private var colorScheme
+    @Namespace private var thumb
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(MemorySegment.allCases) { seg in
+                let selected = seg == selection
+                Button {
+                    guard !selected else { return }
+                    HapticManager.shared.buttonTap()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) { selection = seg }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: seg.icon)
+                            .font(.caption.weight(.bold))
+                        Text(seg.title)
+                            .font(.subheadline.weight(.bold))
+                        if seg == .myVerses && myVersesDue > 0 {
+                            Text("\(myVersesDue)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.reforgedCoral, in: Capsule())
+                                .accessibilityLabel("\(myVersesDue) due")
+                        }
+                    }
+                    .foregroundStyle(selected ? Color.black : Color.adaptiveTextSecondary(colorScheme))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background {
+                        if selected {
+                            Capsule()
+                                .fill(Color.reforgedGold)
+                                .matchedGeometryEffect(id: "thumb", in: thumb)
+                        }
+                    }
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(Color.adaptiveCardBackground(colorScheme), in: Capsule())
+        .overlay(Capsule().stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
+        .gesture(
+            DragGesture(minimumDistance: 20).onEnded { value in
+                let target: MemorySegment = value.translation.width < 0 ? .journey : .myVerses
+                if abs(value.translation.width) > 30, target != selection {
+                    HapticManager.shared.buttonTap()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) { selection = target }
+                }
+            }
+        )
+    }
+}
+
+// MARK: - My Verses tab
+
+/// The member's own verses, laid out like the classic Bible memory apps: a Review
+/// button when anything is due, then a plain list. Each row says where the verse is
+/// (Step 2 of 3, Memorized, Review) and tapping it opens the verse page.
+struct MyVersesListView: View {
+    let verses: [MemoryVerse]
+    let onSelect: (MemoryVerse) -> Void
+    let onAdd: () -> Void
+    let onReview: (Set<String>) -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var due: [MemoryVerse] { verses.filter(\.isDueForReview) }
+
+    /// Due first, then verses still being learned (furthest along first), then the rest.
+    private var sorted: [MemoryVerse] {
+        verses.sorted {
+            if $0.isDueForReview != $1.isDueForReview { return $0.isDueForReview }
+            if $0.inStepsPhase != $1.inStepsPhase { return $0.inStepsPhase }
+            return $0.mastery.percent > $1.mastery.percent
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if !due.isEmpty {
+                PracticeButton(title: "Review (\(due.count))", icon: "arrow.triangle.2.circlepath",
+                               tint: .reforgedCoral) {
+                    onReview(Set(due.map(\.reference)))
+                }
+                .padding(.horizontal, -16)   // PracticeButton pads itself; align to the list
+            }
+
+            HStack {
+                Text("Your verses")
+                    .font(.headline)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                if !verses.isEmpty {
+                    Button(action: { HapticManager.shared.buttonTap(); onAdd() }) {
+                        Label("New verse", systemImage: "plus")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(Color.adaptiveNavyText(colorScheme))
+                }
+            }
+
+            if verses.isEmpty {
+                emptyState
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(sorted) { verse in
+                        MyVerseRow(verse: verse) { onSelect(verse) }
+                        if verse.id != sorted.last?.id {
+                            Divider().padding(.leading, 16)
+                        }
+                    }
+                }
+                .background(Color.adaptiveCardBackground(colorScheme), in: RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1))
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("Add a verse, then memorize it in three steps: type it, fill the gaps, recite it.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            PracticeButton(title: "Add a verse", icon: "plus", tint: .reforgedGold, action: onAdd)
+        }
+        .padding(.vertical, 28)
+    }
+}
+
+struct MyVerseRow: View {
+    let verse: MemoryVerse
+    let onTap: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var chip: (String, Color) {
+        if verse.isDueForReview { return ("Review", .reforgedCoral) }
+        if verse.inStepsPhase { return (verse.statusLabel, Color.adaptiveNavyText(colorScheme)) }
+        switch verse.status {
+        case .mastered: return ("Mastered", Color(red: 0.20, green: 0.65, blue: 0.40))
+        case .memorized: return ("Memorized", .reforgedGold)
+        case .needsWork: return ("Review", .reforgedCoral)
+        default: return (verse.statusLabel, Color.adaptiveNavyText(colorScheme))
+        }
+    }
+
+    var body: some View {
+        let (label, tint) = chip
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(verse.reference)
+                        .font(.headline)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Spacer()
+                    Text(label)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(tint)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(tint.opacity(colorScheme == .dark ? 0.2 : 0.12), in: Capsule())
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                }
+                Text(verse.text)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                    .lineLimit(1)
+                MasteryMeter(score: verse.mastery, showLabel: false)
+                    .padding(.top, 2)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(verse.reference), \(label), \(verse.mastery.percent)% to mastered")
+    }
+}
+
+/// Lets an optional String id drive `.sheet(item:)`.
+struct IdentifiedString: Identifiable { let id: String }
+
+// MARK: - Practice hub
+
+enum PracticeTool: String, CaseIterable, Identifiable {
+    case practice, speak, match, fill, loop, sets
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .practice: return "Practice a verse"
+        case .speak: return "Say it back"
+        case .match: return "Matching game"
+        case .fill: return "Complete the verse"
+        case .loop: return "Listen on loop"
+        case .sets: return "Build a collection"
+        }
+    }
+
+    /// Fits under a toolbar bubble.
+    var shortTitle: String {
+        switch self {
+        case .practice: return "Practice"
+        case .speak: return "Speak"
+        case .match: return "Match"
+        case .fill: return "Fill"
+        case .loop: return "Loop"
+        case .sets: return "Sets"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .practice: return "Flashcards, first letters, fill in, and more"
+        case .speak: return "Recite out loud and get checked"
+        case .match: return "Match references to verses"
+        case .fill: return "Fill in the missing words"
+        case .loop: return "Hear a verse on repeat"
+        case .sets: return "Import a chapter or make your own set"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .practice: return "brain.head.profile"
+        case .speak: return "mic.fill"
+        case .match: return "square.grid.2x2.fill"
+        case .fill: return "pencil.and.outline"
+        case .loop: return "headphones"
+        case .sets: return "rectangle.stack.fill"
+        }
+    }
+}
+
+/// One round, labelled tool in the expanded practice toolbar.
+struct PracticeBubble: View {
+    let tool: PracticeTool
+    let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: tool.icon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.reforgedGold)
+                    .frame(width: 44, height: 44)
+                    .background(Color.reforgedGold.opacity(colorScheme == .dark ? 0.22 : 0.14), in: Circle())
+                Text(tool.shortTitle)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .lineLimit(1)
+            }
+            .frame(width: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tool.title)
+        .accessibilityHint(tool.subtitle)
+    }
 }

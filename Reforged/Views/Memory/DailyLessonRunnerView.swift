@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Duolingo-style daily guided lesson container:
-/// Walks the user through progressive tasks (Listen -> Phrase Tap -> Drag & Drop -> Fill Blank -> Say It Back)
+/// Walks the user through warm-ups that shrink as the verse strengthens, always ending
+/// in the Recite test (see `DailyWorkoutSession.generate`),
 /// with continuous progress tracking, 3D bottom drawer feedback, XP rewards, and daily check-offs.
 struct DailyLessonRunnerView: View {
     let verse: MemoryVerse
@@ -16,6 +17,10 @@ struct DailyLessonRunnerView: View {
     @State private var showDrawer: Bool = false
     @State private var earnedXPSoFar: Int = 0
     @State private var isFinalCelebration: Bool = false
+    /// Score of the lesson's Recite test (the last attempt), recorded on completion.
+    @State private var reciteAccuracy: Double?
+    @State private var reciteMethod: RecitationMethod = .firstLetters
+    private var recitePassed: Bool { (reciteAccuracy ?? 0) >= RecitationProgress.passThreshold }
 
     init(verse: MemoryVerse, onFinished: @escaping () -> Void) {
         self.verse = verse
@@ -105,6 +110,30 @@ struct DailyLessonRunnerView: View {
                         SayItBackView(verse: verse) { quality in
                             handleStageCompletion(quality: quality)
                         }
+                    case .firstLetters:
+                        LetterDrillView(verse: verse, hideEveryOther: false) { quality in
+                            handleStageCompletion(quality: quality)
+                        }
+                    case .everyOtherWord:
+                        LetterDrillView(verse: verse, hideEveryOther: true) { quality in
+                            handleStageCompletion(quality: quality)
+                        }
+                    case .recite:
+                        // The test shows its own result, so it skips the success drawer.
+                        RecitationTestView(
+                            verse: appState.memoryVerses.first(where: { $0.id == verse.id }) ?? verse,
+                            scheduled: appState.memoryVerses.first(where: { $0.id == verse.id })?.isDueForReview ?? false,
+                            onAttempt: { accuracy, method in
+                                reciteAccuracy = accuracy
+                                reciteMethod = method
+                            },
+                            onDone: { _, accuracy in
+                                currentStageQuality = RecitationGrader.reviewQuality(accuracy: accuracy)
+                                earnedXPSoFar += currentStage.xpReward
+                                session.completedStageIndices.insert(session.currentStageIndex)
+                                advanceToNextStage()
+                            }
+                        )
                     }
                 }
                 .id(currentStage.id)
@@ -186,12 +215,17 @@ struct DailyLessonRunnerView: View {
     private var finalCelebration: some View {
         JackpotStage(
             config: JackpotConfig(
-                hero: .symbol("crown.fill"),
-                headline: "Lesson complete",
-                title: "You hid \(verse.reference) in your heart today.",
+                hero: .symbol(recitePassed ? "checkmark.seal.fill" : "crown.fill"),
+                headline: recitePassed ? "Memorized" : "Lesson complete",
+                title: recitePassed
+                    ? "You wrote out \(verse.reference) from memory."
+                    : "Pass the Recite test next time to mark \(verse.reference) memorized.",
                 accent: .gold,
                 reels: [
                     JackpotReel(icon: "star.fill", label: "XP earned", value: earnedXPSoFar, tint: .reforgedGold),
+                    JackpotReel(icon: "chart.bar.fill", label: "Toward mastered",
+                                value: appState.memoryVerses.first(where: { $0.id == verse.id })?.mastery.percent ?? 0,
+                                prefix: "", suffix: "%", tint: .reforgedGold),
                     JackpotReel(icon: "flame.fill", label: "Day streak", value: appState.user.streak, prefix: "", tint: .reforgedCoral),
                 ],
                 cta: "Claim & return",
@@ -242,15 +276,37 @@ struct DailyLessonRunnerView: View {
             // Finished all stages for today! A first-time curriculum verse is only
             // committed to memory now (see MemoryJourneyView.startOrOpen), so it
             // joins the review queue and unlocks the next node only on completion.
-            if !appState.memoryVerses.contains(where: { $0.id == verse.id }) {
-                appState.addMemoryVerse(verse, revealInJourney: false)
+            let existing = appState.memoryVerses.first(where: { $0.id == verse.id })
+            // A verse added from My Verses but never learned is "first time" too: its first
+            // recite must not count as a review pass toward Mastered.
+            let firstTime = existing == nil || existing?.isNew == true
+            let wasDue = existing?.isDueForReview ?? false
+            if existing == nil {
+                appState.addMemoryVerse(verse, revealInJourney: false, fromJourney: true)
             }
             // Grant the full lesson's XP now — the only place XP is awarded, so it
             // always means a completed lesson.
             appState.addXP(earnedXPSoFar, source: "memory-daily-lesson")
             appState.awardSouthlandLearnPoints(reference: verse.reference)
             DailyMemoryPlanManager.shared.markTodayCompleted(verseId: verse.id)
-            appState.updateVerseReview(verseId: verse.id, quality: max(3, currentStageQuality))
+            // A brand-new verse always gets its first review tomorrow. For a verse that was
+            // due, the Recite test is the review: its score sets the schedule. Practising a
+            // verse that isn't due records the recite but leaves the schedule alone.
+            // Lesson drills count as steps 1 and 2 on the verse page.
+            if session.stages.contains(.firstLetters) { appState.markVerseStep(verseId: verse.id, .type) }
+            if session.stages.contains(.everyOtherWord) { appState.markVerseStep(verseId: verse.id, .gaps) }
+            if let reciteAccuracy {
+                let scheduled = !firstTime && wasDue
+                if firstTime {
+                    // Schedule first so recordRecitation sees a scheduled verse and
+                    // doesn't schedule it a second time.
+                    appState.updateVerseReview(verseId: verse.id, quality: max(3, currentStageQuality))
+                }
+                appState.recordRecitation(verseId: verse.id, accuracy: reciteAccuracy,
+                                          method: reciteMethod, scheduled: scheduled)
+            } else if firstTime || wasDue {
+                appState.updateVerseReview(verseId: verse.id, quality: max(3, currentStageQuality))
+            }
             SocialLimitService.shared.grantForMemoryActivity()
             UnlockGateService.shared.clear(with: .memoryVerse)
 
@@ -300,13 +356,16 @@ struct ListenAndAbsorbStage: View {
                     .fontWeight(.bold)
                     .foregroundStyle(Color.adaptiveNavyText(colorScheme))
 
-                Text("\"\(verse.text)\"")
-                    .font(.title3)
-                    .italic()
-                    .lineSpacing(6)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                    .padding(.horizontal)
+                // Long passages step down a size, then scroll inside the card
+                // rather than getting clipped with an ellipsis.
+                ViewThatFits(in: .vertical) {
+                    passageText(font: .title3)
+                    passageText(font: .body)
+                    ScrollView(.vertical) {
+                        passageText(font: .body)
+                    }
+                    .scrollIndicators(.visible)
+                }
             }
             .padding(28)
             .background(Color.adaptiveCardBackground(colorScheme))
@@ -381,5 +440,16 @@ struct ListenAndAbsorbStage: View {
             player.stop()
             player.targetLoopCount = nil
         }
+    }
+
+    private func passageText(font: Font) -> some View {
+        Text("\"\(verse.text)\"")
+            .font(font)
+            .italic()
+            .lineSpacing(6)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(Color.adaptiveText(colorScheme))
+            .padding(.horizontal)
+            .frame(maxWidth: .infinity)
     }
 }

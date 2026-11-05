@@ -9,56 +9,55 @@ struct MemoryReviewView: View {
     /// checkpoint) instead of the global due queue.
     var restrictReferences: Set<String>? = nil
 
-    /// The session ramps difficulty in phases: an easy flashcard swipe deck first,
-    /// then graduated single-card exercises that get harder as verses mature.
-    private enum Phase { case loading, deck, graded, complete, empty }
+    /// Every review is a Recite test: the member writes the verse out and the score
+    /// sets the next review date. An optional flashcard deck can warm up first; it
+    /// never changes the schedule.
+    private enum Phase { case loading, intro, warmup, recite, complete, empty }
 
-    // Snapshotted once on appear so ratings during the session don't reshuffle the queue.
-    @State private var flashcardVerses: [MemoryVerse] = []
-    @State private var gradedVerses: [MemoryVerse] = []
-    @State private var gradedIndex = 0
+    // Snapshotted once on appear so results during the session don't reshuffle the queue.
+    @State private var verses: [MemoryVerse] = []
+    @State private var dueIds: Set<String> = []
+    @State private var index = 0
     @State private var reviewedCount = 0
+    @State private var passedCount = 0
     @State private var phase: Phase = .loading
 
-    private var totalCount: Int { flashcardVerses.count + gradedVerses.count }
+    private var totalCount: Int { verses.count }
 
-    private var currentGradedVerse: MemoryVerse? {
-        guard gradedIndex < gradedVerses.count else { return nil }
-        return gradedVerses[gradedIndex]
-    }
-
-    private var currentMode: MemoryMode {
-        guard let verse = currentGradedVerse else { return .flashcard }
-        return MemoryMode.progressiveMode(for: verse)
+    private var currentVerse: MemoryVerse? {
+        guard index < verses.count else { return nil }
+        return verses[index]
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            if phase == .deck || phase == .graded {
+            if phase == .recite || phase == .warmup {
                 progressHeader
             }
 
             switch phase {
             case .loading:
                 Color.clear
-            case .deck:
+            case .intro:
+                intro
+            case .warmup:
                 FlashcardDeckView(
-                    verses: flashcardVerses,
-                    onRate: { verseId, quality in rate(verseId: verseId, quality: quality) },
-                    onFinished: { advanceFromDeck() }
+                    verses: verses,
+                    onRate: { _, _ in },
+                    onFinished: { withAnimation { phase = .recite } }
                 )
-            case .graded:
-                if let verse = currentGradedVerse {
+            case .recite:
+                if let verse = currentVerse {
                     VStack(spacing: 8) {
-                        stageLabel(icon: currentMode.icon, title: currentMode.displayName)
-
-                        MemoryExerciseView(
+                        stageLabel(icon: "checkmark.seal", title: "Recite test")
+                        RecitationTestView(
                             verse: verse,
-                            mode: currentMode,
-                            onComplete: { quality in
-                                rate(verseId: verse.id, quality: quality)
-                                advanceGraded()
-                            }
+                            firstAttemptOnly: true,
+                            scheduled: dueIds.contains(verse.id),
+                            onAttempt: { accuracy, method in
+                                record(verse, accuracy: accuracy, method: method)
+                            },
+                            onDone: { _, _ in advance() }
                         )
                         .id(verse.id)
                     }
@@ -73,6 +72,33 @@ struct MemoryReviewView: View {
         .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: startSessionIfNeeded)
+    }
+
+    private var intro: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 54))
+                .foregroundStyle(Color.reforgedGold)
+            Text("\(totalCount) verse\(totalCount == 1 ? "" : "s") to recite")
+                .font(.title2.bold())
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+            Text("Write each one out from memory. \(Int(RecitationProgress.passThreshold * 100))% keeps it memorized; a miss brings it back tomorrow.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+                .padding(.horizontal, 32)
+            Spacer()
+            PracticeButton(title: "Start reciting", tint: .reforgedGold) {
+                withAnimation { phase = .recite }
+            }
+            Button("Warm up with flashcards first") {
+                withAnimation { phase = .warmup }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Color.adaptiveTextSecondary(colorScheme))
+            .padding(.bottom, 24)
+        }
     }
 
     // MARK: Progress header
@@ -177,47 +203,33 @@ struct MemoryReviewView: View {
         } else {
             due = appState.getVersesForReview()
         }
-        flashcardVerses = due.filter { MemoryMode.isFlashcardStage($0) }
-        // Graded exercises are ordered easiest → hardest so the session keeps ramping up.
-        gradedVerses = due.filter { !MemoryMode.isFlashcardStage($0) }
-            .sorted { $0.level < $1.level }
-
-        if !flashcardVerses.isEmpty {
-            phase = .deck
-        } else if !gradedVerses.isEmpty {
-            phase = .graded
-        } else {
-            phase = .empty
+        // Shakiest first: verses that need work, then by review strength.
+        verses = due.sorted {
+            let a = $0.status == .needsWork, b = $1.status == .needsWork
+            return a != b ? a : $0.level < $1.level
         }
+        dueIds = Set(due.filter(\.isDueForReview).map(\.id))
+        phase = verses.isEmpty ? .empty : .intro
     }
 
-    private func advanceFromDeck() {
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-            phase = gradedVerses.isEmpty ? .complete : .graded
-        }
-        if gradedVerses.isEmpty { awardCompletionBonus() }
+    private func record(_ verse: MemoryVerse, accuracy: Double, method: RecitationMethod) {
+        // Only a verse that was actually due moves on the review schedule.
+        appState.recordRecitation(verseId: verse.id, accuracy: accuracy, method: method,
+                                  scheduled: dueIds.contains(verse.id))
+        let passed = accuracy >= RecitationProgress.passThreshold
+        appState.addXP(passed ? 15 : 5, source: "review")
+        appState.awardSouthlandReviewPoints(reference: verse.reference)
+        if passed { passedCount += 1 }
+        reviewedCount += 1
     }
 
-    private func advanceGraded() {
-        if gradedIndex < gradedVerses.count - 1 {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                gradedIndex += 1
-            }
+    private func advance() {
+        if index < verses.count - 1 {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { index += 1 }
         } else {
             awardCompletionBonus()
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                phase = .complete
-            }
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { phase = .complete }
         }
-    }
-
-    private func rate(verseId: String, quality: Int) {
-        appState.updateVerseReview(verseId: verseId, quality: quality)
-        appState.addXP(quality >= 3 ? 15 : 5, source: "review")
-        if let reference = appState.memoryVerses.first(where: { $0.id == verseId })?.reference {
-            appState.awardSouthlandReviewPoints(reference: reference)
-        }
-        reviewedCount += 1
     }
 
     private func awardCompletionBonus() {
