@@ -1082,11 +1082,12 @@ class AppState: ObservableObject {
 
     func getVersesForReview() -> [MemoryVerse] {
         let now = Date()
-        return memoryVerses.filter { $0.nextReviewDate <= now }
+        return memoryVerses.filter { !$0.isNew && $0.nextReviewDate <= now }
     }
 
     func updateVerseReview(verseId: String, quality: Int) {
         guard let index = memoryVerses.firstIndex(where: { $0.id == verseId }) else { return }
+        pinOrigin(index)
 
         let today = AppDateFormatters.utcDayString()
         user.weeklyActivity.versesReviewed.append(VerseActivity(verseId: verseId, date: today))
@@ -1199,9 +1200,20 @@ class AppState: ObservableObject {
 
     /// `revealInJourney` is false for a curriculum lesson committing on completion, where the
     /// journey should glide to the next step instead of the verse just finished.
-    func addMemoryVerse(_ verse: MemoryVerse, revealInJourney: Bool = true) {
+    /// `fromJourney` is true only for a Journey lesson committing its verse; every other
+    /// caller is the member choosing a verse, so it belongs in My Verses.
+    func addMemoryVerse(_ verse: MemoryVerse, revealInJourney: Bool = true, fromJourney: Bool = false) {
         FeatureUsage.record(.memoryVerseAdded)
-        guard !memoryVerses.contains(where: { $0.reference == verse.reference }) else { return }
+        if let i = memoryVerses.firstIndex(where: { $0.reference == verse.reference }) {
+            // Already learning it on the Journey: choosing it again files it under My Verses too.
+            if !fromJourney && memoryVerses[i].addedByUser != true {
+                memoryVerses[i].addedByUser = true
+                if revealInJourney { journeyRevealRef = verse.reference }
+            }
+            return
+        }
+        var verse = verse
+        verse.addedByUser = !fromJourney
         // Set first so the journey's count-change scroll sees a pending reveal.
         if revealInJourney { journeyRevealRef = verse.reference }
         memoryVerses.append(verse)
@@ -1212,9 +1224,56 @@ class AppState: ObservableObject {
         memoryVerses.removeAll { $0.id == verseId }
     }
 
-    func markVerseAsMastered(_ verseId: String) {
-        guard let index = memoryVerses.firstIndex(where: { $0.id == verseId }) else { return }
-        memoryVerses[index].markAsMastered()
+    /// Records a Recite test. This is the only way a verse becomes Memorized or Mastered.
+    /// `scheduled` = a due review: its score also drives the spaced-repetition schedule
+    /// and only these passes count toward Mastered. Returns the verse's new status.
+    @discardableResult
+    func recordRecitation(verseId: String, accuracy: Double, method: RecitationMethod,
+                          scheduled: Bool) -> VerseMemoryStatus? {
+        guard let index = memoryVerses.firstIndex(where: { $0.id == verseId }) else { return nil }
+        pinOrigin(index)
+        let before = memoryVerses[index].status
+        let unscheduledBefore = memoryVerses[index].reviewCount == 0
+        let record = RecitationRecord(date: Date(), accuracy: accuracy, method: method,
+                                      passed: accuracy >= RecitationProgress.passThreshold)
+        var progress = memoryVerses[index].recitation ?? RecitationProgress()
+        progress.record(record, scheduled: scheduled)
+        memoryVerses[index].recitation = progress
+
+        if scheduled {
+            updateVerseReview(verseId: verseId, quality: RecitationGrader.reviewQuality(accuracy: accuracy))
+        } else if record.passed && unscheduledBefore {
+            // Just memorized a verse that has never been scheduled: first review tomorrow.
+            updateVerseReview(verseId: verseId, quality: 4)
+        }
+        let after = memoryVerses[index].status
+        if after.isMemorized && !before.isMemorized {
+            awardCrowns(2, reason: "\(memoryVerses[index].reference) memorized",
+                        key: "memorized:\(memoryVerses[index].reference)")
+        }
+        if after == .mastered && before != .mastered {
+            awardCrowns(5, reason: "\(memoryVerses[index].reference) mastered",
+                        key: "mastered:\(memoryVerses[index].reference)")
+        }
+        return after
+    }
+
+    /// Freezes `addedByUser` from the fallback rule before progress changes it (the rule
+    /// looks at whether a verse is new, which recording progress flips).
+    private func pinOrigin(_ index: Int) {
+        if memoryVerses[index].addedByUser == nil {
+            memoryVerses[index].addedByUser = memoryVerses[index].isUserChosen
+        }
+    }
+
+    /// Marks step 1 or 2 of a verse page done. Step 3 is `recordRecitation`.
+    func markVerseStep(verseId: String, _ step: MemoryVerse.Step) {
+        guard step != .recite, let index = memoryVerses.firstIndex(where: { $0.id == verseId }) else { return }
+        pinOrigin(index)
+        var progress = memoryVerses[index].recitation ?? RecitationProgress()
+        if step == .type, progress.typedAt == nil { progress.typedAt = Date() }
+        if step == .gaps, progress.gapsAt == nil { progress.gapsAt = Date() }
+        memoryVerses[index].recitation = progress
     }
 
     // MARK: - Verse Collections
@@ -1446,6 +1505,14 @@ class AppState: ObservableObject {
     }
 
     // MARK: - Reset
+
+    /// Settings > Reset All Settings: wipes this device's progress and returns to onboarding.
+    /// Cloud data is untouched, so a signed-in user is offered their account back during setup.
+    func resetApp() {
+        syncDebounceTask?.cancel()
+        SettingsManager.shared.resetAllSettings()
+        resetToFreshState()
+    }
 
     func resetToFreshState() {
         user = .empty

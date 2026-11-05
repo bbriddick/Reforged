@@ -507,7 +507,7 @@ struct HomeSearchResultsView: View {
                                                 .font(.subheadline)
                                                 .fontWeight(.bold)
                                                 .foregroundStyle(Color.reforgedGold)
-                                            Text(verse.levelName)
+                                            Text(verse.status.displayName)
                                                 .font(.caption2)
                                                 .fontWeight(.semibold)
                                                 .padding(.horizontal, 8)

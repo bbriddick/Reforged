@@ -243,6 +243,15 @@ class CloudKitSyncService: ObservableObject {
                     record["modeStats"] = json as CKRecordValue
                 }
 
+                if let addedByUser = verse.addedByUser {
+                    record["addedByUser"] = (addedByUser ? 1 : 0) as CKRecordValue
+                }
+                if let recitation = verse.recitation,
+                   let data = try? JSONEncoder().encode(recitation),
+                   let json = String(data: data, encoding: .utf8) {
+                    record["recitation"] = json as CKRecordValue
+                }
+
                 record["modifiedAt"] = Date() as CKRecordValue
                 recordsToSave.append(record)
             }
@@ -312,7 +321,13 @@ class CloudKitSyncService: ObservableObject {
             reflectionNote: {
                 let s = record["reflectionNote"] as? String
                 return (s?.isEmpty == false) ? s : nil
-            }()
+            }(),
+            recitation: {
+                guard let json = record["recitation"] as? String,
+                      let data = json.data(using: .utf8) else { return nil }
+                return try? JSONDecoder().decode(RecitationProgress.self, from: data)
+            }(),
+            addedByUser: (record["addedByUser"] as? Int).map { $0 == 1 }
         )
     }
 

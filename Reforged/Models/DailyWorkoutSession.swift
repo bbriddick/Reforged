@@ -8,6 +8,9 @@ enum WorkoutStageType: String, CaseIterable, Identifiable {
     case dragAndDrop
     case fillBlank
     case sayItBack
+    case firstLetters     // "Type it": first letter of each word, text visible
+    case everyOtherWord   // first letters with every other word hidden
+    case recite           // the Recite test: whole verse from memory
 
     var id: String { rawValue }
 
@@ -18,6 +21,9 @@ enum WorkoutStageType: String, CaseIterable, Identifiable {
         case .dragAndDrop: return "Word Placement"
         case .fillBlank: return "Fill in the Blank"
         case .sayItBack: return "Say It Back"
+        case .firstLetters: return "First Letters"
+        case .everyOtherWord: return "Every Other Word"
+        case .recite: return "Recite Test"
         }
     }
 
@@ -28,6 +34,9 @@ enum WorkoutStageType: String, CaseIterable, Identifiable {
         case .dragAndDrop: return "Snap the scrambled words into their correct order"
         case .fillBlank: return "Retrieve missing keywords from memory"
         case .sayItBack: return "Speak the scripture aloud into the microphone"
+        case .firstLetters: return "Type the first letter of each word as you read"
+        case .everyOtherWord: return "Recall the hidden words from their first letters"
+        case .recite: return "Write out the whole verse from memory"
         }
     }
 
@@ -38,6 +47,9 @@ enum WorkoutStageType: String, CaseIterable, Identifiable {
         case .dragAndDrop: return "hand.draw.fill"
         case .fillBlank: return "text.badge.plus"
         case .sayItBack: return "mic.fill"
+        case .firstLetters: return "a.circle"
+        case .everyOtherWord: return "eye.slash"
+        case .recite: return "checkmark.seal"
         }
     }
 
@@ -48,6 +60,9 @@ enum WorkoutStageType: String, CaseIterable, Identifiable {
         case .dragAndDrop: return 20
         case .fillBlank: return 25
         case .sayItBack: return 35
+        case .firstLetters: return 20
+        case .everyOtherWord: return 25
+        case .recite: return 40
         }
     }
 }
@@ -75,20 +90,24 @@ struct DailyWorkoutSession: Identifiable {
         completedStageIndices.count >= stages.count
     }
 
-    /// Curates a personalized multi-stage workout based on verse mastery level
+    /// Curates the lesson. Every lesson ends in the Recite test, the only way a verse
+    /// becomes Memorized. Warm-ups shrink as review strength (`level`) grows, and a verse
+    /// already memorized goes straight to a quick refresher before the test.
     static func generate(for verse: MemoryVerse) -> DailyWorkoutSession {
         let stages: [WorkoutStageType]
-        switch verse.level {
-        case 1: // Learning
-            stages = [.listen, .phraseByPhrase, .dragAndDrop, .sayItBack]
-        case 2: // Familiar
-            stages = [.phraseByPhrase, .dragAndDrop, .fillBlank, .sayItBack]
-        case 3: // Known
-            stages = [.dragAndDrop, .fillBlank, .sayItBack]
-        case 4, 5: // Well-known / Mastered
-            stages = [.fillBlank, .sayItBack]
-        default:
-            stages = [.listen, .phraseByPhrase, .dragAndDrop, .sayItBack]
+        if verse.status.isMemorized {
+            stages = [.everyOtherWord, .recite]
+        } else {
+            switch verse.level {
+            case 1:
+                stages = [.listen, .phraseByPhrase, .dragAndDrop, .firstLetters, .everyOtherWord, .recite]
+            case 2:
+                stages = [.phraseByPhrase, .firstLetters, .everyOtherWord, .recite]
+            case 3:
+                stages = [.fillBlank, .everyOtherWord, .recite]
+            default:
+                stages = [.everyOtherWord, .recite]
+            }
         }
         return DailyWorkoutSession(verse: verse, stages: stages)
     }

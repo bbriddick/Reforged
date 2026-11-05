@@ -18,14 +18,18 @@ import SwiftUI
 enum JourneyStatus {
     case available   // in the curriculum, not yet started
     case due         // started and in the SRS queue now
-    case learning    // started, maturing (level 1–4)
-    case mastered    // level 5
+    case learning    // started, not yet passed a Recite test
+    case memorized   // passed a Recite test
+    case needsWork   // was memorized, then missed a recite
+    case mastered    // passing reviews held across 30+ days
 
     func tint(_ accent: PlanAccent, _ scheme: ColorScheme?) -> Color {
         switch self {
         case .available: return accent.color(scheme)
         case .due:       return .reforgedCoral
         case .learning:  return .reforgedGold
+        case .memorized: return Color(red: 0.20, green: 0.65, blue: 0.40)
+        case .needsWork: return Color(red: 0.93, green: 0.55, blue: 0.15)
         case .mastered:  return Color(red: 0.20, green: 0.65, blue: 0.40)
         }
     }
@@ -35,6 +39,8 @@ enum JourneyStatus {
         case .available: return accent.bevelColor(scheme)
         case .due:       return Color(red: 0.78, green: 0.20, blue: 0.32)
         case .learning:  return Color(red: 0.75, green: 0.58, blue: 0.10)
+        case .memorized: return Color(red: 0.13, green: 0.48, blue: 0.28)
+        case .needsWork: return Color(red: 0.72, green: 0.38, blue: 0.08)
         case .mastered:  return Color(red: 0.13, green: 0.48, blue: 0.28)
         }
     }
@@ -107,6 +113,8 @@ struct MemoryJourneyView: View {
     var trackRefs: Set<String>? = nil
     /// Reviews a single verse (a review-day node). Falls back to the lesson when nil.
     var onReviewVerse: ((MemoryVerse) -> Void)? = nil
+    /// Opens a stand-alone Recite test for a started verse.
+    var onRecite: ((MemoryVerse) -> Void)? = nil
 
     @State private var bounce = false
     @State private var showSwitchImport = false
@@ -130,19 +138,8 @@ struct MemoryJourneyView: View {
     /// same review + repetition loop.
     private var combinedUnits: [CurriculumUnit] {
         if let trackUnits = units { return trackUnits }
-        var units: [CurriculumUnit] = []
-        // Southland camp verses live in their own track, not under "My Verses".
-        let curriculumRefs = Set(MemoryCurriculum.allVerses.map { $0.reference })
-            .union(SouthlandCurriculum.references)
-        let custom = appState.memoryVerses.filter { !curriculumRefs.contains($0.reference) }
-        if !custom.isEmpty {
-            units.append(CurriculumUnit(
-                id: "custom", title: "My Verses", theme: "Custom",
-                subtitle: "Verses you've added yourself", icon: "star.fill", accent: .coral,
-                verses: custom.map { CurriculumVerse(reference: $0.reference, text: $0.text) }))
-        }
-        units.append(contentsOf: MemoryCurriculum.units)
-        return units
+        // Custom verses live in the My Verses tab (MemoryView), not on the path.
+        return MemoryCurriculum.units
     }
 
     /// On a track, only open, non-review days feed the "current" node and frontier, so a locked
@@ -172,8 +169,12 @@ struct MemoryJourneyView: View {
     private func status(for reference: String) -> JourneyStatus {
         guard let mv = startedByRef[reference] else { return .available }
         if mv.isDueForReview { return .due }
-        if mv.level >= 5 { return .mastered }
-        return .learning
+        switch mv.status {
+        case .needsWork: return .needsWork
+        case .mastered: return .mastered
+        case .memorized: return .memorized
+        case .learning, .notYetTested: return .learning
+        }
     }
 
     /// Gradual unlock: a verse is playable only if it is already started or it is
@@ -339,13 +340,6 @@ struct MemoryJourneyView: View {
 
     private var journeyBody: some View {
         VStack(spacing: ReforgedTheme.spacingL) {
-            if !dueVerses.isEmpty {
-                ReviewPriorityBanner(dueCount: dueVerses.count, onReview: {
-                    FeatureUsage.record(.reviewStarted)
-                    reviewAll()
-                })
-            }
-
             // Plain VStack on purpose: a LazyVStack nested in MemoryView's
             // ScrollView > VStack mis-places rows when content above it changes
             // (e.g. the review banner disappearing after a review), drawing the
@@ -357,9 +351,6 @@ struct MemoryJourneyView: View {
                 }
 
                 if units == nil {
-                    addCustomButton
-                        .padding(.top, 26)
-
                     HStack(spacing: 20) {
                         Button { showSwitchImport = true } label: {
                             Text("Coming from another Bible app?")
@@ -440,6 +431,8 @@ struct MemoryJourneyView: View {
                 status: st,
                 locked: locked,
                 level: startedByRef[cv.reference]?.level ?? 0,
+                masteryPercent: startedByRef[cv.reference]?.mastery.percent,
+                dueCount: units == nil ? dueVerses.count : 0,
                 isCurrent: cv.reference == currentRef && !unit.isReview,
                 points: unit.pointsPerVerse,
                 isReview: unit.isReview,
@@ -449,6 +442,10 @@ struct MemoryJourneyView: View {
                 bounce: bounce,
                 onTap: { startOrOpen(cv, unit, st) },
                 onPractice: { if let mv = startedByRef[cv.reference] { onPractice(mv) } },
+                onRecite: onRecite.flatMap { recite in
+                    startedByRef[cv.reference].map { mv in { recite(mv) } }
+                },
+                memoryStatus: startedByRef[cv.reference]?.status,
                 onRemove: startedByRef[cv.reference] == nil ? nil : {
                     if let mv = startedByRef[cv.reference] {
                         withAnimation { appState.removeMemoryVerse(mv.id) }
@@ -511,7 +508,10 @@ struct MemoryJourneyView: View {
     private func startOrOpen(_ cv: CurriculumVerse, _ unit: CurriculumUnit, _ st: JourneyStatus) {
         HapticManager.shared.cardFlipEdgeThud()
         if let existing = startedByRef[cv.reference] {
-            if unit.isReview, let onReviewVerse {
+            if units == nil, existing.isDueForReview {
+                FeatureUsage.record(.reviewStarted)
+                reviewAll()
+            } else if unit.isReview, let onReviewVerse {
                 onReviewVerse(existing)
             } else {
                 launchLesson(existing)
@@ -751,6 +751,10 @@ struct CurriculumVerseNode: View {
     let status: JourneyStatus
     let locked: Bool
     let level: Int
+    /// Front-loaded 0-100 mastery score of a started verse; drives the ring.
+    var masteryPercent: Int? = nil
+    /// Verses due on the path; the current due node's bubble names the count.
+    var dueCount = 0
     let isCurrent: Bool
     var points: Int? = nil
     var isReview = false
@@ -760,6 +764,9 @@ struct CurriculumVerseNode: View {
     let bounce: Bool
     let onTap: () -> Void
     let onPractice: () -> Void
+    var onRecite: (() -> Void)? = nil
+    /// Recite-test status of a started verse (nil when not started).
+    var memoryStatus: VerseMemoryStatus? = nil
     let onRemove: (() -> Void)?
 
     @Environment(\.colorScheme) var colorScheme
@@ -782,7 +789,10 @@ struct CurriculumVerseNode: View {
 
     private var tint: Color { locked ? lockedTint : status.tint(unit.accent, colorScheme) }
     private var bevel: Color { locked ? lockedBevel : status.bevel(unit.accent, colorScheme) }
-    private var levelFraction: CGFloat { CGFloat(min(level, 5)) / 5.0 }
+    private var levelFraction: CGFloat {
+        if let masteryPercent { return CGFloat(masteryPercent) / 100 }
+        return CGFloat(min(level, 5)) / 5.0
+    }
     private var isGhost: Bool { !locked && status == .available }
     private var showRing: Bool { !locked && status != .available }
 
@@ -792,6 +802,8 @@ struct CurriculumVerseNode: View {
         case .available: return unit.icon
         case .due:       return "arrow.triangle.2.circlepath"
         case .learning:  return "book.fill"
+        case .memorized: return "checkmark.seal.fill"
+        case .needsWork: return "arrow.uturn.backward"
         case .mastered:  return "crown.fill"
         }
     }
@@ -802,7 +814,9 @@ struct CurriculumVerseNode: View {
         switch status {
         case .available: return points.map { "Tap to learn · +\($0) XP" } ?? "Tap to learn"
         case .due:       return "Due for review"
-        case .learning:  return "Learning"
+        case .learning:  return "\(memoryStatus?.displayName ?? "Learning")\(percentSuffix)"
+        case .memorized: return "Memorized\(percentSuffix)"
+        case .needsWork: return "Needs work\(percentSuffix)"
         case .mastered:  return "Mastered"
         }
     }
@@ -876,6 +890,11 @@ struct CurriculumVerseNode: View {
                     if !locked {
                         Button(action: onTap) {
                             Label(isGhost ? "Start learning" : "Open lesson", systemImage: "play.fill")
+                        }
+                        if !isGhost, let onRecite {
+                            Button(action: onRecite) {
+                                Label("Recite test", systemImage: "checkmark.seal")
+                            }
                         }
                         if !isGhost {
                             Button(action: onPractice) {
@@ -958,8 +977,17 @@ struct CurriculumVerseNode: View {
         depthOpacity = 1 - 0.16 * norm
     }
 
+    private var percentSuffix: String {
+        masteryPercent.map { " \u{00B7} \($0)%" } ?? ""
+    }
+
+    private var bubbleText: String {
+        guard status == .due else { return "START" }
+        return dueCount > 1 ? "REVIEW \(dueCount)" : "REVIEW"
+    }
+
     private var startBubble: some View {
-        Text("START")
+        Text(bubbleText)
             .font(.caption.bold()).tracking(1.0).foregroundStyle(tint)
             .padding(.horizontal, 14).padding(.vertical, 7)
             .background(Color.adaptiveCardBackground(colorScheme))
